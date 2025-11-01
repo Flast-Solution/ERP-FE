@@ -1,0 +1,28 @@
+[
+  {
+    "id": "1",
+    "service": "Flast",
+    "ncc": [
+      { "id": 1, "text": "In nhanh 35" },
+      { "id": 2, "text": "In nhanh 35" }
+    ],
+    "code": "OA36925280",
+    "product": [
+      { "id": 1, "text": "Tem nhân" },
+      { "id": 2, "text": "Tem nhân" }
+    ],
+    "status": [
+      { "id": 1, "text": "Đang S.X", "color": "#fa8c16" },
+      { "id": 2, "text": "Đang S.X", "color": "#1890ff" }
+    ],
+    "opportunityAt": "04-07-2025",
+    "customerAddress": "Hải Phòng",
+    "customerReceiverName": "Ngô Phong",
+    "customerMobilePhone": "0392280280",
+    "createdAt": "04-07-2025",   
+    "total": "1.300.000 đ",
+    "priceOff": "0 đ",
+    "shippingCost": "0 đ",
+    "paid": "1.300.000 đ"
+  }
+]

@@ -1,0 +1,27 @@
+{
+	"model": {
+		"productId": 776,
+		"skuId": 10209,
+		"quantity": 5,
+		"providerId": 10009,
+		"stockId": 1,
+		"stockName": "Kho Trung Hòa",
+		"skuName": "Hộp 1.5mm"
+	},
+	"mSkuDetails": [
+		{
+			"text": "Dạng kết cấu",
+			"values": [
+				{ "id": 10392, "text": "Âm dương nắp lật" },
+				{ "id": 10394, "text": "Hai tầng" }
+			]
+		},
+		{
+			"text": "Bồi vỏ",
+			"values": [
+				{ "id": 10396, "text": "Giấy C150" },
+				{ "id": 10397, "text": "Giấy Crat" }
+			]
+		}
+	]
+}

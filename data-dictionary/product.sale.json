@@ -1,0 +1,53 @@
+/* Data Post Server */
+{
+  "id": 749,
+  "createdTime": "2024-11-13 20:36:29",
+  "name": "Hữu Long",
+  "serviceId": 10008,
+  "providerId": 10008,
+  "listProperties": [
+    { "attributedId": 10008, "propertyValueId": [ 10009 ] },
+    { "attributedId": 10009, "propertyValueId": [ 10010, 10011 ] }
+  ],
+  "skus": [
+    {
+      "id": 10016,
+      "listPriceRange": [
+        { "id": 10013, "quantityFrom": 1, "quantityTo": 10, "price": 1000000 }
+      ],
+      "sku": [
+        { "id": 10010, "attributedId": 10008, "attributedValueId": 10009 },
+        { "id": 10011, "attributedId": 10009, "attributedValueId": 10010 }
+      ]
+    }
+  ],
+  "listOpenInfo": [
+    { "id": 10017, "name": "Môi trường", "value": "Ánh sáng dưới 30C" }
+  ]
+}
+
+/* Data Set In Form */
+{
+  "name": "Hữu Long",
+  "serviceId": 10008,
+  "providerId": 10008,
+  "status": 1,
+  "listProperties": [
+    { "attributedId": 10008, "attributedValueId": [ 10009 ] },
+    { "attributedId": 10009, "attributedValueId": [ 10010, 10011 ] }
+  ],
+  "skus": [
+    {
+      "listPriceRange": [
+        { "quantityFrom": 1, "quantityTo": 2, "price": 500000 }
+      ],
+      "sku": [
+        [ 10008, 10009 ],
+        [ 10009, 10011 ]
+      ]
+    }
+  ],
+  "listOpenInfo": [
+    { "name": "Môi trường", "value": "Ánh sáng dưới 30C" }
+  ]
+}

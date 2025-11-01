@@ -1,0 +1,63 @@
+[
+	{
+		"key": "5V1JjMUx",
+		"productId": 776,
+		"detailId": 1,
+		"productName": "",
+		"orderName": "",
+		"skuDetailCode": "10208",
+		"unit": "Hộp",
+		"warrantyPeriod": "(Chưa có)",
+		"quantity": 15,
+		"price": 120000,
+		"totalPrice": 1800000,
+		"discountRate": 15,
+		"discountAmount": 270000,
+		"mSkuDetails": [
+			{
+				"text": "Dạng kết cấu",
+				"values": [
+					{ "id": 10385, "text": "Hai tầng" },
+					{ "id": 10383, "text": "Âm dương nắp lật" }
+				]
+			},
+			{
+				"text": "Bồi vỏ",
+				"values": [
+					{ "id": 10389, "text": "Giấy Mỹ thuật" },
+					{ "id": 10388, "text": "Giấy Crat" }
+				]
+			}
+		]
+	},
+	{
+		"key": "dIlDKxCn",
+		"orderName": "",
+		"detailId": 2,
+		"productId": 776,
+		"productName": "",
+		"skuDetailCode": "10209",
+		"unit": "Hộp",
+		"warrantyPeriod": "(Chưa có)",
+		"quantity": 7,
+		"price": 60000,
+		"totalPrice": 420000,
+		"discountRate": 0,
+		"discountAmount": 0,
+		"mSkuDetails": [
+			{
+				"text": "Dạng kết cấu",
+				"values": [
+					{ "id": 10394, "text": "Hai tầng" },
+					{ "id": 10395, "text": "Hai cánh mở giữa" }
+				]
+			},
+			{
+				"text": "Bồi vỏ",
+				"values": [
+					{ "id": 10399, "text": "Giấy Op/Ford" }
+				]
+			}
+		]
+	}
+]

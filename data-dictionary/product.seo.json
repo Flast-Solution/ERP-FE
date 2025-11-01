@@ -1,0 +1,18 @@
+{
+  "id": 1008,
+  "serviceId": 10000,
+  "name": "Hữu Long",
+  "slug": "",
+  "seoTitle": "",
+  "seoDescription": "",
+  "seoContent": "",
+  "social": "{}",
+  "imageLists": [
+    {
+      "productId": 1008,
+      "fileName": "/uploads/products/089238/1.png",
+      "isSlideshow": false
+    }
+  ],
+  "categories": [10002, 10003]
+}
