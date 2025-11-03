@@ -158,15 +158,16 @@ const BanHangPage = ({
       order.warehouseOptions = getWarehouseByProduct(mSkuDetails, mProduct);
 
       const skus = mProduct?.skus ?? [];
-      let listPriceRange = [];
+      let skuPrices = [];
       if (arrayNotEmpty(order.warehouseOptions)) {
         let warehouse = _.first(order.warehouseOptions);
         order.warehouse = warehouse?.stockName ?? '';
         order.stock = warehouse?.quantity ?? 0;
-        listPriceRange = skus.find(s => s.id === warehouse?.skuId)?.listPriceRange ?? [];
+        skuPrices = skus.find(s => s.id === warehouse?.skuId)?.skuPrices ?? [];
       }
 
-      const dataPrice = findByQuantity(listPriceRange, order.quantity);
+      console.log('skuPrices', skuPrices);
+      const dataPrice = findByQuantity(skuPrices, order.quantity);
       if (dataPrice?.priceRef) {
         order.price = dataPrice.priceRef;
         order.totalPrice = order.price * order.quantity;

@@ -51,7 +51,7 @@ const InStockTable = ({ data, onChangeSelected }) => {
       title: "SL",
       dataIndex: "quantity",
       key: "quantity",
-      width: 60
+      width: 80
     },
     {
       title: "Chi tiết",

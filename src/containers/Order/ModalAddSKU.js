@@ -37,11 +37,11 @@ import RequestUtils from 'utils/RequestUtils';
 const SKU_DETAIL_ID_PREFIX = 'skuDetailId_';
 const AddSKU = ({ onSave, productId }) => {
 
-  const [form] = Form.useForm();
-  const [inStocks, setInStocks] = useState([]);
-  const [skus, setSkus] = useState([]);
-  const [mProduct, setProduct] = useState({});
-  const [skuDetail, setSkuDetail] = useState([]);
+  const [ form ] = Form.useForm();
+  const [ inStocks, setInStocks ] = useState([]);
+  const [ skus, setSkus ] = useState([]);
+  const [ mProduct, setProduct ] = useState({});
+  const [ skuDetail, setSkuDetail ] = useState([]);
 
   useEffectAsync(async () => {
     if (!productId) {
@@ -88,7 +88,7 @@ const AddSKU = ({ onSave, productId }) => {
   };
 
   const onChangeGetSelectedSku = (value, item) => {
-    setSkuDetail(item?.skuDetail || []);
+    setSkuDetail(item?.skuDetails || []);
     const values = form.getFieldsValue();
     for (const key in values) {
       if (key.startsWith(SKU_DETAIL_ID_PREFIX)) {
@@ -128,7 +128,7 @@ const AddSKU = ({ onSave, productId }) => {
 
     /* Lấy SKU trong sản phẩm để lọc detail */
     const { skus } = mProduct;
-    setSkuDetail(skus?.find(i => i.id === item.skuId)?.skuDetail ?? []);
+    setSkuDetail(skus?.find(i => i.id === item.skuId)?.skuDetails ?? []);
 
     /* Fill vào form */
     if (arrayEmpty(skuDetails)) {

@@ -28,8 +28,8 @@ export const ContainerStyles = styled.div`
 		max-width:320px;
 		max-height: 100vh;
 		scrollbar-width: none;
-  		-ms-overflow-style: none;
-		overflowY: scroll;
+  	-ms-overflow-style: none;
+		overflow-y: scroll;
 	}
 	.react-kanban-column ::-webkit-scrollbar {
 		display: none;

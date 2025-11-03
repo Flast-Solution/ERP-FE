@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  ProductForm.js                                                        */
+/*  Form3Day.js                                                           */
 /**************************************************************************/
 /*                       Tệp này là một phần của:                         */
 /*                             Open CDP                                   */
@@ -26,6 +26,8 @@ import FormTextArea from 'components/form/FormTextArea'
 import FormInputNumber from 'components/form/FormInputNumber'
 import GroupStyles from './style'
 import { PRIORITY_TYPE_TAGS } from 'configs/localData'
+import FormSelectInfiniteBusinessUser from 'components/form/SelectInfinite/FormSelectInfiniteBusinessUser'
+import FormDatePicker from 'components/form/FormDatePicker'
 
 const CAUSE_3_DAY = [
   { name: "Đang trao đổi " },
@@ -74,11 +76,33 @@ const Form3Day = () => {
         <Form.Item name="issues" label="Sự cố sản phẩm / dịch vụ">
           <GroupStyles>
             <Row gutter={16}>
-              <Col span={12}><Checkbox value="product">Sự cố sản phẩm</Checkbox></Col>
-              <Col span={12}><Checkbox value="service">Sự cố dịch vụ</Checkbox></Col>
+              <Col span={8}><Checkbox value="product">Sản phẩm</Checkbox></Col>
+              <Col span={8}><Checkbox value="service">Dịch vụ</Checkbox></Col>
+              <Col span={8}><Checkbox value="needResolution">Giải quyết</Checkbox></Col>
             </Row>
           </GroupStyles>
         </Form.Item>
+      </Col>
+      <Form.Item
+        noStyle
+        shouldUpdate={(prevValues, curValues) => prevValues.issues !== curValues.issues}
+      >
+        {({ getFieldValue }) => (
+          <Col md={24} xs={24}>
+            <FormResolution issues={getFieldValue('issues')} />
+          </Col>
+        )}
+      </Form.Item>
+      <Col md={24} xs={24}>
+        <FormSelect
+          required
+          name="priority"
+          label="Ưu tiên"
+          placeholder="Chọn ưu tiên"
+          resourceData={PRIORITY_TYPE_TAGS}
+          valueProp="value"
+          titleProp="text"
+        />
       </Col>
       <Col md={24} xs={24}>
         <FormTextArea 
@@ -92,17 +116,6 @@ const Form3Day = () => {
           name="supportRequest"
           placeholder="Khách hàng cần hỗ trợ gì?"
           rows={2}
-        />
-      </Col>
-      <Col md={24} xs={24}>
-        <FormSelect
-          required
-          name="priority"
-          label="Ưu tiên"
-          placeholder="Chọn ưu tiên"
-          resourceData={PRIORITY_TYPE_TAGS}
-          valueProp="value"
-          titleProp="text"
         />
       </Col>
       <Col md={24} xs={24}>
@@ -124,6 +137,32 @@ const Form3Day = () => {
       </Col>
     </Row>
   )
-}
+};
+
+const FormResolution = ({ issues }) => {
+  if (!issues || !issues.includes('needResolution')) {
+    return null;
+  }
+  return (
+    <Row gutter={16}>
+      <Col md={12} xs={24}>
+        <FormSelectInfiniteBusinessUser 
+          required
+          label="Người phụ trách giải quyết"
+          placeholder="Chọn người phụ trách"
+          name={['active', 'ssoId']}
+        />
+      </Col>
+      <Col md={12} xs={24}>
+        <FormDatePicker 
+          required
+          label="Thời gian"
+          placeholder="Chọn thời gian"
+          name={['active', 'inTime']}
+        />
+      </Col>
+    </Row>
+  )
+};
 
 export default Form3Day

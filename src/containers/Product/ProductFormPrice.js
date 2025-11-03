@@ -39,7 +39,8 @@ import FormInput from 'components/form/FormInput';
 
 const ProductFormPrice = ({ listProperties }) => {
 
-  const [dataInOptions, setDataInOptions] = useState([]);
+  const [ dataInOptions, setDataInOptions ] = useState([]);
+  
   useEffect(() => {
     let attrs = [], attrValues = [];
     for (let item of listProperties) {
@@ -84,7 +85,7 @@ const FormListCascader = ({ field, dataInOptions }) => {
       <Col md={24} xs={24}>
         <div style={{ height: 20, width: '100%' }} />
         <FormListAddition
-          name={[name, 'listPriceRange']}
+          name={[name, 'skuPrices']}
           textAddNew="Thêm khoảng gía"
           showBtnInLeft={false}
         >

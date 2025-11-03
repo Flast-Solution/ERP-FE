@@ -39,7 +39,7 @@ const SkuView = ({ skus }) => {
                 <Text strong>{item.name}, SKU({item.id})</Text>
               </Typography.Paragraph>
               <Typography.Paragraph>
-                <Text>{item.skuDetail?.map(d => `${d.name}: ${d.value}`).join(', ')}</Text>
+                <Text>{item.skuDetails?.map(d => `${d.name}: ${d.value}`).join(', ')}</Text>
               </Typography.Paragraph>
             </>
           }
@@ -88,7 +88,7 @@ export const PriceView = ({ skus }) => {
       {skus.map((item, key) =>
         <div key={key}>
           <Typography.Paragraph>
-            <Text>{item.listPriceRange?.map(d => `SKU(${item.id}), SL: ${d.quantityFrom} - ${d.quantityTo}, đơn gía: ${formatMoney(d.price)}`).join(', ')}</Text>
+            <Text>{item.skuPrices?.map(d => `SKU(${item.id}), SL: ${d.quantityFrom} - ${d.quantityTo}, đơn gía: ${formatMoney(d.price)}`).join(', ')}</Text>
           </Typography.Paragraph>
         </div>
       )}

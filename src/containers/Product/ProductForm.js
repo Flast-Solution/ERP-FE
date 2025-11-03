@@ -18,79 +18,20 @@
 /* Đội ngũ phát triển mong rằng phần mềm được sử dụng đúng mục đích và    */
 /* có trách nghiệm                                                        */
 /**************************************************************************/
-
-import { useState } from 'react';
-import { Row, Col, Typography, Form, Modal } from 'antd';
+import { Row, Col, Typography, Form } from 'antd';
 import FormHidden from 'components/form/FormHidden';
 import CustomButton from 'components/CustomButton';
 import FormSelectAPI from 'components/form/FormSelectAPI';
 import FormInput from 'components/form/FormInput';
 import FormListAddition from 'components/form/FormListAddtion';
 import ProductFormProperty from './ProductFormProperty';
-import { DeleteOutlined, EyeOutlined, SwitcherOutlined } from '@ant-design/icons';
+import { SwitcherOutlined } from '@ant-design/icons';
 import ProductFormPrice from './ProductFormPrice';
 import FormSelect from 'components/form/FormSelect';
 import { PRODUCT_STATUS } from 'configs/localData';
-import Dragger from 'antd/es/upload/Dragger';
-import { GATEWAY } from 'configs';
-import { FormListFile } from './styles';
 import { FormListStyles } from "css/global";
-import RequestUtils from 'utils/RequestUtils';
-import { InAppEvent } from 'utils/FuseUtils';
 
-const ProductForm = ({ data, fileActive, setFileActive, setSessionId }) => {
-
-  const [listFile, setListFile] = useState(data?.imageLists || []);
-  const [listImage, setListImage] = useState([]);
-  const [isOpen, setIsOpen] = useState(false);
-  const [detailImage, setDetailImage] = useState('');
-
-  const onUploadMultiple = (fileList) => {
-    let formData = new FormData();
-    const sessionId = Math.floor(Date.now() / 1000);
-    fileList.forEach((file) => {
-      formData.append('files', file);
-    });
-    RequestUtils.Post(`/product/upload-file?sessionId=${sessionId}&productId=${data?.id ? data?.id : ''}`, formData)
-      .then(({ data, errorCode }) => {
-        setListImage(data?.fileNames || []);
-        setSessionId(data?.sessionId);
-        if (errorCode !== 200) {
-          throw new Error("Upload failed");
-        }
-        InAppEvent.normalSuccess("Tải file thành công");
-      })
-      .catch((error) => {
-        InAppEvent.normalError("Lỗi tải file");
-      });
-  };
-
-  /* Tải file mẫu */
-  const props = {
-    beforeUpload: (file, fileList) => {
-      onUploadMultiple(fileList);
-      return false;
-    }
-  }
-
-  /* set mặc định ảnh*/
-  const onHandleAvtiveImage = (file) => setFileActive(file);
-
-  /* Xoá ảnh */
-  const onHandleDeleteFile = (file) => {
-    const params = { file, productId: data?.id };
-    RequestUtils.Post('/product/remove-file', {}, params).then(({ errorCode }) => {
-      if (errorCode !== 200) {
-        throw new Error("Xóa file thất bại");
-      }
-      InAppEvent.normalSuccess("Xóa file thành công");
-      const newListFile = listFile.filter(f => f !== file);
-      setListFile(newListFile);
-    }).catch((error) => {
-      InAppEvent.normalError("Lỗi xóa file");
-    });
-  }
-
+const ProductForm = () => {
   return (
     <>
       <Row gutter={16} style={{ marginTop: 20 }}>
@@ -193,66 +134,15 @@ const ProductForm = ({ data, fileActive, setFileActive, setSessionId }) => {
             <FormOpenInfo />
           </FormListAddition>
         </Col>
-
-        <Col md={24} xs={24} style={{ marginBottom: 30 }}>
-          <Dragger {...props} multiple={true} showUploadList={false} style={{ border: '2px dashed #f2f1fc' }}>
-            <FormListFile>
-              <div className='upload-image-wrapper' onClick={(e) => e.stopPropagation()}>
-                {[...listFile, ...listImage]?.map((file, i) => (
-                  <div className='selectedImage' key={i}>
-                    <div className='uploadImage'>
-                      <img loading='lazy' fetchPriority='high' src={`${GATEWAY}${file}`} width={100} height={100} alt="" />
-                      <div className='overlay'>
-                        <span className='anticon anticon-eye' onClick={() => {
-                          setIsOpen(true);
-                          setDetailImage(file)
-                        }}>
-                          <EyeOutlined />
-                        </span>
-                        <span className='anticon anticon-delete' onClick={() => onHandleDeleteFile(file)}>
-                          <DeleteOutlined />
-                        </span>
-                        <div className={`lbSetDefault ${file === (fileActive || data?.image) ? 'active' : ''}`} onClick={() => onHandleAvtiveImage(file)}>Mặc định</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ marginTop: 20 }}>
-                <p align="center" style={{ margin: 0 }}>
-                  <img src="/img/upload-image.png" width={67} height={50} alt="upload" />
-                </p>
-                <p>Tải file hình ảnh</p>
-              </div>
-            </FormListFile>
-          </Dragger>
-        </Col>
-
         <Col md={24} xs={24}>
-          <div style={{ display: 'flex', justifyContent: 'end' }}>
-            <CustomButton
-              htmlType="submit"
-              title="Hoàn thành"
-              color="danger"
-              variant="solid"
-            />
-          </div>
+          <CustomButton
+            htmlType="submit"
+            title="Hoàn thành"
+            color="danger"
+            variant="solid"
+          />
         </Col>
       </Row>
-
-      <Modal
-        style={{ top: 80 }}
-        open={isOpen}
-        footer={false}
-        onCancel={() => setIsOpen(false)}
-        width={560}
-      >
-        <div>
-          <img loading='lazy' style={{ width: '100%', objectFit: 'cover' }} fetchPriority='high' src={`${GATEWAY}${detailImage}`}
-            width={472} height={454} alt=""
-          />
-        </div>
-      </Modal>
     </>
   )
 }

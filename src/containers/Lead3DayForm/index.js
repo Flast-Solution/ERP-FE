@@ -30,13 +30,22 @@ const Lead3DayForm = ({ data }) => {
 
   const [ record, setRecord ] = useState({});
   const onSubmit = async (dataCreate) => {
-    const { priority, cause, action, newFeatures = "", supportRequest = "", ...lead3Day } = dataCreate;
+    const { 
+      priority, 
+      cause, 
+      action, 
+      newFeatures = "", 
+      supportRequest = "", 
+      active, 
+      ...information 
+    } = dataCreate;
     const { errorCode, message } = await RequestUtils.Post("/cs/3day-update", {
       priority,
       cause,
       action,
+      active,
       objectId: data.id,
-      lead3Day: { ...lead3Day, newFeatures, supportRequest },
+      information: { ...information, newFeatures, supportRequest },
     });
     if (errorCode === 200) {
       f5List('cs/3day-fetch');

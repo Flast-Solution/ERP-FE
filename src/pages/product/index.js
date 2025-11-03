@@ -25,7 +25,7 @@ import useGetList from "hooks/useGetList";
 import { Helmet } from "react-helmet";
 import CustomBreadcrumb from 'components/BreadcrumbCustom';
 import Filter from './Filter';
-import { Button, Image, Space } from 'antd';
+import { Button, Space } from 'antd';
 import { InAppEvent } from "utils/FuseUtils";
 import { GATEWAY, HASH_MODAL } from 'configs';
 import { arrayEmpty, dateFormatOnSubmit, formatTime } from 'utils/dataUtils';
@@ -33,6 +33,7 @@ import ProductAttrService from 'services/ProductAttrService';
 import { cloneDeep } from 'lodash';
 import SkuView, { PriceView } from 'containers/Product/SkuView';
 import { Link } from 'react-router-dom';
+import CustomImage from 'components/common/CustomImage';
 
 const Index = () => {
 
@@ -51,9 +52,9 @@ const Index = () => {
       }
     }
     for (const iSkus of item.skus) {
-      let item = { id: iSkus?.id, name: iSkus.name, listPriceRange: iSkus.listPriceRange }
+      let item = { id: iSkus?.id, name: iSkus.name, skuPrices: iSkus.skuPrices || [] }
       let details = [];
-      for (const detail of iSkus.skuDetail) {
+      for (const detail of iSkus.skuDetails) {
         details.push({ id: detail?.id, attributedId: detail.attributedId, attributedValueId: detail.attributedValueId });
       }
       item.sku = details;
@@ -89,14 +90,14 @@ const Index = () => {
       dataIndex: 'image',
       width: 150,
       ellipsis: true,
-      render: (image) => (
-        <Image
+      render: (image) => image ? (
+        <CustomImage
           preview={false}
           width={50}
-          src={`${image ? `${GATEWAY}${image}` : '/img/image_not_found.png'}`}
+          src={String(GATEWAY).concat(image)}
           alt='image'
         />
-      )
+      ) : ('Chưa có')
     },
     {
       title: "Sản phẩm",

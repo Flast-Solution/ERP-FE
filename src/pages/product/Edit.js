@@ -11,11 +11,11 @@ import { Row, Col, message } from 'antd';
 import JoditEditor from 'jodit-react';
 import FormInput from 'components/form/FormInput';
 import FormTextArea from 'components/form/FormTextArea';
-import ProductImageUploader from 'containers/Product/ProductImageUploader';
 import { FormContextCustom } from 'components/context/FormContextCustom';
 import CustomButton from 'components/CustomButton';
 import { useCallback } from 'react';
 import FormInfiniteCategory from 'components/form/SelectInfinite/FormInfiniteCategory';
+import ImageUploader from 'components/common/File/ImageUploader';
 
 const ProductEdit = () => {
 
@@ -68,7 +68,7 @@ const ProductEdit = () => {
         <title>Sửa nội dung sản phẩm</title>
       </Helmet>
       <CustomBreadcrumb
-        data={[{ title: 'Trang chủ' }, { title: 'Sản phẩm' }, { title: mContent?.name ?? '' }]}
+        data={[{ title: 'Trang chủ' }, { title: 'Sản phẩm' }, { title: mContent?.name ?? 'Thêm mới nội dung' }]}
       />
       <RestEditModal
         record={mContent}
@@ -123,7 +123,7 @@ const ProductEdit = () => {
             />
           </Col>
           <Col md={12} xs={24}>
-            <ProductImageUploader
+            <ImageUploader
               onBeforeSubmitMultiPart={(formData) => {
                 formData.append('productId', id);
                 return formData;

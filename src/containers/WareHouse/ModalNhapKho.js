@@ -95,7 +95,7 @@ const ModalNhapKho = ({
   };
 
   const onChangeGetSelectedSku = (value, item) => {
-    setSkuDetail(item?.skuDetail || []);
+    setSkuDetail(item?.skuDetails || []);
     const values = form.getFieldsValue();
     for (const key in values) {
       if (key.startsWith(SKU_DETAIL_ID_PREFIX)) {
@@ -139,7 +139,7 @@ const ModalNhapKho = ({
 
     /* Lấy SKU trong sản phẩm để lọc detail */
     const { skus } = mProduct;
-    setSkuDetail(skus?.find(i => i.id === item.skuId)?.skuDetail ?? []);
+    setSkuDetail(skus?.find(i => i.id === item.skuId)?.skuDetails ?? []);
 
     /* Fill vào form */
     if (arrayEmpty(skuInfo)) {
