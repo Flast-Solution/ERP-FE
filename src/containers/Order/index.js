@@ -142,7 +142,6 @@ const BanHangPage = ({
 
   const onAddProduct = useCallback((lead = null) => {
     const onAfterChoiseProduct = (values) => {
-      console.log('App Product', values);
       let order = _.cloneDeep(ORDER_TEMPLATE);
       const { mSkuDetails, mProduct, quantity, productId, skuId } = values;
       /* Tạo Item trong list sản phẩm */
@@ -155,7 +154,7 @@ const BanHangPage = ({
       order.mSkuDetails = mSkuDetails;
       order.skuDetailCode = String(skuId);
       order.quantity = quantity;
-      order.warehouseOptions = getWarehouseByProduct(mSkuDetails, mProduct);
+      order.warehouseOptions = getWarehouseByProduct(skuId, mProduct);
 
       const skus = mProduct?.skus ?? [];
       let skuPrices = [];
@@ -166,7 +165,6 @@ const BanHangPage = ({
         skuPrices = skus.find(s => s.id === warehouse?.skuId)?.skuPrices ?? [];
       }
 
-      console.log('skuPrices', skuPrices);
       const dataPrice = findByQuantity(skuPrices, order.quantity);
       if (dataPrice?.priceRef) {
         order.price = dataPrice.priceRef;
@@ -293,10 +291,7 @@ const BanHangPage = ({
   const totalSubOrder = data.reduce((sum, item) => sum + item.totalPrice - item.discountAmount, 0);
 
   const editRow = (key) => {
-    const newData = data.map(item => ({
-      ...item,
-      editable: item.key === key,
-    }));
+    const newData = data.map(item => ({ ...item, editable: item.key === key }));
     setData(newData);
   };
 

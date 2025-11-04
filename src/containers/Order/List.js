@@ -20,8 +20,8 @@
 /**************************************************************************/
 
 import React, { useState, useCallback } from 'react';
-import { Button, message } from 'antd';
-import { CopyOutlined } from '@ant-design/icons';
+import { Button, message, Space } from 'antd';
+import { CopyOutlined, EditFilled } from '@ant-design/icons';
 import RestList from "components/RestLayout/RestList";
 import useGetList from "hooks/useGetList";
 import Filter from './Filter';
@@ -30,6 +30,7 @@ import OrderService from 'services/OrderService';
 import { InAppEvent } from 'utils/FuseUtils';
 import { HASH_MODAL } from 'configs';
 import { renderArrayColor } from './utils';
+import { useNavigate  } from 'react-router-dom';
 
 const copyToClipboard = (text, setCopiedIndex, index) => {
   navigator.clipboard.writeText(text).then(() => {
@@ -41,6 +42,7 @@ const copyToClipboard = (text, setCopiedIndex, index) => {
 
 const ListOrder = ({ filter }) => {
 
+  const navigate = useNavigate();
   const [ copiedIndex, setCopiedIndex ] = useState(null);
   const onClickViewDetail = (customerOrder) => InAppEvent.emit(HASH_MODAL, {
     hash: "#order.tabs",
@@ -173,9 +175,9 @@ const ListOrder = ({ filter }) => {
       title: 'Action',
       key: 'action',
       fixed: 'right',
-      width: 150,
+      width: filter.type === 'cohoi' ? 200 : 160,
       render: (record) => (
-        <span style={{ display: 'flex', gap: 8 }}>
+        <Space gap={8}>
           <Button
             type="primary"
             size="small"
@@ -183,10 +185,22 @@ const ListOrder = ({ filter }) => {
           >
             Chi tiết
           </Button>
-          <Button size="small" style={{ color: "#fa8c16" }}>
+          <Button 
+            size="small" 
+            style={{ color: "#fa8c16" }}
+          >
             Báo giá
           </Button>
-        </span>
+          { record.type === 'cohoi' &&
+            <Button 
+              size="small" 
+              style={{ color: "#16c5faff" }}
+              onClick={() => navigate(String('/sale/ban-hang/').concat(record.id))}
+            >
+              <EditFilled />
+            </Button>
+          }
+        </Space>
       )
     }
   ];

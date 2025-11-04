@@ -25,7 +25,7 @@ import CustomBreadcrumb from 'components/BreadcrumbCustom';
 import ListOrder from 'containers/Order/List';
 
 const CoHoiPage = () => {
-  const [title] = useState("Danh sách cơ hội bán hàng");
+  const [ title ] = useState("Danh sách cơ hội bán hàng");
   const filter = { type: "cohoi" }
   return <>
     <Helmet>

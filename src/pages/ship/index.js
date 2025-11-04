@@ -40,11 +40,17 @@ const ShipPage = () => {
     return values;
   }, []);
 
-  const onClickGiaoHang = (record) => InAppEvent.emit(HASH_MODAL, {
-    hash: "#ship.update",
-    title: 'Phiếu xuất kho #' + record.orderCode,
-    data: record
-  });
+  const onClickGiaoHang = (record) => {
+    if(!record.warehouseProduct) {
+      InAppEvent.normalError("Giao hàng mà chưa có sản phẩm trong kho!");
+      return;
+    }
+    InAppEvent.emit(HASH_MODAL, {
+      hash: "#ship.update",
+      title: 'Phiếu xuất kho #' + record.orderCode,
+      data: record
+    });
+  };
 
   const onData = async (values) => {
     if (arrayEmpty(values.embedded)) {
@@ -63,14 +69,14 @@ const ShipPage = () => {
       dataIndex: 'warehouseProduct',
       width: 120,
       ellipsis: true,
-      render: (warehouse) => warehouse.product.code
+      render: (warehouse) => warehouse?.product?.code || '(Chưa có)'
     },
     {
       title: 'Sản phẩm',
       dataIndex: 'warehouseProduct',
       width: 150,
       ellipsis: true,
-      render: (warehouse) => warehouse.product.name
+      render: (warehouse) => warehouse?.product?.name || '(Chưa có)'
     },
     {
       title: 'Mã đơn',
@@ -113,13 +119,13 @@ const ShipPage = () => {
       dataIndex: 'warehouseProduct',
       width: 200,
       ellipsis: true,
-      render: (warehouse) => <ShowSkuDetail skuInfo={warehouse.skuDetails} width={250} />
+      render: (warehouse) => <ShowSkuDetail skuInfo={warehouse?.skuDetails ?? []} width={250} />
     },
     {
       title: 'Kho',
       dataIndex: 'warehouseProduct',
       width: 150,
-      render: (warehouse) => warehouse.stockName,
+      render: (warehouse) => warehouse?.stockName || '',
       ellipsis: true
     },
     {

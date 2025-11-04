@@ -25,23 +25,24 @@ import FormSelectInfiniteProduct from 'components/form/SelectInfinite/FormSelect
 import FormSelect from 'components/form/FormSelect';
 import FormInputNumber from 'components/form/FormInputNumber';
 import BtnSubmit from 'components/CustomButton/BtnSubmit';
-import _ from 'lodash';
-import { arrayEmpty, arrayNotEmpty } from 'utils/dataUtils';
+import _, { isEmpty } from 'lodash';
+import { arrayNotEmpty } from 'utils/dataUtils';
 import InStockTable from 'containers/WareHouse/InStockTable'
 import FormAutoComplete from 'components/form/FormAutoComplete';
 import OrderService from 'services/OrderService';
 import FormTextArea from 'components/form/FormTextArea';
 import { useEffectAsync } from 'hooks/MyHooks';
 import RequestUtils from 'utils/RequestUtils';
+import { ShowSkuDetail } from 'containers/Product/SkuView';
+import { createMSkuDetails } from 'utils/skuUtils';
 
-const SKU_DETAIL_ID_PREFIX = 'skuDetailId_';
 const AddSKU = ({ onSave, productId }) => {
 
   const [ form ] = Form.useForm();
   const [ inStocks, setInStocks ] = useState([]);
   const [ skus, setSkus ] = useState([]);
   const [ mProduct, setProduct ] = useState({});
-  const [ skuDetail, setSkuDetail ] = useState([]);
+  const [ sku, setSkuDetail ] = useState([]);
 
   useEffectAsync(async () => {
     if (!productId) {
@@ -55,24 +56,9 @@ const AddSKU = ({ onSave, productId }) => {
   }, [productId, form]);
 
   const onFinish = useCallback((values) => {
-
-    const genDetail = (datas) => datas.map((id) => ({
-      id,
-      text: skuDetail.find(detail => detail.id === id)?.value || ''
-    }));
-
-    const mSkuDetails = Object.entries(values).filter(([key]) => key.startsWith(SKU_DETAIL_ID_PREFIX))
-      .map(([key, values]) => {
-        const text = key.replace(SKU_DETAIL_ID_PREFIX, '');
-        return { text, values: genDetail(values) };
-      });
-
-    let mValues = Object.fromEntries(
-      Object.entries(values).filter(([key]) => !key.startsWith(SKU_DETAIL_ID_PREFIX))
-    );
-
-    onSave({ ...mValues, mProduct, mSkuDetails });
-  }, [onSave, skuDetail, mProduct]);
+    const mSkuDetails = createMSkuDetails(sku?.skuDetails ?? []);
+    onSave({ ...values, mProduct, mSkuDetails });
+  }, [ onSave, sku, mProduct ]);
 
   const onChangeSelectedProductItem = (value, item) => {
     let nProduct = _.cloneDeep(item);
@@ -84,61 +70,24 @@ const AddSKU = ({ onSave, productId }) => {
     }
     setSkus(nProduct?.skus || []);
     setProduct(nProduct);
-    form.setFieldsValue({ skuId: undefined });
+    form.resetFields(['skuId']);
   };
 
   const onChangeGetSelectedSku = (value, item) => {
-    setSkuDetail(item?.skuDetails || []);
-    const values = form.getFieldsValue();
-    for (const key in values) {
-      if (key.startsWith(SKU_DETAIL_ID_PREFIX)) {
-        form.setFieldsValue({ [key]: undefined });
-      }
-    }
+    setSkuDetail(item);
   };
 
   const memoSkuDetail = React.useMemo(() => {
-    const groupedData = skuDetail.reduce((oKey, item) => {
-      if (!oKey[item.name]) {
-        oKey[item.name] = [];
-      }
-      oKey[item.name].push(item);
-      return oKey;
-    }, {});
-    const numberOfKeys = Object.keys(groupedData).length;
-    return Object.keys(groupedData).map((groupName) => (
-      <Col key={groupName} span={numberOfKeys <= 1 ? 24 : 12}>
-        <FormSelect
-          mode='multiple'
-          name={`${SKU_DETAIL_ID_PREFIX}${groupName}`}
-          valueProp='id'
-          titleProp='value'
-          label={`Chọn ${groupName}`}
-          placeholder={`Chọn ${groupName}`}
-          resourceData={groupedData[groupName]}
-          required
-        />
-      </Col>
-    ))
-  }, [skuDetail]);
+    if(isEmpty(sku)) {
+      return <span />;
+    }
+    const mSkuDetails = createMSkuDetails(sku.skuDetails ?? []);
+    return <ShowSkuDetail skuInfo={mSkuDetails} />
+  }, [ sku ]);
 
   const onSelectedStock = useCallback((item) => {
-    const { skuDetails, ...params } = item;
-    form.setFieldsValue(params);
-
-    /* Lấy SKU trong sản phẩm để lọc detail */
-    const { skus } = mProduct;
-    setSkuDetail(skus?.find(i => i.id === item.skuId)?.skuDetails ?? []);
-
-    /* Fill vào form */
-    if (arrayEmpty(skuDetails)) {
-      return;
-    }
-    for (let sku of skuDetails) {
-      let key = `${SKU_DETAIL_ID_PREFIX}${sku.text}`
-      form.setFieldsValue({ [key]: sku?.values?.map(i => i.id) ?? [] });
-    }
-  }, [form, mProduct]);
+    console.log('Selected stock: ', item);
+  }, []);
 
   return (
     <Form form={form} layout="vertical" onFinish={onFinish}>
@@ -165,7 +114,9 @@ const AddSKU = ({ onSave, productId }) => {
             onChangeGetSelectedItem={onChangeGetSelectedSku}
           />
         </Col>
-        {memoSkuDetail}
+        <Col span={24} style={{marginBottom: 20}}>
+          {memoSkuDetail}
+        </Col>
         <Col span={24}>
           <InStockTable
             data={inStocks}

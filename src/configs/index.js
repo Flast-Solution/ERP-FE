@@ -29,18 +29,18 @@ export const GATE_EVN = {
 
 export const GATEWAY = GATE_EVN['Loc'];
 export const CHANGE_STORE = 'CHANGE_STORE';
-export const UPLOAD_PATH = GATEWAY + '/uploads'
+export const UPLOAD_PATH = GATEWAY + '/uploads';
 
 export const API = {
   SINGIN: '/auth/login'
-}
+};
 
 export const ACTIONS = {
   ADD_USER: 'add__user',
   REMOVE_USER: 'remove__user',
   TOOGLE_COLLAPSE: 'tg_cll',
   F5_LIST: 'f5_list'
-}
+};
 
 export const INAPP_NOTIFICATION_EMITTER = 'in_app_noti';
 export const EVENT_ACCEPT_IMAGE_TYPES = '.png, .jpeg, .jpg';

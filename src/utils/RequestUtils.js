@@ -83,4 +83,5 @@ class RequestUtils {
 	}
 }
 
+export const SUCCESS_CODE = 200;
 export default RequestUtils;

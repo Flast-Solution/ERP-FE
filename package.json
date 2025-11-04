@@ -43,7 +43,7 @@
   },
   "scripts": {
     "start": "craco start",
-    "build": "GENERATE_SOURCEMAP=false craco build"
+    "build": "cross-env GENERATE_SOURCEMAP=false craco build"
   },
   "resolutions": {
     "strip-ansi": "6.0.0"
@@ -65,5 +65,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0"
   }
 }
