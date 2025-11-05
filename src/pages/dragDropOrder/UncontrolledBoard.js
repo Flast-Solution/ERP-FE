@@ -24,7 +24,7 @@ import Board from "@asseinfo/react-kanban";
 import { Button, Input, message } from 'antd';
 import RequestUtils from 'utils/RequestUtils';
 import { useState, useEffect } from 'react';
-import { arrayEmpty, decodeProperty } from 'utils/dataUtils';
+import { arrayEmpty } from 'utils/dataUtils';
 import { ContainerStyles } from './style';
 import { useEffectAsync } from 'hooks/MyHooks';
 import KanbanCard from './KanbanCard';
@@ -42,7 +42,6 @@ const generateCart = (details, order, status) => {
     if (detailStatus !== status) {
       continue;
     }
-    decodeProperty(detail, ["skuInfo"]);
     let item = { id, title: code, ...detail, order }
     items.push(item);
   }

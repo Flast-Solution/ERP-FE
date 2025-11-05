@@ -39,7 +39,7 @@ import {
 
 const KanbanCard = ({
   code,
-  skuInfo,
+  skuDetails,
   productName,
   total,
   updatedAt,
@@ -57,7 +57,7 @@ const KanbanCard = ({
       </TitleWrapper>
       <Description ellipsis={false}>
         <p>{String(code).concat(" (").concat(productName).concat(")")} </p>
-        <ShowSkuDetail skuInfo={skuInfo} width={250} />
+        <ShowSkuDetail skuDetails={skuDetails} width={250} />
       </Description>
       <MetaInfo>
         <TagsContainer>

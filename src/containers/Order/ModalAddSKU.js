@@ -82,7 +82,7 @@ const AddSKU = ({ onSave, productId }) => {
       return <span />;
     }
     const mSkuDetails = createMSkuDetails(sku.skuDetails ?? []);
-    return <ShowSkuDetail skuInfo={mSkuDetails} />
+    return <ShowSkuDetail skuDetails={mSkuDetails} />
   }, [ sku ]);
 
   const onSelectedStock = useCallback((item) => {

@@ -38,10 +38,10 @@ import { SUCCESS_CODE } from 'configs';
 
 const GiaoHangForm = ({ title, data }) => {
 
-  const [form] = Form.useForm();
-  const [submitStock, setSubmitStock] = useState({});
-  const [details, setDetails] = useState([]);
-  const [ship, setShip] = useState({});
+  const [ form ] = Form.useForm();
+  const [ submitStock, setSubmitStock ] = useState({});
+  const [ details, setDetails ] = useState([]);
+  const [ ship, setShip ] = useState({});
 
   const onChangeGetOrderItem = (value, order) => {
     let { id, details, ...values } = order;
@@ -56,10 +56,18 @@ const GiaoHangForm = ({ title, data }) => {
     if (arrayEmpty(details)) {
       return;
     }
+    let mDetails = [];
     for (let detail of details) {
-      detail.mSkuDetails = JSON.parse(detail.skuInfo);
+      if(detail.skuId !== data?.skuId) {
+        continue;  
+      }
+      mDetails.push(detail);
     }
-    setDetails(details || []);
+    if (arrayEmpty(mDetails)) {
+      message.error("Đơn hàng không có sản phẩm phù hợp để giao !");
+      return;
+    }
+    setDetails(mDetails);
   }
 
   const onFinish = async (values) => {
@@ -219,8 +227,8 @@ const ShowSkuInStockByDetailCode = ({
   onChoiseStock = (value) => value
 }) => {
 
-  const [skusInStock, setSkuInStock] = useState([]);
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [ skusInStock, setSkuInStock ] = useState([]);
+  const [ selectedRowKeys, setSelectedRowKeys ] = useState([]);
 
   useEffectAsync(async () => {
     onChoiseStock({});
@@ -228,12 +236,11 @@ const ShowSkuInStockByDetailCode = ({
       return;
     }
     const detail = details.find(i => i.code === detailCode);
-    if (!detail?.skuInfo) {
+    if (!detail?.skuDetails) {
       setSkuInStock([]);
       return;
     }
-    const skuHash = await WarehouseService.hashSku(detail.skuInfo);
-    const { embedded } = await WarehouseService.fetch({ skuHash });
+    const { embedded } = await WarehouseService.fetch({ skuId: detail.skuId });
     setSkuInStock(embedded);
   }, [details, detailCode]);
 

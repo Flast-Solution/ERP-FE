@@ -386,7 +386,7 @@ const BanHangPage = ({
         return <Text style={{ width: 120 }} ellipsis> {text || '(Chưa nhập)'} </Text>;
       }
       if (column.dataIndex === 'mSkuDetails') {
-        return <ShowSkuDetail skuInfo={record.mSkuDetails} width={260} />
+        return <ShowSkuDetail skuDetails={record.mSkuDetails} width={260} />
       }
       const isFormatted = ['price', 'discountAmount', 'totalPrice'].includes(column.dataIndex);
       return isFormatted ? formatMoney(text) : text;

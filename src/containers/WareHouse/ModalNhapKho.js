@@ -85,7 +85,7 @@ const ModalNhapKho = ({
       return <span />;
     }
     const mSkuDetails = createMSkuDetails(sku.skuDetails ?? []);
-    return <ShowSkuDetail skuInfo={mSkuDetails} />
+    return <ShowSkuDetail skuDetails={mSkuDetails} />
   }, [sku]);
 
   const updateRecord = useCallback((values) => {

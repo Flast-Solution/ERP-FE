@@ -95,7 +95,7 @@ const OrderTextTableOnly = ({ details }) => {
 			render: (_, record) => {
 				if (record.isNoiDungMoRong) {
 					return {
-						children: <ShowSkuDetail skuInfo={record.mSkuDetails} />,
+						children: <ShowSkuDetail skuDetails={record.mSkuDetails} />,
 						...COL_SPAN_4
 					};
 				}

@@ -58,7 +58,7 @@ const InStockTable = ({ data, onChangeSelected }) => {
       dataIndex: "skuDetails",
       width: 350,
       ellipsis: true,
-      render: (skuDetails) => <ShowSkuDetail skuInfo={skuDetails} />
+      render: (skuDetails) => <ShowSkuDetail skuDetails={skuDetails} />
     },
     {
       title: "Chọn",

@@ -54,12 +54,12 @@ const SkuView = ({ skus }) => {
   )
 }
 
-export const ShowSkuDetail = ({ skuInfo, width = 0 }) => {
-  if (!arrayNotEmpty(skuInfo)) {
+export const ShowSkuDetail = ({ skuDetails, width = 0 }) => {
+  if (!arrayNotEmpty(skuDetails)) {
     return <span />;
   }
   const maxLines = 2;
-  const itemsToShow = skuInfo.slice(0, maxLines);
+  const itemsToShow = skuDetails.slice(0, maxLines);
   return <>
     {itemsToShow.map((item, key) => (
       <SKUContent key={key}>
@@ -74,7 +74,7 @@ export const ShowSkuDetail = ({ skuInfo, width = 0 }) => {
         </Typography.Paragraph>
       </SKUContent>
     ))}
-    {skuInfo.length > maxLines && <div>...</div>}
+    {skuDetails.length > maxLines && <div>...</div>}
   </>
 }
 

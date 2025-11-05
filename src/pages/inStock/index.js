@@ -94,7 +94,7 @@ const ListInStock = () => {
       dataIndex: 'skuDetails',
       width: 250,
       ellipsis: true,
-      render: (skuDetails) => <ShowSkuDetail skuInfo={skuDetails} width={250} />
+      render: (skuDetails) => <ShowSkuDetail skuDetails={skuDetails} width={250} />
     },
     {
       title: 'Kho',

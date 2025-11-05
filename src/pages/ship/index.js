@@ -119,7 +119,7 @@ const ShipPage = () => {
       dataIndex: 'warehouseProduct',
       width: 200,
       ellipsis: true,
-      render: (warehouse) => <ShowSkuDetail skuInfo={warehouse?.skuDetails ?? []} width={250} />
+      render: (warehouse) => <ShowSkuDetail skuDetails={warehouse?.skuDetails ?? []} width={250} />
     },
     {
       title: 'Kho',
