@@ -34,10 +34,12 @@ import UserGroupRouter from './UserGroupRouter.js';
 import Cohoi7DayRouter from './Cohoi7DayRouter.js';
 import ActionChamSocDonHangRouter from './ChamSocDonHangRouter.js';
 import CommonRoute from './CommonRoute.js';
+import WebRouter from './WebRouter.js';
 
 const notFoundHash = { Component: () => <div /> };
 const modalRoutes = [
   ...CommonRoute,
+  ...WebRouter,
   ...ProductRoute,
   ...OrderRoute,
   ...LeadRoute,

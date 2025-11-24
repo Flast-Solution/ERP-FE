@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  craco.config.js                                                        */
+/*  Filter.js                                                             */
 /**************************************************************************/
 /*                       Tệp này là một phần của:                         */
 /*                             Open CDP                                   */
@@ -18,26 +18,48 @@
 /* Đội ngũ phát triển mong rằng phần mềm được sử dụng đúng mục đích và    */
 /* có trách nghiệm                                                        */
 /**************************************************************************/
-const path = require('path');
-const CracoLessPlugin = require("craco-less");
 
-module.exports = {
-  webpack: {
-    alias: {
-      '@': path.resolve(__dirname, 'src')
-    }
-  },
-  plugins: [
-    {
-      plugin: CracoLessPlugin,
-      options: {
-        lessLoaderOptions: {
-          lessOptions: { javascriptEnabled: true }
-        }
-      }
-    }
-  ],
-  devServer: {
-    port: 3200
-  }
+import { Row, Col } from 'antd';
+import FormInput from 'components/form/FormInput';
+import FormSelect from 'components/form/FormSelect';
+import FormDatePicker from 'components/form/FormDatePicker';
+
+const ProductFilter = () => {
+  return (
+    <>
+      <Row gutter={16}>
+        <Col xl={6} lg={6} md={6} xs={24}>
+          <FormInput
+            name={'name'}
+            placeholder="Tên danh mục sản phẩm"
+          />
+        </Col>
+        <Col xl={6} lg={6} md={6} xs={24}>
+          <FormSelect
+            label="Trạng thái"
+            valueProp="id"
+            titleProp='name'
+            resourceData={[]}
+            placeholder='Lọc theo trạng thái'
+          />
+        </Col>
+        <Col xl={6} lg={6} md={6} xs={24}>
+          <FormDatePicker
+            format='YYYY-MM-DD'
+            name='from'
+            placeholder="Start date filter"
+          />
+        </Col>
+        <Col xl={6} lg={6} md={6} xs={24}>
+          <FormDatePicker
+            format='YYYY-MM-DD'
+            name='to'
+            placeholder="End date filter"
+          />
+        </Col>
+      </Row>
+    </>
+  )
 };
+
+export default ProductFilter;

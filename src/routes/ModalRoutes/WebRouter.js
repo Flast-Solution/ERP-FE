@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  craco.config.js                                                        */
+/*  WebRouter.js                                                          */
 /**************************************************************************/
 /*                       Tệp này là một phần của:                         */
 /*                             Open CDP                                   */
@@ -18,26 +18,20 @@
 /* Đội ngũ phát triển mong rằng phần mềm được sử dụng đúng mục đích và    */
 /* có trách nghiệm                                                        */
 /**************************************************************************/
-const path = require('path');
-const CracoLessPlugin = require("craco-less");
 
-module.exports = {
-  webpack: {
-    alias: {
-      '@': path.resolve(__dirname, 'src')
-    }
+import React from 'react';
+
+const WebRouter = [
+  {
+    path: 'cate.sanpham',
+    Component: React.lazy(() => import('containers/Category/SanPham')),
+    modalOptions: { title: '', width: 750 }
   },
-  plugins: [
-    {
-      plugin: CracoLessPlugin,
-      options: {
-        lessLoaderOptions: {
-          lessOptions: { javascriptEnabled: true }
-        }
-      }
-    }
-  ],
-  devServer: {
-    port: 3200
+  {
+    path: 'cate.tintuc',
+    Component: React.lazy(() => import('containers/Category/SanPham')),
+    modalOptions: { title: '', width: 750 }
   }
-};
+];
+
+export default WebRouter;

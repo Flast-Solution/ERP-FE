@@ -47,7 +47,8 @@ import {
   PaperClipOutlined,
   GiftOutlined,
   BuildOutlined,
-  DeliveredProcedureOutlined
+  DeliveredProcedureOutlined,
+  FileWordOutlined
 } from '@ant-design/icons';
 
 import useCollapseSidebar from 'hooks/useCollapseSidebar';
@@ -102,11 +103,17 @@ function SideBar() {
       getItem(<Link to="/material">Nguyên V.Liệu</Link>, 'material', <DeliveredProcedureOutlined />),
       getItem(<Link to="/material/bom">Lệnh S.Xuất</Link>, 'material.bom', <FolderOpenOutlined />)
     ]),
+    getItem('Web', 'web', <FileWordOutlined />, [
+      getItem(<Link to="/category/san-pham">D.Mục sản phẩm</Link>, 'cate-san-pham', <span> - </span>),
+      getItem(<Link to="/category/tin-tuc">D.Mục tin tức</Link>, 'cate-tin-tuc', <span> - </span>),
+      getItem(<Link to="/trang-tin-tuc">Trang tin tức</Link>, 'trang-tin-tuc', <span> - </span>),
+      getItem(<Link to="/faq">Faq</Link>, 'faq', <span> - </span>)
+    ]),
     getItem('Tài khoản', 'tai_khoan', <UserOutlined />, [
       getItem(<Link to="/user/group">Team</Link>, 'user_group', <TeamOutlined />),
       getItem(<Link to="/user/list-system">Tài khoản hệ thống</Link>, 'user_system', <SettingOutlined />)
     ])
-  ]
+  ];
 
   return (
     <SideBarStyles>
@@ -128,7 +135,7 @@ function SideBar() {
         />
       </Sider>
     </SideBarStyles>
-  );
-}
+  )
+};
 
 export default SideBar;

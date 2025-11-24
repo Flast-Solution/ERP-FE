@@ -59,6 +59,9 @@ import { NewfeedConfig } from './NewFeedConfig';
 import { DragDropConfig } from './DragDropOrderConfig';
 import { AiAgentConfig } from './AiAgentConfig';
 
+/* Web */
+import { WebConfig } from './WebConfig';
+
 const routeConfigs = [
     LoginConfig,
     KpiConfig,
@@ -80,7 +83,8 @@ const routeConfigs = [
     ShipConfig,
     OrderConfig,
     AiAgentConfig,
-    DragDropConfig
+    DragDropConfig,
+    WebConfig
 ];
 
 const routes = [

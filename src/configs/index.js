@@ -23,8 +23,8 @@ export const SUCCESS_CODE = 200;
 export const GATE_EVN = {
   Loc: 'http://127.0.0.1:9765',
   Pro: 'https://open.api.flast.vn',
-  BaoGia: 'https://flash-solution-eight.vercel.app/bao-gia-don-hang-i',
-  AiA2A: 'https://service.aicuatui.vn'
+  Web: 'https://flast-vn',
+  AiA: 'https://service.aicuatui.vn'
 };
 
 export const GATEWAY = GATE_EVN['Loc'];

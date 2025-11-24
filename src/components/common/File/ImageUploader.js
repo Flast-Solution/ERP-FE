@@ -20,8 +20,9 @@ import CustomImage from 'components/common/CustomImage';
 
 const ImageUploader = ({
   apiUploadMultiPart,
-  apiUploadUrlFile,
+  apiUploadUrlFile = '',
   title = 'Upload ảnh sản phẩm',
+  showImgSlide = true,
   onBeforeSubmitMultiPart = (values) => values,
   onBeforeSubmitUrl = (values) => values,
   onClickAddImageToContent = (url) => url,
@@ -67,6 +68,11 @@ const ImageUploader = ({
       message.warning('Vui lòng nhập URL hình ảnh!');
       return;
     }
+    if(apiUploadUrlFile) {
+      message.warning('Vui lòng cấu hình API cập nhật Url file !');
+      return;
+    }
+
     const newImage = {
       url: urlInputValue.trim(),
       name: urlInputValue.trim().split('/').pop(),
@@ -153,7 +159,7 @@ const ImageUploader = ({
   };
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial' }}>
+    <div style={{ padding: '20px 0px', fontFamily: 'Arial' }}>
       <h3>{title}</h3>
 
       {/* Thêm ảnh và URL */}
@@ -244,12 +250,14 @@ const ImageUploader = ({
                   >
                     Chọn làm ảnh đại diện
                   </Checkbox>
-                  <Checkbox
-                    checked={item.isSlideshow}
-                    onChange={(e) => handleToggleSlide(item.id, e.target.checked)}
-                  >
-                    Chọn làm ảnh slide
-                  </Checkbox>
+                  { showImgSlide && 
+                    <Checkbox
+                      checked={item.isSlideshow}
+                      onChange={(e) => handleToggleSlide(item.id, e.target.checked)}
+                    >
+                      Chọn làm ảnh slide
+                    </Checkbox>
+                  }
                 </div>
               </Col>
               <Col span={8} style={{ textAlign: 'right' }}>
