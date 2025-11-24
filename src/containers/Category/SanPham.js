@@ -29,9 +29,10 @@ import FormTextArea from '@/components/form/FormTextArea';
 import ImageUploader from '@/components/common/File/ImageUploader';
 import FormJoditEditor from '@/components/form/FormJoditEditor';
 import logger from '@/logger';
-import RequestUtils from '@/utils/RequestUtils';
+import RequestUtils, { SUCCESS_CODE } from '@/utils/RequestUtils';
 import { useEffectAsync } from '@/hooks/MyHooks';
-import MediaService from 'services/MediaService';
+import MediaService from '@/services/MediaService';
+import { f5List } from '@/utils/dataUtils';
 
 const LOGGER_TAG = '[container/category/sanpham.js]';
 const FormCateSanPHam = ({ closeModal, data }) => {
@@ -40,7 +41,7 @@ const FormCateSanPHam = ({ closeModal, data }) => {
   const [ record, setRecord ] = useState({});
 
   useEffectAsync(async () => {
-    const images = await MediaService.fetchById(data.id, "category", data.image || '');
+    const images = await MediaService.fetchById(data.id, "category.product", data.image || '');
     logger.info(LOGGER_TAG, 'IMAGES: ', images);
     setRecord({ 
       ...data,
@@ -51,8 +52,12 @@ const FormCateSanPHam = ({ closeModal, data }) => {
 
   const onSubmit = useCallback(async (values) => {
     const { images, ...body } = values;
-    const { message: MEG } = await RequestUtils.Post("/category/updated", body);
+    const { data, message: MEG, errorCode } = await RequestUtils.Post("/category/product/updated", body);
     message.info(MEG);
+    if(SUCCESS_CODE === errorCode) {
+      setRecord(pre => ({...pre, ...data}));
+      f5List("category/product/fetch");
+    }
   }, []);
 
   const insertImageToEditor = (url) => {
@@ -62,7 +67,7 @@ const FormCateSanPHam = ({ closeModal, data }) => {
   };
 
   const onUpdateFeaturedImage = useCallback(async (imageId) => {
-    RequestUtils.Post("/category/image-featured/" + imageId);
+    RequestUtils.Post("/category/product/image-featured/" + imageId);
   }, []);
 
   return (
@@ -114,15 +119,15 @@ const FormCateSanPHam = ({ closeModal, data }) => {
           <ImageUploader
             onBeforeSubmitMultiPart={(formData) => {
               if(data.id) {
-                formData.append('objectType', "category");
                 formData.append('objectId', data.id);
-                formData.append('sectionId', record.sectionId);
               }
+              formData.append('sectionId', record.sectionId);
+              formData.append('objectType', "category.product");
               return formData;
             }}
             title='Tải lên ảnh'
             showImgSlide={false}
-            apiUploadMultiPart="/category/upload-multi-part"
+            apiUploadMultiPart="/category/product/upload-multi-part"
             onClickAddImageToContent={insertImageToEditor}
             onToggleFeatured={onUpdateFeaturedImage}
           />

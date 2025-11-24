@@ -20,17 +20,18 @@
 /**************************************************************************/
 
 import React, { useCallback, useState } from 'react';
-import RestList from "components/RestLayout/RestList";
-import useGetList from "hooks/useGetList";
-import { Helmet } from "react-helmet";
-import CustomBreadcrumb from 'components/BreadcrumbCustom';
-import Filter from './Filter';
-import { Button } from 'antd';
-import { InAppEvent } from "utils/FuseUtils";
-import { GATEWAY, HASH_MODAL } from 'configs';
-import { dateFormatOnSubmit, formatTime } from 'utils/dataUtils';
+import { Button, message, Space } from 'antd';
 import { cloneDeep } from 'lodash';
-import CustomImage from 'components/common/CustomImage';
+import RestList from "@/components/RestLayout/RestList";
+import useGetList from "@/hooks/useGetList";
+import { Helmet } from "react-helmet";
+import CustomBreadcrumb from '@/components/BreadcrumbCustom';
+import Filter from '@/pages/category/Filter';
+import { InAppEvent } from "@/utils/FuseUtils";
+import { GATEWAY, HASH_MODAL } from '@/configs';
+import { dateFormatOnSubmit, formatTime } from '@/utils/dataUtils';
+import CustomImage from '@/components/common/CustomImage';
+import RequestUtils from '@/utils/RequestUtils';
 
 const CateSanPham = () => {
 
@@ -46,6 +47,11 @@ const CateSanPham = () => {
     title: 'Tạo mới danh mục sản phẩm',
     data: {}
   });
+
+  const onDeleteCate = async ({ id }) => {
+    const { message: MSG } = await RequestUtils.Post("/category/product/delete", {}, {id});
+    message.info(MSG);
+  }
 
   const [ title ] = useState("Danh mục sản phẩm");
   const CUSTOM_ACTION = [
@@ -106,7 +112,10 @@ const CateSanPham = () => {
       width: 140,
       fixed: 'right',
       render: (record) => (
-        <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size='small'>Detail</Button>
+        <Space gap={8}>
+          <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size='small'>Detail</Button>
+          <Button onClick={() => onDeleteCate(record)} size='small'>Xóa</Button>
+        </Space>
       )
     }
   ];
@@ -130,7 +139,7 @@ const CateSanPham = () => {
         filter={<Filter />}
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
-        apiPath={'category/fetch'}
+        apiPath={'category/product/fetch'}
         customClickCreate={onCreateCateSanPHam}
         columns={CUSTOM_ACTION}
       />

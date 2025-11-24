@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import jwtService from 'utils/jwtService';
+import jwtService from '@/utils/jwtService';
 import {
   Upload,
   Button,
@@ -12,11 +12,11 @@ import {
   Col,
 } from 'antd';
 import { DeleteOutlined, UploadOutlined, PlusOutlined } from '@ant-design/icons';
-import { isPositiveInteger } from 'utils/tools';
-import RequestUtils from 'utils/RequestUtils';
-import { GATEWAY, SUCCESS_CODE } from 'configs';
-import { FormContextCustom } from 'components/context/FormContextCustom';
-import CustomImage from 'components/common/CustomImage';
+import { isPositiveInteger } from '@/utils/tools';
+import RequestUtils from '@/utils/RequestUtils';
+import { GATEWAY, SUCCESS_CODE } from '@/configs';
+import { FormContextCustom } from '@/components/context/FormContextCustom';
+import CustomImage from '@/components/common/CustomImage';
 
 const ImageUploader = ({
   apiUploadMultiPart,
@@ -81,7 +81,10 @@ const ImageUploader = ({
       fromUpload: true
     };
 
-    const { errorCode, data } = await RequestUtils.Post(apiUploadUrlFile, { method: 'POST', body: onBeforeSubmitUrl(newImage)});
+    const { errorCode, data } = await RequestUtils.Post(apiUploadUrlFile, { 
+      method: 'POST', 
+      body: onBeforeSubmitUrl(newImage)
+    });
     if (errorCode !== 200) {
       message.error('Update file url thất bại');
       return;

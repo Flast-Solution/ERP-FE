@@ -1,11 +1,12 @@
-import { GATEWAY } from 'configs';
-import RequestUtils, { SUCCESS_CODE } from 'utils/RequestUtils';
+import { GATEWAY } from '@/configs';
+import RequestUtils, { SUCCESS_CODE } from '@/utils/RequestUtils';
 
 const MediaService = {
   fetchById: async (objectId, objectType, featureImage) => {
     if(!objectId) {
       return [];
     }
+    
     const { data, errorCode } = await RequestUtils.Get("/media/find", { 
       objectId,
       objectType
@@ -13,6 +14,7 @@ const MediaService = {
     if(errorCode !== SUCCESS_CODE) {
       return [];
     }
+
     let images = [];
     for(let image of data) {
       const { id, fileName } = image;

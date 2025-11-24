@@ -28,8 +28,8 @@ const WebRouter = [
     modalOptions: { title: '', width: 750 }
   },
   {
-    path: 'cate.tintuc',
-    Component: React.lazy(() => import('containers/Category/SanPham')),
+    path: 'cate.page',
+    Component: React.lazy(() => import('containers/Category/Page')),
     modalOptions: { title: '', width: 750 }
   }
 ];
