@@ -24,12 +24,17 @@ import React from 'react';
 const WebRouter = [
   {
     path: 'cate.sanpham',
-    Component: React.lazy(() => import('containers/Category/SanPham')),
+    Component: React.lazy(() => import('@/containers/Category/SanPham')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'cate.page',
-    Component: React.lazy(() => import('containers/Category/Page')),
+    Component: React.lazy(() => import('@/containers/Category/Page')),
+    modalOptions: { title: '', width: 750 }
+  },
+  {
+    path: 'faq.add',
+    Component: React.lazy(() => import('@/containers/Faq')),
     modalOptions: { title: '', width: 750 }
   }
 ];

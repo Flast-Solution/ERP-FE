@@ -18,12 +18,11 @@
 /* Đội ngũ phát triển mong rằng phần mềm được sử dụng đúng mục đích và    */
 /* có trách nghiệm                                                        */
 /**************************************************************************/
-
-import { Col, Row } from 'antd'
-import FormDatePicker from 'components/form/FormDatePicker'
-import FormInput from 'components/form/FormInput'
-import FormSelectInfiniteBusinessUser from 'components/form/SelectInfinite/FormSelectInfiniteBusinessUser'
 import React from 'react'
+import { Col, Row } from 'antd'
+import FormDatePicker from '@/components/form/FormDatePicker'
+import FormInput from '@/components/form/FormInput'
+import FormSelectInfiniteBusinessUser from '@/components/form/SelectInfinite/FormSelectInfiniteBusinessUser'
 
 const Filter = () => {
   return (
@@ -61,6 +60,6 @@ const Filter = () => {
       </Row>
     </div>
   )
-}
+};
 
-export default Filter
+export default Filter;

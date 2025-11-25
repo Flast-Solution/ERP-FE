@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  useGetList.js                                                 				*/
+/*  Filter.js                                                           	*/
 /**************************************************************************/
 /*                       Tệp này là một phần của:                         */
 /*                             Open CDP                                   */
@@ -18,56 +18,47 @@
 /* Đội ngũ phát triển mong rằng phần mềm được sử dụng đúng mục đích và    */
 /* có trách nghiệm                                                        */
 /**************************************************************************/
+import React from 'react'
+import { Col, Row } from 'antd'
+import FormDatePicker from '@/components/form/FormDatePicker'
+import FormInput from '@/components/form/FormInput'
+import FormSelectInfiniteBusinessUser from '@/components/form/SelectInfinite/FormSelectInfiniteBusinessUser'
 
-import { useCallback, useEffect, useState, useContext } from "react";
-import RequestUtils from "@/utils/RequestUtils";
-import MyContext from '@/DataContext';
-import { useUpdateEffect } from "@/hooks/MyHooks";
-import logger from "@/logger";
-
-const LOGGER_TAG = '[hooks.useGetList]';
-function useGetList({
-	queryParams: filter,
-	onData
-}) {
-
-	const { f5List } = useContext(MyContext)
-	const [ loading, setLoading ] = useState(true);
-	const [ data, setData ] = useState({ embedded: [], page: {} });
-
-	const fetchResource = useCallback((values) => {
-		
-		const { apiPath, ...params } = values;
-		setLoading(true);
-
-		RequestUtils.Get('/' + apiPath, params).then(async ({ data, errorCode, message }) => {
-			if (errorCode !== 200) {
-				logger.error(LOGGER_TAG, message);
-				return;
-			}
-			Promise.resolve(onData(data)).then(setData);
-			setLoading(false);
-		}).catch(e => {
-			logger.error(LOGGER_TAG, e);
-			setLoading(false);
-		});
-	}, [ onData ]);
-
-	useEffect(() => {
-		fetchResource(filter);
-		/* eslint-disable-next-line */
-	}, [filter]);
-
-	useUpdateEffect(() => {
-		if (f5List?.apiPath === filter.apiPath) {
-			fetchResource(filter);
-		}
-	}, [f5List, filter]);
-
-	return {
-		data,
-		loading
-	}
+const Filter = () => {
+  return (
+    <div>
+      <Row gutter={16}>
+        <Col xl={6} lg={6} md={6} xs={24}>
+          <FormInput
+            name={'name'}
+            placeholder="Tên faq"
+          />
+        </Col>
+        <Col xl={6} lg={6} md={6} xs={24}>
+          <FormSelectInfiniteBusinessUser
+            name="ssoId"
+            valueProp="id"
+            titleProp='fullName'
+            placeholder='Nhân viên'
+          />
+        </Col>
+        <Col xl={6} lg={6} md={6} xs={24}>
+          <FormDatePicker
+            format='YYYY-MM-DD'
+            name='from'
+            placeholder="Ngày bắt đầu"
+          />
+        </Col>
+        <Col xl={6} lg={6} md={6} xs={24}>
+          <FormDatePicker
+            format='YYYY-MM-DD'
+            name='to'
+            placeholder="Ngày kết thúc"
+          />
+        </Col>
+      </Row>
+    </div>
+  )
 };
 
-export default useGetList;
+export default Filter
