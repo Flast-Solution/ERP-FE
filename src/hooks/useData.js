@@ -104,7 +104,10 @@ export const useGetAllStockQuery = ({ queryParams, onCompleted }) =>
 	useData({ queryParams, onCompleted, api: 'warehouse/fetch-stock' });
 
 export const useGetAllCategoryQuery = ({ queryParams, onCompleted }) =>
-	useData({ queryParams, onCompleted, api: 'category/fetch' });
+	useData({ queryParams, onCompleted, api: 'category/product/fetch' });
+
+export const useGetCategoryPost = ({ queryParams, onCompleted }) =>
+	useData({ queryParams, onCompleted, api: 'category/page/fetch' });
 
 export const useGetShipStatusQuery = ({ queryParams, onCompleted }) =>
 	useData({ queryParams, onCompleted, api: 'shipping/fetch-status' });

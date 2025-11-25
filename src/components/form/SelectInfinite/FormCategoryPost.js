@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  useNavigateSearch.js                                                  */
+/*  FormInfiniteCategory.js                                               */
 /**************************************************************************/
 /*                       Tệp này là một phần của:                         */
 /*                             Open CDP                                   */
@@ -19,15 +19,25 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { useNavigate } from 'react-router';
-import { convertObjToSearchStr } from '@/utils/tools';
+import { useGetAllCategoryQuery } from 'hooks/useData';
+import FormSelectInfinite from './FormSelectInfinite';
 
-const getPath = (name) => name.startsWith('/') ? name : '/'.concat(name);
-
-export const useNavigateSearch = () => {
-  const navigate = useNavigate();
-  return (pathname, params) => navigate({
-    pathname: getPath(pathname),
-    search: `?${convertObjToSearchStr(params)}`
-  });
+const FormCategoryPost = ({
+  name="pageCategoryId",  
+  ...props
+}) => {
+  return (
+    <FormSelectInfinite
+      useGetAllQuery={useGetAllCategoryQuery}
+      name={name}
+      valueProp="id"
+      titleProp="name"
+      searchKey="name"
+      filterField="id"
+      initialFilter={{ page: 1 }}
+      {...props}
+    />
+  )
 };
+
+export default FormCategoryPost;

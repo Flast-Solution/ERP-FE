@@ -23,6 +23,7 @@ const ImageUploader = ({
   apiUploadUrlFile = '',
   title = 'Upload ảnh sản phẩm',
   showImgSlide = true,
+  imageSize = 80,
   onBeforeSubmitMultiPart = (values) => values,
   onBeforeSubmitUrl = (values) => values,
   onClickAddImageToContent = (url) => url,
@@ -229,8 +230,8 @@ const ImageUploader = ({
                   preview={false}
                   src={item.url}
                   alt={item.name}
-                  width={80}
-                  height={80}
+                  width={imageSize}
+                  height={imageSize}
                   style={{ objectFit: 'cover', borderRadius: '4px' }}
                 />
               </Col>

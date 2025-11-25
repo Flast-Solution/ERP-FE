@@ -106,7 +106,7 @@ function SideBar() {
     getItem('Web', 'web', <FileWordOutlined />, [
       getItem(<Link to="/category/san-pham">D.Mục sản phẩm</Link>, 'cate-san-pham', <span> - </span>),
       getItem(<Link to="/category/tin-tuc">D.Mục tin tức</Link>, 'cate-tin-tuc', <span> - </span>),
-      getItem(<Link to="/trang-tin-tuc">Trang tin tức</Link>, 'trang-tin-tuc', <span> - </span>),
+      getItem(<Link to="/post">Trang tin tức</Link>, 'post', <span> - </span>),
       getItem(<Link to="/faq">Faq</Link>, 'faq', <span> - </span>)
     ]),
     getItem('Tài khoản', 'tai_khoan', <UserOutlined />, [

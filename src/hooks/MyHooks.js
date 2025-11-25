@@ -26,7 +26,7 @@ export const useMount = (callback) => {
     callback();
     /* eslint-disable-next-line */
   }, []);
-}
+};
 
 /* useUnmount(() => console.log("useUnmount")) */
 export const useUnmount = (callback) => {
@@ -37,7 +37,7 @@ export const useUnmount = (callback) => {
       callbackRef.current()
     }
   }, []);
-}
+};
 
 /* const [count, setCount] = useSetState(initState) 
 *  setCount({ name: 'medium' })
@@ -49,7 +49,7 @@ export const useSetState = (initState) => {
     return newValue ? { ...prevValue, ...newValue } : prevValue
   })
   return [state, setMergeState]
-}
+};
 
 /*
 const [ count, setCount ] = React.useState(0)
@@ -75,7 +75,7 @@ export const useUpdateEffect = function (effectCallback, deps = []) {
     }
     /* eslint-disable-next-line */
   }, deps);
-}
+};
 
 /*
 useEffectAsync(async () => {
@@ -83,14 +83,19 @@ useEffectAsync(async () => {
   setBooks(books);
 });
 */
-export function useEffectAsync(effect, inputs = []) {
+export function useEffectAsync(effect, inputs = [], callback) {
   useEffect(() => {
     let isMounted = true;
     const run = async () => {
       await effect(isMounted);
     };
     run();
-    return () => { isMounted = false; };
+    return () => {
+      if(typeof callback === 'function') {
+        callback();
+      }
+      isMounted = false; 
+    };
     /* eslint-disable-next-line */
   }, inputs);
-}
+};
