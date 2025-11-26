@@ -121,4 +121,7 @@ export const useGetServiceQuery = ({ queryParams, onCompleted }) =>
 export const useGetMaterialQuery = ({ queryParams, onCompleted }) =>
 	useData({ queryParams, onCompleted, api: 'material/fetch' });
 
+export const useGetAllFaq = ({ queryParams, onCompleted }) =>
+	useData({ queryParams, onCompleted, api: 'faq/fetch' });
+
 export default useData;

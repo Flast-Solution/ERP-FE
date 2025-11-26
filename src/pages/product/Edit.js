@@ -15,6 +15,7 @@ import CustomButton from '@/components/CustomButton';
 import { useCallback } from 'react';
 import FormInfiniteCategory from '@/components/form/SelectInfinite/FormInfiniteCategory';
 import ImageUploader from '@/components/common/File/ImageUploader';
+import InfiniteFaq from '@/components/form/SelectInfinite/InfiniteFaq';
 
 const ProductEdit = () => {
 
@@ -80,24 +81,12 @@ const ProductEdit = () => {
             <FormHidden name={'content'} />
           </Col>
           <Col md={12} xs={24}>
-            <Row gutter={16}>
-              <Col md={12} xs={24}>
-                <FormInput
-                  required
-                  label="Tiêu đề"
-                  name="title"
-                  placeholder={"Nhập tiêu đề"}
-                />
-              </Col>
-              <Col md={12} xs={24}>
-                <FormInfiniteCategory 
-                  mode="multiple"
-                  label="Danh mục"
-                  name='listCategories'
-                  placeholder={"Chọn nhiều danh mục"}
-                />
-              </Col>
-            </Row>
+            <FormInput
+              required
+              label="Tiêu đề"
+              name="title"
+              placeholder={"Nhập tiêu đề"}
+            />
             <FormInput
               required
               label="Url tùy chỉnh"
@@ -122,6 +111,19 @@ const ProductEdit = () => {
             />
           </Col>
           <Col md={12} xs={24}>
+            <FormInfiniteCategory 
+              required
+              mode="multiple"
+              label="Danh mục"
+              name='listCategories'
+              placeholder={"Chọn nhiều danh mục"}
+            />
+            <InfiniteFaq 
+              mode="multiple"
+              label="FAQ"
+              name='listFaqs'
+              placeholder={"Chọn nhiều faq"}
+            />
             <ImageUploader
               onBeforeSubmitMultiPart={(formData) => {
                 formData.append('productId', id);
