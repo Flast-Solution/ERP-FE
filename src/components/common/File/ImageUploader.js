@@ -21,6 +21,7 @@ import CustomImage from '@/components/common/CustomImage';
 const ImageUploader = ({
   apiUploadMultiPart,
   apiUploadUrlFile = '',
+  apiRemoveFile = '',
   title = 'Upload ảnh sản phẩm',
   showImgSlide = true,
   imageSize = 80,
@@ -96,6 +97,11 @@ const ImageUploader = ({
   };
 
   const handleRemove = (id) => {
+    if(!apiRemoveFile) {
+      message.error('Chưa cấu hình enpoint xóa file !');
+      return;
+    }
+    RequestUtils.Post(`${apiRemoveFile}/${id}`, {});
     setImages(images.filter((img) => img.id !== id));
   };
 

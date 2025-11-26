@@ -130,6 +130,7 @@ const ProductEdit = () => {
                 return formData;
               }}
               title='Tải lên ảnh sản phẩm'
+              apiRemoveFile="/product/remove-file"
               apiUploadMultiPart="/product/upload-multi-part"
               apiUploadUrlFile="/product/upload-url"
               onClickAddImageToContent={insertImageToEditor}
