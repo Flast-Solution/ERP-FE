@@ -21,14 +21,12 @@
 
 import React, { useCallback, useState } from 'react';
 import { Button, message, Space } from 'antd';
-import { cloneDeep } from 'lodash';
 import RestList from "@/components/RestLayout/RestList";
 import useGetList from "@/hooks/useGetList";
 import { Helmet } from "react-helmet";
 import CustomBreadcrumb from '@/components/BreadcrumbCustom';
 import Filter from '@/pages/category/Filter';
-import { InAppEvent } from "@/utils/FuseUtils";
-import { GATEWAY, HASH_MODAL } from '@/configs';
+import { GATEWAY } from '@/configs';
 import { dateFormatOnSubmit, formatTime } from '@/utils/dataUtils';
 import CustomImage from '@/components/common/CustomImage';
 import RequestUtils from '@/utils/RequestUtils';
@@ -38,10 +36,7 @@ const Post = () => {
 
   const navigate = useNavigateSearch();
   const onEdit = (item) => {
-    let title = 'Sửa tin tức # ' + item.id;
-    let hash = '#draw/post.edit';
-    let data = cloneDeep(item);
-    InAppEvent.emit(HASH_MODAL, { hash, title, data });
+    navigate("/post/edit", { id: item.id });
   }
 
   const onDeleteCate = async ({ id }) => {
@@ -136,7 +131,7 @@ const Post = () => {
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
         apiPath={'page-content/fetch'}
-        customClickCreate={() => navigate("post/edit")}
+        customClickCreate={() => navigate("/post/edit")}
         columns={CUSTOM_ACTION}
       />
     </>
