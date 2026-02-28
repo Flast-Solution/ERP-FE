@@ -16,6 +16,7 @@ import { useCallback } from 'react';
 import FormInfiniteCategory from '@/components/form/SelectInfinite/FormInfiniteCategory';
 import ImageUploader from '@/components/common/File/ImageUploader';
 import InfiniteFaq from '@/components/form/SelectInfinite/InfiniteFaq';
+import FormInputNumber from 'components/form/FormInputNumber';
 
 const ProductEdit = () => {
 
@@ -111,6 +112,35 @@ const ProductEdit = () => {
             />
           </Col>
           <Col md={12} xs={24}>
+            <Row gutter={16}>
+              <Col md={8} xs={24}>
+                <FormInputNumber
+                  style={{ width: '100%' }}
+                  required
+                  label="Lượt xem"
+                  name={['social', 'view']}
+                  placeholder={"Điều chỉnh lượt xem"}
+                />
+              </Col>
+              <Col md={8} xs={24}>
+                <FormInputNumber
+                  style={{ width: '100%' }}
+                  required
+                  label="Lượt đánh giá"
+                  name={['social', 'rating']}
+                  placeholder={"Điều chỉnh đánh giá"}
+                />
+              </Col>
+              <Col md={8} xs={24}>
+                <FormInputNumber
+                  style={{ width: '100%' }}
+                  required
+                  label="Favor"
+                  name={['social', 'favor']}
+                  placeholder={"Điều chỉnh favor"}
+                />
+              </Col>
+            </Row>
             <FormInfiniteCategory 
               required
               mode="multiple"

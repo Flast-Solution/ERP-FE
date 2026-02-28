@@ -22,7 +22,7 @@
 import React from 'react';
 import { authRoles } from 'auth';
 
-const HomePage = React.lazy(() => import('pages/home'));
+const HomePage = React.lazy(() => import('pages/newFeed'));
 const TaskPage = React.lazy(() => import('pages/task'));
 const TaskCalendar = React.lazy(() => import('pages/task/MyCalendar'));
 

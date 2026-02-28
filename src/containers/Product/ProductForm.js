@@ -30,6 +30,7 @@ import ProductFormPrice from './ProductFormPrice';
 import FormSelect from 'components/form/FormSelect';
 import { PRODUCT_STATUS } from 'configs/localData';
 import { FormListStyles } from "css/global";
+import FormInputNumber from 'components/form/FormInputNumber';
 
 const ProductForm = () => {
   return (
@@ -87,6 +88,21 @@ const ProductForm = () => {
             placeholder={"Chọn trạng thái"}
           />
         </Col>
+        <Col md={12} xs={24}>
+          <FormInputNumber
+            required
+            label="Giá hiển thị"
+            name="price"
+            placeholder={"Nhập giá hiển thị"}
+          />
+        </Col>
+        <Col md={12} xs={24}>
+          <FormInputNumber
+            label="Giá tham khảo"
+            name="priceRef"
+            placeholder={"Nhập giá tham khảo"}
+          />
+        </Col>
 
         <Col md={24} xs={24}>
           <Typography.Title level={5}>
@@ -104,8 +120,11 @@ const ProductForm = () => {
         <Col md={24} xs={24}>
           <Typography.Title level={5}>
             <SwitcherOutlined />
-            <span style={{ marginLeft: 20 }}>Thiết lập giá bán</span>
+            <span style={{ marginLeft: 20 }}>Thiết lập khoảng giá bán</span>
           </Typography.Title>
+        </Col>
+        
+        <Col md={24} xs={24}>
           <Form.Item
             noStyle
             shouldUpdate={(prevValues, curValues) =>
