@@ -25,7 +25,7 @@ import RestList from "@/components/RestLayout/RestList";
 import useGetList from "@/hooks/useGetList";
 import { Helmet } from "react-helmet";
 import CustomBreadcrumb from '@/components/BreadcrumbCustom';
-import Filter from '@/pages/category/Filter';
+import Filter from '@/pages/post/Filter';
 import { GATEWAY } from '@/configs';
 import { dateFormatOnSubmit, formatTime } from '@/utils/dataUtils';
 import CustomImage from '@/components/common/CustomImage';

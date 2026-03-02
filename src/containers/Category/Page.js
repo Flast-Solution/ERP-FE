@@ -28,12 +28,23 @@ import FormTextArea from '@/components/form/FormTextArea';
 import RequestUtils, { SUCCESS_CODE } from '@/utils/RequestUtils';
 import { useEffectAsync } from '@/hooks/MyHooks';
 import { f5List } from '@/utils/dataUtils';
+import MediaService from '@/services/MediaService';
+import ImageUploader from '@/components/common/File/ImageUploader';
+import logger from '@/logger';
 
+const LOGGER_TAG = '[container/category/Page.js]';
+const MEDIA_TYPE = "category.page";
 const FormCatePage = ({ closeModal, data }) => {
 
   const [ record, setRecord ] = useState({});
   useEffectAsync(async () => {
-    setRecord(data);
+    const images = await MediaService.fetchById(data.id, MEDIA_TYPE, data.image || '');
+    logger.info(LOGGER_TAG, 'IMAGES: ', images);
+    setRecord({ 
+      ...data,
+      images: images,
+      sectionId: Math.floor(new Date().getTime() / 1000)
+    });
   }, [ data ]);
 
   const onSubmit = useCallback(async (body) => {
@@ -43,6 +54,10 @@ const FormCatePage = ({ closeModal, data }) => {
       setRecord(pre => ({...pre, ...data}));
       f5List("category/page/fetch");
     }
+  }, []);
+
+  const onUpdateFeaturedImage = useCallback(async (imageId) => {
+    RequestUtils.Post("/category/page/image-featured/" + imageId);
   }, []);
 
   return (
@@ -87,6 +102,22 @@ const FormCatePage = ({ closeModal, data }) => {
             label="Mô tả"
             name="desc"
             placeholder={"Nhập mô tả"}
+          />
+        </Col>
+        <Col md={24} xs={24}>
+          <ImageUploader
+            onBeforeSubmitMultiPart={(formData) => {
+              if(data.id) {
+                formData.append('objectId', data.id);
+              }
+              formData.append('sectionId', record.sectionId);
+              formData.append('objectType', MEDIA_TYPE);
+              return formData;
+            }}
+            title='Tải lên ảnh'
+            showImgSlide={false}
+            apiUploadMultiPart="/category/page/upload-multi-part"
+            onToggleFeatured={onUpdateFeaturedImage}
           />
         </Col>
         <Col md={24} xs={24} style={{marginTop: 30}}>

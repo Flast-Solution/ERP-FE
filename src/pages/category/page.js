@@ -28,9 +28,10 @@ import { Helmet } from "react-helmet";
 import CustomBreadcrumb from '@/components/BreadcrumbCustom';
 import Filter from '@/pages/category/Filter';
 import { InAppEvent } from "@/utils/FuseUtils";
-import { HASH_MODAL } from '@/configs';
+import { GATEWAY, HASH_MODAL } from '@/configs';
 import { dateFormatOnSubmit, formatTime } from '@/utils/dataUtils';
 import RequestUtils from '@/utils/RequestUtils';
+import CustomImage from '@/components/common/CustomImage';
 
 const CatePage = () => {
 
@@ -77,6 +78,20 @@ const CatePage = () => {
       dataIndex: 'desc',
       width: 250,
       ellipsis: true
+    },
+    {
+      title: "Hình ảnh",
+      dataIndex: 'image',
+      width: 150,
+      ellipsis: true,
+      render: (image) => (
+        <CustomImage
+          preview={false}
+          width={50}
+          src={String(GATEWAY).concat(image)}
+          alt='image'
+        />
+      )
     },
     {
       title: "Ngày",

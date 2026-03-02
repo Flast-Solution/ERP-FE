@@ -24,18 +24,25 @@ import FormInput from '@/components/form/FormInput';
 import FormSelect from '@/components/form/FormSelect';
 import FormDatePicker from '@/components/form/FormDatePicker';
 import { ACTIVE_TYPES } from '@/configs/localData';
+import FormCategoryPost from '@/components/form/SelectInfinite/FormCategoryPost';
 
 const ProductFilter = () => {
   return (
     <>
       <Row gutter={16}>
-        <Col xl={6} lg={6} md={6} xs={24}>
+        <Col xl={4} lg={4} md={4} xs={24}>
           <FormInput
             name={'name'}
-            placeholder="Tên danh mục sản phẩm"
+            placeholder="Tên bài viết"
           />
         </Col>
-        <Col xl={6} lg={6} md={6} xs={24}>
+        <Col xl={5} lg={5} md={5} xs={24}>
+          <FormCategoryPost
+            name={'cateId'}
+            placeholder="Danh mục bài"
+          />
+        </Col>
+        <Col xl={5} lg={5} md={5} xs={24}>
           <FormSelect
             label="Trạng thái"
             valueProp="value"
@@ -44,14 +51,14 @@ const ProductFilter = () => {
             placeholder='Lọc theo trạng thái'
           />
         </Col>
-        <Col xl={6} lg={6} md={6} xs={24}>
+        <Col xl={5} lg={5} md={5} xs={24}>
           <FormDatePicker
             format='YYYY-MM-DD'
             name='from'
             placeholder="Từ ngày"
           />
         </Col>
-        <Col xl={6} lg={6} md={6} xs={24}>
+        <Col xl={5} lg={5} md={5} xs={24}>
           <FormDatePicker
             format='YYYY-MM-DD'
             name='to'
