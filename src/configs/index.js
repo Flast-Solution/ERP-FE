@@ -21,13 +21,13 @@
 
 export const SUCCESS_CODE = 200;
 export const GATE_EVN = {
-  Loc: 'http://127.0.0.1:9765',
-  Pro: 'https://open.api.flast.vn',
+  Loc: 'http://127.0.0.1:9775',
+  Pro: 'https://biz.api.flast.vn',
   Web: 'https://flast-vn',
   AiA: 'https://service.aicuatui.vn'
 };
 
-export const GATEWAY = GATE_EVN['Loc'];
+export const GATEWAY = GATE_EVN['Pro'];
 export const CHANGE_STORE = 'CHANGE_STORE';
 export const UPLOAD_PATH = GATEWAY + '/uploads';
 
