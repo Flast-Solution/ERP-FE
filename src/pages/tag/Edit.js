@@ -58,7 +58,6 @@ const TagEdit = () => {
     [id, formInstance, navigate]
   );
 
-  // Xem trước tag
   const handleAgree = useCallback(() => {
     formInstance.validateFields().then(values => {
       setLocalTags(pre => [...pre, values]);
@@ -66,12 +65,10 @@ const TagEdit = () => {
     }).catch(() => {});
   }, [formInstance]);
 
-  // Xoá tag khỏi preview
   const handleRemoveTag = useCallback((idx) => {
     setLocalTags(pre => pre.filter((_, i) => i !== idx));
   }, []);
 
-  // Tạo slug từ tag name
   const makeSlug = (text = '') => {
     return text
       .toString()
@@ -84,11 +81,9 @@ const TagEdit = () => {
       .replace(/^-+|-+$/g, '');
   };
 
-  // form 
   const TagFormContent = () => {
     const { form } = useContext(FormContextCustom);
 
-    // Tự động tạo slug khi nhập tên tag
     const handleNameChange = (e) => {
       const nameVal = e.target.value;
       const slugVal = makeSlug(nameVal);
