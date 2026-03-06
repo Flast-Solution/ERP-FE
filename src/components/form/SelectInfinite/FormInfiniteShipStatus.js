@@ -1,4 +1,4 @@
-import { useGetShipStatusQuery } from 'hooks/useData';
+import { useGetShipStatusQuery } from '@/hooks/useData';
 import FormSelectInfinite from './FormSelectInfinite';
 
 const FormInfiniteShipStatus = props => {

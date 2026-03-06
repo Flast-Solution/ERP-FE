@@ -20,7 +20,7 @@
 /**************************************************************************/
 
 import { useEffect, useState } from 'react';
-import CardService from 'services/CardService';
+import CardService from '@/services/CardService';
 
 export const useGetPaymentTypes = () => {
 

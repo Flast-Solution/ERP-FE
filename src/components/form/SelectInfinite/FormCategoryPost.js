@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { useGetAllCategoryQuery } from 'hooks/useData';
+import { useGetAllCategoryQuery } from '@/hooks/useData';
 import FormSelectInfinite from './FormSelectInfinite';
 
 const FormCategoryPost = ({

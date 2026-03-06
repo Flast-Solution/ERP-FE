@@ -20,8 +20,8 @@
 /**************************************************************************/
 
 import { useCallback } from 'react';
-import { useStore } from 'DataContext';
-import { ACTIONS } from 'configs';
+import { useStore } from '@/DataContext';
+import { ACTIONS } from '@/configs';
 
 function useCollapseSidebar() {
     const { isCollapse, dispatch } = useStore();

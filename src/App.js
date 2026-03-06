@@ -22,18 +22,18 @@
 import 'Main.less';
 import { useEffect, Suspense } from 'react';
 import { ThemeProvider } from 'styled-components';
-import theme from 'theme';
+import theme from '@/theme';
 import i18n from './i18n';
 import moment from 'moment';
-import { Auth } from 'auth';
-import { DataProvider } from 'DataContext';
+import { Auth } from '@/auth';
+import { DataProvider } from '@/DataContext';
 import { BrowserRouter } from 'react-router-dom';
-import history from "@history";
-import Authorization from 'auth/Authorization';
-import MainLayout from 'layouts/MainLayout';
-import MyPopup from 'routes/PopupRoute';
-import Loading from 'components/Loading';
-import ModalRoutes from 'routes/ModalRoutes';
+import history from "@/@history";
+import Authorization from '@/auth/Authorization';
+import MainLayout from '@/layouts/MainLayout';
+import MyPopup from '@/routes/PopupRoute';
+import Loading from '@/components/Loading';
+import ModalRoutes from '@/routes/ModalRoutes';
 
 const ThemeRender = () => (
   <ThemeProvider theme={theme}>

@@ -20,7 +20,7 @@
 /**************************************************************************/
 
 import { useCallback, useEffect, useState } from "react";
-import RequestUtils from "utils/RequestUtils";
+import RequestUtils from "@/utils/RequestUtils";
 
 function useGetOneQuery({ filter, uri, onBeforeProcessData }) {
 

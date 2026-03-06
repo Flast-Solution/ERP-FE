@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { useGetAllCustomersSimpleQuery } from 'hooks/useData';
+import { useGetAllCustomersSimpleQuery } from '@/hooks/useData';
 import FormSelectInfinite from './FormSelectInfinite';
 
 const FormSelectInfiniteCustomer = ({

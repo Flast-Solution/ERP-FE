@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { useGetMaterialQuery } from 'hooks/useData';
+import { useGetMaterialQuery } from '@/hooks/useData';
 import FormSelectInfinite from './FormSelectInfinite';
 
 const FormSelectInfiniteMaterial = props => {

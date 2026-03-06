@@ -20,7 +20,7 @@
 /**************************************************************************/
 
 import { DatePicker, Form } from 'antd';
-import { FORMAT_DATE_INPUT } from 'configs/constant';
+import { FORMAT_DATE_INPUT } from '@/configs/constant';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 

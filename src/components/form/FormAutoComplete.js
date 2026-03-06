@@ -23,7 +23,7 @@ import { useMemo, useCallback } from 'react';
 import { AutoComplete, Form, Spin } from 'antd';
 import { map, isObject, get } from 'lodash';
 import { useTranslation } from 'react-i18next';
-import { onSearch as onChangeSearch } from 'utils/tools';
+import { onSearch as onChangeSearch } from '@/utils/tools';
 
 const { Option } = AutoComplete;
 

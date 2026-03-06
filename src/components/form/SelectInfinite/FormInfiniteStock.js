@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { useGetAllStockQuery } from 'hooks/useData';
+import { useGetAllStockQuery } from '@/hooks/useData';
 import FormSelectInfinite from './FormSelectInfinite';
 
 const FormInfiniteStock = props => {

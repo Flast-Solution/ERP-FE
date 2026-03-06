@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { GATE_EVN, GATEWAY } from 'configs';
+import { GATE_EVN, GATEWAY } from '@/configs';
 import axios from 'axios';
 
 class RequestUtils {

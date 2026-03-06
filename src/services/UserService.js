@@ -19,9 +19,9 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { SUCCESS_CODE } from "configs";
-import { arrayEmpty } from "utils/dataUtils";
-import RequestUtils from "utils/RequestUtils";
+import { SUCCESS_CODE } from "@/configs";
+import { arrayEmpty } from "@/utils/dataUtils";
+import RequestUtils from "@/utils/RequestUtils";
 
 const UserService = {
   async findId(id) {

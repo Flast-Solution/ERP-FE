@@ -20,7 +20,7 @@
 /**************************************************************************/
 
 import { Form } from 'antd';
-import { FormContextCustom } from 'components/context/FormContextCustom';
+import { FormContextCustom } from '@/components/context/FormContextCustom';
 import { useCallback, useEffect } from 'react';
 
 const RestEditModal = ({

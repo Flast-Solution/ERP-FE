@@ -20,9 +20,9 @@
 /**************************************************************************/
 
 import { useCallback, useContext, useEffect, useState } from "react";
-import RequestUtils from "utils/RequestUtils";
-import MyContext from 'DataContext';
-import { useUpdateEffect } from "hooks/MyHooks";
+import RequestUtils from "@/utils/RequestUtils";
+import MyContext from '@/DataContext';
+import { useUpdateEffect } from "@/hooks/MyHooks";
 
 function useGetRestApi({
     queryParams: filter,

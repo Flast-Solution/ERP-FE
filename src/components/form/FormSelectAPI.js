@@ -20,16 +20,16 @@
 /**************************************************************************/
 
 import { useContext, useEffect, useState, useMemo, useCallback } from 'react';
-import RequestUtils from 'utils/RequestUtils';
+import RequestUtils from '@/utils/RequestUtils';
 import { Form, Select, Spin, Divider, Input, Button, message } from 'antd';
 import { get } from 'lodash';
 import debounce from 'lodash/debounce';
 import { useTranslation } from 'react-i18next';
-import MyContext from 'DataContext';
-import { useUpdateEffect, useMount } from "hooks/MyHooks";
+import MyContext from '@/DataContext';
+import { useUpdateEffect, useMount } from "@/hooks/MyHooks";
 import { PlusOutlined } from '@ant-design/icons';
-import { SUCCESS_CODE } from 'configs';
-import { arrayEmpty } from "utils/dataUtils"
+import { SUCCESS_CODE } from '@/configs';
+import { arrayEmpty } from "@/utils/dataUtils"
 
 const { Option } = Select;
 const FormSelectAPI = ({

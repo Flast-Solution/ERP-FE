@@ -21,7 +21,7 @@
 
 import { Form, InputNumber, Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { formatterInputNumber, parserInputNumber } from 'utils/tools';
+import { formatterInputNumber, parserInputNumber } from '@/utils/tools';
 
 const FormInputNumber = ({
   name,

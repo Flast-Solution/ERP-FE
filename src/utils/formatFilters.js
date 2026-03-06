@@ -22,7 +22,7 @@
 import forEach from 'lodash/forEach';
 import last from 'lodash/last';
 import head from 'lodash/head';
-import { QUERY_PARAMS_PROPERTY } from 'configs/constant';
+import { QUERY_PARAMS_PROPERTY } from '@/configs/constant';
 
 export const formatFiltersTable = (filters) => {
   const outsideFilter = {};

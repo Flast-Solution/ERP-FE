@@ -22,8 +22,8 @@
 import { forwardRef, useContext, useEffect, useImperativeHandle, useMemo } from 'react';
 import debounce from 'lodash/debounce';
 import get from 'lodash/get';
-import useInfinite from 'hooks/useInfinite';
-import { FormContextCustom } from 'components/context/FormContextCustom';
+import useInfinite from '@/hooks/useInfinite';
+import { FormContextCustom } from '@/components/context/FormContextCustom';
 import FormSelect from '../FormSelect';
 
 const FormSelectInfinite = ({

@@ -25,7 +25,7 @@ import { useTranslation } from 'react-i18next';
 import isEmpty from 'lodash/isEmpty';
 import get from 'lodash/get';
 import { CloseCircleFilled, PlusOutlined } from '@ant-design/icons';
-import { FormContextCustom } from 'components/context/FormContextCustom';
+import { FormContextCustom } from '@/components/context/FormContextCustom';
 import FormStyles from './styles';
 
 const FormListAddition = ({

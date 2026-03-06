@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { HASH_MODAL } from 'configs/constant';
+import { HASH_MODAL } from '@/configs/constant';
 import { useLocation } from 'react-router';
 
 const useGetIdFromHash = (resource, suffix = 'edit') => {

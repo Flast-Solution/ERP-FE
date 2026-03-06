@@ -21,10 +21,10 @@
 
 import { useState } from 'react';
 import { useLocation, useNavigate } from "react-router-dom";
-import { convertObjToSearchStr, getQueryParamsFromUrl } from 'utils/tools';
+import { convertObjToSearchStr, getQueryParamsFromUrl } from '@/utils/tools';
 import ListLayout from './ListLayout';
 import RestFilter from '../RestFilter';
-import { useUpdateEffect } from 'hooks/MyHooks';
+import { useUpdateEffect } from '@/hooks/MyHooks';
 import { isEmpty } from 'lodash';
 
 const log = (k, v) => console.log('[component.RestLayout.RestList] ' + k, v);

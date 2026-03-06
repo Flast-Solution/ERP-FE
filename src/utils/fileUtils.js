@@ -19,12 +19,11 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { IMAGE_TYPES } from 'configs/localData';
+import { IMAGE_TYPES } from '@/configs/localData';
 import { notification, Upload } from 'antd';
 import i18next from 'i18next';
-import { MAX_FILE_SIZE_MB } from 'configs/constant';
+import { MAX_FILE_SIZE_MB } from '@/configs/constant';
 import axios from 'axios';
-import { getFileNameHeader } from 'api/download';
 
 const showErrorDownloadFile = (message) => {
   notification.error({
@@ -81,7 +80,7 @@ export const downloadFileByURL = async (file) => {
           resolve({ loading: false });
         }
         const disposition = response.headers['content-disposition'];
-        const restFileName = file.fileName || getFileNameHeader(disposition) || getFileNameFromUrl(file.url) || 'example';
+        const restFileName = file.fileName || getFileNameFromUrl(file.url) || 'example';
         const a = document.createElement('a');
         const url = window.URL.createObjectURL(blob);
         a.href = url;

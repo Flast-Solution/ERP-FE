@@ -24,7 +24,7 @@ import { Form, Select, Spin, Tooltip } from 'antd';
 import { map, isObject, get } from 'lodash';
 import { Waypoint } from 'react-waypoint';
 import { useTranslation } from 'react-i18next';
-import { onSearch as onChangeSearch } from 'utils/tools';
+import { onSearch as onChangeSearch } from '@/utils/tools';
 
 const { Option } = Select;
 

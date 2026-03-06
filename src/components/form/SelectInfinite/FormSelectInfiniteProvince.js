@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { useGetAllProvinceQuery } from 'hooks/useData';
+import { useGetAllProvinceQuery } from '@/hooks/useData';
 import FormSelectInfinite from './FormSelectInfinite';
 
 const FormSelectInfiniteProvince = ({ name, ...props }) => {

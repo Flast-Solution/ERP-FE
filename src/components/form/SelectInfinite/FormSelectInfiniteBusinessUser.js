@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { useGetAllBusinessUsersQuery } from 'hooks/useData';
+import { useGetAllBusinessUsersQuery } from '@/hooks/useData';
 import FormSelectInfinite from './FormSelectInfinite';
 
 const FormSelectInfiniteBusinessUser = ({

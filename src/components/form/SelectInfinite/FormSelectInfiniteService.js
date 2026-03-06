@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { useGetServiceQuery } from 'hooks/useData';
+import { useGetServiceQuery } from '@/hooks/useData';
 import FormSelectInfinite from './FormSelectInfinite';
 
 const FormSelectInfiniteService = ({ name, ...props }) => {

@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { GATEWAY } from 'configs';
+import { GATEWAY } from '@/configs';
 import { pickBy, identity } from 'lodash'
 
 export const getQueryParamsFromUrl = (url) => {

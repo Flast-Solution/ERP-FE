@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { getStaticImageUrl } from 'utils/tools';
+import { getStaticImageUrl } from '@/utils/tools';
 
 const Image = props => {
   const onError = (e) => {

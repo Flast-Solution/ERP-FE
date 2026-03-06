@@ -20,8 +20,8 @@
 /**************************************************************************/
 
 import { useState } from "react";
-import { InAppEvent } from "utils/FuseUtils";
-import RequestUtils from "utils/RequestUtils";
+import { InAppEvent } from "@/utils/FuseUtils";
+import RequestUtils from "@/utils/RequestUtils";
 
 const useDeleteMutation = () => {
 

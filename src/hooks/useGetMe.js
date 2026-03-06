@@ -20,7 +20,7 @@
 /**************************************************************************/
 
 import { useContext } from 'react';
-import MyContext from 'DataContext';
+import MyContext from '@/DataContext';
 
 function useGetMe() {
     const { user, setMyData } = useContext(MyContext)

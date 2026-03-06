@@ -20,8 +20,8 @@
 /**************************************************************************/
 
 import { useState } from 'react';
-import RequestUtils from 'utils/RequestUtils';
-import jwtService from 'utils/jwtService';
+import RequestUtils from '@/utils/RequestUtils';
+import jwtService from '@/utils/jwtService';
 
 /* const log = (key, val) => console.log('[hooks.useLogin] ' + key, val); */
 function useLogin() {

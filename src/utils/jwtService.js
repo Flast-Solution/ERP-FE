@@ -21,7 +21,7 @@
 
 import FuseUtils, { InAppEvent } from './FuseUtils';
 import axios from 'axios';
-import { CHANGE_STORE, ACTIONS } from "configs";
+import { CHANGE_STORE, ACTIONS } from "@/configs";
 import RequestUtils from './RequestUtils';
 
 class jwtService extends FuseUtils.EventEmitter {

@@ -23,8 +23,8 @@ import { useCallback } from 'react';
 import { Pagination, Table, Space } from 'antd';
 import ListLayoutStyles from './styles';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { HASH_MODAL } from 'configs';
-import CreateButton from 'components/RestActions/CreateButton';
+import { HASH_MODAL } from '@/configs';
+import CreateButton from '@/components/RestActions/CreateButton';
 
 const ListLayout = ({
   columns,

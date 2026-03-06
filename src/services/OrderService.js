@@ -19,9 +19,9 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { SUCCESS_CODE } from "configs";
-import { arrayEmpty } from "utils/dataUtils";
-import RequestUtils from "utils/RequestUtils";
+import { SUCCESS_CODE } from "@/configs";
+import { arrayEmpty } from "@/utils/dataUtils";
+import RequestUtils from "@/utils/RequestUtils";
 
 export const getWarehouseByProduct = (skuId, mProduct) => {
   if (arrayEmpty(mProduct?.warehouses)) {

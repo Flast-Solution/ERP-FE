@@ -20,7 +20,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { useGetAllCustomersSimpleQuery } from 'hooks/useData';
+import { useGetAllCustomersSimpleQuery } from '@/hooks/useData';
 import FormAutoCompleteInfinite from './FormAutoCompleteInfinite';
 
 const FormAutoCompleteCustomer = props => {

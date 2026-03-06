@@ -22,7 +22,7 @@
 import { useContext, useMemo } from 'react';
 import { Form, Input, Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { FormContextCustom } from '../context/FormContextCustom';
+import { FormContextCustom } from '@/components/context/FormContextCustom';
 
 const FormInput = ({
   name,

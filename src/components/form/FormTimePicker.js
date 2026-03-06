@@ -20,7 +20,7 @@
 /**************************************************************************/
 
 import { Form, TimePicker } from 'antd';
-import { FORMAT_TIME_INPUT } from 'configs/constant';
+import { FORMAT_TIME_INPUT } from '@/configs/constant';
 import { useTranslation } from 'react-i18next';
 
 const FormTimePicker = ({

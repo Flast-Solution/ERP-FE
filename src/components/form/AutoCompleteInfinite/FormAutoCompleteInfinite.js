@@ -23,8 +23,8 @@
 import { useContext, useEffect, useMemo } from 'react';
 import debounce from 'lodash/debounce';
 import get from 'lodash/get';
-import useInfinite from 'hooks/useInfinite';
-import { FormContextCustom } from 'components/context/FormContextCustom';
+import useInfinite from '@/hooks/useInfinite';
+import { FormContextCustom } from '@/components/context/FormContextCustom';
 import FormAutoComplete from '../FormAutoComplete';
 
 const FormAutoCompleteInfinite = ({

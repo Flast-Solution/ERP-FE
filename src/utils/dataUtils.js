@@ -21,8 +21,8 @@
 
 import i18next from 'i18next';
 import { random } from "lodash";
-import { InAppEvent } from "utils/FuseUtils";
-import { ACTIONS, CHANGE_STORE } from "configs";
+import { InAppEvent } from "@/utils/FuseUtils";
+import { ACTIONS, CHANGE_STORE } from "@/configs";
 import moment from 'moment';
 import dayjs from 'dayjs';
 

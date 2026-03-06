@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import theme from 'theme';
+import theme from '@/theme';
 import mapKeys from 'lodash/mapKeys';
 
 export const ACTIVE_TYPES = [

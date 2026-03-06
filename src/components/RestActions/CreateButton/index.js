@@ -20,7 +20,7 @@
 /**************************************************************************/
 
 import { PlusOutlined } from '@ant-design/icons';
-import CustomButton from 'components/CustomButton';
+import CustomButton from '@/components/CustomButton';
 
 const CreateButton = ({
   title = 'button.create',

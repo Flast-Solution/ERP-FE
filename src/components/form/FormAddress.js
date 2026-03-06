@@ -20,12 +20,12 @@
 /**************************************************************************/
 
 import { Form, Col } from "antd";
-import FormInput from "components/form/FormInput";
-import FormSelect from "components/form/FormSelect";
-import FormSelectInfiniteProvince from "components/form/SelectInfinite/FormSelectInfiniteProvince";
-import { useEffectAsync } from "hooks/MyHooks";
+import FormInput from "@/components/form/FormInput";
+import FormSelect from "@/components/form/FormSelect";
+import FormSelectInfiniteProvince from "@/components/form/SelectInfinite/FormSelectInfiniteProvince";
+import { useEffectAsync } from "@/hooks/MyHooks";
 import React, { useState } from "react";
-import RequestUtils from "utils/RequestUtils";
+import RequestUtils from "@/utils/RequestUtils";
 
 const FormAddress = () => {
   return <>

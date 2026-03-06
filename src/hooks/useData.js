@@ -21,10 +21,10 @@
 
 import { isArray } from "lodash";
 import { useContext, useCallback, useEffect, useState } from "react";
-import RequestUtils from "utils/RequestUtils";
-import MyContext from 'DataContext';
-import { useUpdateEffect } from "hooks/MyHooks";
-import { SUCCESS_CODE } from "configs";
+import RequestUtils from "@/utils/RequestUtils";
+import MyContext from '@/DataContext';
+import { useUpdateEffect } from "@/hooks/MyHooks";
+import { SUCCESS_CODE } from "@/configs";
 
 const log = (val, key = '') => console.log('[hooks.useData] ' + key, val);
 function useData({

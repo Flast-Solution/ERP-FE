@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { useGetOrderCodeQuery } from 'hooks/useData';
+import { useGetOrderCodeQuery } from '@/hooks/useData';
 import FormSelectInfinite from './FormSelectInfinite';
 
 const FormInfiniteOrderCode = props => {

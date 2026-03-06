@@ -22,11 +22,12 @@
 import i18next from 'i18next';
 import {
   PAYMENT_STATUS_MAP_KEYS,
-  CONTRACT_TYPES, CONTRACT_STATUS
-} from 'configs/localData';
+  CONTRACT_TYPES, 
+  CONTRACT_STATUS
+} from '@/configs/localData';
 import { Tag } from 'antd';
 import { formatDataI18n } from './dataUtils';
-import UserInfo from 'components/common/UserInfo';
+import UserInfo from '@/components/common/UserInfo';
 
 export const formatPaymentStatus = (data) => {
   if (!data) {

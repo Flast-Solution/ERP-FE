@@ -22,7 +22,7 @@
 import { useEffect } from 'react';
 import { Row, Col, Button, Form } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { FormContextCustom } from 'components/context/FormContextCustom';
+import { FormContextCustom } from '@/components/context/FormContextCustom';
 import RestFilterStyles from './styles';
 
 const RestFilter = ({

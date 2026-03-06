@@ -21,9 +21,9 @@
 
 import { useState } from 'react';
 import FormSelect from './FormSelect';
-import RequestUtils from 'utils/RequestUtils';
-import { arrayNotEmpty } from 'utils/dataUtils';
-import { useEffectAsync } from 'hooks/MyHooks';
+import RequestUtils from '@/utils/RequestUtils';
+import { arrayNotEmpty } from '@/utils/dataUtils';
+import { useEffectAsync } from '@/hooks/MyHooks';
 
 const FormSelectUser = ({ name, label, filter, ...props }) => {
 
