@@ -186,9 +186,9 @@ const FormOpenInfo = ({ field }) => {
       </Col>
       <Col md={4} xs={24}>
         <FormInput
-          name={[name, 'icon']}
+          name={[name, 'type']}
           required={false}
-          placeholder={"Icon"}
+          placeholder={"Loại trường (vd: icon, link, text...)"}
         />
       </Col>
     </FormListStyles>

@@ -21,7 +21,7 @@
 
 export const SUCCESS_CODE = 200;
 export const GATE_EVN = {
-  Loc: 'http://127.0.0.1:9765',
+  Loc: 'http://127.0.0.1:9775',
   Pro: 'https://biz.api.flast.vn',
   Web: 'https://flast-vn',
   AiA: 'https://service.aicuatui.vn'
