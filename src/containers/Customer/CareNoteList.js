@@ -22,9 +22,9 @@
 import React, { useState } from 'react';
 import { Card, Row, Col, Tag, Flex, Typography, Divider, Space, Popover } from 'antd';
 import { StarOutlined, SmileOutlined, FlagOutlined, EditOutlined } from '@ant-design/icons';
-import { useEffectAsync } from 'hooks/MyHooks';
-import RequestUtils from 'utils/RequestUtils';
-import { arrayEmpty } from 'utils/dataUtils';
+import { useEffectAsync } from '@/shared/hooks/MyHooks';
+import RequestUtils from '@/shared/utils/RequestUtils';
+import { arrayEmpty } from '@/shared/utils/dataUtils';
 
 const { Text, Paragraph } = Typography;
 const GetIssueLabels = (issues) => {

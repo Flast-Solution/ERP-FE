@@ -21,13 +21,13 @@
 
 import React, { useContext } from 'react'
 import { Col, Row } from 'antd'
-import CustomButton from 'components/CustomButton'
-import FormHidden from 'components/form/FormHidden'
-import FormInput from 'components/form/FormInput'
-import FormSelect from 'components/form/FormSelect'
-import FormSelectInfiniteBusinessUser from 'components/form/SelectInfinite/FormSelectInfiniteBusinessUser'
+import CustomButton from '@/shared/components/CustomButton'
+import FormHidden from '@/shared/components/form/FormHidden'
+import FormInput from '@/shared/components/form/FormInput'
+import FormSelect from '@/shared/components/form/FormSelect'
+import FormSelectInfiniteBusinessUser from '@/shared/components/form/SelectInfinite/FormSelectInfiniteBusinessUser'
 import { ACTIVE_TYPES, DEPARTMENT } from 'configs/localData'
-import { FormContextCustom } from 'components/context/FormContextCustom'
+import { FormContextCustom } from '@/shared/components/context/FormContextCustom'
 
 const UserGroupForm = () => {
 	const { record } = useContext(FormContextCustom);

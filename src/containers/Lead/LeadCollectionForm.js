@@ -1,15 +1,15 @@
 import React, { useEffect } from 'react';
 import { Row, Col, Form, message } from 'antd';
-import FormSelectInfiniteProduct from 'components/form/SelectInfinite/FormSelectInfiniteProduct';
-import FormSelectInfiniteService from 'components/form/SelectInfinite/FormSelectInfiniteService';
-import FormSelect from 'components/form/FormSelect';
-import CustomButton from 'components/CustomButton';
-import FormInput from 'components/form/FormInput';
+import FormSelectInfiniteProduct from '@/shared/components/form/SelectInfinite/FormSelectInfiniteProduct';
+import FormSelectInfiniteService from '@/shared/components/form/SelectInfinite/FormSelectInfiniteService';
+import FormSelect from '@/shared/components/form/FormSelect';
+import CustomButton from '@/shared/components/CustomButton';
+import FormInput from '@/shared/components/form/FormInput';
 import { CHANNEL_SOURCE } from 'configs/localData';
-import FormHidden from 'components/form/FormHidden';
-import FormTextArea from 'components/form/FormTextArea';
-import RequestUtils from 'utils/RequestUtils';
-import { f5List } from 'utils/dataUtils';
+import FormHidden from '@/shared/components/form/FormHidden';
+import FormTextArea from '@/shared/components/form/FormTextArea';
+import RequestUtils from '@/shared/utils/RequestUtils';
+import { f5List } from '@/shared/utils/dataUtils';
 
 const LeadCollectionForm = ({ data }) => {
   const [ form ] = Form.useForm();

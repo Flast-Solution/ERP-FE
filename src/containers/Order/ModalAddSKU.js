@@ -21,20 +21,20 @@
 
 import React, { useState, useCallback } from 'react';
 import { Col, Form, Row } from 'antd';
-import FormSelectInfiniteProduct from 'components/form/SelectInfinite/FormSelectInfiniteProduct';
-import FormSelect from 'components/form/FormSelect';
-import FormInputNumber from 'components/form/FormInputNumber';
-import BtnSubmit from 'components/CustomButton/BtnSubmit';
+import FormSelectInfiniteProduct from '@/shared/components/form/SelectInfinite/FormSelectInfiniteProduct';
+import FormSelect from '@/shared/components/form/FormSelect';
+import FormInputNumber from '@/shared/components/form/FormInputNumber';
+import BtnSubmit from '@/shared/components/CustomButton/BtnSubmit';
 import _, { isEmpty } from 'lodash';
-import { arrayNotEmpty } from 'utils/dataUtils';
+import { arrayNotEmpty } from '@/shared/utils/dataUtils';
 import InStockTable from 'containers/WareHouse/InStockTable'
-import FormAutoComplete from 'components/form/FormAutoComplete';
+import FormAutoComplete from '@/shared/components/form/FormAutoComplete';
 import OrderService from 'services/OrderService';
-import FormTextArea from 'components/form/FormTextArea';
-import { useEffectAsync } from 'hooks/MyHooks';
-import RequestUtils from 'utils/RequestUtils';
+import FormTextArea from '@/shared/components/form/FormTextArea';
+import { useEffectAsync } from '@/shared/hooks/MyHooks';
+import RequestUtils from '@/shared/utils/RequestUtils';
 import { ShowSkuDetail } from 'containers/Product/SkuView';
-import { createMSkuDetails } from 'utils/skuUtils';
+import { createMSkuDetails } from '@/shared/utils/skuUtils';
 
 const AddSKU = ({ onSave, productId }) => {
 

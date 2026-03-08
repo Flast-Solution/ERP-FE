@@ -21,17 +21,17 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from 'components/BreadcrumbCustom';
-import RestList from 'components/RestLayout/RestList';
+import CustomBreadcrumb from '@/shared/components/BreadcrumbCustom';
+import RestList from '@/shared/components/RestLayout/RestList';
 import LeadFilter from './Filter';
-import useGetList from "hooks/useGetList";
-import { dateFormatOnSubmit, f5List } from 'utils/dataUtils';
-import { InAppEvent } from 'utils/FuseUtils';
+import useGetList from "@/shared/hooks/useGetList";
+import { dateFormatOnSubmit, f5List } from '@/shared/utils/dataUtils';
+import { InAppEvent } from '@/shared/utils/FuseUtils';
 import { Button, Col, Form, Row } from 'antd';
 import ModaleStyles from 'pages/lead/style';
 import { useForm } from 'antd/es/form/Form';
-import FormInput from 'components/form/FormInput';
-import RequestUtils from 'utils/RequestUtils';
+import FormInput from '@/shared/components/form/FormInput';
+import RequestUtils from '@/shared/utils/RequestUtils';
 
 const ListWareHouse = () => {
 

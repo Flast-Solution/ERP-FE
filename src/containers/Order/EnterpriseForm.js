@@ -21,18 +21,18 @@
 
 import { useState, useCallback } from "react";
 import { Form, Row, Col, Button, Upload } from "antd";
-import CustomButton from "components/CustomButton";
-import FormAddress from "components/form/FormAddress";
-import FormHidden from "components/form/FormHidden";
-import FormInput from "components/form/FormInput";
+import CustomButton from "@/shared/components/CustomButton";
+import FormAddress from "@/shared/components/form/FormAddress";
+import FormHidden from "@/shared/components/form/FormHidden";
+import FormInput from "@/shared/components/form/FormInput";
 import { GATEWAY, SUCCESS_CODE } from "configs";
-import { useEffectAsync } from "hooks/MyHooks";
-import { arrayNotEmpty } from "utils/dataUtils";
-import RequestUtils from "utils/RequestUtils";
+import { useEffectAsync } from "@/shared/hooks/MyHooks";
+import { arrayNotEmpty } from "@/shared/utils/dataUtils";
+import RequestUtils from "@/shared/utils/RequestUtils";
 import { UploadOutlined } from '@ant-design/icons';
 import axios from "axios";
-import { InAppEvent } from "utils/FuseUtils";
-import FileUploadView from "components/common/File/FileUploadView";
+import { InAppEvent } from "@/shared/utils/FuseUtils";
+import FileUploadView from "@/shared/components/common/File/FileUploadView";
 
 const EnterpriseForm = ({ customerOrder }) => {
 

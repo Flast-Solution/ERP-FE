@@ -2,11 +2,11 @@ import React, { useContext, useState } from 'react';
 import { Row, Col, Button } from 'antd';
 import axios from 'axios';
 import { PlusCircleOutlined } from '@ant-design/icons';
-import RequestUtils from 'utils/RequestUtils';
-import { InAppEvent } from 'utils/FuseUtils';
-import FormInput from 'components/form/FormInput';
-import FormCheckbox from 'components/form/FormCheckbox';
-import { FormContextCustom } from 'components/context/FormContextCustom';
+import RequestUtils from '@/shared/utils/RequestUtils';
+import { InAppEvent } from '@/shared/utils/FuseUtils';
+import FormInput from '@/shared/components/form/FormInput';
+import FormCheckbox from '@/shared/components/form/FormCheckbox';
+import { FormContextCustom } from '@/shared/components/context/FormContextCustom';
 import { GATEWAY, HASH_MODAL } from 'configs';
 
 const BotDataFilter = () => {

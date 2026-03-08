@@ -21,7 +21,7 @@
 
 import React, { Suspense } from 'react';
 import { Layout } from 'antd';
-import Loading from 'components/Loading';
+import Loading from '@/shared/components/Loading';
 import { useStore } from 'DataContext';
 import { useRoutes } from "react-router-dom";
 

@@ -18,7 +18,7 @@
 /* Đội ngũ phát triển mong rằng phần mềm được sử dụng đúng mục đích và    */
 /* có trách nghiệm                                                        */
 /**************************************************************************/
-import { arrayEmpty, formatTime, formatMoney } from 'utils/dataUtils';
+import { arrayEmpty, formatTime, formatMoney } from '@/shared/utils/dataUtils';
 
 export const renderArrayColor = (datas, colors) => {
   if (arrayEmpty(datas) || arrayEmpty(colors)) {

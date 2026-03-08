@@ -1,12 +1,12 @@
 import { Col, Row } from 'antd';
-import CustomButton from 'components/CustomButton';
-import FormDatePicker from 'components/form/FormDatePicker';
-import FormHidden from 'components/form/FormHidden';
-import FormInput from 'components/form/FormInput';
-import FormInputNumber from 'components/form/FormInputNumber';
-import FormSelect from 'components/form/FormSelect';
-import FormTextArea from 'components/form/FormTextArea';
-import FormSelectInfiniteBusinessUser from 'components/form/SelectInfinite/FormSelectInfiniteBusinessUser';
+import CustomButton from '@/shared/components/CustomButton';
+import FormDatePicker from '@/shared/components/form/FormDatePicker';
+import FormHidden from '@/shared/components/form/FormHidden';
+import FormInput from '@/shared/components/form/FormInput';
+import FormInputNumber from '@/shared/components/form/FormInputNumber';
+import FormSelect from '@/shared/components/form/FormSelect';
+import FormTextArea from '@/shared/components/form/FormTextArea';
+import FormSelectInfiniteBusinessUser from '@/shared/components/form/SelectInfinite/FormSelectInfiniteBusinessUser';
 import { DEPARTMENT, PROJECT_STATUS_LIST } from 'configs/localData';
 
 const WorkForm = () => {

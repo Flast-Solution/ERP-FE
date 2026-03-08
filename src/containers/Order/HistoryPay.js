@@ -21,8 +21,8 @@
 
 import { Table } from "antd";
 import { useEffect, useState } from "react";
-import { arrayNotEmpty, dataArray, formatMoney, formatTime } from "utils/dataUtils";
-import RequestUtils from "utils/RequestUtils";
+import { arrayNotEmpty, dataArray, formatMoney, formatTime } from "@/shared/utils/dataUtils";
+import RequestUtils from "@/shared/utils/RequestUtils";
 
 const HistoryPay = ({ orderId }) => {
   const [historyPayment, setData] = useState([]);

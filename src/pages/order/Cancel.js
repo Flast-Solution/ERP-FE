@@ -21,10 +21,10 @@
 
 import React, { useState } from 'react';
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from 'components/BreadcrumbCustom';
+import CustomBreadcrumb from '@/shared/components/BreadcrumbCustom';
 import ListOrder from 'containers/Order/List';
-import { useEffectAsync } from 'hooks/MyHooks';
-import RequestUtils from 'utils/RequestUtils';
+import { useEffectAsync } from '@/shared/hooks/MyHooks';
+import RequestUtils from '@/shared/utils/RequestUtils';
 
 const OrderCancel = () => {
 

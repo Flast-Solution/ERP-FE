@@ -21,16 +21,16 @@
 
 import React, { useCallback, useState } from 'react';
 import { Button, message, Space } from 'antd';
-import RestList from "@/components/RestLayout/RestList";
-import useGetList from "@/hooks/useGetList";
+import RestList from "@/shared/components/RestLayout/RestList";
+import useGetList from "@/shared/hooks/useGetList";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@/components/BreadcrumbCustom';
+import CustomBreadcrumb from '@/shared/components/BreadcrumbCustom';
 import Filter from '@/pages/post/Filter';
 import { GATEWAY } from '@/configs';
-import { dateFormatOnSubmit, formatTime } from '@/utils/dataUtils';
-import CustomImage from '@/components/common/CustomImage';
-import RequestUtils from '@/utils/RequestUtils';
-import { useNavigateSearch } from '@/hooks/useNavigateSearch';
+import { dateFormatOnSubmit, formatTime } from '@/shared/utils/dataUtils';
+import CustomImage from '@/shared/components/common/CustomImage';
+import RequestUtils from '@/shared/utils/RequestUtils';
+import { useNavigateSearch } from '@/shared/hooks/useNavigateSearch';
 
 const Post = () => {
 

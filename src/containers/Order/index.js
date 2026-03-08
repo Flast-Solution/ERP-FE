@@ -22,10 +22,10 @@
 import React, { useCallback, useState } from 'react';
 import { Table, Button, InputNumber, Select, Typography, message } from 'antd';
 import { ShowSkuDetail } from 'containers/Product/SkuView';
-import { arrayEmpty, arrayNotEmpty, formatMoney } from 'utils/dataUtils';
-import { formatterInputNumber, parserInputNumber } from 'utils/tools';
+import { arrayEmpty, arrayNotEmpty, formatMoney } from '@/shared/utils/dataUtils';
+import { formatterInputNumber, parserInputNumber } from '@/shared/utils/tools';
 import { HASH_POPUP } from 'configs/constant';
-import { InAppEvent } from 'utils/FuseUtils';
+import { InAppEvent } from '@/shared/utils/FuseUtils';
 import {
   SaveOutlined,
   TagOutlined,
@@ -37,9 +37,9 @@ import {
 } from '@ant-design/icons';
 import _ from 'lodash';
 import { HASH_MODAL, SUCCESS_CODE } from 'configs';
-import RequestUtils from 'utils/RequestUtils';
+import RequestUtils from '@/shared/utils/RequestUtils';
 import OrderService, { getWarehouseByProduct } from 'services/OrderService';
-import { useEffectAsync } from 'hooks/MyHooks';
+import { useEffectAsync } from '@/shared/hooks/MyHooks';
 
 const { Text } = Typography;
 const warrantyOptions = [

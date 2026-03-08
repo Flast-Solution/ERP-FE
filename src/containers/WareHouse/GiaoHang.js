@@ -21,19 +21,19 @@
 
 import React, { useState } from 'react'
 import { Col, Form, Row, message, Table } from 'antd'
-import CustomButton from 'components/CustomButton';
-import FormAddress from 'components/form/FormAddress';
-import FormInput from 'components/form/FormInput';
-import FormInputNumber from 'components/form/FormInputNumber';
-import FormSelectAPI from 'components/form/FormSelectAPI';
-import FormInfiniteOrderCode from 'components/form/SelectInfinite/FormInfiniteOrderCode';
-import FormSelect from 'components/form/FormSelect';
+import CustomButton from '@/shared/components/CustomButton';
+import FormAddress from '@/shared/components/form/FormAddress';
+import FormInput from '@/shared/components/form/FormInput';
+import FormInputNumber from '@/shared/components/form/FormInputNumber';
+import FormSelectAPI from '@/shared/components/form/FormSelectAPI';
+import FormInfiniteOrderCode from '@/shared/components/form/SelectInfinite/FormInfiniteOrderCode';
+import FormSelect from '@/shared/components/form/FormSelect';
 import WarehouseService from 'services/WarehouseService';
-import { useEffectAsync } from 'hooks/MyHooks';
-import { arrayEmpty } from 'utils/dataUtils';
+import { useEffectAsync } from '@/shared/hooks/MyHooks';
+import { arrayEmpty } from '@/shared/utils/dataUtils';
 import OrderTextTableOnly from 'containers/Order/OrderTextTableOnly';
-import RequestUtils from 'utils/RequestUtils';
-import FormTextArea from 'components/form/FormTextArea';
+import RequestUtils from '@/shared/utils/RequestUtils';
+import FormTextArea from '@/shared/components/form/FormTextArea';
 import { SUCCESS_CODE } from 'configs';
 
 const GiaoHangForm = ({ title, data }) => {

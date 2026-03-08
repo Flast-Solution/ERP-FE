@@ -21,11 +21,11 @@
 
 import React from 'react'
 import { Col, Row } from 'antd'
-import FormInput from 'components/form/FormInput'
-import FormAutoCompleteInfinite from 'components/form/AutoCompleteInfinite/FormAutoCompleteInfinite'
-import FormSelectInfiniteBusinessUser from 'components/form/SelectInfinite/FormSelectInfiniteBusinessUser'
-import { useGetAllProductQuery } from 'hooks/useData'
-import FormDatePicker from 'components/form/FormDatePicker'
+import FormInput from '@/shared/components/form/FormInput'
+import FormAutoCompleteInfinite from '@/shared/components/form/AutoCompleteInfinite/FormAutoCompleteInfinite'
+import FormSelectInfiniteBusinessUser from '@/shared/components/form/SelectInfinite/FormSelectInfiniteBusinessUser'
+import { useGetAllProductQuery } from '@/shared/hooks/useData'
+import FormDatePicker from '@/shared/components/form/FormDatePicker'
 
 const Filter = () => {
   return (

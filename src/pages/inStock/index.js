@@ -22,17 +22,17 @@
 import React, { useCallback, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Button, Popconfirm, Form, message } from 'antd';
-import CustomBreadcrumb from 'components/BreadcrumbCustom';
-import RestList from 'components/RestLayout/RestList';
+import CustomBreadcrumb from '@/shared/components/BreadcrumbCustom';
+import RestList from '@/shared/components/RestLayout/RestList';
 import WarehouseFilter from './Filter';
-import useGetList from "hooks/useGetList";
-import { dateFormatOnSubmit, f5List, formatTime } from 'utils/dataUtils';
-import { InAppEvent } from 'utils/FuseUtils';
+import useGetList from "@/shared/hooks/useGetList";
+import { dateFormatOnSubmit, f5List, formatTime } from '@/shared/utils/dataUtils';
+import { InAppEvent } from '@/shared/utils/FuseUtils';
 import { ShowSkuDetail } from 'containers/Product/SkuView';
 import { HASH_POPUP, HASH_MODAL } from 'configs/constant';
-import FormInfiniteStock from 'components/form/SelectInfinite/FormInfiniteStock';
-import FormInputNumber from 'components/form/FormInputNumber';
-import RequestUtils from 'utils/RequestUtils';
+import FormInfiniteStock from '@/shared/components/form/SelectInfinite/FormInfiniteStock';
+import FormInputNumber from '@/shared/components/form/FormInputNumber';
+import RequestUtils from '@/shared/utils/RequestUtils';
 
 const ListInStock = () => {
 

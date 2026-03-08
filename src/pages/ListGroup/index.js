@@ -21,13 +21,13 @@
 
 import React, { useCallback, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from 'components/BreadcrumbCustom';
-import RestList from 'components/RestLayout/RestList';
+import CustomBreadcrumb from '@/shared/components/BreadcrumbCustom';
+import RestList from '@/shared/components/RestLayout/RestList';
 import LeadFilter from './Filter';
-import useGetList from "hooks/useGetList";
-import { arrayNotEmpty, dateFormatOnSubmit } from 'utils/dataUtils';
+import useGetList from "@/shared/hooks/useGetList";
+import { arrayNotEmpty, dateFormatOnSubmit } from '@/shared/utils/dataUtils';
 import { HASH_MODAL } from 'configs';
-import { InAppEvent } from 'utils/FuseUtils';
+import { InAppEvent } from '@/shared/utils/FuseUtils';
 import { Button } from 'antd';
 import UserService from 'services/UserService';
 

@@ -21,16 +21,16 @@
 
 import { useEffect, useCallback, useState } from "react";
 import { Col, Form, Row } from "antd";
-import { FormContextCustom } from 'components/context/FormContextCustom';
-import FormSelectInfiniteCustomer from "components/form/SelectInfinite/FormSelectInfiniteCustomer";
-import FormInput from "components/form/FormInput";
-import BtnSubmit from 'components/CustomButton/BtnSubmit';
-import FormSelect from "components/form/FormSelect";
+import { FormContextCustom } from '@/shared/components/context/FormContextCustom';
+import FormSelectInfiniteCustomer from "@/shared/components/form/SelectInfinite/FormSelectInfiniteCustomer";
+import FormInput from "@/shared/components/form/FormInput";
+import BtnSubmit from '@/shared/components/CustomButton/BtnSubmit';
+import FormSelect from "@/shared/components/form/FormSelect";
 import { CHANNEL_SOURCE } from "configs/localData";
-import { arrayEmpty } from "utils/dataUtils";
-import RequestUtils from "utils/RequestUtils";
+import { arrayEmpty } from "@/shared/utils/dataUtils";
+import RequestUtils from "@/shared/utils/RequestUtils";
 import { SUCCESS_CODE } from "configs";
-import { InAppEvent } from "utils/FuseUtils";
+import { InAppEvent } from "@/shared/utils/FuseUtils";
 
 function mapFields(source, mapping) {
   let result = {};

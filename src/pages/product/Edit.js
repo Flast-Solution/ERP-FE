@@ -1,21 +1,21 @@
 import { useState, useRef, useCallback } from 'react';
 import { Row, Col, message } from 'antd';
-import { useEffectAsync } from '@/hooks/MyHooks';
+import { useEffectAsync } from '@/shared/hooks/MyHooks';
 import { useParams } from 'react-router-dom';
-import RequestUtils from '@/utils/RequestUtils';
+import RequestUtils from '@/shared/utils/RequestUtils';
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@/components/BreadcrumbCustom';
+import CustomBreadcrumb from '@/shared/components/BreadcrumbCustom';
 import { GATEWAY, SUCCESS_CODE } from '@/configs';
-import RestEditModal from '@/components/RestLayout/RestEditModal';
-import FormHidden from '@/components/form/FormHidden';
-import FormInput from '@/components/form/FormInput';
-import FormTextArea from '@/components/form/FormTextArea';
-import FormJoditEditor from '@/components/form/FormJoditEditor';
-import CustomButton from '@/components/CustomButton';
-import FormInfiniteCategory from '@/components/form/SelectInfinite/FormInfiniteCategory';
-import ImageUploader from '@/components/common/File/ImageUploader';
-import InfiniteFaq from '@/components/form/SelectInfinite/InfiniteFaq';
-import FormInputNumber from 'components/form/FormInputNumber';
+import RestEditModal from '@/shared/components/RestLayout/RestEditModal';
+import FormHidden from '@/shared/components/form/FormHidden';
+import FormInput from '@/shared/components/form/FormInput';
+import FormTextArea from '@/shared/components/form/FormTextArea';
+import FormJoditEditor from '@/shared/components/form/FormJoditEditor';
+import CustomButton from '@/shared/components/CustomButton';
+import FormInfiniteCategory from '@/shared/components/form/SelectInfinite/FormInfiniteCategory';
+import ImageUploader from '@/shared/components/common/File/ImageUploader';
+import InfiniteFaq from '@/shared/components/form/SelectInfinite/InfiniteFaq';
+import FormInputNumber from '@/shared/components/form/FormInputNumber';
 
 const ProductEdit = () => {
 

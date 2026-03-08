@@ -1,18 +1,18 @@
 import React, { useCallback, useState } from 'react';
-import RestList from "components/RestLayout/RestList";
-import useGetList from "hooks/useGetList";
+import RestList from "@/shared/components/RestLayout/RestList";
+import useGetList from "@/shared/hooks/useGetList";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from 'components/BreadcrumbCustom';
+import CustomBreadcrumb from '@/shared/components/BreadcrumbCustom';
 import BotDataFilter from './BotDataFilter';
 import { Avatar, Button, message, Space } from 'antd';
-import { InAppEvent } from "utils/FuseUtils";
+import { InAppEvent } from "@/shared/utils/FuseUtils";
 import { CHANNEL_SOURCE_MAP_KEYS } from 'configs/localData';
 import { HASH_MODAL } from 'configs';
-import { arrayEmpty, formatTime } from 'utils/dataUtils';
+import { arrayEmpty, formatTime } from '@/shared/utils/dataUtils';
 import OrderService from 'services/OrderService';
 import LeadService from 'services/LeadService';
 import { useNavigate } from 'react-router-dom';
-import RequestUtils from 'utils/RequestUtils';
+import RequestUtils from '@/shared/utils/RequestUtils';
 
 const BotData = () => {
 

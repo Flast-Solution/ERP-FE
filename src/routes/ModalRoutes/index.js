@@ -21,8 +21,8 @@
 
 import { HASH_MODAL, HASH_MODAL_CLOSE } from 'configs';
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { InAppEvent } from 'utils/FuseUtils';
-import DrawerCustom from 'components/DrawerCustom';
+import { InAppEvent } from '@/shared/utils/FuseUtils';
+import DrawerCustom from '@/shared/components/DrawerCustom';
 
 import ProductRoute from './ProductRoute.js';
 import OrderRoute from './OrderRoute';

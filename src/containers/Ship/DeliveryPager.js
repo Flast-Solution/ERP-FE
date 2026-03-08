@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Typography, Table, Row, Col, message, Form } from 'antd';
-import HeaderCompany from 'components/common/HeaderCompany';
+import HeaderCompany from '@/shared/components/common/HeaderCompany';
 import { StyledHeaderInvoice } from "css/global";
-import CustomButton from 'components/CustomButton';
-import FormSelectAPI from 'components/form/FormSelectAPI';
+import CustomButton from '@/shared/components/CustomButton';
+import FormSelectAPI from '@/shared/components/form/FormSelectAPI';
 import { useReactToPrint } from "react-to-print";
-import { arrayEmpty, f5List } from 'utils/dataUtils';
-import RequestUtils from 'utils/RequestUtils';
+import { arrayEmpty, f5List } from '@/shared/utils/dataUtils';
+import RequestUtils from '@/shared/utils/RequestUtils';
 
 const { Title, Text } = Typography;
 const generateListProduct = (warehouse, ship) => {

@@ -20,8 +20,8 @@
 /**************************************************************************/
 
 import { Row, Col } from 'antd';
-import FormInput from 'components/form/FormInput';
-import FormSelectUser from 'components/form/FormSelectUser';
+import FormInput from '@/shared/components/form/FormInput';
+import FormSelectUser from '@/shared/components/form/FormSelectUser';
 
 const CustomerFilter = ({ taxCode = false }) => (
   <Row gutter={16}>

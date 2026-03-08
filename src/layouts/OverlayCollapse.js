@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import useCollapseSidebar from 'hooks/useCollapseSidebar';
+import useCollapseSidebar from '@/shared/hooks/useCollapseSidebar';
 
 function OverlayCollapse() {
   const { isCollapseSidebar, toggleCollapse } = useCollapseSidebar();

@@ -21,18 +21,18 @@
 
 import React, { useCallback, useState, useRef } from 'react';
 import { Row, Col, message } from 'antd';
-import RestEditModal from '@/components/RestLayout/RestEditModal';
-import FormHidden from '@/components/form/FormHidden';
-import FormInput from '@/components/form/FormInput';
-import CustomButton from '@/components/CustomButton';
-import FormTextArea from '@/components/form/FormTextArea';
-import ImageUploader from '@/components/common/File/ImageUploader';
-import FormJoditEditor from '@/components/form/FormJoditEditor';
+import RestEditModal from '@/shared/components/RestLayout/RestEditModal';
+import FormHidden from '@/shared/components/form/FormHidden';
+import FormInput from '@/shared/components/form/FormInput';
+import CustomButton from '@/shared/components/CustomButton';
+import FormTextArea from '@/shared/components/form/FormTextArea';
+import ImageUploader from '@/shared/components/common/File/ImageUploader';
+import FormJoditEditor from '@/shared/components/form/FormJoditEditor';
 import logger from '@/logger';
-import RequestUtils, { SUCCESS_CODE } from '@/utils/RequestUtils';
-import { useEffectAsync } from '@/hooks/MyHooks';
+import RequestUtils, { SUCCESS_CODE } from '@/shared/utils/RequestUtils';
+import { useEffectAsync } from '@/shared/hooks/MyHooks';
 import MediaService from '@/services/MediaService';
-import { f5List } from '@/utils/dataUtils';
+import { f5List } from '@/shared/utils/dataUtils';
 
 const LOGGER_TAG = '[container/category/sanpham.js]';
 const FormCateSanPHam = ({ closeModal, data }) => {

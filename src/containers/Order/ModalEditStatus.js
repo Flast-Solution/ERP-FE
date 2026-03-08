@@ -19,17 +19,17 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import FormListAddition from "components/form/FormListAddtion";
+import FormListAddition from "@/shared/components/form/FormListAddtion";
 import { Col, Form, ColorPicker, message } from 'antd';
-import FormInput from "components/form/FormInput";
-import FormSelect from "components/form/FormSelect";
+import FormInput from "@/shared/components/form/FormInput";
+import FormSelect from "@/shared/components/form/FormSelect";
 import { FormListStyles } from "css/global";
 import { useEffect } from "react";
-import RequestUtils from "utils/RequestUtils";
+import RequestUtils from "@/shared/utils/RequestUtils";
 import { SUCCESS_CODE } from "configs";
-import FormHidden from "components/form/FormHidden";
-import CustomButton from "components/CustomButton";
-import FormInputNumber from "components/form/FormInputNumber";
+import FormHidden from "@/shared/components/form/FormHidden";
+import CustomButton from "@/shared/components/CustomButton";
+import FormInputNumber from "@/shared/components/form/FormInputNumber";
 
 const ModalEditStatus = ({ listStatus, onSave }) => {
 

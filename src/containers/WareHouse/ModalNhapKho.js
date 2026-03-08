@@ -21,21 +21,21 @@
 
 import React, { useState, useCallback } from 'react';
 import { Col, Form, message, Row } from 'antd';
-import { FormContextCustom } from 'components/context/FormContextCustom';
-import FormSelectInfiniteProduct from 'components/form/SelectInfinite/FormSelectInfiniteProduct';
-import FormSelect from 'components/form/FormSelect';
-import FormInputNumber from 'components/form/FormInputNumber';
-import BtnSubmit from 'components/CustomButton/BtnSubmit';
-import FormSelectInfiniteProvider from 'components/form/SelectInfinite/FormSelectInfiniteProvider';
-import FormInfiniteStock from 'components/form/SelectInfinite/FormInfiniteStock';
-import FormHidden from 'components/form/FormHidden';
-import RequestUtils from 'utils/RequestUtils';
+import { FormContextCustom } from '@/shared/components/context/FormContextCustom';
+import FormSelectInfiniteProduct from '@/shared/components/form/SelectInfinite/FormSelectInfiniteProduct';
+import FormSelect from '@/shared/components/form/FormSelect';
+import FormInputNumber from '@/shared/components/form/FormInputNumber';
+import BtnSubmit from '@/shared/components/CustomButton/BtnSubmit';
+import FormSelectInfiniteProvider from '@/shared/components/form/SelectInfinite/FormSelectInfiniteProvider';
+import FormInfiniteStock from '@/shared/components/form/SelectInfinite/FormInfiniteStock';
+import FormHidden from '@/shared/components/form/FormHidden';
+import RequestUtils from '@/shared/utils/RequestUtils';
 import WarehouseService from 'services/WarehouseService';
 import InStockTable from 'containers/WareHouse/InStockTable'
 import { ShowSkuDetail } from 'containers/Product/SkuView';
 import { isEmpty } from 'lodash';
-import { createMSkuDetails } from 'utils/skuUtils';
-import { useEffectAsync } from 'hooks/MyHooks';
+import { createMSkuDetails } from '@/shared/utils/skuUtils';
+import { useEffectAsync } from '@/shared/hooks/MyHooks';
 
 const ModalNhapKho = ({
   product,

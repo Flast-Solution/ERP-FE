@@ -20,9 +20,9 @@
 /**************************************************************************/
 
 import { Row, Col } from 'antd';
-import FormDatePicker from 'components/form/FormDatePicker';
-import FormInput from 'components/form/FormInput';
-import FormSelect from 'components/form/FormSelect';
+import FormDatePicker from '@/shared/components/form/FormDatePicker';
+import FormInput from '@/shared/components/form/FormInput';
+import FormSelect from '@/shared/components/form/FormSelect';
 import { CHANNEL_SOURCE, CHANNEL_STATUS } from 'configs/localData';
 
 const LeadFilter = () => {

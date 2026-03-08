@@ -20,10 +20,10 @@
 /**************************************************************************/
 
 import React, { useState } from 'react';
-import RestEditModal from 'components/RestLayout/RestEditModal';
-import { InAppEvent } from 'utils/FuseUtils';
-import RequestUtils from 'utils/RequestUtils';
-import { arrayNotEmpty, f5List } from 'utils/dataUtils';
+import RestEditModal from '@/shared/components/RestLayout/RestEditModal';
+import { InAppEvent } from '@/shared/utils/FuseUtils';
+import RequestUtils from '@/shared/utils/RequestUtils';
+import { arrayNotEmpty, f5List } from '@/shared/utils/dataUtils';
 import { GATEWAY, HASH_MODAL_CLOSE } from 'configs';
 import axios from "axios";
 import LeadForm from './LeadForm';

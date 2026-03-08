@@ -19,20 +19,20 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 import { useState, useContext } from 'react';
-import RestEditModal from 'components/RestLayout/RestEditModal';
-import FormListAddition from "components/form/FormListAddtion";
+import RestEditModal from '@/shared/components/RestLayout/RestEditModal';
+import FormListAddition from "@/shared/components/form/FormListAddtion";
 import { Col, Row, Typography, Form, message } from 'antd';
 import { SwitcherOutlined } from '@ant-design/icons';
-import FormSelectInfiniteMaterial from 'components/form/SelectInfinite/FormSelectInfiniteMaterial';
-import FormInputNumber from 'components/form/FormInputNumber';
-import FormHidden from 'components/form/FormHidden';
-import { FormContextCustom } from 'components/context/FormContextCustom';
-import CustomButton from 'components/CustomButton';
-import FormInput from 'components/form/FormInput';
-import { arrayEmpty, formatMoney } from 'utils/dataUtils';
-import RequestUtils from 'utils/RequestUtils';
-import { useEffectAsync } from 'hooks/MyHooks';
-import FormSelect from 'components/form/FormSelect';
+import FormSelectInfiniteMaterial from '@/shared/components/form/SelectInfinite/FormSelectInfiniteMaterial';
+import FormInputNumber from '@/shared/components/form/FormInputNumber';
+import FormHidden from '@/shared/components/form/FormHidden';
+import { FormContextCustom } from '@/shared/components/context/FormContextCustom';
+import CustomButton from '@/shared/components/CustomButton';
+import FormInput from '@/shared/components/form/FormInput';
+import { arrayEmpty, formatMoney } from '@/shared/utils/dataUtils';
+import RequestUtils from '@/shared/utils/RequestUtils';
+import { useEffectAsync } from '@/shared/hooks/MyHooks';
+import FormSelect from '@/shared/components/form/FormSelect';
 
 const ProductBomContainer = ({ closeModal, data }) => {
 

@@ -22,17 +22,17 @@
 import React, { useCallback, useState } from 'react';
 import { Button } from 'antd';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from 'components/BreadcrumbCustom';
-import RestList from 'components/RestLayout/RestList';
-import useGetList from "hooks/useGetList";
+import CustomBreadcrumb from '@/shared/components/BreadcrumbCustom';
+import RestList from '@/shared/components/RestLayout/RestList';
+import useGetList from "@/shared/hooks/useGetList";
 import { HASH_MODAL } from 'configs';
-import { InAppEvent } from 'utils/FuseUtils';
+import { InAppEvent } from '@/shared/utils/FuseUtils';
 import { cloneDeep } from 'lodash';
-import { dateFormatOnSubmit } from 'utils/dataUtils';
+import { dateFormatOnSubmit } from '@/shared/utils/dataUtils';
 import { ORDER_COLUMN_ACTION } from 'containers/Order/utils';
 import Filter from './Filter';
 import OrderService from 'services/OrderService';
-import { useEffectAsync } from 'hooks/MyHooks';
+import { useEffectAsync } from '@/shared/hooks/MyHooks';
 
 const CoHoi7DayPage = ( { type }) => {
 

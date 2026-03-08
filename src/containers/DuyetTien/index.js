@@ -21,7 +21,7 @@
 
 import React from 'react';
 import { Table } from 'antd';
-import { formatMoney, formatTime } from 'utils/dataUtils';
+import { formatMoney, formatTime } from '@/shared/utils/dataUtils';
 
 const DuyetTienPage = ({ data }) => {
 	const CUSTOM_ACTION = [

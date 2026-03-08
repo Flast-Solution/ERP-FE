@@ -20,11 +20,11 @@
 /**************************************************************************/
 
 import React from 'react';
-import RestEditModal from 'components/RestLayout/RestEditModal';
+import RestEditModal from '@/shared/components/RestLayout/RestEditModal';
 import Form7Day from 'containers/Lead3DayForm/Form3Day';
-import RequestUtils from 'utils/RequestUtils';
-import { InAppEvent } from 'utils/FuseUtils';
-import { f5List } from 'utils/dataUtils';
+import RequestUtils from '@/shared/utils/RequestUtils';
+import { InAppEvent } from '@/shared/utils/FuseUtils';
+import { f5List } from '@/shared/utils/dataUtils';
 
 const CoHoi7DayForm = ({ data }) => {
 

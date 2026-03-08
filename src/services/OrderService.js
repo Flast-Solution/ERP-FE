@@ -20,8 +20,8 @@
 /**************************************************************************/
 
 import { SUCCESS_CODE } from "@/configs";
-import { arrayEmpty } from "@/utils/dataUtils";
-import RequestUtils from "@/utils/RequestUtils";
+import { arrayEmpty } from "@/shared/utils/dataUtils";
+import RequestUtils from "@/shared/utils/RequestUtils";
 
 export const getWarehouseByProduct = (skuId, mProduct) => {
   if (arrayEmpty(mProduct?.warehouses)) {

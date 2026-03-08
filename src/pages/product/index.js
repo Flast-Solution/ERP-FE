@@ -20,20 +20,20 @@
 /**************************************************************************/
 
 import React, { useCallback, useState } from 'react';
-import RestList from "components/RestLayout/RestList";
-import useGetList from "hooks/useGetList";
+import RestList from "@/shared/components/RestLayout/RestList";
+import useGetList from "@/shared/hooks/useGetList";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from 'components/BreadcrumbCustom';
+import CustomBreadcrumb from '@/shared/components/BreadcrumbCustom';
 import Filter from './Filter';
 import { Button, Space } from 'antd';
-import { InAppEvent } from "utils/FuseUtils";
+import { InAppEvent } from "@/shared/utils/FuseUtils";
 import { GATEWAY, HASH_MODAL } from 'configs';
-import { arrayEmpty, dateFormatOnSubmit, formatTime } from 'utils/dataUtils';
+import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@/shared/utils/dataUtils';
 import ProductAttrService from 'services/ProductAttrService';
 import { cloneDeep } from 'lodash';
 import SkuView, { PriceView } from 'containers/Product/SkuView';
 import { Link } from 'react-router-dom';
-import CustomImage from 'components/common/CustomImage';
+import CustomImage from '@/shared/components/common/CustomImage';
 
 const Index = () => {
 

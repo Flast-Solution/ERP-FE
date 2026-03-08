@@ -19,12 +19,12 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@/components/BreadcrumbCustom';
+import CustomBreadcrumb from '@/shared/components/BreadcrumbCustom';
 import Filter from '@/pages/faq/Filter';
-import { f5List } from '@/utils/dataUtils';
+import { f5List } from '@/shared/utils/dataUtils';
 import { HASH_MODAL } from '@/configs/constant';
-import { InAppEvent } from '@/utils/FuseUtils';
-import CustomList from '@/components/RestLayout/CustomList';
+import { InAppEvent } from '@/shared/utils/FuseUtils';
+import CustomList from '@/shared/components/RestLayout/CustomList';
 import {
   GridWrapper,
   TitleWrapper,

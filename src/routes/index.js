@@ -22,7 +22,7 @@
 import React, { Suspense } from 'react';
 import { useRoutes } from 'react-router-dom';
 import privateRoutes from './PrivateRoutes';
-import Loading from 'components/Loading';
+import Loading from '@/shared/components/Loading';
 
 function MyRoutes() {
   return (

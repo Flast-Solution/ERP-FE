@@ -22,7 +22,7 @@
 import React, { useEffect } from 'react';
 import { notification } from 'antd';
 import { INAPP_NOTIFICATION_EMITTER } from 'configs';
-import { InAppEvent } from 'utils/FuseUtils';
+import { InAppEvent } from '@/shared/utils/FuseUtils';
 
 const InAppNotify = () => {
 

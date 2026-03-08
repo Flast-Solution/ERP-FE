@@ -19,18 +19,18 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 import { Row, Col, Typography, Form } from 'antd';
-import FormHidden from 'components/form/FormHidden';
-import CustomButton from 'components/CustomButton';
-import FormSelectAPI from 'components/form/FormSelectAPI';
-import FormInput from 'components/form/FormInput';
-import FormListAddition from 'components/form/FormListAddtion';
+import FormHidden from '@/shared/components/form/FormHidden';
+import CustomButton from '@/shared/components/CustomButton';
+import FormSelectAPI from '@/shared/components/form/FormSelectAPI';
+import FormInput from '@/shared/components/form/FormInput';
+import FormListAddition from '@/shared/components/form/FormListAddtion';
 import ProductFormProperty from './ProductFormProperty';
 import { SwitcherOutlined } from '@ant-design/icons';
 import ProductFormPrice from './ProductFormPrice';
-import FormSelect from 'components/form/FormSelect';
+import FormSelect from '@/shared/components/form/FormSelect';
 import { PRODUCT_STATUS } from 'configs/localData';
 import { FormListStyles } from "css/global";
-import FormInputNumber from 'components/form/FormInputNumber';
+import FormInputNumber from '@/shared/components/form/FormInputNumber';
 
 const ProductForm = () => {
   return (

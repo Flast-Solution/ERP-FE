@@ -21,17 +21,17 @@
 
 import { useEffect } from "react";
 import { Form, Row, Col, message } from "antd";
-import FormHidden from "components/form/FormHidden";
-import CustomButton from "components/CustomButton";
-import FormListAddition from "components/form/FormListAddtion";
+import FormHidden from "@/shared/components/form/FormHidden";
+import CustomButton from "@/shared/components/CustomButton";
+import FormListAddition from "@/shared/components/form/FormListAddtion";
 import { FormListStyles } from "css/global";
-import FormInputNumber from "components/form/FormInputNumber";
-import FormSelect from "components/form/FormSelect";
-import FormSelectInfiniteBusinessUser from "components/form/SelectInfinite/FormSelectInfiniteBusinessUser";
+import FormInputNumber from "@/shared/components/form/FormInputNumber";
+import FormSelect from "@/shared/components/form/FormSelect";
+import FormSelectInfiniteBusinessUser from "@/shared/components/form/SelectInfinite/FormSelectInfiniteBusinessUser";
 import { KPI_TYPE } from "configs/localData";
-import FormDatePicker from "components/form/FormDatePicker";
-import { dateFormatOnSubmit } from "utils/dataUtils";
-import RequestUtils from "utils/RequestUtils";
+import FormDatePicker from "@/shared/components/form/FormDatePicker";
+import { dateFormatOnSubmit } from "@/shared/utils/dataUtils";
+import RequestUtils from "@/shared/utils/RequestUtils";
 
 const KPIForm = ({ onSave, kpi }) => {
 

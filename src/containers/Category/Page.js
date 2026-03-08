@@ -20,16 +20,16 @@
 /**************************************************************************/
 import React, { useCallback, useState } from 'react';
 import { Row, Col, message } from 'antd';
-import RestEditModal from '@/components/RestLayout/RestEditModal';
-import FormHidden from '@/components/form/FormHidden';
-import FormInput from '@/components/form/FormInput';
-import CustomButton from '@/components/CustomButton';
-import FormTextArea from '@/components/form/FormTextArea';
-import RequestUtils, { SUCCESS_CODE } from '@/utils/RequestUtils';
-import { useEffectAsync } from '@/hooks/MyHooks';
-import { f5List } from '@/utils/dataUtils';
+import RestEditModal from '@/shared/components/RestLayout/RestEditModal';
+import FormHidden from '@/shared/components/form/FormHidden';
+import FormInput from '@/shared/components/form/FormInput';
+import CustomButton from '@/shared/components/CustomButton';
+import FormTextArea from '@/shared/components/form/FormTextArea';
+import RequestUtils, { SUCCESS_CODE } from '@/shared/utils/RequestUtils';
+import { useEffectAsync } from '@/shared/hooks/MyHooks';
+import { f5List } from '@/shared/utils/dataUtils';
 import MediaService from '@/services/MediaService';
-import ImageUploader from '@/components/common/File/ImageUploader';
+import ImageUploader from '@/shared/components/common/File/ImageUploader';
 import logger from '@/logger';
 
 const LOGGER_TAG = '[container/category/Page.js]';

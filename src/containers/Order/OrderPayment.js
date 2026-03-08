@@ -20,16 +20,16 @@
 /**************************************************************************/
 
 import { Col, Form, message, Row } from 'antd'
-import FormDatePicker from 'components/form/FormDatePicker';
-import FormInputNumber from 'components/form/FormInputNumber';
-import FormSelect from 'components/form/FormSelect';
-import { formatMoney } from 'utils/dataUtils'
+import FormDatePicker from '@/shared/components/form/FormDatePicker';
+import FormInputNumber from '@/shared/components/form/FormInputNumber';
+import FormSelect from '@/shared/components/form/FormSelect';
+import { formatMoney } from '@/shared/utils/dataUtils'
 import OrderTextTableOnly from './OrderTextTableOnly';
-import BtnSubmit from 'components/CustomButton/BtnSubmit';
-import RequestUtils from 'utils/RequestUtils';
+import BtnSubmit from '@/shared/components/CustomButton/BtnSubmit';
+import RequestUtils from '@/shared/utils/RequestUtils';
 import { SUCCESS_CODE } from 'configs';
 import { useCallback, useEffect } from 'react';
-import FormAutoComplete from 'components/form/FormAutoComplete';
+import FormAutoComplete from '@/shared/components/form/FormAutoComplete';
 
 const OptionPrice = [
   { title: 'Tiền mặt', name: 'tienmat' },

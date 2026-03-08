@@ -21,7 +21,7 @@
 
 import React, { useReducer, useCallback, useEffect } from 'react'
 import { ACTIONS, CHANGE_STORE } from '@/configs';
-import { InAppEvent } from '@/utils/FuseUtils';
+import { InAppEvent } from '@/shared/utils/FuseUtils';
 import routes from '@/routes/PrivateRoutes';
 
 const DataContext = React.createContext();

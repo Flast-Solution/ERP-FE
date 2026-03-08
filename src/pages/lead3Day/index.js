@@ -21,17 +21,17 @@
 
 import React, { useCallback, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from 'components/BreadcrumbCustom';
-import RestList from 'components/RestLayout/RestList';
+import CustomBreadcrumb from '@/shared/components/BreadcrumbCustom';
+import RestList from '@/shared/components/RestLayout/RestList';
 import LeadFilter from './LeadFilter';
-import useGetList from "hooks/useGetList";
+import useGetList from "@/shared/hooks/useGetList";
 import { Button, Tag } from 'antd';
-import { arrayEmpty, dateFormatOnSubmit } from 'utils/dataUtils';
+import { arrayEmpty, dateFormatOnSubmit } from '@/shared/utils/dataUtils';
 import { getColorStatusLead, getStatusLead } from 'configs/constant';
 import { HASH_MODAL } from 'configs';
-import { InAppEvent } from 'utils/FuseUtils';
+import { InAppEvent } from '@/shared/utils/FuseUtils';
 import { cloneDeep } from 'lodash';
-import RequestUtils from 'utils/RequestUtils';
+import RequestUtils from '@/shared/utils/RequestUtils';
 import { CHANNEL_SOURCE_MAP_KEYS } from 'configs/localData';
 
 const Lead3DayPage = () => {

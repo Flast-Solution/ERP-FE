@@ -1,5 +1,5 @@
 import { GATEWAY } from '@/configs';
-import RequestUtils, { SUCCESS_CODE } from '@/utils/RequestUtils';
+import RequestUtils, { SUCCESS_CODE } from '@/shared/utils/RequestUtils';
 
 const MediaService = {
   fetchById: async (objectId, objectType, featureImage) => {

@@ -21,19 +21,19 @@
 
 import React, { useState } from "react";
 import { Col, Row, Form, message } from "antd";
-import FormInput from "components/form/FormInput";
-import FormSelect from "components/form/FormSelect";
-import RestEditModal from "components/RestLayout/RestEditModal";
-import FormDatePicker from "components/form/FormDatePicker";
-import FormListAddition from "components/form/FormListAddtion";
+import FormInput from "@/shared/components/form/FormInput";
+import FormSelect from "@/shared/components/form/FormSelect";
+import RestEditModal from "@/shared/components/RestLayout/RestEditModal";
+import FormDatePicker from "@/shared/components/form/FormDatePicker";
+import FormListAddition from "@/shared/components/form/FormListAddtion";
 import { FormListStyles } from "css/global";
-import CustomButton from "components/CustomButton";
-import FormSelectInfiniteProvince from "components/form/SelectInfinite/FormSelectInfiniteProvince";
-import { useEffectAsync } from "hooks/MyHooks";
-import RequestUtils from "utils/RequestUtils";
-import FormCheckbox from "components/form/FormCheckbox";
-import { dateFormatOnSubmit } from "utils/dataUtils";
-import FormHidden from "components/form/FormHidden";
+import CustomButton from "@/shared/components/CustomButton";
+import FormSelectInfiniteProvince from "@/shared/components/form/SelectInfinite/FormSelectInfiniteProvince";
+import { useEffectAsync } from "@/shared/hooks/MyHooks";
+import RequestUtils from "@/shared/utils/RequestUtils";
+import FormCheckbox from "@/shared/components/form/FormCheckbox";
+import { dateFormatOnSubmit } from "@/shared/utils/dataUtils";
+import FormHidden from "@/shared/components/form/FormHidden";
 import { SUCCESS_CODE } from "configs";
 
 const CustomerAddressForm = ({ data }) => {

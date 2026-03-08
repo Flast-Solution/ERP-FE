@@ -22,15 +22,15 @@
 import React, { useCallback } from 'react'
 import Board from "@asseinfo/react-kanban";
 import { Button, Input, message } from 'antd';
-import RequestUtils from 'utils/RequestUtils';
+import RequestUtils from '@/shared/utils/RequestUtils';
 import { useState, useEffect } from 'react';
-import { arrayEmpty } from 'utils/dataUtils';
+import { arrayEmpty } from '@/shared/utils/dataUtils';
 import { ContainerStyles } from './style';
-import { useEffectAsync } from 'hooks/MyHooks';
+import { useEffectAsync } from '@/shared/hooks/MyHooks';
 import KanbanCard from './KanbanCard';
 import { SUCCESS_CODE } from 'configs';
 import { isEmpty } from 'lodash';
-import { InAppEvent } from 'utils/FuseUtils';
+import { InAppEvent } from '@/shared/utils/FuseUtils';
 import { HASH_POPUP } from 'configs/constant';
 import '@asseinfo/react-kanban/dist/styles.css'
 

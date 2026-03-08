@@ -20,13 +20,13 @@
 /**************************************************************************/
 import React, { useCallback, useState, useRef } from 'react';
 import { Row, Col, message } from 'antd';
-import RestEditModal from '@/components/RestLayout/RestEditModal';
-import FormHidden from '@/components/form/FormHidden';
-import FormInput from '@/components/form/FormInput';
-import FormJoditEditor from '@/components/form/FormJoditEditor';
-import CustomButton from '@/components/CustomButton';
-import RequestUtils, { SUCCESS_CODE } from '@/utils/RequestUtils';
-import { useEffectAsync } from '@/hooks/MyHooks';
+import RestEditModal from '@/shared/components/RestLayout/RestEditModal';
+import FormHidden from '@/shared/components/form/FormHidden';
+import FormInput from '@/shared/components/form/FormInput';
+import FormJoditEditor from '@/shared/components/form/FormJoditEditor';
+import CustomButton from '@/shared/components/CustomButton';
+import RequestUtils, { SUCCESS_CODE } from '@/shared/utils/RequestUtils';
+import { useEffectAsync } from '@/shared/hooks/MyHooks';
 
 const FormFaq = ({ closeModal, data }) => {
 

@@ -22,19 +22,19 @@
 import React, { useCallback, useState } from 'react';
 import { Button, Space, Popconfirm, Form, message, Row, Col } from 'antd';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from 'components/BreadcrumbCustom';
-import RestList from 'components/RestLayout/RestList';
+import CustomBreadcrumb from '@/shared/components/BreadcrumbCustom';
+import RestList from '@/shared/components/RestLayout/RestList';
 import Filter from './Filter';
-import useGetList from "hooks/useGetList";
-import { dateFormatOnSubmit, formatMoney, formatTime, f5List, arrayEmpty } from 'utils/dataUtils';
+import useGetList from "@/shared/hooks/useGetList";
+import { dateFormatOnSubmit, formatMoney, formatTime, f5List, arrayEmpty } from '@/shared/utils/dataUtils';
 import { HASH_POPUP } from 'configs/constant';
-import { InAppEvent } from 'utils/FuseUtils';
+import { InAppEvent } from '@/shared/utils/FuseUtils';
 import { DeleteOutlined } from '@ant-design/icons';
-import FormInfiniteStock from 'components/form/SelectInfinite/FormInfiniteStock';
-import FormInputNumber from 'components/form/FormInputNumber';
-import RequestUtils from 'utils/RequestUtils';
-import FormTextArea from 'components/form/FormTextArea';
-import FormInput from 'components/form/FormInput';
+import FormInfiniteStock from '@/shared/components/form/SelectInfinite/FormInfiniteStock';
+import FormInputNumber from '@/shared/components/form/FormInputNumber';
+import RequestUtils from '@/shared/utils/RequestUtils';
+import FormTextArea from '@/shared/components/form/FormTextArea';
+import FormInput from '@/shared/components/form/FormInput';
 import { SUCCESS_CODE } from 'configs';
 
 const PopconfirmImport = ({ form, record }) => {

@@ -20,7 +20,7 @@
 /**************************************************************************/
 
 import { Row, Col } from 'antd';
-import FormInput from 'components/form/FormInput';
+import FormInput from '@/shared/components/form/FormInput';
 
 const Filter = () => {
   return (
