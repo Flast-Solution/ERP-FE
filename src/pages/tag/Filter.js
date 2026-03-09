@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  RestEditModal.js                                                      */
+/*  Filter.js                                                             */
 /**************************************************************************/
 /*                       Tệp này là một phần của:                         */
 /*                             Open CDP                                   */
@@ -7,7 +7,7 @@
 /**************************************************************************/
 /* Bản quyền (c) 2025 - này thuộc về các cộng tác viên Flast Solution     */
 /* (xem AUTHORS.md).                                                      */
-/* Bản quyền (c) 2024-2025 Long Huu, Quang Duc, Hung Bui                  */
+/* Bản quyền (c) 2024-2025 Long Huu, Quang Duc, Hung Bui, DuongTM         */
 /*                                                                        */
 /* Bạn được quyền sử dụng phần mềm này miễn phí cho bất kỳ mục đích nào,  */
 /* bao gồm sao chép, sửa đổi, phân phối, bán lại…                         */
@@ -19,42 +19,43 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { Form } from 'antd';
-import { FormContextCustom } from '@/components/context/FormContextCustom';
-import { useCallback, useEffect } from 'react';
+import { Row, Col } from 'antd';
+import FormInput from '@/components/form/FormInput';
 
-const RestEditModal = ({
-  children,
-  record,
-  form: externalForm,
-  isMergeRecordOnSubmit = true,
-  formatOnSubmit = values => values,
-  updateRecord = values => values,
-  formatDefaultValues = values => values,
-  onSubmit
-}) => {
-
-  const [innerForm] = Form.useForm();
-  const form = externalForm || innerForm;
-
-  useEffect(() => {
-    form.setFieldsValue(formatDefaultValues(record));
-    /* eslint-disable-next-line */
-  }, [form, record]);
-
-  const onFinish = useCallback((values) => {
-    const datas = isMergeRecordOnSubmit ? { ...record, ...values } : values;
-    onSubmit(formatOnSubmit(datas));
-    /* eslint-disable-next-line */
-  }, [record, onSubmit]);
-
+const TagFilter = () => {
   return (
-    <Form form={form} layout="vertical" onFinish={onFinish}>
-      <FormContextCustom.Provider value={{ form, record, updateRecord }}>
-        {children}
-      </FormContextCustom.Provider>
-    </Form>
-  );
+    <>
+      <Row gutter={16}>
+        <Col xl={8} lg={8} md={8} xs={24}>
+          <FormInput
+            name={'name'}
+            placeholder="Tên tag"
+            style={{
+                border: "1px solid #d9d9d9", 
+            }}
+          />
+        </Col>
+        <Col xl={8} lg={8} md={8} xs={24}>
+          <FormInput
+            name={'slug'}
+            placeholder="Slug"
+            style={{
+                border: "1px solid #d9d9d9", 
+            }}
+          />
+        </Col>
+        <Col xl={8} lg={8} md={8} xs={24}>
+          <FormInput
+            name={'description'}
+            placeholder="Mô tả"
+            style={{
+                border: "1px solid #d9d9d9", 
+            }}
+          />
+        </Col>
+      </Row>
+    </>
+  )
 };
 
-export default RestEditModal;
+export default TagFilter;
