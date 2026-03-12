@@ -36,22 +36,22 @@ const LOGGER_TAG = '[container/category/Page.js]';
 const MEDIA_TYPE = "category.page";
 const FormCatePage = ({ closeModal, data }) => {
 
-  const [ record, setRecord ] = useState({});
+  const [record, setRecord] = useState({});
   useEffectAsync(async () => {
     const images = await MediaService.fetchById(data.id, MEDIA_TYPE, data.image || '');
     logger.info(LOGGER_TAG, 'IMAGES: ', images);
-    setRecord({ 
+    setRecord({
       ...data,
       images: images,
       sectionId: Math.floor(new Date().getTime() / 1000)
     });
-  }, [ data ]);
+  }, [data]);
 
   const onSubmit = useCallback(async (body) => {
     const { data, message: MEG, errorCode } = await RequestUtils.Post("/category/page/save", body);
     message.info(MEG);
-    if(SUCCESS_CODE === errorCode) {
-      setRecord(pre => ({...pre, ...data}));
+    if (SUCCESS_CODE === errorCode) {
+      setRecord(pre => ({ ...pre, ...data }));
       f5List("category/page/fetch");
     }
   }, []);
@@ -107,7 +107,7 @@ const FormCatePage = ({ closeModal, data }) => {
         <Col md={24} xs={24}>
           <ImageUploader
             onBeforeSubmitMultiPart={(formData) => {
-              if(data.id) {
+              if (data.id) {
                 formData.append('objectId', data.id);
               }
               formData.append('sectionId', record.sectionId);
@@ -120,7 +120,7 @@ const FormCatePage = ({ closeModal, data }) => {
             onToggleFeatured={onUpdateFeaturedImage}
           />
         </Col>
-        <Col md={24} xs={24} style={{marginTop: 30}}>
+        <Col md={24} xs={24} style={{ marginTop: 30 }}>
           <CustomButton
             htmlType="submit"
             title="Hoàn thành"

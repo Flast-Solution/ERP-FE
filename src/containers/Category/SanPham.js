@@ -38,24 +38,24 @@ const LOGGER_TAG = '[container/category/sanpham.js]';
 const FormCateSanPHam = ({ closeModal, data }) => {
 
   const editorRef = useRef(null);
-  const [ record, setRecord ] = useState({});
+  const [record, setRecord] = useState({});
 
   useEffectAsync(async () => {
     const images = await MediaService.fetchById(data.id, "category.product", data.image || '');
     logger.info(LOGGER_TAG, 'IMAGES: ', images);
-    setRecord({ 
+    setRecord({
       ...data,
       images: images,
       sectionId: Math.floor(new Date().getTime() / 1000)
     });
-  }, [ data ]);
+  }, [data]);
 
   const onSubmit = useCallback(async (values) => {
     const { images, ...body } = values;
     const { data, message: MEG, errorCode } = await RequestUtils.Post("/category/product/updated", body);
     message.info(MEG);
-    if(SUCCESS_CODE === errorCode) {
-      setRecord(pre => ({...pre, ...data}));
+    if (SUCCESS_CODE === errorCode) {
+      setRecord(pre => ({ ...pre, ...data }));
       f5List("category/product/fetch");
     }
   }, []);
@@ -118,7 +118,7 @@ const FormCateSanPHam = ({ closeModal, data }) => {
         <Col md={24} xs={24}>
           <ImageUploader
             onBeforeSubmitMultiPart={(formData) => {
-              if(data.id) {
+              if (data.id) {
                 formData.append('objectId', data.id);
               }
               formData.append('sectionId', record.sectionId);
@@ -133,13 +133,13 @@ const FormCateSanPHam = ({ closeModal, data }) => {
           />
         </Col>
         <Col md={24} xs={24}>
-          <FormJoditEditor 
+          <FormJoditEditor
             name="seoContent"
             initContent={data?.seoContent ?? ''}
             ref={editorRef}
           />
         </Col>
-        <Col md={24} xs={24} style={{marginTop: 30}}>
+        <Col md={24} xs={24} style={{ marginTop: 30 }}>
           <CustomButton
             htmlType="submit"
             title="Hoàn thành"

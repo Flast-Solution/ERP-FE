@@ -48,7 +48,14 @@ import {
   GiftOutlined,
   BuildOutlined,
   DeliveredProcedureOutlined,
-  FileWordOutlined
+  FileWordOutlined,
+  SolutionOutlined,
+  MailOutlined,
+  CalendarOutlined,
+  BookOutlined,
+  FieldTimeOutlined,
+  UsergroupAddOutlined,
+  RotateLeftOutlined
 } from '@ant-design/icons';
 
 import useCollapseSidebar from 'hooks/useCollapseSidebar';
@@ -113,7 +120,14 @@ function SideBar() {
     getItem('Tài khoản', 'tai_khoan', <UserOutlined />, [
       getItem(<Link to="/user/group">Team</Link>, 'user_group', <TeamOutlined />),
       getItem(<Link to="/user/list-system">Tài khoản hệ thống</Link>, 'user_system', <SettingOutlined />)
-    ])
+    ]),
+    getItem('Quản lý hành chính', 'quan_ly_hanh_chinh', <SolutionOutlined />, [
+      getItem(<Link to="/employee">Nhân viên</Link>, 'employee', <UsergroupAddOutlined />),
+      getItem(<Link to="/cleander">Lịch</Link>, 'cleander', <CalendarOutlined />),
+      getItem(<Link to="/booking">Booking</Link>, 'booking', <BookOutlined />),
+      getItem(<Link to="/leave">Nghỉ phép</Link>, 'leave', <RotateLeftOutlined />),
+      getItem(<Link to="/email">Email</Link>, 'email', <MailOutlined />),
+      getItem(<Link to="/overtime">Tăng ca</Link>, 'overtime', <FieldTimeOutlined />)]), 
   ];
 
   return (

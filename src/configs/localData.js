@@ -21,6 +21,16 @@
 
 import theme from '@/theme';
 import mapKeys from 'lodash/mapKeys';
+import {
+  AudioOutlined,
+  FileExcelOutlined,
+  FilePdfOutlined,
+  FilePptOutlined,
+  FileTextOutlined,
+  FileWordOutlined,
+  FileZipOutlined,
+  VideoCameraOutlined
+} from '@ant-design/icons';
 
 export const ACTIVE_TYPES = [
   {
@@ -98,13 +108,57 @@ export const DEPARTMENT = [
   { value: 3, name: "Kinhdoanh", color: 'purple' },
   { value: 4, name: "Khác", color: 'orange' }
 ];
+
+export const CAR_WORK_TYPE = 1;
 export const DEPARTMENT_MAP_KEYS_VALUE = mapKeys(DEPARTMENT, 'value');
 
 export const PROJECT_STATUS_LIST = ['Not Started', 'In Progress', 'Completed', 'On Hold'];
-export const PROJECT_TASK_STATUS_LIST = ['To Do', 'In Progress','Done','Cancelled'];
+export const PROJECT_TASK_STATUS_LIST = ['To Do', 'In Progress', 'Done', 'Cancelled'];
 
 export const MATERIAL_UNIT_TYPE = [
   { value: "QUANTITY", name: "Số lượng" },
   { value: "DIMENSION", name: "Kích thước" },
   { value: "WEIGHT", name: "Trọng lượng" }
+];
+
+
+
+export const CAR_NOT_WORK_TYPE = 2;
+export const REGISTER_WORK_TYPE = [
+  { value: 1, text: 'Công tác có phí', color: 'green' },
+  { value: 2, text: 'Công tác không phí', color: 'red' }
+];
+
+export const HOTEL_ROOM_PAY_TYPE_COMPANY = 1;
+export const HOTEL_ROOM_PAY_TYPE_PERSIONAL = 2;
+export const HOTEL_ROOM_PAY_TYPE = [
+  { value: HOTEL_ROOM_PAY_TYPE_COMPANY, text: 'Công ty trả/company pay', color: 'green' },
+  { value: HOTEL_ROOM_PAY_TYPE_PERSIONAL, text: 'Cá nhân tạm ứng/person pay', color: 'red' }
+];
+
+export const FLIGHT_WAY_TYPE_DEPARTURE = 1;
+export const FLIGHT_WAY_TYPE_ARRIVAL = 2;
+export const FLIGHT_WAY_TYPE = [
+  { value: FLIGHT_WAY_TYPE_DEPARTURE, text: 'Chiều đi / Departure', color: 'green' },
+  { value: FLIGHT_WAY_TYPE_ARRIVAL, text: 'Chiều về / Arrival', color: 'red' }
+];
+
+export const FILE_TYPES = [
+  { value: 'pdf', IconCPN: FilePdfOutlined, color: theme.color.red },
+  { value: 'ppt', IconCPN: FilePptOutlined, color: theme.color.pink },
+  { value: 'pptx', IconCPN: FilePptOutlined, color: theme.color.pink },
+  { value: 'doc', IconCPN: FileWordOutlined, color: theme.color.blue },
+  { value: 'docx', IconCPN: FileWordOutlined, color: theme.color.blue },
+  { value: 'xlsx', IconCPN: FileExcelOutlined, color: theme.color.green },
+  { value: 'xls', IconCPN: FileExcelOutlined, color: theme.color.green },
+  { value: 'csv', IconCPN: FileExcelOutlined, color: theme.color.green },
+  { value: 'zip', IconCPN: FileZipOutlined, color: theme.color.violet },
+  { value: 'zar', IconCPN: FileZipOutlined, color: theme.color.violet },
+  { value: 'txt', IconCPN: FileTextOutlined, color: 'currentColor' },
+  { value: 'mov', IconCPN: VideoCameraOutlined, color: 'currentColor' },
+  { value: 'mp4', IconCPN: VideoCameraOutlined, color: 'currentColor' },
+  { value: 'avi', IconCPN: VideoCameraOutlined, color: 'currentColor' },
+  { value: 'flv', IconCPN: VideoCameraOutlined, color: 'currentColor' },
+  { value: 'wmv', IconCPN: VideoCameraOutlined, color: 'currentColor' },
+  { value: 'mp3', IconCPN: AudioOutlined, color: theme.color.lightGreen },
 ];

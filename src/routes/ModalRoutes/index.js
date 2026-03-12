@@ -35,6 +35,7 @@ import Cohoi7DayRouter from './Cohoi7DayRouter.js';
 import ActionChamSocDonHangRouter from './ChamSocDonHangRouter.js';
 import CommonRoute from './CommonRoute.js';
 import WebRouter from './WebRouter.js';
+import userRoute from './userRoute.js';
 
 const notFoundHash = { Component: () => <div /> };
 const modalRoutes = [
@@ -48,7 +49,8 @@ const modalRoutes = [
   ...OrderRouter,
   ...UserGroupRouter,
   ...Cohoi7DayRouter,
-  ...ActionChamSocDonHangRouter
+  ...ActionChamSocDonHangRouter,
+  ...userRoute
 ]
 
 const getModalRoute = (urlHash) => {
