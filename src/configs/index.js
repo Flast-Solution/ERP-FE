@@ -28,6 +28,7 @@ export const GATE_EVN = {
 };
 
 export const GATEWAY = GATE_EVN['Pro'];
+export const BASE_URL = GATEWAY;
 export const CHANGE_STORE = 'CHANGE_STORE';
 export const UPLOAD_PATH = GATEWAY + '/uploads';
 

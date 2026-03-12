@@ -1,0 +1,12 @@
+.c__today {
+  border: 1px solid #ccc;
+  padding: 3px 15px;
+  border-radius: 20px;
+  color: black;
+  font-size: 15px;
+}
+
+.c__action_calender {
+  display: flex;
+  align-items: center;
+}

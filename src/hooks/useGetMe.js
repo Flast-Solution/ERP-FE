@@ -21,12 +21,25 @@
 
 import { useContext } from 'react';
 import MyContext from '@/DataContext';
+import authRoles from '@/auth/authRoles';
 
 function useGetMe() {
-    const { user, setMyData } = useContext(MyContext)
+    const { user, setMyData } = useContext(MyContext);
+
+    const hasRole = (roles) => {
+        if (!user || !user.roles) return false;
+        return roles.some(role => user.roles.includes(role));
+    };
+
+    const isLeader = () => hasRole([...authRoles.admin, ...authRoles.partner]);
+    const isManager = () => hasRole([...authRoles.admin, ...authRoles.partner, ...authRoles.provider]);
+
     return {
         user,
         setMe: (me) => setMyData(pre => ({ ...pre, user: me })),
+        isLeader,
+        isManager,
+        hasRole
     };
 }
 

@@ -95,3 +95,39 @@ export const getTypeGroup = (option) => {
       return 'N/A';
   }
 }
+
+/**************************************************************************/
+
+export const SUCCESS_API_CODE = 200;
+
+export const NGHI_PHEP_META = [
+    { id: 1, name: 'Nghỉ phép năm (Annual Leave)' },
+    { id: 2, name: 'Nghỉ không lương (Unpaid Absence)' },
+    { id: 3, name: 'Nghỉ theo chính sách phúc lợi của công ty (Leave According To Company Welfare Policy)' },
+    { id: 4, name: 'Nghỉ ốm hưởng BHXH (Sick Leave With Social Insurance)' },
+    { id: 5, name: 'Lý do khác (Other Reasons)' },
+]
+
+export const OVERTIME_META = [
+    { id: 1, name: 'Làm thêm giờ' },
+    { id: 2, name: 'Làm thêm vào ngày nghỉ' }
+]
+
+export const NGHI_PHEP_STATUS_WAITING = 0;
+export const NGHI_PHEP_STATUS_CONFIRM = 1;
+export const NGHI_PHEP_STATUS_DONE = 2;
+export const NGHI_PHEP_STATUS_REJECT = 3;
+
+export const APP_FOLLOW_STATUS_WAITING = 0;
+export const APP_FOLLOW_STATUS_CONFIRM = 1;
+export const APP_FOLLOW_STATUS_DONE = 2;
+export const APP_FOLLOW_STATUS_REJECT = 3;
+
+export const NGHI_PHEP_STATUS_TEXT = [
+    { id: NGHI_PHEP_STATUS_WAITING, name: 'Chờ xác nhận (Waiting For Confirmation)' },
+    { id: NGHI_PHEP_STATUS_CONFIRM, name: 'Xác nhận (Confirm)' },
+    { id: NGHI_PHEP_STATUS_DONE, name: 'Duyệt (Approve)' },
+    { id: NGHI_PHEP_STATUS_REJECT, name: 'Không đồng ý (Refuse)' }
+]
+
+export const APP_STATUS_TEXT = NGHI_PHEP_STATUS_TEXT;

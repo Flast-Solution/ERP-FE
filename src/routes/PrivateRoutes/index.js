@@ -62,6 +62,9 @@ import { AiAgentConfig } from './AiAgentConfig';
 /* Web */
 import { WebConfig } from './WebConfig';
 
+/* HR - Quản lý hành chính */
+import { HRConfig } from './HRConfig';
+
 const routeConfigs = [
     LoginConfig,
     KpiConfig,
@@ -84,7 +87,8 @@ const routeConfigs = [
     OrderConfig,
     AiAgentConfig,
     DragDropConfig,
-    WebConfig
+    WebConfig,
+    HRConfig
 ];
 
 const routes = [
