@@ -142,7 +142,7 @@ export const EOvertime = ({
               <th style={tBorder}>Từ (From)</th>
               <th style={tBorder}>Đến (To)</th>
             </tr>
-            {arrayNotEmpty(record?.listRegis) &&
+            {arrayNotEmpty(record?.listRegis?.filter(Boolean)) &&
               <TableRender listRegis={record.listRegis} />
             }
           </table>
@@ -179,11 +179,12 @@ export const EOvertime = ({
 };
 
 const TableRender = ({ listRegis }) => {
-  return listRegis.map(item => (
-    <tr style={tBorder}>
-      <td style={tBorder}>{item.jobs}</td>
-      <td style={jobTimeContent}>{formatDateDayjs(item.startTime, "MM-DD HH:mm")}</td>
-      <td style={jobTimeContent}>{formatDateDayjs(item.endTime, "MM-DD HH:mm")}</td>
+  const safeList = (listRegis || []).filter(Boolean);
+  return safeList.map((item, idx) => (
+    <tr key={idx} style={tBorder}>
+      <td style={tBorder}>{item?.jobs ?? ''}</td>
+      <td style={jobTimeContent}>{formatDateDayjs(item?.startTime, "MM-DD HH:mm")}</td>
+      <td style={jobTimeContent}>{formatDateDayjs(item?.endTime, "MM-DD HH:mm")}</td>
     </tr>
   ));
 }

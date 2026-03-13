@@ -136,10 +136,10 @@ const NPConfirm = ({ closeModal, data }) => {
       }
       applyStyleDaKy("daKy", "Đã Ký");
     }
-    let domContent = document.getElementById("np-content-html");
-    if(domContent) {
-      nItem.contentEmail = domContent.innerHTML;
-    }
+    // let domContent = document.getElementById("np-content-html");
+    // if(domContent) {
+    //   nItem.contentEmail = domContent.innerHTML;
+    // }
     const uri = isLeader() ? "/over-time/check-leave-of" : "/over-time/appoved-leave-of";
     RequestUtils.Post(uri, {...values, ...nItem }).then(({ message }) => {
       InAppEvent.normalInfo(message);

@@ -115,3 +115,18 @@ export const dateFormatOnSubmit = (entity, propertes = [], format = "YYYY-MM-DD 
 export const formatTime = (text, fm = "DD-MM-YYYY") => text ? moment(new Date(text)).format(fm) : 'N/a';
 export const formatMoney = (x) => x ? x.toLocaleString('it-IT') + ' đ' : '0 đ';
 export const calVat = ({ total, vatPercent }) => (total || 0) * (vatPercent / 100);
+
+export const string2Object = (data) => {
+	if(!data) {
+		return [ '(empty)', null ];
+	}
+	if(typeof(data) !== 'string') {
+		return [ '(invalid)', null ];
+	}
+	try {
+		let obj = JSON.parse(data);
+		return [ null, obj ];
+	} catch (e) {
+		return [ e, null ];
+	}
+}

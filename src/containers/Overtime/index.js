@@ -56,10 +56,10 @@ const OverTime = ({ closeModal, data }) => {
       }
       overTimeReality.listRegis = values.otRequestEdit;
     }
-    let domContent = document.getElementById("np-content-html");
-    if(domContent) {
-      values.contentEmail = domContent.innerHTML;
-    }
+    // let domContent = document.getElementById("np-content-html");
+    // if(domContent) {
+    //   values.contentEmail = domContent.innerHTML;
+    // }
     values.overTimeReality = overTimeReality;
     values.userId = user.id;
     return values;

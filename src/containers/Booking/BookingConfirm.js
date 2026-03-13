@@ -127,10 +127,10 @@ const BookingConfirm = ({ closeModal, data }) => {
       nItem.status = APP_FOLLOW_STATUS_DONE;
       applyStyleDaKy("daKy", "Đã Ký");
     }
-    let domContent = document.getElementById("np-content-html");
-    if (domContent) {
-      nItem.contentEmail = domContent.innerHTML;
-    }
+    // let domContent = document.getElementById("np-content-html");
+    // if (domContent) {
+    //   nItem.contentEmail = domContent.innerHTML;
+    // }
     const pService = record.pService ?? '/un-know';
     const uri = isLeader() ? (pService + "/check-leave-of") : (pService + "/appoved-leave-of");
     RequestUtils.Post(uri, { ...values, ...nItem }).then(({ message }) => {

@@ -27,26 +27,26 @@ const dataRoute = [
     Component: React.lazy(() => import('containers/UserAcount')),
     modalOptions: { title: '', width: 750 }
   },
-  // {
-  //   path: 'nghiphep.edit',
-  //   Component: React.lazy(() => import('containers/NghiPhep')),
-  //   modalOptions: { title: '', width: 750 }
-  // },
-  // {
-  //   path: 'nghiphep.confirm',
-  //   Component: React.lazy(() => import('containers/NghiPhep/NPConfirm')),
-  //   modalOptions: { title: '', width: 750 }
-  // },
-  // {
-  //   path: 'overtime.edit',
-  //   Component: React.lazy(() => import('containers/Overtime')),
-  //   modalOptions: { title: '', width: 750 }
-  // },
-  // {
-  //   path: 'overtime.confirm',
-  //   Component: React.lazy(() => import('containers/Overtime/OVConfirm')),
-  //   modalOptions: { title: '', width: 750 }
-  // },
+  {
+    path: 'nghiphep.edit',
+    Component: React.lazy(() => import('containers/NghiPhep')),
+    modalOptions: { title: '', width: 750 }
+  },
+  {
+    path: 'nghiphep.confirm',
+    Component: React.lazy(() => import('containers/NghiPhep/NPConfirm')),
+    modalOptions: { title: '', width: 750 }
+  },
+  {
+    path: 'overtime.edit',
+    Component: React.lazy(() => import('containers/Overtime')),
+    modalOptions: { title: '', width: 750 }
+  },
+  {
+    path: 'overtime.confirm',
+    Component: React.lazy(() => import('containers/Overtime/OVConfirm')),
+    modalOptions: { title: '', width: 750 }
+  },
   {
     path: 'booking.car.edit',
     Component: React.lazy(() => import('containers/Booking/BookingCar')),

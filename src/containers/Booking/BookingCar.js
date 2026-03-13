@@ -58,10 +58,10 @@ const BookingCar = ({ closeModal, data }) => {
   }, []);
 
   const formatOnSubmit = useCallback((values) => {
-    let domContent = document.getElementById("np-content-html");
-    if (domContent) {
-      values.contentEmail = domContent.innerHTML;
-    }
+    // let domContent = document.getElementById("np-content-html");
+    // if (domContent) {
+    //   values.contentEmail = domContent.innerHTML;
+    // }
     return values;
   }, []);
 

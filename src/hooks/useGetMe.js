@@ -33,12 +33,14 @@ function useGetMe() {
 
     const isLeader = () => hasRole([...authRoles.admin, ...authRoles.partner]);
     const isManager = () => hasRole([...authRoles.admin, ...authRoles.partner, ...authRoles.provider]);
+    const isUser = () => !isLeader() && !isManager();
 
     return {
         user,
         setMe: (me) => setMyData(pre => ({ ...pre, user: me })),
         isLeader,
         isManager,
+        isUser,
         hasRole
     };
 }

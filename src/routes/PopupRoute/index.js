@@ -53,6 +53,11 @@ const Common = [
     path: 'material.add',
     Component: React.lazy(() => import('containers/Material')),
     modalOptions: { title: '', width: 600 }
+  },
+  {
+    path: 'calendar.add',
+    Component: React.lazy(() => import('containers/Calendar/AddAction')),
+    modalOptions: { title: '', width: 650 }
   }
 ];
 

@@ -115,10 +115,10 @@ const NPConfirm = ({ closeModal, data }) => {
       nItem.status = NGHI_PHEP_STATUS_DONE;
       applyStyleDaKy("daKy", "Đã Ký");
     }
-    let domContent = document.getElementById("np-content-html");
-    if (domContent) {
-      nItem.contentEmail = domContent.innerHTML;
-    }
+    // let domContent = document.getElementById("np-content-html");
+    // if (domContent) {
+    //   nItem.contentEmail = domContent.innerHTML;
+    // }
     const uri = isLeader() ? "/leave-of-absence/check-leave-of" : "/leave-of-absence/appoved-leave-of";
     RequestUtils.Post(uri, { ...data, ...nItem }).then(({ message }) => {
       InAppEvent.normalInfo(message);
