@@ -148,7 +148,7 @@ const RenderOTItem = ({ listRegis }) => {
       { listRegis.map( (regis, id) => (
       <Typography key={id}>
         <Paragraph >
-          <Text>{regis.jobs}</Text>
+          <Text>{regis?.jobs}</Text>
         </Paragraph>
         <Paragraph >
           <Text strong type={regis.type === 2 ? "warning" : "success"}>

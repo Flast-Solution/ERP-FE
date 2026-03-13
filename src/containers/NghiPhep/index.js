@@ -27,10 +27,10 @@ const UserNPForm = ({ closeModal, data }) => {
 
   const formatOnSubmit = useCallback((values) => {
     dateFormatOnSubmit(values, ['createdAt', 'endAt', 'startedAt']);
-    let domContent = document.getElementById("np-content-html");
-    if (domContent) {
-      values.contentEmail = domContent.innerHTML;
-    }
+    // let domContent = document.getElementById("np-content-html");
+    // if (domContent) {
+    //   values.contentEmail = domContent.innerHTML;
+    // }
     return values;
   }, []);
 

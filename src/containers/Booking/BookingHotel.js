@@ -45,11 +45,11 @@ const BookingHotel = ({ closeModal, data }) => {
     for (let item of (values?.bookingList ?? [])) {
       dateFormatOnSubmit(item, ['checkIn', 'checkOut'])
     }
-    const { userId, bookingList, note, contentEmail, ...info } = values;
+    const { userId, bookingList, note, ...info } = values;
     let params = (values?.id ?? '') === '' ? {} : { id: values.id };
     let uri = params?.id ? 'update' : 'create';
     let nUri = String("/tickes-hotel/").concat(uri);
-    RequestUtils.Post(nUri, { ...params, bookingList, infoHotel: info, note, contentEmail }, params).then(
+    RequestUtils.Post(nUri, { ...params, bookingList, infoHotel: info, note }, params).then(
       ({ errorCode, message }) => {
         InAppEvent.normalInfo(errorCode === SUCCESS_CODE ? message : "Lỗi gửi thông tin đặt nhà nghỉ, khách sạn .!");
       }
@@ -57,10 +57,10 @@ const BookingHotel = ({ closeModal, data }) => {
   }, []);
 
   const formatOnSubmit = useCallback((values) => {
-    let domContent = document.getElementById("np-content-html");
-    if (domContent) {
-      values.contentEmail = domContent.innerHTML;
-    }
+    // let domContent = document.getElementById("np-content-html");
+    // if (domContent) {
+    //   values.contentEmail = domContent.innerHTML;
+    // }
     return values;
   }, []);
 

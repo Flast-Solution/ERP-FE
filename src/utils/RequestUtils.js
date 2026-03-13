@@ -21,6 +21,7 @@
 
 import { GATE_EVN, GATEWAY } from '@/configs';
 import axios from 'axios';
+import { SUCCESS_API_CODE } from 'configs/constant';
 
 class RequestUtils {
 
@@ -80,6 +81,34 @@ class RequestUtils {
 			result[item[0]] = decodeURIComponent(item[1]);
 		});
 		return result;
+	}
+
+		static uploadSigFile = ({
+		onSuccess,
+		onError,
+		file,
+		onProgress = (progress) => progress,
+		onSuccessUploadServer = (values) => values,
+		api
+	}) => {
+		const fmData = new FormData();
+		const config = {
+			headers: { "content-type": "multipart/form-data" },
+			onUploadProgress: event => {
+				onProgress({ percent: (event.loaded / event.total) * 100 }, file);
+			}
+		};
+		fmData.append("files", file);
+		axios.post(GATEWAY + "/" + api, fmData, config).then(({ data: ret }) => {
+			const { data, errorCode } = ret;
+			onSuccess(file);
+			if (errorCode === SUCCESS_API_CODE && (data?.fileName || '') !== '') {
+				onSuccessUploadServer(data.fileName);
+			}
+		}).catch(err => {
+			const error = new Error(err.message);
+			onError({ event: error });
+		});
 	}
 }
 
