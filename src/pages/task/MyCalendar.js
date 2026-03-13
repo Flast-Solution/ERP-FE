@@ -6,11 +6,11 @@ import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import { message } from 'antd';
 import dayjs from 'dayjs';
-import { InAppEvent } from '@/shared/utils/FuseUtils';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
 import { HASH_POPUP } from 'configs/constant';
-import RequestUtils from '@/shared/utils/RequestUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 import { useParams } from 'react-router-dom';
-import { useEffectAsync } from '@/shared/hooks/MyHooks';
+import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
 import { EventTime, EventTitle, EventContainer, LayoutWrapper } from './style'
 
 export default function MyCalendar() {

@@ -20,9 +20,9 @@
 /**************************************************************************/
 
 import { Row, Col } from 'antd';
-import FormDatePicker from '@/shared/components/form/FormDatePicker';
-import FormInput from '@/shared/components/form/FormInput';
-import FormSelectInfiniteBusinessUser from '@/shared/components/form/SelectInfinite/FormSelectInfiniteBusinessUser';
+import FormDatePicker from '@erp/shared/dist/components/form/FormDatePicker';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
+import FormSelectInfiniteBusinessUser from '@erp/shared/dist/components/form/SelectInfinite/FormSelectInfiniteBusinessUser';
 
 const Filter = () => (
   <Row gutter={16}>

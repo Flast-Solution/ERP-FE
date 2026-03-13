@@ -23,12 +23,12 @@ import React, { useRef, useState } from 'react';
 import { Row, Col, Table, Typography } from 'antd';
 import OrderTextTableOnly from './OrderTextTableOnly';
 import { useReactToPrint } from "react-to-print";
-import CustomButton from '@/shared/components/CustomButton';
-import { formatMoney } from '@/shared/utils/dataUtils';
-import { formatPhoneNumber } from '@/shared/utils/tools';
-import { useEffectAsync } from '@/shared/hooks/MyHooks';
+import CustomButton from '@erp/shared/dist/components/CustomButton';
+import { formatMoney } from '@erp/shared/dist/utils/dataUtils';
+import { formatPhoneNumber } from '@erp/shared/dist/utils/tools';
+import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
 import UserService from 'services/UserService';
-import HeaderCompany from '@/shared/components/common/HeaderCompany';
+import HeaderCompany from '@erp/shared/dist/components/common/HeaderCompany';
 import { StyledHeaderInvoice } from "css/global";
 
 const { Title, Text } = Typography;

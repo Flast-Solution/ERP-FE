@@ -21,7 +21,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Column } from '@ant-design/plots';
-import RequestUtils from '@/shared/utils/RequestUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 
 const ChartActivityLead = ({ activityLead }) => {
   const [listSale, setListSale] = useState([]);

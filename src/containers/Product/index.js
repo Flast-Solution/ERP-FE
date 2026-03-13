@@ -21,10 +21,10 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { message } from 'antd';
-import RestEditModal from '@/shared/components/RestLayout/RestEditModal';
-import { InAppEvent } from '@/shared/utils/FuseUtils';
-import RequestUtils from '@/shared/utils/RequestUtils';
-import { arrayEmpty, arrayNotEmpty, f5List } from '@/shared/utils/dataUtils';
+import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import { arrayEmpty, arrayNotEmpty, f5List } from '@erp/shared/dist/utils/dataUtils';
 import ProductForm from './ProductForm';
 import ProductAttrService from 'services/ProductAttrService';
 import { cloneDeep } from 'lodash';

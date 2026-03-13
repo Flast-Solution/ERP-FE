@@ -21,9 +21,9 @@
 
 import React, { useState } from 'react';
 import { Tabs } from 'antd';
-import { arrayNotEmpty, f5List } from '@/shared/utils/dataUtils';
+import { arrayNotEmpty, f5List } from '@erp/shared/dist/utils/dataUtils';
 import OrderService from 'services/OrderService';
-import { useEffectAsync } from '@/shared/hooks/MyHooks';
+import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
 import OrderPayment from './OrderPayment';
 import { DollarOutlined, FileTextOutlined, BankOutlined } from '@ant-design/icons';
 import Invoice from './Invoice';

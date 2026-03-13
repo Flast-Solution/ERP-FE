@@ -21,17 +21,17 @@
 
 import { useState, useEffect, useContext } from 'react';
 import { Row, Col, Tag, List, Button } from 'antd';
-import FormHidden from '@/shared/components/form/FormHidden';
-import CustomButton from '@/shared/components/CustomButton';
-import FormInput from '@/shared/components/form/FormInput';
-import FormSelect from '@/shared/components/form/FormSelect';
+import FormHidden from '@erp/shared/dist/components/form/FormHidden';
+import CustomButton from '@erp/shared/dist/components/CustomButton';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
+import FormSelect from '@erp/shared/dist/components/form/FormSelect';
 import Dragger from 'antd/es/upload/Dragger';
-import FormTextArea from '@/shared/components/form/FormTextArea';
+import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
 import { CHANNEL_SOURCE } from 'configs/localData';
-import RequestUtils from '@/shared/utils/RequestUtils';
-import FormSelectInfiniteProduct from '@/shared/components/form/SelectInfinite/FormSelectInfiniteProduct';
-import { FormContextCustom } from '@/shared/components/context/FormContextCustom';
-import { arrayEmpty, arrayNotEmpty } from '@/shared/utils/dataUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import FormSelectInfiniteProduct from '@erp/shared/dist/components/form/SelectInfinite/FormSelectInfiniteProduct';
+import { FormContextCustom } from '@erp/shared/dist/components/context/FormContextCustom';
+import { arrayEmpty, arrayNotEmpty } from '@erp/shared/dist/utils/dataUtils';
 import { DeleteOutlined } from '@ant-design/icons';
 
 const LeadForm = ({

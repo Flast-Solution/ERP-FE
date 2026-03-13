@@ -22,16 +22,16 @@
 import React, { useCallback, useState } from 'react';
 import { Button, message, Space } from 'antd';
 import { cloneDeep } from 'lodash';
-import RestList from "@/shared/components/RestLayout/RestList";
-import useGetList from "@/shared/hooks/useGetList";
+import RestList from "@erp/shared/dist/components/RestLayout/RestList";
+import useGetList from "@erp/shared/dist/hooks/useGetList";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@/shared/components/BreadcrumbCustom';
+import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
 import Filter from '@/pages/category/Filter';
-import { InAppEvent } from "@/shared/utils/FuseUtils";
+import { InAppEvent } from "@erp/shared/dist/utils/FuseUtils";
 import { GATEWAY, HASH_MODAL } from '@/configs';
-import { dateFormatOnSubmit, formatTime } from '@/shared/utils/dataUtils';
-import RequestUtils from '@/shared/utils/RequestUtils';
-import CustomImage from '@/shared/components/common/CustomImage';
+import { dateFormatOnSubmit, formatTime } from '@erp/shared/dist/utils/dataUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import CustomImage from '@erp/shared/dist/components/common/CustomImage';
 
 const CatePage = () => {
 

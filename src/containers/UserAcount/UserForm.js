@@ -21,10 +21,10 @@
 
 import React from 'react'
 import { Col, Row } from 'antd'
-import CustomButton from '@/shared/components/CustomButton'
-import FormHidden from '@/shared/components/form/FormHidden'
-import FormInput from '@/shared/components/form/FormInput'
-import FormSelect from '@/shared/components/form/FormSelect'
+import CustomButton from '@erp/shared/dist/components/CustomButton'
+import FormHidden from '@erp/shared/dist/components/form/FormHidden'
+import FormInput from '@erp/shared/dist/components/form/FormInput'
+import FormSelect from '@erp/shared/dist/components/form/FormSelect'
 import { ACTIVE_TYPES } from 'configs/localData'
 
 const UserForm = ({ listProFile }) => {

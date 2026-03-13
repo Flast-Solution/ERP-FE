@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { Form, DatePicker, ColorPicker, Row, Col, Slider, Button, Flex } from 'antd';
-import FormInput from '@/shared/components/form/FormInput';
-import FormSelect from '@/shared/components/form/FormSelect';
-import FormTextArea from '@/shared/components/form/FormTextArea';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
+import FormSelect from '@erp/shared/dist/components/form/FormSelect';
+import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
 import { PROJECT_TASK_STATUS_LIST } from 'configs/localData';
 import { isEmpty } from 'lodash';
-import { useEffectAsync } from '@/shared/hooks/MyHooks';
+import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
 import dayjs from 'dayjs';
-import FormSelectInfiniteBusinessUser from '@/shared/components/form/SelectInfinite/FormSelectInfiniteBusinessUser';
+import FormSelectInfiniteBusinessUser from '@erp/shared/dist/components/form/SelectInfinite/FormSelectInfiniteBusinessUser';
 
 const { RangePicker } = DatePicker;
 const TaskForm = ({ 

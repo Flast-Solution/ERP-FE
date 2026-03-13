@@ -21,7 +21,7 @@
 
 import React, { useState } from 'react';
 import { Table } from 'antd';
-import { arrayNotEmpty } from '@/shared/utils/dataUtils';
+import { arrayNotEmpty } from '@erp/shared/dist/utils/dataUtils';
 import { ShowSkuDetail } from 'containers/Product/SkuView'
 
 const InStockTable = ({ data, onChangeSelected }) => {

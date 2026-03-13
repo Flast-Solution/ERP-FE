@@ -21,18 +21,18 @@
 
 import { useState, useCallback } from "react";
 import { Form, Row, Col, Button, Upload } from "antd";
-import CustomButton from "@/shared/components/CustomButton";
-import FormAddress from "@/shared/components/form/FormAddress";
-import FormHidden from "@/shared/components/form/FormHidden";
-import FormInput from "@/shared/components/form/FormInput";
+import CustomButton from "@erp/shared/dist/components/CustomButton";
+import FormAddress from "@erp/shared/dist/components/form/FormAddress";
+import FormHidden from "@erp/shared/dist/components/form/FormHidden";
+import FormInput from "@erp/shared/dist/components/form/FormInput";
 import { GATEWAY, SUCCESS_CODE } from "configs";
-import { useEffectAsync } from "@/shared/hooks/MyHooks";
-import { arrayNotEmpty } from "@/shared/utils/dataUtils";
-import RequestUtils from "@/shared/utils/RequestUtils";
+import { useEffectAsync } from "@erp/shared/dist/hooks/MyHooks";
+import { arrayNotEmpty } from "@erp/shared/dist/utils/dataUtils";
+import RequestUtils from "@erp/shared/dist/utils/RequestUtils";
 import { UploadOutlined } from '@ant-design/icons';
 import axios from "axios";
-import { InAppEvent } from "@/shared/utils/FuseUtils";
-import FileUploadView from "@/shared/components/common/File/FileUploadView";
+import { InAppEvent } from "@erp/shared/dist/utils/FuseUtils";
+import FileUploadView from "@erp/shared/dist/components/common/File/FileUploadView";
 
 const EnterpriseForm = ({ customerOrder }) => {
 

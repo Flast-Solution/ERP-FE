@@ -21,10 +21,10 @@
 
 import { useContext, useMemo } from 'react';
 import { Col, Form } from 'antd';
-import FormSelectAPI from '@/shared/components/form/FormSelectAPI';
+import FormSelectAPI from '@erp/shared/dist/components/form/FormSelectAPI';
 import { FormListStyles } from "css/global";
 import ProductAttrService from 'services/ProductAttrService';
-import { FormContextCustom } from '@/shared/components/context/FormContextCustom';
+import { FormContextCustom } from '@erp/shared/dist/components/context/FormContextCustom';
 import _ from "lodash";
 
 const ProductFormProperty = ({ field }) => {

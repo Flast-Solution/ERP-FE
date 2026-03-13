@@ -21,7 +21,7 @@
 
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import FuseUtils from '@/shared/utils/FuseUtils';
+import FuseUtils from '@erp/shared/dist/utils/FuseUtils';
 
 import { LoginConfig } from './AuthConfig';
 import { CommonConfig } from './CommonConfig';

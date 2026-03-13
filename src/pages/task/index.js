@@ -32,13 +32,13 @@ import {
   Popconfirm
 } from 'antd';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@/shared/components/BreadcrumbCustom';
+import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
 import Filter from './Filter';
-import useGetList from "@/shared/hooks/useGetList";
-import RestList from '@/shared/components/RestLayout/RestList';
-import { arrayEmpty, dateFormatOnSubmit, f5List, formatMoney, formatTime } from '@/shared/utils/dataUtils';
+import useGetList from "@erp/shared/dist/hooks/useGetList";
+import RestList from '@erp/shared/dist/components/RestLayout/RestList';
+import { arrayEmpty, dateFormatOnSubmit, f5List, formatMoney, formatTime } from '@erp/shared/dist/utils/dataUtils';
 import { useCallback } from 'react';
-import { InAppEvent } from '@/shared/utils/FuseUtils';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
 import { HASH_MODAL } from 'configs';
 import {
   CalendarOutlined, 
@@ -51,7 +51,7 @@ import {
 } from '@ant-design/icons';
 import { DEPARTMENT_MAP_KEYS_VALUE } from 'configs/localData';
 import UserService from 'services/UserService';
-import RequestUtils from '@/shared/utils/RequestUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 import { useNavigate } from 'react-router-dom';
 
 const STATUS_COLORS = {

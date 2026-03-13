@@ -21,21 +21,21 @@
 
 import React, { useState, useCallback } from 'react';
 import { Col, Form, message, Row } from 'antd';
-import { FormContextCustom } from '@/shared/components/context/FormContextCustom';
-import FormSelectInfiniteProduct from '@/shared/components/form/SelectInfinite/FormSelectInfiniteProduct';
-import FormSelect from '@/shared/components/form/FormSelect';
-import FormInputNumber from '@/shared/components/form/FormInputNumber';
-import BtnSubmit from '@/shared/components/CustomButton/BtnSubmit';
-import FormSelectInfiniteProvider from '@/shared/components/form/SelectInfinite/FormSelectInfiniteProvider';
-import FormInfiniteStock from '@/shared/components/form/SelectInfinite/FormInfiniteStock';
-import FormHidden from '@/shared/components/form/FormHidden';
-import RequestUtils from '@/shared/utils/RequestUtils';
+import { FormContextCustom } from '@erp/shared/dist/components/context/FormContextCustom';
+import FormSelectInfiniteProduct from '@erp/shared/dist/components/form/SelectInfinite/FormSelectInfiniteProduct';
+import FormSelect from '@erp/shared/dist/components/form/FormSelect';
+import FormInputNumber from '@erp/shared/dist/components/form/FormInputNumber';
+import BtnSubmit from '@erp/shared/dist/components/CustomButton/BtnSubmit';
+import FormSelectInfiniteProvider from '@erp/shared/dist/components/form/SelectInfinite/FormSelectInfiniteProvider';
+import FormInfiniteStock from '@erp/shared/dist/components/form/SelectInfinite/FormInfiniteStock';
+import FormHidden from '@erp/shared/dist/components/form/FormHidden';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 import WarehouseService from 'services/WarehouseService';
 import InStockTable from 'containers/WareHouse/InStockTable'
 import { ShowSkuDetail } from 'containers/Product/SkuView';
 import { isEmpty } from 'lodash';
-import { createMSkuDetails } from '@/shared/utils/skuUtils';
-import { useEffectAsync } from '@/shared/hooks/MyHooks';
+import { createMSkuDetails } from '@erp/shared/dist/utils/skuUtils';
+import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
 
 const ModalNhapKho = ({
   product,

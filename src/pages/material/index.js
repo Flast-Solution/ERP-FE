@@ -22,19 +22,19 @@
 import React, { useCallback, useState } from 'react';
 import { Button, Space, Popconfirm, Form, message, Row, Col } from 'antd';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@/shared/components/BreadcrumbCustom';
-import RestList from '@/shared/components/RestLayout/RestList';
+import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
+import RestList from '@erp/shared/dist/components/RestLayout/RestList';
 import Filter from './Filter';
-import useGetList from "@/shared/hooks/useGetList";
-import { dateFormatOnSubmit, formatMoney, formatTime, f5List, arrayEmpty } from '@/shared/utils/dataUtils';
+import useGetList from "@erp/shared/dist/hooks/useGetList";
+import { dateFormatOnSubmit, formatMoney, formatTime, f5List, arrayEmpty } from '@erp/shared/dist/utils/dataUtils';
 import { HASH_POPUP } from 'configs/constant';
-import { InAppEvent } from '@/shared/utils/FuseUtils';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
 import { DeleteOutlined } from '@ant-design/icons';
-import FormInfiniteStock from '@/shared/components/form/SelectInfinite/FormInfiniteStock';
-import FormInputNumber from '@/shared/components/form/FormInputNumber';
-import RequestUtils from '@/shared/utils/RequestUtils';
-import FormTextArea from '@/shared/components/form/FormTextArea';
-import FormInput from '@/shared/components/form/FormInput';
+import FormInfiniteStock from '@erp/shared/dist/components/form/SelectInfinite/FormInfiniteStock';
+import FormInputNumber from '@erp/shared/dist/components/form/FormInputNumber';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
 import { SUCCESS_CODE } from 'configs';
 
 const PopconfirmImport = ({ form, record }) => {

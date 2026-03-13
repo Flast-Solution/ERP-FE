@@ -24,7 +24,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { GlobalOutlined, LogoutOutlined, ProfileOutlined, UserOutlined } from '@ant-design/icons';
 import { Avatar, Dropdown, Menu } from 'antd';
-import useGetMe from '@/shared/hooks/useGetMe';
+import useGetMe from '@erp/shared/dist/hooks/useGetMe';
 import moment from 'moment';
 import { MenuStyles } from './styles';
 

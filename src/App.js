@@ -18,7 +18,7 @@
 /* Đội ngũ phát triển mong rằng phần mềm được sử dụng đúng mục đích và    */
 /* có trách nghiệm                                                        */
 /**************************************************************************/
-
+import React from "react";
 import 'Main.less';
 import { useEffect, Suspense } from 'react';
 import { ThemeProvider } from 'styled-components';
@@ -32,7 +32,7 @@ import history from "@/@history";
 import Authorization from '@/auth/Authorization';
 import MainLayout from '@/layouts/MainLayout';
 import MyPopup from '@/routes/PopupRoute';
-import Loading from '@/shared/components/Loading';
+import Loading from '@erp/shared/dist/components/Loading';
 import ModalRoutes from '@/routes/ModalRoutes';
 
 const ThemeRender = () => (

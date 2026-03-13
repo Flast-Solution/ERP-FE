@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import RequestUtils, { SUCCESS_CODE } from "@/shared/utils/RequestUtils";
+import RequestUtils, { SUCCESS_CODE } from "@erp/shared/dist/utils/RequestUtils";
 
 const WarehouseService = {
   allStatus: [],

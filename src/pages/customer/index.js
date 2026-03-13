@@ -21,17 +21,17 @@
 
 import React, { useCallback, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@/shared/components/BreadcrumbCustom';
-import RestList from '@/shared/components/RestLayout/RestList';
+import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
+import RestList from '@erp/shared/dist/components/RestLayout/RestList';
 import CustomerFilter from './Filter';
-import useGetList from '@/shared/hooks/useGetList';
+import useGetList from '@erp/shared/dist/hooks/useGetList';
 import { Button } from 'antd';
-import { arrayEmpty, arrayNotEmpty, dateFormatOnSubmit, formatTime } from '@/shared/utils/dataUtils';
+import { arrayEmpty, arrayNotEmpty, dateFormatOnSubmit, formatTime } from '@erp/shared/dist/utils/dataUtils';
 import UserService from 'services/UserService';
 import { CHANNEL_SOURCE_MAP_KEYS } from 'configs/localData';
 import { useNavigate } from 'react-router-dom';
 import TagEditor from './TagEditor';
-import RequestUtils from '@/shared/utils/RequestUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 import { SUCCESS_CODE } from 'configs';
 
 const ListCustomerRetail = () => {

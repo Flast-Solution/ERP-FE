@@ -21,9 +21,9 @@
 
 import { useTranslation } from 'react-i18next';
 import { Form, Input } from 'antd';
-import FormInput from '@/shared/components/form/FormInput';
-import useLogin from '@/shared/hooks/useLogin';
-import CustomButton from '@/shared/components/CustomButton';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
+import useLogin from '@erp/shared/dist/hooks/useLogin';
+import CustomButton from '@erp/shared/dist/components/CustomButton';
 
 function Login() {
 

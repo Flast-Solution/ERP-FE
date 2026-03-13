@@ -22,17 +22,17 @@
 import React, { useCallback, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Button, Popconfirm, Form, message } from 'antd';
-import CustomBreadcrumb from '@/shared/components/BreadcrumbCustom';
-import RestList from '@/shared/components/RestLayout/RestList';
+import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
+import RestList from '@erp/shared/dist/components/RestLayout/RestList';
 import WarehouseFilter from './Filter';
-import useGetList from "@/shared/hooks/useGetList";
-import { dateFormatOnSubmit, f5List, formatTime } from '@/shared/utils/dataUtils';
-import { InAppEvent } from '@/shared/utils/FuseUtils';
+import useGetList from "@erp/shared/dist/hooks/useGetList";
+import { dateFormatOnSubmit, f5List, formatTime } from '@erp/shared/dist/utils/dataUtils';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
 import { ShowSkuDetail } from 'containers/Product/SkuView';
 import { HASH_POPUP, HASH_MODAL } from 'configs/constant';
-import FormInfiniteStock from '@/shared/components/form/SelectInfinite/FormInfiniteStock';
-import FormInputNumber from '@/shared/components/form/FormInputNumber';
-import RequestUtils from '@/shared/utils/RequestUtils';
+import FormInfiniteStock from '@erp/shared/dist/components/form/SelectInfinite/FormInfiniteStock';
+import FormInputNumber from '@erp/shared/dist/components/form/FormInputNumber';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 
 const ListInStock = () => {
 

@@ -19,20 +19,20 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 import { useState, useContext } from 'react';
-import RestEditModal from '@/shared/components/RestLayout/RestEditModal';
-import FormListAddition from "@/shared/components/form/FormListAddtion";
+import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
+import FormListAddition from "@erp/shared/dist/components/form/FormListAddtion";
 import { Col, Row, Typography, Form, message } from 'antd';
 import { SwitcherOutlined } from '@ant-design/icons';
-import FormSelectInfiniteMaterial from '@/shared/components/form/SelectInfinite/FormSelectInfiniteMaterial';
-import FormInputNumber from '@/shared/components/form/FormInputNumber';
-import FormHidden from '@/shared/components/form/FormHidden';
-import { FormContextCustom } from '@/shared/components/context/FormContextCustom';
-import CustomButton from '@/shared/components/CustomButton';
-import FormInput from '@/shared/components/form/FormInput';
-import { arrayEmpty, formatMoney } from '@/shared/utils/dataUtils';
-import RequestUtils from '@/shared/utils/RequestUtils';
-import { useEffectAsync } from '@/shared/hooks/MyHooks';
-import FormSelect from '@/shared/components/form/FormSelect';
+import FormSelectInfiniteMaterial from '@erp/shared/dist/components/form/SelectInfinite/FormSelectInfiniteMaterial';
+import FormInputNumber from '@erp/shared/dist/components/form/FormInputNumber';
+import FormHidden from '@erp/shared/dist/components/form/FormHidden';
+import { FormContextCustom } from '@erp/shared/dist/components/context/FormContextCustom';
+import CustomButton from '@erp/shared/dist/components/CustomButton';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
+import { arrayEmpty, formatMoney } from '@erp/shared/dist/utils/dataUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
+import FormSelect from '@erp/shared/dist/components/form/FormSelect';
 
 const ProductBomContainer = ({ closeModal, data }) => {
 

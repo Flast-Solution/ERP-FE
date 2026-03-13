@@ -36,11 +36,11 @@ import {
 } from 'antd';
 
 import { DollarCircleOutlined, MailOutlined, FileDoneOutlined } from "@ant-design/icons";
-import { useEffectAsync } from '@/shared/hooks/MyHooks';
-import RequestUtils from '@/shared/utils/RequestUtils';
+import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 import { SUCCESS_CODE } from 'configs';
-import { arrayNotEmpty, formatMoney, formatTime } from '@/shared/utils/dataUtils';
-import { InAppEvent } from '@/shared/utils/FuseUtils';
+import { arrayNotEmpty, formatMoney, formatTime } from '@erp/shared/dist/utils/dataUtils';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
 import { useNavigate } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
 import OrderService from 'services/OrderService';

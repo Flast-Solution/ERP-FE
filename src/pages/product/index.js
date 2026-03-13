@@ -20,20 +20,20 @@
 /**************************************************************************/
 
 import React, { useCallback, useState } from 'react';
-import RestList from "@/shared/components/RestLayout/RestList";
-import useGetList from "@/shared/hooks/useGetList";
+import RestList from "@erp/shared/dist/components/RestLayout/RestList";
+import useGetList from "@erp/shared/dist/hooks/useGetList";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@/shared/components/BreadcrumbCustom';
+import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
 import Filter from './Filter';
 import { Button, Space } from 'antd';
-import { InAppEvent } from "@/shared/utils/FuseUtils";
+import { InAppEvent } from "@erp/shared/dist/utils/FuseUtils";
 import { GATEWAY, HASH_MODAL } from 'configs';
-import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@/shared/utils/dataUtils';
+import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@erp/shared/dist/utils/dataUtils';
 import ProductAttrService from 'services/ProductAttrService';
 import { cloneDeep } from 'lodash';
 import SkuView, { PriceView } from 'containers/Product/SkuView';
 import { Link } from 'react-router-dom';
-import CustomImage from '@/shared/components/common/CustomImage';
+import CustomImage from '@erp/shared/dist/components/common/CustomImage';
 
 const Index = () => {
 

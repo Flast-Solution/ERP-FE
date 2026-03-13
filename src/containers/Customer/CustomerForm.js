@@ -21,16 +21,16 @@
 
 import { useEffect, useCallback, useState } from "react";
 import { Col, Form, Row } from "antd";
-import { FormContextCustom } from '@/shared/components/context/FormContextCustom';
-import FormSelectInfiniteCustomer from "@/shared/components/form/SelectInfinite/FormSelectInfiniteCustomer";
-import FormInput from "@/shared/components/form/FormInput";
-import BtnSubmit from '@/shared/components/CustomButton/BtnSubmit';
-import FormSelect from "@/shared/components/form/FormSelect";
+import { FormContextCustom } from '@erp/shared/dist/components/context/FormContextCustom';
+import FormSelectInfiniteCustomer from "@erp/shared/dist/components/form/SelectInfinite/FormSelectInfiniteCustomer";
+import FormInput from "@erp/shared/dist/components/form/FormInput";
+import BtnSubmit from '@erp/shared/dist/components/CustomButton/BtnSubmit';
+import FormSelect from "@erp/shared/dist/components/form/FormSelect";
 import { CHANNEL_SOURCE } from "configs/localData";
-import { arrayEmpty } from "@/shared/utils/dataUtils";
-import RequestUtils from "@/shared/utils/RequestUtils";
+import { arrayEmpty } from "@erp/shared/dist/utils/dataUtils";
+import RequestUtils from "@erp/shared/dist/utils/RequestUtils";
 import { SUCCESS_CODE } from "configs";
-import { InAppEvent } from "@/shared/utils/FuseUtils";
+import { InAppEvent } from "@erp/shared/dist/utils/FuseUtils";
 
 function mapFields(source, mapping) {
   let result = {};

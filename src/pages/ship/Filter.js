@@ -20,11 +20,11 @@
 /**************************************************************************/
 
 import { Row, Col } from 'antd';
-import FormInput from '@/shared/components/form/FormInput';
-import FormInfiniteShipStatus from '@/shared/components/form/SelectInfinite/FormInfiniteShipStatus';
-import FormInfiniteStock from '@/shared/components/form/SelectInfinite/FormInfiniteStock';
-import FormSelectInfiniteBusinessUser from '@/shared/components/form/SelectInfinite/FormSelectInfiniteBusinessUser';
-import FormSelectInfiniteProduct from '@/shared/components/form/SelectInfinite/FormSelectInfiniteProduct';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
+import FormInfiniteShipStatus from '@erp/shared/dist/components/form/SelectInfinite/FormInfiniteShipStatus';
+import FormInfiniteStock from '@erp/shared/dist/components/form/SelectInfinite/FormInfiniteStock';
+import FormSelectInfiniteBusinessUser from '@erp/shared/dist/components/form/SelectInfinite/FormSelectInfiniteBusinessUser';
+import FormSelectInfiniteProduct from '@erp/shared/dist/components/form/SelectInfinite/FormSelectInfiniteProduct';
 
 const ShipFilter = () => (
   <Row gutter={16}>

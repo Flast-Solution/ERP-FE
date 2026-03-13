@@ -19,13 +19,13 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import RestEditModal from '@/shared/components/RestLayout/RestEditModal';
+import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
 import React, { useEffect, useState } from 'react'
 import UserForm from './UserForm';
-import RequestUtils from '@/shared/utils/RequestUtils';
-import { validateRegex } from '@/shared/utils/validateUtils';
-import { InAppEvent } from '@/shared/utils/FuseUtils';
-import { f5List } from '@/shared/utils/dataUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import { validateRegex } from '@erp/shared/dist/utils/validateUtils';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
+import { f5List } from '@erp/shared/dist/utils/dataUtils';
 
 const UserAccount = ({ data }) => {
 

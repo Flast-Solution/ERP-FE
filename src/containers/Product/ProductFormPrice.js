@@ -19,15 +19,15 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import FormCascader from '@/shared/components/form/FormCascader';
-import FormListAddition from '@/shared/components/form/FormListAddtion';
+import FormCascader from '@erp/shared/dist/components/form/FormCascader';
+import FormListAddition from '@erp/shared/dist/components/form/FormListAddtion';
 import { FormPriceStyle } from './styles';
 import { Col, Row } from 'antd';
-import FormInputNumber from '@/shared/components/form/FormInputNumber';
+import FormInputNumber from '@erp/shared/dist/components/form/FormInputNumber';
 import { useEffect, useState } from 'react';
 import { isEmpty } from 'lodash';
 import ProductAttrService from 'services/ProductAttrService';
-import FormInput from '@/shared/components/form/FormInput';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
 
 /** 
  * listProperties Data simple

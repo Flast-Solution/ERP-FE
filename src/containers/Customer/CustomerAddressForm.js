@@ -21,19 +21,19 @@
 
 import React, { useState } from "react";
 import { Col, Row, Form, message } from "antd";
-import FormInput from "@/shared/components/form/FormInput";
-import FormSelect from "@/shared/components/form/FormSelect";
-import RestEditModal from "@/shared/components/RestLayout/RestEditModal";
-import FormDatePicker from "@/shared/components/form/FormDatePicker";
-import FormListAddition from "@/shared/components/form/FormListAddtion";
+import FormInput from "@erp/shared/dist/components/form/FormInput";
+import FormSelect from "@erp/shared/dist/components/form/FormSelect";
+import RestEditModal from "@erp/shared/dist/components/RestLayout/RestEditModal";
+import FormDatePicker from "@erp/shared/dist/components/form/FormDatePicker";
+import FormListAddition from "@erp/shared/dist/components/form/FormListAddtion";
 import { FormListStyles } from "css/global";
-import CustomButton from "@/shared/components/CustomButton";
-import FormSelectInfiniteProvince from "@/shared/components/form/SelectInfinite/FormSelectInfiniteProvince";
-import { useEffectAsync } from "@/shared/hooks/MyHooks";
-import RequestUtils from "@/shared/utils/RequestUtils";
-import FormCheckbox from "@/shared/components/form/FormCheckbox";
-import { dateFormatOnSubmit } from "@/shared/utils/dataUtils";
-import FormHidden from "@/shared/components/form/FormHidden";
+import CustomButton from "@erp/shared/dist/components/CustomButton";
+import FormSelectInfiniteProvince from "@erp/shared/dist/components/form/SelectInfinite/FormSelectInfiniteProvince";
+import { useEffectAsync } from "@erp/shared/dist/hooks/MyHooks";
+import RequestUtils from "@erp/shared/dist/utils/RequestUtils";
+import FormCheckbox from "@erp/shared/dist/components/form/FormCheckbox";
+import { dateFormatOnSubmit } from "@erp/shared/dist/utils/dataUtils";
+import FormHidden from "@erp/shared/dist/components/form/FormHidden";
 import { SUCCESS_CODE } from "configs";
 
 const CustomerAddressForm = ({ data }) => {

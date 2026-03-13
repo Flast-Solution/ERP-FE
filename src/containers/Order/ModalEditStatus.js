@@ -19,17 +19,17 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import FormListAddition from "@/shared/components/form/FormListAddtion";
+import FormListAddition from "@erp/shared/dist/components/form/FormListAddtion";
 import { Col, Form, ColorPicker, message } from 'antd';
-import FormInput from "@/shared/components/form/FormInput";
-import FormSelect from "@/shared/components/form/FormSelect";
+import FormInput from "@erp/shared/dist/components/form/FormInput";
+import FormSelect from "@erp/shared/dist/components/form/FormSelect";
 import { FormListStyles } from "css/global";
 import { useEffect } from "react";
-import RequestUtils from "@/shared/utils/RequestUtils";
+import RequestUtils from "@erp/shared/dist/utils/RequestUtils";
 import { SUCCESS_CODE } from "configs";
-import FormHidden from "@/shared/components/form/FormHidden";
-import CustomButton from "@/shared/components/CustomButton";
-import FormInputNumber from "@/shared/components/form/FormInputNumber";
+import FormHidden from "@erp/shared/dist/components/form/FormHidden";
+import CustomButton from "@erp/shared/dist/components/CustomButton";
+import FormInputNumber from "@erp/shared/dist/components/form/FormInputNumber";
 
 const ModalEditStatus = ({ listStatus, onSave }) => {
 

@@ -21,14 +21,14 @@
 
 import { Badge } from 'antd';
 import { Link } from 'react-router-dom';
-import useCollapseSidebar from '@/shared/hooks/useCollapseSidebar';
+import useCollapseSidebar from '@erp/shared/dist/hooks/useCollapseSidebar';
 import SearchInput from './SearchInput';
 import ServiceSelect from './ServiceSelect';
 import HeaderWrapper from './styles';
-import CustomButton from '@/shared/components/CustomButton';
+import CustomButton from '@erp/shared/dist/components/CustomButton';
 import { BellFilled, PlusOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import UserInfo from './UserInfo';
-import useServiceId from '@/shared/hooks/useServiceId';
+import useServiceId from '@erp/shared/dist/hooks/useServiceId';
 import { useNavigate } from "react-router-dom";
 
 const Header = () => {

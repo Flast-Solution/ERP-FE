@@ -19,11 +19,11 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import RestEditModal from '@/shared/components/RestLayout/RestEditModal';
+import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
 import React, { useEffect, useState } from 'react'
 import UserGroupForm from './UserGroupForm';
-import RequestUtils from '@/shared/utils/RequestUtils';
-import { f5List } from '@/shared/utils/dataUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import { f5List } from '@erp/shared/dist/utils/dataUtils';
 import { message } from 'antd';
 
 const UserAccount = ({ data }) => {

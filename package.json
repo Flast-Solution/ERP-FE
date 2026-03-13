@@ -39,7 +39,8 @@
     "react-to-print": "^3.1.1",
     "react-waypoint": "^10.3.0",
     "styled-components": "^5.3.5",
-    "vn-num2words": "^1.0.4"
+    "vn-num2words": "^1.0.4",
+    "@erp/shared": "git+https://github.com/BuiDucHung/ERP-SHARED.git"
   },
   "scripts": {
     "start": "craco start",
@@ -67,6 +68,7 @@
     ]
   },
   "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "cross-env": "^10.1.0"
   }
 }

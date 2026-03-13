@@ -22,7 +22,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Table, Typography } from "antd";
 import styled from "styled-components";
-import { arrayEmpty, formatMoney } from '@/shared/utils/dataUtils';
+import { arrayEmpty, formatMoney } from '@erp/shared/dist/utils/dataUtils';
 import { ShowSkuDetail } from 'containers/Product/SkuView';
 
 const { Text } = Typography;

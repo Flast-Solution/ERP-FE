@@ -51,7 +51,7 @@ import {
   FileWordOutlined
 } from '@ant-design/icons';
 
-import useCollapseSidebar from '@/shared/hooks/useCollapseSidebar';
+import useCollapseSidebar from '@erp/shared/dist/hooks/useCollapseSidebar';
 import { useTranslation } from 'react-i18next';
 import { Link } from "react-router-dom";
 import SideBarStyles from './styles';

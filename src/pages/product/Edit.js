@@ -1,21 +1,21 @@
 import { useState, useRef, useCallback } from 'react';
 import { Row, Col, message } from 'antd';
-import { useEffectAsync } from '@/shared/hooks/MyHooks';
+import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
 import { useParams } from 'react-router-dom';
-import RequestUtils from '@/shared/utils/RequestUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@/shared/components/BreadcrumbCustom';
+import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
 import { GATEWAY, SUCCESS_CODE } from '@/configs';
-import RestEditModal from '@/shared/components/RestLayout/RestEditModal';
-import FormHidden from '@/shared/components/form/FormHidden';
-import FormInput from '@/shared/components/form/FormInput';
-import FormTextArea from '@/shared/components/form/FormTextArea';
-import FormJoditEditor from '@/shared/components/form/FormJoditEditor';
-import CustomButton from '@/shared/components/CustomButton';
-import FormInfiniteCategory from '@/shared/components/form/SelectInfinite/FormInfiniteCategory';
-import ImageUploader from '@/shared/components/common/File/ImageUploader';
-import InfiniteFaq from '@/shared/components/form/SelectInfinite/InfiniteFaq';
-import FormInputNumber from '@/shared/components/form/FormInputNumber';
+import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
+import FormHidden from '@erp/shared/dist/components/form/FormHidden';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
+import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
+import FormJoditEditor from '@erp/shared/dist/components/form/FormJoditEditor';
+import CustomButton from '@erp/shared/dist/components/CustomButton';
+import FormInfiniteCategory from '@erp/shared/dist/components/form/SelectInfinite/FormInfiniteCategory';
+import ImageUploader from '@erp/shared/dist/components/common/File/ImageUploader';
+import InfiniteFaq from '@erp/shared/dist/components/form/SelectInfinite/InfiniteFaq';
+import FormInputNumber from '@erp/shared/dist/components/form/FormInputNumber';
 
 const ProductEdit = () => {
 

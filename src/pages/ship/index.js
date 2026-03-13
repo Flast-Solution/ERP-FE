@@ -22,15 +22,15 @@
 import React, { useCallback, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Button } from 'antd';
-import CustomBreadcrumb from '@/shared/components/BreadcrumbCustom';
-import RestList from '@/shared/components/RestLayout/RestList';
+import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
+import RestList from '@erp/shared/dist/components/RestLayout/RestList';
 import ShipFilter from './Filter';
-import useGetList from "@/shared/hooks/useGetList";
-import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@/shared/utils/dataUtils';
-import { InAppEvent } from '@/shared/utils/FuseUtils';
+import useGetList from "@erp/shared/dist/hooks/useGetList";
+import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@erp/shared/dist/utils/dataUtils';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
 import { ShowSkuDetail } from 'containers/Product/SkuView';
 import { HASH_MODAL } from 'configs/constant';
-import RequestUtils from '@/shared/utils/RequestUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 
 const ShipPage = () => {
 

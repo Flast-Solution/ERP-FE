@@ -21,19 +21,19 @@
 
 import React, { useState } from 'react'
 import { Col, Form, Row, message, Table } from 'antd'
-import CustomButton from '@/shared/components/CustomButton';
-import FormAddress from '@/shared/components/form/FormAddress';
-import FormInput from '@/shared/components/form/FormInput';
-import FormInputNumber from '@/shared/components/form/FormInputNumber';
-import FormSelectAPI from '@/shared/components/form/FormSelectAPI';
-import FormInfiniteOrderCode from '@/shared/components/form/SelectInfinite/FormInfiniteOrderCode';
-import FormSelect from '@/shared/components/form/FormSelect';
+import CustomButton from '@erp/shared/dist/components/CustomButton';
+import FormAddress from '@erp/shared/dist/components/form/FormAddress';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
+import FormInputNumber from '@erp/shared/dist/components/form/FormInputNumber';
+import FormSelectAPI from '@erp/shared/dist/components/form/FormSelectAPI';
+import FormInfiniteOrderCode from '@erp/shared/dist/components/form/SelectInfinite/FormInfiniteOrderCode';
+import FormSelect from '@erp/shared/dist/components/form/FormSelect';
 import WarehouseService from 'services/WarehouseService';
-import { useEffectAsync } from '@/shared/hooks/MyHooks';
-import { arrayEmpty } from '@/shared/utils/dataUtils';
+import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
+import { arrayEmpty } from '@erp/shared/dist/utils/dataUtils';
 import OrderTextTableOnly from 'containers/Order/OrderTextTableOnly';
-import RequestUtils from '@/shared/utils/RequestUtils';
-import FormTextArea from '@/shared/components/form/FormTextArea';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
 import { SUCCESS_CODE } from 'configs';
 
 const GiaoHangForm = ({ title, data }) => {

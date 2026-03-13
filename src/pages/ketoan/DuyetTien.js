@@ -22,14 +22,14 @@
 import React, { useCallback, useState } from 'react';
 import { Button } from 'antd';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@/shared/components/BreadcrumbCustom';
-import RestList from '@/shared/components/RestLayout/RestList';
+import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
+import RestList from '@erp/shared/dist/components/RestLayout/RestList';
 import Filter from './Filter';
-import useGetList from "@/shared/hooks/useGetList";
-import { dateFormatOnSubmit } from '@/shared/utils/dataUtils';
+import useGetList from "@erp/shared/dist/hooks/useGetList";
+import { dateFormatOnSubmit } from '@erp/shared/dist/utils/dataUtils';
 import { ORDER_COLUMN_ACTION } from 'containers/Order/utils';
 import { HASH_MODAL } from 'configs';
-import { InAppEvent } from '@/shared/utils/FuseUtils';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
 import OrderService from 'services/OrderService';
 
 const DuyetTienPage = () => {

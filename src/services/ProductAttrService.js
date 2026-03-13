@@ -20,8 +20,8 @@
 /**************************************************************************/
 
 import { SUCCESS_CODE } from '@/configs';
-import { arrayEmpty, arrayNotEmpty } from '@/shared/utils/dataUtils';
-import RequestUtils from '@/shared/utils/RequestUtils';
+import { arrayEmpty, arrayNotEmpty } from '@erp/shared/dist/utils/dataUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 
 const ProductAttrService = {
   allData: [],

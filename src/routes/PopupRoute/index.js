@@ -21,9 +21,9 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { HASH_POPUP, HASH_POPUP_CLOSE } from 'configs/constant';
-import { InAppEvent } from '@/shared/utils/FuseUtils';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
 import { Modal } from 'antd';
-import { NoFooter } from '@/shared/components/common/NoFooter';
+import { NoFooter } from '@erp/shared/dist/components/common/NoFooter';
 import { createGlobalStyle } from 'styled-components';
 
 import Order from './Order';

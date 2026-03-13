@@ -22,7 +22,7 @@
 import React from 'react';
 import { Tag, Tooltip } from 'antd';
 import { ClockCircleOutlined } from '@ant-design/icons';
-import { formatMoney, formatTime } from '@/shared/utils/dataUtils';
+import { formatMoney, formatTime } from '@erp/shared/dist/utils/dataUtils';
 import { ShowSkuDetail } from 'containers/Product/SkuView';
 import {
   KanbanCardWrapper,
