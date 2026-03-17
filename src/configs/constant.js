@@ -115,8 +115,8 @@ export const OVERTIME_META = [
 
 export const NGHI_PHEP_STATUS_WAITING = 0;
 export const NGHI_PHEP_STATUS_CONFIRM = 1;
+export const NGHI_PHEP_STATUS_REJECT = 1;
 export const NGHI_PHEP_STATUS_DONE = 2;
-export const NGHI_PHEP_STATUS_REJECT = 3;
 
 export const APP_FOLLOW_STATUS_WAITING = 0;
 export const APP_FOLLOW_STATUS_CONFIRM = 1;
@@ -124,10 +124,9 @@ export const APP_FOLLOW_STATUS_DONE = 2;
 export const APP_FOLLOW_STATUS_REJECT = 3;
 
 export const NGHI_PHEP_STATUS_TEXT = [
-    { id: NGHI_PHEP_STATUS_WAITING, name: 'Chờ xác nhận (Waiting For Confirmation)' },
-    { id: NGHI_PHEP_STATUS_CONFIRM, name: 'Xác nhận (Confirm)' },
-    { id: NGHI_PHEP_STATUS_DONE, name: 'Duyệt (Approve)' },
-    { id: NGHI_PHEP_STATUS_REJECT, name: 'Không đồng ý (Refuse)' }
+    { id: NGHI_PHEP_STATUS_WAITING, name: 'Chờ duyệt (Waiting For Approval)' },
+    { id: NGHI_PHEP_STATUS_REJECT, name: 'Không duyệt (Not Approved)' },
+    { id: NGHI_PHEP_STATUS_DONE, name: 'Duyệt (Approved)' }
 ]
 
 export const APP_STATUS_TEXT = NGHI_PHEP_STATUS_TEXT;

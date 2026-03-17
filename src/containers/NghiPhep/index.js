@@ -5,12 +5,16 @@ import RequestUtils from 'utils/RequestUtils';
 import NghiPhepForm from './NghiPhepForm';
 import { dateFormatOnSubmit, f5List } from 'utils/dataUtils';
 import NPReview from './NPReview';
+import NPConfirm from './NPConfirm';
 import { Form } from 'antd';
 import { NGHI_PHEP_STATUS_WAITING } from 'configs/constant';
+import useGetMe from 'hooks/useGetMe';
 
 const UserNPForm = ({ closeModal, data }) => {
 
+  const { isLeader, isManager } = useGetMe();
   const [record, setRecord] = useState({});
+
   useEffect(() => {
     setRecord(data);
   }, [data]);
@@ -27,10 +31,6 @@ const UserNPForm = ({ closeModal, data }) => {
 
   const formatOnSubmit = useCallback((values) => {
     dateFormatOnSubmit(values, ['createdAt', 'endAt', 'startedAt']);
-    // let domContent = document.getElementById("np-content-html");
-    // if (domContent) {
-    //   values.contentEmail = domContent.innerHTML;
-    // }
     return values;
   }, []);
 
@@ -40,6 +40,11 @@ const UserNPForm = ({ closeModal, data }) => {
     }
     return (values?.preview ?? false) === true;
   }, [data]);
+
+  const canApprove = isLeader() || isManager();
+  if (canApprove && data?.id) {
+    return <NPConfirm closeModal={closeModal} data={data} />;
+  }
 
   return <>
     <RestEditModal

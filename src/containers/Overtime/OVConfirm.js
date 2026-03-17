@@ -7,7 +7,6 @@ import useGetMe from 'hooks/useGetMe';
 import CustomButton from 'components/CustomButton';
 import { Popconfirm } from 'antd';
 import { 
-  NGHI_PHEP_STATUS_CONFIRM,
   NGHI_PHEP_STATUS_DONE, 
   NGHI_PHEP_STATUS_REJECT, 
   NGHI_PHEP_STATUS_WAITING
@@ -23,23 +22,21 @@ const BtnCancel = ({
   setShowNote
 }) => {
 
-  const { isLeader, isManager } = useGetMe();
+  const { isLeader } = useGetMe();
   const { form } = useContext(FormContextCustom);
 
   const onSubmitCancel = useCallback(() => {
     form.validateFields().then((values) => {
       let nItem = {};
-      if(isLeader()) {
-        nItem.noteCheck = values.note;
-        applyStyleDaKy("daKiemTra", "Cancel");
-      }
-      if(isManager()) {
-        nItem.noteAppoved = values.note;
-        applyStyleDaKy("daKy", "Cancel");
-      }
+      nItem.noteCheck = values.note;
+      applyStyleDaKy("daKiemTra", "Không duyệt");
       nItem.status = NGHI_PHEP_STATUS_REJECT;
-      const uri = isLeader() ? "/over-time/check-leave-of" : "/over-time/appoved-leave-of";
-      RequestUtils.Post(uri, {...data, ...nItem }).then(({ message }) => {
+      const reEditStatus = data?.overTimeReality ?? false;
+      if (reEditStatus) {
+        nItem.overTimeReality = { ...reEditStatus, status: NGHI_PHEP_STATUS_REJECT };
+      }
+      const uri = "/over-time/check-leave-of";
+      RequestUtils.Post(uri, { ...data, ...nItem }).then(({ message }) => {
         InAppEvent.normalInfo(message);
       });
       f5List('over-time/fetch');
@@ -50,34 +47,17 @@ const BtnCancel = ({
   const reEditStatus = data?.overTimeReality?.status ?? -1;
   const status = data.status;
 
-  if(isLeader()) {
+  if (isLeader()) {
     return (status === NGHI_PHEP_STATUS_WAITING || reEditStatus === NGHI_PHEP_STATUS_WAITING) ? (
-      <CustomButton 
+      <CustomButton
         onClick={() => {
-          if(!showNoteCancel) {
+          if (!showNoteCancel) {
             setShowNote(pre => !pre)
           } else {
             onSubmitCancel();
           }
         }}
-        title={showNoteCancel ? 'Canceling' : 'Cancel'} 
-        type='primary'
-      />
-    ) : <span />
-  } else if(isManager()) {
-    if(status === NGHI_PHEP_STATUS_DONE || reEditStatus === NGHI_PHEP_STATUS_DONE) {
-      return <span />
-    }
-    return (status !== NGHI_PHEP_STATUS_REJECT || reEditStatus !== NGHI_PHEP_STATUS_REJECT) ? (
-      <CustomButton 
-        onClick={() => {
-          if(!showNoteCancel) {
-            setShowNote(pre => !pre)
-          } else {
-            onSubmitCancel();
-          }
-        }}
-        title={showNoteCancel ? 'Canceling' : 'Cancel'} 
+        title={showNoteCancel ? 'Không duyệt' : 'Không duyệt'}
         type='primary'
       />
     ) : <span />
@@ -106,7 +86,7 @@ const applyStyleDaKy = (element, text) => {
 
 const NPConfirm = ({ closeModal, data }) => {
 
-  const { isLeader, isManager } = useGetMe();
+  const { isLeader } = useGetMe();
   const [ showNoteCancel, setShowNote ] = useState(false);
   const [ record, setRecord ] = useState({});
 
@@ -122,69 +102,38 @@ const NPConfirm = ({ closeModal, data }) => {
     let values = cloneDeep(record)
     let nItem = {};
     const reEditStatus = values?.overTimeReality ?? false;
-    if(isLeader()) {
-      nItem.status = NGHI_PHEP_STATUS_CONFIRM;
-      if(reEditStatus) {
-        values.overTimeReality.status = NGHI_PHEP_STATUS_CONFIRM;
-      }
-      applyStyleDaKy("daKiemTra", "Đã kiểm tra");
+    nItem.status = NGHI_PHEP_STATUS_DONE;
+    if (reEditStatus) {
+      values.overTimeReality.status = NGHI_PHEP_STATUS_DONE;
     }
-    if(isManager()) {
-      nItem.status = NGHI_PHEP_STATUS_DONE;
-      if(reEditStatus) {
-        values.overTimeReality.status = NGHI_PHEP_STATUS_DONE;
-      }
-      applyStyleDaKy("daKy", "Đã Ký");
-    }
-    // let domContent = document.getElementById("np-content-html");
-    // if(domContent) {
-    //   nItem.contentEmail = domContent.innerHTML;
-    // }
-    const uri = isLeader() ? "/over-time/check-leave-of" : "/over-time/appoved-leave-of";
-    RequestUtils.Post(uri, {...values, ...nItem }).then(({ message }) => {
+    applyStyleDaKy("daKiemTra", "Đã duyệt");
+    const uri = "/over-time/check-leave-of";
+    RequestUtils.Post(uri, { ...values, ...nItem }).then(({ message }) => {
       InAppEvent.normalInfo(message);
     });
     f5List('over-time/fetch');
+    closeModal()
     /* eslint-disable-next-line  */
   }, [record]);
 
   const btnConfirm = useMemo(() => {
     const reEditStatus = record?.overTimeReality?.status ?? -1;
     const status = record.status;
-    if(isLeader()) {
-      return ( 
+    if (isLeader()) {
+      return (
         (status === NGHI_PHEP_STATUS_WAITING || reEditStatus === NGHI_PHEP_STATUS_WAITING) && !showNoteCancel) ? (
         <Popconfirm
-          title="Confirm Item"
-          description="Are you sure this confirm ?"
+          title="Duyệt đơn"
+          description="Bạn có chắc chắn duyệt đơn này?"
           onConfirm={onSubmitConfirm}
-          okText="Yes"
-          cancelText="No"
+          okText="Có"
+          cancelText="Không"
         >
-          <CustomButton 
+          <CustomButton
             htmlType="submit"
-            title="Confirm" 
-            color="danger" 
-            style={{marginLeft: 20}}
-            variant="solid"
-          />
-        </Popconfirm>
-      ) : <span />
-    } else if(isManager()) {
-      return ( 
-        (status === NGHI_PHEP_STATUS_CONFIRM || reEditStatus === NGHI_PHEP_STATUS_CONFIRM ) && !showNoteCancel ) ? (
-        <Popconfirm
-          title="Confirm Item"
-          description="Are you sure this confirm ?"
-          onConfirm={onSubmitConfirm}
-          okText="Yes"
-          cancelText="No"
-        >
-          <CustomButton 
-            htmlType="submit"
-            title="Confirm" 
-            color="danger" 
-            style={{marginLeft: 20}}
+            title="Duyệt"
+            color="danger"
+            style={{ marginLeft: 20 }}
             variant="solid"
           />
         </Popconfirm>

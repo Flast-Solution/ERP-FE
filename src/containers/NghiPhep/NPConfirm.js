@@ -7,7 +7,6 @@ import useGetMe from 'hooks/useGetMe';
 import CustomButton from 'components/CustomButton';
 import { Popconfirm } from 'antd';
 import {
-  NGHI_PHEP_STATUS_CONFIRM,
   NGHI_PHEP_STATUS_DONE,
   NGHI_PHEP_STATUS_REJECT,
   NGHI_PHEP_STATUS_WAITING
@@ -46,16 +45,10 @@ const BtnCancel = ({
   const onSubmitCancel = useCallback(() => {
     form.validateFields().then((values) => {
       let nItem = {};
-      if (isLeader()) {
-        nItem.noteCheck = values.note;
-        applyStyleDaKy("daKiemTra", "Cancel");
-      }
-      if (isManager()) {
-        nItem.noteAppoved = values.note;
-        applyStyleDaKy("daKy", "Cancel");
-      }
+      nItem.noteCheck = values.note;
+      applyStyleDaKy("daKiemTra", "Không duyệt");
       nItem.status = NGHI_PHEP_STATUS_REJECT;
-      const uri = isLeader() ? "/leave-of-absence/check-leave-of" : "/leave-of-absence/appoved-leave-of";
+      const uri = "/leave-of-absence/check-leave-of";
       RequestUtils.Post(uri, { ...data, ...nItem }).then(({ message }) => {
         InAppEvent.normalInfo(message);
       });
@@ -64,7 +57,8 @@ const BtnCancel = ({
     /* eslint-disable-next-line  */
   }, [data, form]);
 
-  if (isLeader()) {
+  const canApprove = isLeader() || isManager();
+  if (canApprove) {
     return data.status === NGHI_PHEP_STATUS_WAITING ? (
       <CustomButton
         onClick={() => {
@@ -74,24 +68,7 @@ const BtnCancel = ({
             onSubmitCancel();
           }
         }}
-        title={showNoteCancel ? 'Canceling' : 'Cancel'}
-        type='primary'
-      />
-    ) : <span />
-  } else if (isManager()) {
-    if (data.status === NGHI_PHEP_STATUS_DONE) {
-      return <span />
-    }
-    return data.status !== NGHI_PHEP_STATUS_REJECT ? (
-      <CustomButton
-        onClick={() => {
-          if (!showNoteCancel) {
-            setShowNote(pre => !pre)
-          } else {
-            onSubmitCancel();
-          }
-        }}
-        title={showNoteCancel ? 'Canceling' : 'Cancel'}
+        title={showNoteCancel ? 'Không duyệt' : 'Không duyệt'}
         type='primary'
       />
     ) : <span />
@@ -107,19 +84,9 @@ const NPConfirm = ({ closeModal, data }) => {
 
   const onSubmitConfirm = useCallback(() => {
     let nItem = {};
-    if (isLeader()) {
-      nItem.status = NGHI_PHEP_STATUS_CONFIRM;
-      applyStyleDaKy("daKiemTra", "Đã kiểm tra");
-    }
-    if (isManager()) {
-      nItem.status = NGHI_PHEP_STATUS_DONE;
-      applyStyleDaKy("daKy", "Đã Ký");
-    }
-    // let domContent = document.getElementById("np-content-html");
-    // if (domContent) {
-    //   nItem.contentEmail = domContent.innerHTML;
-    // }
-    const uri = isLeader() ? "/leave-of-absence/check-leave-of" : "/leave-of-absence/appoved-leave-of";
+    nItem.status = NGHI_PHEP_STATUS_DONE;
+    applyStyleDaKy("daKiemTra", "Đã duyệt");
+    const uri = "/leave-of-absence/check-leave-of";
     RequestUtils.Post(uri, { ...data, ...nItem }).then(({ message }) => {
       InAppEvent.normalInfo(message);
     });
@@ -128,37 +95,20 @@ const NPConfirm = ({ closeModal, data }) => {
     /* eslint-disable-next-line  */
   }, [data]);
 
+  const canApprove = isLeader() || isManager();
   const btnConfirm = useMemo(() => {
-    if (isLeader()) {
+    if (canApprove) {
       return (data.status === NGHI_PHEP_STATUS_WAITING && !showNoteCancel) ? (
         <Popconfirm
-          title="Confirm Item"
-          description="Are you sure this confirm ?"
+          title="Duyệt đơn"
+          description="Bạn có chắc chắn duyệt đơn này?"
           onConfirm={onSubmitConfirm}
-          okText="Yes"
-          cancelText="No"
+          okText="Có"
+          cancelText="Không"
         >
           <CustomButton
             htmlType="submit"
-            title="Confirm"
-            color="danger"
-            style={{ marginLeft: 20 }}
-            variant="solid"
-          />
-        </Popconfirm>
-      ) : <span />
-    } else if (isManager()) {
-      return (data.status === NGHI_PHEP_STATUS_CONFIRM && !showNoteCancel) ? (
-        <Popconfirm
-          title="Confirm Item"
-          description="Are you sure this confirm ?"
-          onConfirm={onSubmitConfirm}
-          okText="Yes"
-          cancelText="No"
-        >
-          <CustomButton
-            htmlType="submit"
-            title="Confirm"
+            title="Duyệt"
             color="danger"
             style={{ marginLeft: 20 }}
             variant="solid"
@@ -167,7 +117,7 @@ const NPConfirm = ({ closeModal, data }) => {
       ) : <span />
     }
     /* eslint-disable-next-line  */
-  }, [showNoteCancel, data]);
+  }, [showNoteCancel, data, canApprove]);
 
   return <>
     <RestEditModal
