@@ -25,7 +25,7 @@ import CustomButton from 'components/CustomButton'
 import FormHidden from 'components/form/FormHidden'
 import FormInput from 'components/form/FormInput'
 import FormSelect from 'components/form/FormSelect'
-import { ACTIVE_TYPES } from 'configs/localData'
+import { USER_STATUS } from 'configs/localData'
 
 const UserForm = ({ listProFile }) => {
 	return (
@@ -75,7 +75,7 @@ const UserForm = ({ listProFile }) => {
 				<FormSelect 
 					label="Trạng thái" 
 					name="status"
-					resourceData={ACTIVE_TYPES}
+					resourceData={USER_STATUS}
 					titleProp='text'
 					valueProp='value'
 				/>

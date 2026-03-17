@@ -36,6 +36,16 @@ const UserAccount = ({ data }) => {
     RequestUtils.GetAsList('/user/list-role').then(setListProFile);
   }, [])
 
+  useEffect(() => {
+    if (data) {
+      const transformedData = {
+        ...data,
+        userProfiles: data.userProfiles?.map(profile => profile.id) || []
+      };
+      setRecord(transformedData);
+    }
+  }, [data])
+
   const onSubmit = async (dataCreate) => {
     if (!/^\+?[0-9]{9,15}$/.test(dataCreate.phone || data?.phone)) {
       InAppEvent.normalInfo('Vui lòng nhập đúng số điện thoại định dạng');

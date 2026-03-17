@@ -10,11 +10,8 @@ import { HASH_MODAL } from 'configs';
 import { arrayEmpty, dateFormatOnSubmit, formatTime } from 'utils/dataUtils';
 import useGetMe from 'hooks/useGetMe';
 import {
-  NGHI_PHEP_STATUS_CONFIRM, 
   NGHI_PHEP_STATUS_TEXT, 
   NGHI_PHEP_STATUS_WAITING,
-  NGHI_PHEP_STATUS_DONE,
-  NGHI_PHEP_STATUS_REJECT
 } from 'configs/constant';
 import { formatDateDayjs } from 'utils/textUtils'
 import { OTContent } from './styles';
@@ -23,26 +20,21 @@ const { Paragraph, Text } = Typography;
 
 const Overtime = () => {
 
-  const { isLeader, isManager } = useGetMe();
-  const showPreviewOnly = isLeader() || isManager();
+  const { isLeader } = useGetMe();
+  const showPreviewOnly = isLeader();
 
   const textBtn = useCallback((item) => {
     let text = "Xem đơn";
-    if(isLeader() || isManager()) {
-      const reEditStatus = item?.overTimeReality?.status ?? -1;
-      const status = item.status;
-      if(status === NGHI_PHEP_STATUS_WAITING || reEditStatus === NGHI_PHEP_STATUS_WAITING){
-        text = "N.Check";
-      } else if(status === NGHI_PHEP_STATUS_CONFIRM || reEditStatus === NGHI_PHEP_STATUS_CONFIRM) {
-        text = "Checked";
-      } else if(status === NGHI_PHEP_STATUS_DONE || reEditStatus === NGHI_PHEP_STATUS_DONE) {
-        text = "Confirm";
-      } else if(status === NGHI_PHEP_STATUS_REJECT || reEditStatus === NGHI_PHEP_STATUS_REJECT) {
-        text = "Cancel";
+    if (isLeader()) {
+      const reEditStatus = item?.overTimeReality?.status ?? item.status;
+      if (reEditStatus === NGHI_PHEP_STATUS_WAITING) {
+        text = "Duyệt";
+      } else {
+        text = "Xem";
       }
     }
     return text;
-  },[isLeader, isManager]);
+  }, [isLeader]);
   
   const onEdit = (item) => {
     let title = 'Sửa đơn làm thêm giờ # ' + item.id;

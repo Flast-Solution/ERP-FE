@@ -18,7 +18,7 @@ const NPReview = ({
   const { user } = useStore();
   const [ management, setManagement ] = useState({});
 
-  const { isLeader } = useGetMe();
+  const { isLeader, isManager } = useGetMe();
   useEffect(() => {
     RequestUtils.Get("/user/fetch-level-manager", { idUser: user.id }).then(({ data, errorCode }) => {
       if (errorCode === SUCCESS_API_CODE) {
@@ -42,7 +42,7 @@ const NPReview = ({
       let owrnerInfo = user;
       if (record?.userId && owrnerInfo?.id !== record?.userId) {
         const { data: dOwrner, errorCode: code } = await RequestUtils.Get("/user/list", { ids: record.userId });
-        if (code === SUCCESS_API_CODE && dOwrner.find(i => i.id === record.userId)) {
+        if (code === SUCCESS_API_CODE && Array.isArray(dOwrner) && dOwrner.find(i => i.id === record.userId)) {
           owrnerInfo = dOwrner.find(i => i.id === record.userId)
         }
       }
@@ -59,7 +59,7 @@ const NPReview = ({
       style={{ display: show ? 'block' : 'none' }} 
       dangerouslySetInnerHTML={{ __html: html }} 
     />
-    { isLeader && record.status === APP_FOLLOW_STATUS_DONE &&
+    { (isLeader() || isManager()) && record.status === APP_FOLLOW_STATUS_DONE &&
       <div style={{ display: 'flex', justifyContent: 'end', marginTop: 15 }}>
         <Button
           onClick={() => cancelAbsence()}

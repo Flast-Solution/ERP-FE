@@ -26,13 +26,20 @@ import authRoles from '@/auth/authRoles';
 function useGetMe() {
     const { user, setMyData } = useContext(MyContext);
 
-    const hasRole = (roles) => {
-        if (!user || !user.roles) return false;
-        return roles.some(role => user.roles.includes(role));
+    const getUserRoles = () => {
+        if (!user) return [];
+        if (user.roles?.length) return user.roles;
+        return user.userProfiles?.map(p => p.type) ?? [];
     };
 
-    const isLeader = () => hasRole([...authRoles.admin, ...authRoles.partner]);
-    const isManager = () => hasRole([...authRoles.admin, ...authRoles.partner, ...authRoles.provider]);
+    const hasRole = (roles) => {
+        const userRoles = getUserRoles();
+        if (!userRoles.length) return false;
+        return roles.some(role => userRoles.includes(role));
+    };
+
+    const isLeader = () => hasRole([...authRoles.admin, ...authRoles.partner, ...(authRoles.leader || [])]);
+    const isManager = () => hasRole([...authRoles.admin, ...authRoles.partner, ...authRoles.provider, ...(authRoles.leader || [])]);
     const isUser = () => !isLeader() && !isManager();
 
     return {

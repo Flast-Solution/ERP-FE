@@ -102,6 +102,11 @@ export const PRODUCT_STATUS = [
   { value: 1, text: 'Kích hoạt', color: 'green' }
 ];
 
+export const USER_STATUS = [
+  { value: 0, text: 'Ngưng', color: 'red' },
+  { value: 1, text: 'Kích hoạt', color: 'green' }
+];
+
 export const DEPARTMENT = [
   { value: 1, name: "IT", color: 'blue' },
   { value: 2, name: "Marketing", color: 'green' },

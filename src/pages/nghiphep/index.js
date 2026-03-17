@@ -11,38 +11,31 @@ import { dateFormatOnSubmit, formatTime } from 'utils/dataUtils';
 import useGetMe from 'hooks/useGetMe';
 import {
   NGHI_PHEP_META,
-  NGHI_PHEP_STATUS_CONFIRM,
   NGHI_PHEP_STATUS_TEXT,
   NGHI_PHEP_STATUS_WAITING,
-  NGHI_PHEP_STATUS_DONE,
-  NGHI_PHEP_STATUS_REJECT
 } from 'configs/constant';
 
 const User = () => {
 
   const { isLeader, isManager } = useGetMe();
-  const showPreviewOnly = isLeader() || isManager();
 
+  const canApprove = isLeader() || isManager();
   const textBtn = useCallback((item) => {
     let text = "Xem đơn";
-    if (isLeader() || isManager()) {
+    if (canApprove) {
       if (item.status === NGHI_PHEP_STATUS_WAITING) {
-        text = "N.Check";
-      } else if (item.status === NGHI_PHEP_STATUS_CONFIRM) {
-        text = "Checked";
-      } else if (item.status === NGHI_PHEP_STATUS_DONE) {
-        text = "Confirm";
-      } else if (item.status === NGHI_PHEP_STATUS_REJECT) {
-        text = "Cancel";
+        text = "Duyệt";
+      } else {
+        text = "Xem";
       }
     }
     return text;
-  }, [isLeader, isManager]);
+  }, [canApprove]);
 
   const onEdit = (item) => {
     let title = 'Sửa đơn xin nghỉ phép # ' + item.id;
     let hash = '#draw/nghiphep.edit';
-    if (showPreviewOnly) {
+    if (canApprove) {
       title = 'Duyệt đơn xin nghỉ phép # ' + item.id;
       hash = '#draw/nghiphep.confirm';
     }

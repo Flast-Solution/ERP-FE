@@ -75,12 +75,13 @@ const Scheduner = () => {
   });
 
   useEffect(() => {
-    let rd = 0;
+    const dataArray = Array.isArray(data) ? data : [];
+    let rd = [];
     if (isLeader()) {
-      rd = (data || []).filter(i => i.status === APP_FOLLOW_STATUS_WAITING) ?? [];
+      rd = dataArray.filter(i => i.status === APP_FOLLOW_STATUS_WAITING);
     }
     if (isManager()) {
-      rd = (data || []).filter(i => i.status === APP_FOLLOW_STATUS_CONFIRM) ?? [];
+      rd = dataArray.filter(i => i.status === APP_FOLLOW_STATUS_CONFIRM);
     }
     setItems(rd);
     /* eslint-disable-next-line */
@@ -155,7 +156,7 @@ const Scheduner = () => {
             </Col>
           </Row>
           <TimeSheet
-            listTimesheet={data}
+            listTimesheet={Array.isArray(data) ? data : []}
             {...record}
             month={queryParams.month}
             year={queryParams.year}

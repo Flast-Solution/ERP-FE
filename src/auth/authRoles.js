@@ -26,6 +26,7 @@
 const authRoles = {
     admin: ['ROLE_ADMIN'],
     user: ['ROLE_DBA'],
+    leader: ['ROLE_LEADER'],
     partner: ['ROLE_PARTNER'],
     provider: ['ROLE_PROVIDER'],
     sale: ['ROLE_SALE'],
