@@ -1,18 +1,18 @@
-import FormCheckbox from 'components/form/FormCheckbox';
+import FormCheckbox from '@erp/shared/dist/components/form/FormCheckbox';
 import FormStyles from './styles'
 import { Form, Row, Col, Typography } from 'antd';
-import FormDatePicker from 'components/form/FormDatePicker';
-import FormInput from 'components/form/FormInput';
-import FormInputNumber from 'components/form/FormInputNumber';
-import FormSelectUser from 'components/form/FormSelectUser';
-import FormSelect from 'components/form/FormSelect';
+import FormDatePicker from '@erp/shared/dist/components/form/FormDatePicker';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
+import FormInputNumber from '@erp/shared/dist/components/form/FormInputNumber';
+import FormSelectUser from '@erp/shared/dist/components/form/FormSelectUser';
+import FormSelect from '@erp/shared/dist/components/form/FormSelect';
 import { REGISTER_WORK_TYPE } from 'configs/localData';
-import FormTextArea from 'components/form/FormTextArea';
+import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
 import UserService from 'services/UserService';
-import FormListAddition from 'components/form/FormListAddtion';
+import FormListAddition from '@erp/shared/dist/components/form/FormListAddtion';
 import { EnvironmentOutlined } from '@ant-design/icons';
 import CarService from 'services/CarService';
-import FormAutoComplete from 'components/form/FormAutoComplete';
+import FormAutoComplete from '@erp/shared/dist/components/form/FormAutoComplete';
 
 const CarListPickUp = ({ field }) => {
   const { name } = field || { name: 0 };

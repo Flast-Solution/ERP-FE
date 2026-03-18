@@ -19,20 +19,20 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 import { useState, useContext } from 'react';
-import RestEditModal from 'components/RestLayout/RestEditModal';
-import FormListAddition from "components/form/FormListAddtion";
+import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
+import FormListAddition from "@erp/shared/dist/components/form/FormListAddtion";
 import { Col, Row, Typography, Form, message } from 'antd';
 import { SwitcherOutlined } from '@ant-design/icons';
-import FormSelectInfiniteMaterial from 'components/form/SelectInfinite/FormSelectInfiniteMaterial';
-import FormInputNumber from 'components/form/FormInputNumber';
-import FormHidden from 'components/form/FormHidden';
-import { FormContextCustom } from 'components/context/FormContextCustom';
-import CustomButton from 'components/CustomButton';
-import FormInput from 'components/form/FormInput';
-import { arrayEmpty, formatMoney } from 'utils/dataUtils';
-import RequestUtils from 'utils/RequestUtils';
-import { useEffectAsync } from 'hooks/MyHooks';
-import FormSelect from 'components/form/FormSelect';
+import FormSelectInfiniteMaterial from '@erp/shared/dist/components/form/SelectInfinite/FormSelectInfiniteMaterial';
+import FormInputNumber from '@erp/shared/dist/components/form/FormInputNumber';
+import FormHidden from '@erp/shared/dist/components/form/FormHidden';
+import { FormContextCustom } from '@erp/shared/dist/components/context/FormContextCustom';
+import CustomButton from '@erp/shared/dist/components/CustomButton';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
+import { arrayEmpty, formatMoney } from '@erp/shared/dist/utils/dataUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
+import FormSelect from '@erp/shared/dist/components/form/FormSelect';
 
 const ProductBomContainer = ({ closeModal, data }) => {
 

@@ -20,14 +20,14 @@
 /**************************************************************************/
 import React from 'react'
 import { Col, Row, Form, Slider, Checkbox } from 'antd'
-import CustomButton from 'components/CustomButton'
-import FormSelect from 'components/form/FormSelect'
-import FormTextArea from 'components/form/FormTextArea'
-import FormInputNumber from 'components/form/FormInputNumber'
+import CustomButton from '@erp/shared/dist/components/CustomButton'
+import FormSelect from '@erp/shared/dist/components/form/FormSelect'
+import FormTextArea from '@erp/shared/dist/components/form/FormTextArea'
+import FormInputNumber from '@erp/shared/dist/components/form/FormInputNumber'
 import GroupStyles from './style'
 import { PRIORITY_TYPE_TAGS } from 'configs/localData'
-import FormSelectInfiniteBusinessUser from 'components/form/SelectInfinite/FormSelectInfiniteBusinessUser'
-import FormDatePicker from 'components/form/FormDatePicker'
+import FormSelectInfiniteBusinessUser from '@erp/shared/dist/components/form/SelectInfinite/FormSelectInfiniteBusinessUser'
+import FormDatePicker from '@erp/shared/dist/components/form/FormDatePicker'
 
 const CAUSE_3_DAY = [
   { name: "Đang trao đổi " },

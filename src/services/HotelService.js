@@ -1,6 +1,6 @@
 import { SUCCESS_CODE } from 'configs';
-import { arrayNotEmpty } from 'utils/dataUtils';
-import RequestUtils from 'utils/RequestUtils';
+import { arrayNotEmpty } from '@erp/shared/dist/utils/dataUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 
 const HotelService = {
   allData: [],

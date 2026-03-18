@@ -1,15 +1,15 @@
 import React, { useEffect } from 'react';
 import { Row, Col, Form, message } from 'antd';
-import FormSelectInfiniteProduct from 'components/form/SelectInfinite/FormSelectInfiniteProduct';
-import FormSelectInfiniteService from 'components/form/SelectInfinite/FormSelectInfiniteService';
-import FormSelect from 'components/form/FormSelect';
-import CustomButton from 'components/CustomButton';
-import FormInput from 'components/form/FormInput';
+import FormSelectInfiniteProduct from '@erp/shared/dist/components/form/SelectInfinite/FormSelectInfiniteProduct';
+import FormSelectInfiniteService from '@erp/shared/dist/components/form/SelectInfinite/FormSelectInfiniteService';
+import FormSelect from '@erp/shared/dist/components/form/FormSelect';
+import CustomButton from '@erp/shared/dist/components/CustomButton';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
 import { CHANNEL_SOURCE } from 'configs/localData';
-import FormHidden from 'components/form/FormHidden';
-import FormTextArea from 'components/form/FormTextArea';
-import RequestUtils from 'utils/RequestUtils';
-import { f5List } from 'utils/dataUtils';
+import FormHidden from '@erp/shared/dist/components/form/FormHidden';
+import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import { f5List } from '@erp/shared/dist/utils/dataUtils';
 
 const LeadCollectionForm = ({ data }) => {
   const [ form ] = Form.useForm();

@@ -21,16 +21,16 @@
 
 import React, { useCallback, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from 'components/BreadcrumbCustom';
-import RestList from 'components/RestLayout/RestList';
+import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
+import RestList from '@erp/shared/dist/components/RestLayout/RestList';
 import CustomerFilter from './Filter';
-import useGetList from 'hooks/useGetList';
+import useGetList from '@erp/shared/dist/hooks/useGetList';
 import { Button, Tag } from 'antd';
-import { dateFormatOnSubmit, formatTime } from 'utils/dataUtils';
+import { dateFormatOnSubmit, formatTime } from '@erp/shared/dist/utils/dataUtils';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingCartOutlined } from '@ant-design/icons';
 import styled from 'styled-components';
-import RequestUtils from 'utils/RequestUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 
 const StyledTag = styled(Tag)`
   cursor: pointer;

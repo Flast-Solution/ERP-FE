@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import RestEditModal from 'components/RestLayout/RestEditModal';
-import { InAppEvent } from 'utils/FuseUtils';
-import RequestUtils from 'utils/RequestUtils';
+import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 import NghiPhepForm from './NghiPhepForm';
-import { dateFormatOnSubmit, f5List } from 'utils/dataUtils';
+import { dateFormatOnSubmit, f5List } from '@erp/shared/dist/utils/dataUtils';
 import NPReview from './NPReview';
 import NPConfirm from './NPConfirm';
 import { Form } from 'antd';
 import { NGHI_PHEP_STATUS_WAITING } from 'configs/constant';
-import useGetMe from 'hooks/useGetMe';
+import useGetMe from '@erp/shared/dist/hooks/useGetMe';
 
 const UserNPForm = ({ closeModal, data }) => {
 

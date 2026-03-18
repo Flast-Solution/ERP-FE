@@ -1,9 +1,9 @@
 import FormStyles from './styles'
 import { Col } from 'antd';
-import FormDatePicker from 'components/form/FormDatePicker';
+import FormDatePicker from '@erp/shared/dist/components/form/FormDatePicker';
 import { OVERTIME_META } from 'configs/constant';
-import FormSelect from 'components/form/FormSelect';
-import FormTextArea from 'components/form/FormTextArea';
+import FormSelect from '@erp/shared/dist/components/form/FormSelect';
+import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
 
 const RegisForm = ({ field }) => {
   const { name } = field || { name: 0 };

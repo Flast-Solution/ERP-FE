@@ -22,14 +22,14 @@
 import React, { useEffect } from "react";
 import { Form, Row, Col, message } from "antd";
 import { isEmpty } from "lodash";
-import FormHidden from "components/form/FormHidden";
-import CustomButton from "components/CustomButton";
-import RequestUtils from "utils/RequestUtils";
-import FormInput from "components/form/FormInput";
-import FormSelect from "components/form/FormSelect";
+import FormHidden from "@erp/shared/dist/components/form/FormHidden";
+import CustomButton from "@erp/shared/dist/components/CustomButton";
+import RequestUtils from "@erp/shared/dist/utils/RequestUtils";
+import FormInput from "@erp/shared/dist/components/form/FormInput";
+import FormSelect from "@erp/shared/dist/components/form/FormSelect";
 import { MATERIAL_UNIT_TYPE } from "configs/localData";
-import FormInputNumber from "components/form/FormInputNumber";
-import FormTextArea from "components/form/FormTextArea";
+import FormInputNumber from "@erp/shared/dist/components/form/FormInputNumber";
+import FormTextArea from "@erp/shared/dist/components/form/FormTextArea";
 
 const MaterialForm = ({ onSave, material }) => {
 

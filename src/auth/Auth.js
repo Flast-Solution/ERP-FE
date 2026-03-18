@@ -21,7 +21,7 @@
 /**************************************************************************/
 
 import React, { useCallback, useEffect, useState } from 'react';
-import jwtService from 'utils/jwtService';
+import jwtService from '@erp/shared/dist/utils/jwtService';
 import { useStore } from "DataContext";
 import { ACTIONS } from 'configs';
 

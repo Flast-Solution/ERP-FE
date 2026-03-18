@@ -1,4 +1,4 @@
-import RequestUtils, { SUCCESS_CODE } from '@/utils/RequestUtils';
+import RequestUtils, { SUCCESS_CODE } from '@erp/shared/dist/utils/RequestUtils';
 
 const LeadService = {
   fetchByPhone: async (phone) => {

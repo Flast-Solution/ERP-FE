@@ -1,6 +1,6 @@
 import { Row, Col } from 'antd';
-import FormInput from 'components/form/FormInput';
-import FormCheckbox from 'components/form/FormCheckbox';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
+import FormCheckbox from '@erp/shared/dist/components/form/FormCheckbox';
 
 const EmployeeFilter = () => {
   return (

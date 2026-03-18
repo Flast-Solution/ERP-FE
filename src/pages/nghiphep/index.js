@@ -1,14 +1,14 @@
 import React, { useCallback, useState } from 'react';
-import RestList from "components/RestLayout/RestList";
-import useGetList from "hooks/useGetList";
+import RestList from "@erp/shared/dist/components/RestLayout/RestList";
+import useGetList from "@erp/shared/dist/hooks/useGetList";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from 'components/BreadcrumbCustom';
+import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
 import Filter from './Filter';
 import { Button } from 'antd';
-import { InAppEvent } from "utils/FuseUtils";
+import { InAppEvent } from "@erp/shared/dist/utils/FuseUtils";
 import { HASH_MODAL } from 'configs';
-import { dateFormatOnSubmit, formatTime } from 'utils/dataUtils';
-import useGetMe from 'hooks/useGetMe';
+import { dateFormatOnSubmit, formatTime } from '@erp/shared/dist/utils/dataUtils';
+import useGetMe from '@erp/shared/dist/hooks/useGetMe';
 import {
   NGHI_PHEP_META,
   NGHI_PHEP_STATUS_TEXT,

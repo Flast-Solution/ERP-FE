@@ -20,9 +20,9 @@
 /**************************************************************************/
 
 import { Row, Col } from 'antd';
-import FormInput from '@/components/form/FormInput';
-import FormSelect from '@/components/form/FormSelect';
-import FormDatePicker from '@/components/form/FormDatePicker';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
+import FormSelect from '@erp/shared/dist/components/form/FormSelect';
+import FormDatePicker from '@erp/shared/dist/components/form/FormDatePicker';
 import { ACTIVE_TYPES } from '@/configs/localData';
 
 const ProductFilter = () => {

@@ -2,12 +2,12 @@ import { render } from '@react-email/render';
 import { useCallback, useEffect, useState } from 'react';
 import NghiPhep from 'containers/Email/NghiPhep';
 import { useStore } from "DataContext";
-import RequestUtils from 'utils/RequestUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 import { APP_FOLLOW_STATUS_DONE, SUCCESS_API_CODE } from 'configs/constant';
-import useGetMe from 'hooks/useGetMe';
+import useGetMe from '@erp/shared/dist/hooks/useGetMe';
 import { Button } from 'antd';
-import { f5List } from 'utils/dataUtils';
-import { InAppEvent } from 'utils/FuseUtils';
+import { f5List } from '@erp/shared/dist/utils/dataUtils';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
 
 const NPReview = ({
   record,

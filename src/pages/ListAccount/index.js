@@ -21,13 +21,13 @@
 
 import React, { useCallback, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from 'components/BreadcrumbCustom';
-import RestList from 'components/RestLayout/RestList';
+import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
+import RestList from '@erp/shared/dist/components/RestLayout/RestList';
 import LeadFilter from './Filter';
-import useGetList from "hooks/useGetList";
-import { dateFormatOnSubmit } from 'utils/dataUtils';
+import useGetList from "@erp/shared/dist/hooks/useGetList";
+import { dateFormatOnSubmit } from '@erp/shared/dist/utils/dataUtils';
 import { HASH_MODAL } from 'configs';
-import { InAppEvent } from 'utils/FuseUtils';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
 import { Button } from 'antd';
 
 const ListUser = () => {

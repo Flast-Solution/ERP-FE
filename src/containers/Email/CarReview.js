@@ -3,9 +3,9 @@ import { Body, Container, Column, Head, Heading, Html, Preview, Row, Section, Te
 import { APP_FOLLOW_STATUS_DONE, APP_FOLLOW_STATUS_WAITING } from "configs/constant";
 import HeaderEmail from "./HeaderEmail";
 import ESig from "./ESig";
-import { formatDateDayjs } from "utils/textUtils";
+import { formatDateDayjs } from "@erp/shared/dist/utils/textUtils";
 import { CAR_WORK_TYPE } from "configs/localData";
-import { arrayNotEmpty, formatMoney } from "utils/dataUtils";
+import { arrayNotEmpty, formatMoney } from "@erp/shared/dist/utils/dataUtils";
 import UserService from "services/UserService";
 
 const nRow = {

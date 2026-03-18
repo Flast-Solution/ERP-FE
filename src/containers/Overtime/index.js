@@ -1,18 +1,18 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import RestEditModal from 'components/RestLayout/RestEditModal';
-import { InAppEvent } from 'utils/FuseUtils';
-import RequestUtils from 'utils/RequestUtils';
+import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 import OverTimeForm from './OverTimeForm';
-import { arrayNotEmpty, dateFormatOnSubmit, f5List } from 'utils/dataUtils';
+import { arrayNotEmpty, dateFormatOnSubmit, f5List } from '@erp/shared/dist/utils/dataUtils';
 import OVReview from './OVReview';
 import { Form, Typography } from 'antd';
 import { FormOutlined } from '@ant-design/icons';
 import { NGHI_PHEP_STATUS_WAITING } from 'configs/constant';
 import { useStore } from "DataContext";
-import useGetMe from 'hooks/useGetMe';
+import useGetMe from '@erp/shared/dist/hooks/useGetMe';
 import RegisForm from './RegisForm';
-import FormListAddition from 'components/form/FormListAddtion';
-import CustomButton from 'components/CustomButton';
+import FormListAddition from '@erp/shared/dist/components/form/FormListAddtion';
+import CustomButton from '@erp/shared/dist/components/CustomButton';
 import { cloneDeep } from "lodash";
 
 const OverTime = ({ closeModal, data }) => {

@@ -21,21 +21,21 @@
 
 import React, { useState, useCallback } from 'react';
 import { Col, Form, message, Row } from 'antd';
-import { FormContextCustom } from 'components/context/FormContextCustom';
-import FormSelectInfiniteProduct from 'components/form/SelectInfinite/FormSelectInfiniteProduct';
-import FormSelect from 'components/form/FormSelect';
-import FormInputNumber from 'components/form/FormInputNumber';
-import BtnSubmit from 'components/CustomButton/BtnSubmit';
-import FormSelectInfiniteProvider from 'components/form/SelectInfinite/FormSelectInfiniteProvider';
-import FormInfiniteStock from 'components/form/SelectInfinite/FormInfiniteStock';
-import FormHidden from 'components/form/FormHidden';
-import RequestUtils from 'utils/RequestUtils';
+import { FormContextCustom } from '@erp/shared/dist/components/context/FormContextCustom';
+import FormSelectInfiniteProduct from '@erp/shared/dist/components/form/SelectInfinite/FormSelectInfiniteProduct';
+import FormSelect from '@erp/shared/dist/components/form/FormSelect';
+import FormInputNumber from '@erp/shared/dist/components/form/FormInputNumber';
+import BtnSubmit from '@erp/shared/dist/components/CustomButton/BtnSubmit';
+import FormSelectInfiniteProvider from '@erp/shared/dist/components/form/SelectInfinite/FormSelectInfiniteProvider';
+import FormInfiniteStock from '@erp/shared/dist/components/form/SelectInfinite/FormInfiniteStock';
+import FormHidden from '@erp/shared/dist/components/form/FormHidden';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 import WarehouseService from 'services/WarehouseService';
 import InStockTable from 'containers/WareHouse/InStockTable'
 import { ShowSkuDetail } from 'containers/Product/SkuView';
 import { isEmpty } from 'lodash';
-import { createMSkuDetails } from 'utils/skuUtils';
-import { useEffectAsync } from 'hooks/MyHooks';
+import { createMSkuDetails } from '@erp/shared/dist/utils/skuUtils';
+import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
 
 const ModalNhapKho = ({
   product,

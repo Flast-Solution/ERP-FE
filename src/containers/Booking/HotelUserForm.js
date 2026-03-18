@@ -1,11 +1,11 @@
 import FormStyles from './styles'
 import { Form, Col, Typography } from 'antd';
-import FormDatePicker from 'components/form/FormDatePicker';
-import FormInputNumber from 'components/form/FormInputNumber';
-import FormSelectUser from 'components/form/FormSelectUser';
-import FormInput from 'components/form/FormInput';
+import FormDatePicker from '@erp/shared/dist/components/form/FormDatePicker';
+import FormInputNumber from '@erp/shared/dist/components/form/FormInputNumber';
+import FormSelectUser from '@erp/shared/dist/components/form/FormSelectUser';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
 import UserService from 'services/UserService';
-import FormAutoComplete from 'components/form/FormAutoComplete';
+import FormAutoComplete from '@erp/shared/dist/components/form/FormAutoComplete';
 import HotelService from 'services/HotelService';
 
 const HotelUserForm = ({ field }) => {

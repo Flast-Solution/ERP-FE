@@ -1,21 +1,21 @@
 import { useState, useRef, useCallback } from 'react';
 import { Row, Col, message } from 'antd';
-import { useEffectAsync } from '@/hooks/MyHooks';
+import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
 import { useParams } from 'react-router-dom';
-import RequestUtils from '@/utils/RequestUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@/components/BreadcrumbCustom';
+import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
 import { GATEWAY, SUCCESS_CODE } from '@/configs';
-import RestEditModal from '@/components/RestLayout/RestEditModal';
-import FormHidden from '@/components/form/FormHidden';
-import FormInput from '@/components/form/FormInput';
-import FormTextArea from '@/components/form/FormTextArea';
-import FormJoditEditor from '@/components/form/FormJoditEditor';
-import CustomButton from '@/components/CustomButton';
-import FormInfiniteCategory from '@/components/form/SelectInfinite/FormInfiniteCategory';
-import ImageUploader from '@/components/common/File/ImageUploader';
-import InfiniteFaq from '@/components/form/SelectInfinite/InfiniteFaq';
-import FormInputNumber from 'components/form/FormInputNumber';
+import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
+import FormHidden from '@erp/shared/dist/components/form/FormHidden';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
+import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
+import FormJoditEditor from '@erp/shared/dist/components/form/FormJoditEditor';
+import CustomButton from '@erp/shared/dist/components/CustomButton';
+import FormInfiniteCategory from '@erp/shared/dist/components/form/SelectInfinite/FormInfiniteCategory';
+import ImageUploader from '@erp/shared/dist/components/common/File/ImageUploader';
+import InfiniteFaq from '@erp/shared/dist/components/form/SelectInfinite/InfiniteFaq';
+import FormInputNumber from '@erp/shared/dist/components/form/FormInputNumber';
 
 const ProductEdit = () => {
 

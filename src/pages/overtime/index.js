@@ -1,19 +1,19 @@
 import React, { useCallback, useState } from 'react';
-import RestList from "components/RestLayout/RestList";
-import useGetList from "hooks/useGetList";
+import RestList from "@erp/shared/dist/components/RestLayout/RestList";
+import useGetList from "@erp/shared/dist/hooks/useGetList";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from 'components/BreadcrumbCustom';
+import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
 import Filter from './Filter';
 import { Button, Typography } from 'antd';
-import { InAppEvent } from "utils/FuseUtils";
+import { InAppEvent } from "@erp/shared/dist/utils/FuseUtils";
 import { HASH_MODAL } from 'configs';
-import { arrayEmpty, dateFormatOnSubmit, formatTime } from 'utils/dataUtils';
-import useGetMe from 'hooks/useGetMe';
+import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@erp/shared/dist/utils/dataUtils';
+import useGetMe from '@erp/shared/dist/hooks/useGetMe';
 import {
   NGHI_PHEP_STATUS_TEXT, 
   NGHI_PHEP_STATUS_WAITING,
 } from 'configs/constant';
-import { formatDateDayjs } from 'utils/textUtils'
+import { formatDateDayjs } from '@erp/shared/dist/utils/textUtils'
 import { OTContent } from './styles';
 
 const { Paragraph, Text } = Typography;

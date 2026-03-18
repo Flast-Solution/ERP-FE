@@ -21,20 +21,20 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from 'components/BreadcrumbCustom';
+import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
 import { SelectOutlined, UserAddOutlined } from '@ant-design/icons';
-import RestList from 'components/RestLayout/RestList';
+import RestList from '@erp/shared/dist/components/RestLayout/RestList';
 import LeadFilter from './LeadFilter';
-import useGetList from "hooks/useGetList";
+import useGetList from "@erp/shared/dist/hooks/useGetList";
 import { Button, Form, Tag, Tooltip } from 'antd';
-import { dateFormatOnSubmit, f5List } from 'utils/dataUtils';
+import { dateFormatOnSubmit, f5List } from '@erp/shared/dist/utils/dataUtils';
 import { HASH_MODAL } from 'configs';
-import { InAppEvent } from 'utils/FuseUtils';
-import RequestUtils from 'utils/RequestUtils';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 import { cloneDeep } from 'lodash';
 import ModaleStyles from './style';
-import FormSelect from 'components/form/FormSelect';
-import { NoFooter } from 'components/common/NoFooter';
+import FormSelect from '@erp/shared/dist/components/form/FormSelect';
+import { NoFooter } from '@erp/shared/dist/components/common/NoFooter';
 import { useNavigate } from "react-router-dom";
 import { CHANNEL_SOURCE_MAP_KEYS } from 'configs/localData';
 
