@@ -1,7 +1,6 @@
 import React from 'react';
 import { Body, Container, Column, Head, Heading, Html, Preview, Row, Section, Text, } from "@react-email/components";
 import { APP_FOLLOW_STATUS_DONE, APP_FOLLOW_STATUS_WAITING } from "configs/constant";
-import HeaderEmail from "./HeaderEmail";
 import ESig from "./ESig";
 import { formatDateDayjs } from "utils/textUtils";
 import { arrayNotEmpty, formatMoney } from "utils/dataUtils";
@@ -65,7 +64,6 @@ export const FlightReview = ({
       <Preview>Confirm your email address</Preview>
       <Body style={main}>
         <Container style={container}>
-          <HeaderEmail />
           <Heading style={h2}>ĐẶT VÉ MÁY BAY ĐI CÔNG TÁC <br /> REGISTRATION FOR FLIGHT TICKET FOR BUSINESS TRIP</Heading>
 
           <Row style={nRowMarTop50}>

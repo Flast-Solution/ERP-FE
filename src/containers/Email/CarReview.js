@@ -1,7 +1,6 @@
 import React from 'react';
 import { Body, Container, Column, Head, Heading, Html, Preview, Row, Section, Text, } from "@react-email/components";
 import { APP_FOLLOW_STATUS_DONE, APP_FOLLOW_STATUS_WAITING } from "configs/constant";
-import HeaderEmail from "./HeaderEmail";
 import ESig from "./ESig";
 import { formatDateDayjs } from "utils/textUtils";
 import { CAR_WORK_TYPE } from "configs/localData";
@@ -65,7 +64,6 @@ export const CarReview = ({
       <Preview>Confirm your email address</Preview>
       <Body style={main}>
         <Container style={container}>
-          <HeaderEmail />
           <Heading style={h2}>ĐẶT XE CÔNG TÁC <br /> REGISTRATION FOR RENTAL CAR</Heading>
 
           <Row style={nRowMarTop50}>

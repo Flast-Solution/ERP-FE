@@ -1,7 +1,6 @@
 import { Body, Container, Column, Head, Heading, Html, Preview, Row, Section, Text, } from "@react-email/components";
 import { NGHI_PHEP_STATUS_DONE, NGHI_PHEP_STATUS_WAITING } from "configs/constant";
 import { formatDateDayjs } from "utils/textUtils";
-import HeaderEmail from "./HeaderEmail";
 import { arrayNotEmpty } from "utils/dataUtils";
 import ESig from "./ESig";
 
@@ -96,7 +95,6 @@ export const EOvertime = ({
       <Preview>Confirm your email address</Preview>
       <Body style={main}>
         <Container style={container}>
-          <HeaderEmail />
           <Heading style={h2}>REGISTRATION FOR OVERTIME & WORK ON DAYS OFF</Heading>
           <Row>
             <Column style={{ width: "150px" }}>
