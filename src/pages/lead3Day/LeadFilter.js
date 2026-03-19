@@ -20,9 +20,9 @@
 /**************************************************************************/
 
 import { Row, Col } from 'antd';
-import FormDatePicker from 'components/form/FormDatePicker';
-import FormInput from 'components/form/FormInput';
-import FormSelect from 'components/form/FormSelect';
+import FormDatePicker from '@erp/shared/dist/components/form/FormDatePicker';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
+import FormSelect from '@erp/shared/dist/components/form/FormSelect';
 import { STATUS_LEAD } from 'configs/constant';
 import { CHANNEL_SOURCE } from 'configs/localData';
 

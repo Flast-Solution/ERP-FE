@@ -1,9 +1,9 @@
 import { Row, Col } from 'antd';
-import FormInput from 'components/form/FormInput';
-import FormHidden from 'components/form/FormHidden';
-import BtnSubmit from 'components/common/BtnSubmit';
-import FormSelectUser from 'components/form/FormSelectUser';
-import FormSelect from 'components/form/FormSelect';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
+import FormHidden from '@erp/shared/dist/components/form/FormHidden';
+import BtnSubmit from '@erp/shared/dist/components/common/BtnSubmit';
+import FormSelectUser from '@erp/shared/dist/components/form/FormSelectUser';
+import FormSelect from '@erp/shared/dist/components/form/FormSelect';
 
 const EditUserForm = () => {
   return (

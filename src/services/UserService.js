@@ -20,8 +20,8 @@
 /**************************************************************************/
 
 import { SUCCESS_CODE } from "@/configs";
-import { arrayEmpty } from "@/utils/dataUtils";
-import RequestUtils from "@/utils/RequestUtils";
+import { arrayEmpty } from "@erp/shared/dist/utils/dataUtils";
+import RequestUtils from "@erp/shared/dist/utils/RequestUtils";
 
 
 

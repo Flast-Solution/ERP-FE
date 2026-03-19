@@ -22,10 +22,10 @@
 import React, { useCallback, useState } from 'react';
 import { Table, Button, InputNumber, Select, Typography, message } from 'antd';
 import { ShowSkuDetail } from 'containers/Product/SkuView';
-import { arrayEmpty, arrayNotEmpty, formatMoney } from 'utils/dataUtils';
-import { formatterInputNumber, parserInputNumber } from 'utils/tools';
+import { arrayEmpty, arrayNotEmpty, formatMoney } from '@erp/shared/dist/utils/dataUtils';
+import { formatterInputNumber, parserInputNumber } from '@erp/shared/dist/utils/tools';
 import { HASH_POPUP } from 'configs/constant';
-import { InAppEvent } from 'utils/FuseUtils';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
 import {
   SaveOutlined,
   TagOutlined,
@@ -37,9 +37,9 @@ import {
 } from '@ant-design/icons';
 import _ from 'lodash';
 import { HASH_MODAL, SUCCESS_CODE } from 'configs';
-import RequestUtils from 'utils/RequestUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 import OrderService, { getWarehouseByProduct } from 'services/OrderService';
-import { useEffectAsync } from 'hooks/MyHooks';
+import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
 
 const { Text } = Typography;
 const warrantyOptions = [

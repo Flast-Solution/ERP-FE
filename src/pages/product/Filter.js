@@ -20,10 +20,10 @@
 /**************************************************************************/
 
 import { Row, Col } from 'antd';
-import FormInput from 'components/form/FormInput';
-import FormSelectUser from 'components/form/FormSelectUser';
-import FormSelect from 'components/form/FormSelect';
-import FormDatePicker from 'components/form/FormDatePicker';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
+import FormSelectUser from '@erp/shared/dist/components/form/FormSelectUser';
+import FormSelect from '@erp/shared/dist/components/form/FormSelect';
+import FormDatePicker from '@erp/shared/dist/components/form/FormDatePicker';
 
 const ProductFilter = () => {
   return (

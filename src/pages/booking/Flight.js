@@ -1,14 +1,14 @@
 import React, { useCallback, useState } from 'react';
-import RestList from "components/RestLayout/RestList";
-import useGetList from "hooks/useGetList";
+import RestList from "@erp/shared/dist/components/RestLayout/RestList";
+import useGetList from "@erp/shared/dist/hooks/useGetList";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from 'components/BreadcrumbCustom';
+import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
 import Filter from './Filter';
 import { Button, Flex, Typography } from 'antd';
-import { InAppEvent } from "utils/FuseUtils";
+import { InAppEvent } from "@erp/shared/dist/utils/FuseUtils";
 import { HASH_MODAL } from 'configs';
-import { arrayEmpty, dateFormatOnSubmit, formatTime, formatMoney, arrayNotEmpty } from 'utils/dataUtils';
-import useGetMe from 'hooks/useGetMe';
+import { arrayEmpty, dateFormatOnSubmit, formatTime, formatMoney, arrayNotEmpty } from '@erp/shared/dist/utils/dataUtils';
+import useGetMe from '@erp/shared/dist/hooks/useGetMe';
 import {
   APP_FOLLOW_STATUS_CONFIRM,
   APP_STATUS_TEXT,
@@ -17,9 +17,9 @@ import {
   APP_FOLLOW_STATUS_REJECT
 } from 'configs/constant';
 import { OTContent } from './styles';
-import { formatDateDayjs } from 'utils/textUtils';
+import { formatDateDayjs } from '@erp/shared/dist/utils/textUtils';
 import UserService from 'services/UserService';
-import RequestUtils from 'utils/RequestUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 import { DownloadOutlined } from '@ant-design/icons';
 
 const { Paragraph, Text } = Typography;

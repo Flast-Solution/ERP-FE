@@ -21,18 +21,18 @@
 
 import React, { useCallback, useState, useRef } from 'react';
 import { Row, Col, message } from 'antd';
-import RestEditModal from '@/components/RestLayout/RestEditModal';
-import FormHidden from '@/components/form/FormHidden';
-import FormInput from '@/components/form/FormInput';
-import CustomButton from '@/components/CustomButton';
-import FormTextArea from '@/components/form/FormTextArea';
-import ImageUploader from '@/components/common/File/ImageUploader';
-import FormJoditEditor from '@/components/form/FormJoditEditor';
+import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
+import FormHidden from '@erp/shared/dist/components/form/FormHidden';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
+import CustomButton from '@erp/shared/dist/components/CustomButton';
+import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
+import ImageUploader from '@erp/shared/dist/components/common/File/ImageUploader';
+import FormJoditEditor from '@erp/shared/dist/components/form/FormJoditEditor';
 import logger from '@/logger';
-import RequestUtils, { SUCCESS_CODE } from '@/utils/RequestUtils';
-import { useEffectAsync } from '@/hooks/MyHooks';
+import RequestUtils, { SUCCESS_CODE } from '@erp/shared/dist/utils/RequestUtils';
+import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
 import MediaService from '@/services/MediaService';
-import { f5List } from '@/utils/dataUtils';
+import { f5List } from '@erp/shared/dist/utils/dataUtils';
 
 const LOGGER_TAG = '[container/category/sanpham.js]';
 const FormCateSanPHam = ({ closeModal, data }) => {

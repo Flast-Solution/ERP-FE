@@ -1,13 +1,13 @@
 import { Row, Col, Form } from 'antd';
-import FormHidden from 'components/form/FormHidden';
-import CustomButton from 'components/CustomButton';
+import FormHidden from '@erp/shared/dist/components/form/FormHidden';
+import CustomButton from '@erp/shared/dist/components/CustomButton';
 import { HourglassOutlined } from '@ant-design/icons';
-import { FormContextCustom } from 'components/context/FormContextCustom';
+import { FormContextCustom } from '@erp/shared/dist/components/context/FormContextCustom';
 import { useCallback, useContext } from 'react';
-import FormListAddition from 'components/form/FormListAddtion';
-import FormTextArea from 'components/form/FormTextArea';
+import FormListAddition from '@erp/shared/dist/components/form/FormListAddtion';
+import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
 import FlightListForm from './FlightListForm';
-import FormDatePicker from 'components/form/FormDatePicker';
+import FormDatePicker from '@erp/shared/dist/components/form/FormDatePicker';
 
 const FlightBookForm = () => {
 

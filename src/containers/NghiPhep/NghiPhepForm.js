@@ -1,17 +1,17 @@
 import { Row, Col, Form, Button, Upload } from 'antd';
-import FormHidden from 'components/form/FormHidden';
-import FormTextArea from 'components/form/FormTextArea';
-import FormDatePicker from 'components/form/FormDatePicker';
-import FormSelect from 'components/form/FormSelect';
-import CustomButton from 'components/CustomButton';
+import FormHidden from '@erp/shared/dist/components/form/FormHidden';
+import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
+import FormDatePicker from '@erp/shared/dist/components/form/FormDatePicker';
+import FormSelect from '@erp/shared/dist/components/form/FormSelect';
+import CustomButton from '@erp/shared/dist/components/CustomButton';
 import { UploadOutlined, DeleteTwoTone, HourglassOutlined } from '@ant-design/icons';
 import { NGHI_PHEP_META } from 'configs/constant';
-import FormInput from 'components/form/FormInput';
-import { FormContextCustom } from 'components/context/FormContextCustom';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
+import { FormContextCustom } from '@erp/shared/dist/components/context/FormContextCustom';
 import { useCallback, useContext, useEffect, useState } from 'react';
-import RequestUtils from 'utils/RequestUtils';
-import { arrayNotEmpty, string2Object } from 'utils/dataUtils';
-import { getFileName } from 'utils/fileUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import { arrayNotEmpty, string2Object } from '@erp/shared/dist/utils/dataUtils';
+import { getFileName } from '@erp/shared/dist/utils/fileUtils';
 import { GATEWAY } from 'configs';
 import { isArray } from 'lodash';
 

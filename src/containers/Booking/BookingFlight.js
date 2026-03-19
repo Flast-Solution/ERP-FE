@@ -1,15 +1,15 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import RestEditModal from 'components/RestLayout/RestEditModal';
-import { arrayNotEmpty, dateFormatOnSubmit } from 'utils/dataUtils';
+import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
+import { arrayNotEmpty, dateFormatOnSubmit } from '@erp/shared/dist/utils/dataUtils';
 import { Form } from 'antd';
 import { APP_FOLLOW_STATUS_WAITING } from 'configs/constant';
 import { cloneDeep } from 'lodash';
-import RequestUtils from 'utils/RequestUtils';
-import { InAppEvent } from 'utils/FuseUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
 import { SUCCESS_CODE } from 'configs';
 import FlightBookForm from './FlightBookForm';
 import BookingFlightPreview from './BookingFlightPreview';
-import useGetMe from 'hooks/useGetMe';
+import useGetMe from '@erp/shared/dist/hooks/useGetMe';
 
 const BookingFlight = ({ closeModal, data }) => {
 

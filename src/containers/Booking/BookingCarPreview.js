@@ -3,7 +3,7 @@ import CarReview from "containers/Email/CarReview";
 import { render } from '@react-email/render';
 import { useEffect, useState } from 'react';
 import { useStore } from "DataContext";
-import RequestUtils from 'utils/RequestUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 import { SUCCESS_API_CODE } from 'configs/constant';
 
 const BookingCarPreview = ({

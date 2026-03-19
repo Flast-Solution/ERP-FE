@@ -2,8 +2,8 @@ import React from 'react';
 import { Body, Container, Column, Head, Heading, Html, Preview, Row, Section, Text, } from "@react-email/components";
 import { APP_FOLLOW_STATUS_DONE, APP_FOLLOW_STATUS_WAITING } from "configs/constant";
 import ESig from "./ESig";
-import { formatDateDayjs } from "utils/textUtils";
-import { arrayNotEmpty, formatMoney } from "utils/dataUtils";
+import { formatDateDayjs } from "@erp/shared/dist/utils/textUtils";
+import { arrayNotEmpty, formatMoney } from "@erp/shared/dist/utils/dataUtils";
 import UserService from "services/UserService";
 import { FLIGHT_WAY_TYPE } from "configs/localData";
 

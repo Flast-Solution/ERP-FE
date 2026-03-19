@@ -22,12 +22,12 @@
 import React, { useState, useCallback } from 'react';
 import { Button, message, Space } from 'antd';
 import { CopyOutlined, EditFilled } from '@ant-design/icons';
-import RestList from "components/RestLayout/RestList";
-import useGetList from "hooks/useGetList";
+import RestList from "@erp/shared/dist/components/RestLayout/RestList";
+import useGetList from "@erp/shared/dist/hooks/useGetList";
 import Filter from './Filter';
-import { dateFormatOnSubmit, formatMoney, formatTime } from 'utils/dataUtils';
+import { dateFormatOnSubmit, formatMoney, formatTime } from '@erp/shared/dist/utils/dataUtils';
 import OrderService from 'services/OrderService';
-import { InAppEvent } from 'utils/FuseUtils';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
 import { HASH_MODAL } from 'configs';
 import { renderArrayColor } from './utils';
 import { useNavigate  } from 'react-router-dom';

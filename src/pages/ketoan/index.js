@@ -22,14 +22,14 @@
 import React, { useCallback, useState } from 'react';
 import { Button } from 'antd';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from 'components/BreadcrumbCustom';
-import RestList from 'components/RestLayout/RestList';
+import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
+import RestList from '@erp/shared/dist/components/RestLayout/RestList';
 import Filter from './Filter';
-import useGetList from "hooks/useGetList";
-import { dateFormatOnSubmit } from 'utils/dataUtils';
+import useGetList from "@erp/shared/dist/hooks/useGetList";
+import { dateFormatOnSubmit } from '@erp/shared/dist/utils/dataUtils';
 import { ORDER_COLUMN_ACTION } from 'containers/Order/utils';
 import { HASH_MODAL } from 'configs';
-import { InAppEvent } from 'utils/FuseUtils';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
 import OrderService from 'services/OrderService';
 
 const CongnoPage = () => {

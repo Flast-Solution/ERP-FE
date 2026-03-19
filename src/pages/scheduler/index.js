@@ -1,18 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import TimeSheet from './TimeSheet';
 import MyScheduner from './MyScheduner';
-import useGetMe from 'hooks/useGetMe';
+import useGetMe from '@erp/shared/dist/hooks/useGetMe';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from 'components/BreadcrumbCustom';
-import useGetRestApi from 'hooks/useGetRestApi';
-import FormSelectUser from 'components/form/FormSelectUser';
+import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
+import useGetRestApi from '@erp/shared/dist/hooks/useGetRestApi';
+import FormSelectUser from '@erp/shared/dist/components/form/FormSelectUser';
 import { FilterContent } from './styles';
 import { Dropdown, Button, Row, Col, Form, Badge } from 'antd';
-import FormSelect from 'components/form/FormSelect';
+import FormSelect from '@erp/shared/dist/components/form/FormSelect';
 import dayjs from 'dayjs';
 import { APP_FOLLOW_STATUS_CONFIRM, APP_FOLLOW_STATUS_WAITING } from 'configs/constant';
 import UserService from 'services/UserService';
-import { arrayEmpty } from 'utils/dataUtils';
+import { arrayEmpty } from '@erp/shared/dist/utils/dataUtils';
 
 const title = 'Timesheet, work schedule';
 const currentDate = dayjs();

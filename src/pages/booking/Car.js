@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import RestList from "components/RestLayout/RestList";
-import useGetList from "hooks/useGetList";
+import RestList from "@erp/shared/dist/components/RestLayout/RestList";
+import useGetList from "@erp/shared/dist/hooks/useGetList";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from 'components/BreadcrumbCustom';
+import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
 import Filter from './Filter';
 import { Button, Flex, Typography } from 'antd';
-import { InAppEvent } from "utils/FuseUtils";
+import { InAppEvent } from "@erp/shared/dist/utils/FuseUtils";
 import { HASH_MODAL } from 'configs';
-import { arrayEmpty, arrayNotEmpty, dateFormatOnSubmit, formatTime, formatMoney } from 'utils/dataUtils';
-import useGetMe from 'hooks/useGetMe';
+import { arrayEmpty, arrayNotEmpty, dateFormatOnSubmit, formatTime, formatMoney } from '@erp/shared/dist/utils/dataUtils';
+import useGetMe from '@erp/shared/dist/hooks/useGetMe';
 import {
   APP_FOLLOW_STATUS_CONFIRM,
   APP_STATUS_TEXT,
@@ -20,7 +20,7 @@ import { OTContent } from './styles';
 import UserService from 'services/UserService';
 import { CAR_WORK_TYPE } from 'configs/localData';
 import CarService from 'services/CarService';
-import RequestUtils from 'utils/RequestUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 import { DownloadOutlined } from '@ant-design/icons';
 
 const { Paragraph, Text } = Typography;

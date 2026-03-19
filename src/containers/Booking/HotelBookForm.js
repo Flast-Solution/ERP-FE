@@ -1,16 +1,16 @@
 import { Row, Col, Form, Typography } from 'antd';
-import FormHidden from 'components/form/FormHidden';
-import CustomButton from 'components/CustomButton';
+import FormHidden from '@erp/shared/dist/components/form/FormHidden';
+import CustomButton from '@erp/shared/dist/components/CustomButton';
 import { HourglassOutlined } from '@ant-design/icons';
-import { FormContextCustom } from 'components/context/FormContextCustom';
+import { FormContextCustom } from '@erp/shared/dist/components/context/FormContextCustom';
 import { useCallback, useContext } from 'react';
-import FormListAddition from 'components/form/FormListAddtion';
+import FormListAddition from '@erp/shared/dist/components/form/FormListAddtion';
 import HotelUserForm from './HotelUserForm';
-import FormTextArea from 'components/form/FormTextArea';
-import FormInput from 'components/form/FormInput';
-import FormRadioGroup from 'components/form/FormRadioGroup';
+import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
+import FormRadioGroup from '@erp/shared/dist/components/form/FormRadioGroup';
 import { HOTEL_ROOM_PAY_TYPE } from 'configs/localData';
-import FormAutoComplete from 'components/form/FormAutoComplete';
+import FormAutoComplete from '@erp/shared/dist/components/form/FormAutoComplete';
 import HotelService from 'services/HotelService';
 
 const HotelBookForm = () => {

@@ -11,16 +11,16 @@ import { Button, Col, Radio, Row } from 'antd';
 import Calendar from './Calendar';
 import { theme } from './theme';
 import { initialCalendars, clone } from './utils';
-import RequestUtils from 'utils/RequestUtils';
-import { arrayEmpty, dateFormatOnSubmit, formatTime } from 'utils/dataUtils';
-import useGetMe from 'hooks/useGetMe';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@erp/shared/dist/utils/dataUtils';
+import useGetMe from '@erp/shared/dist/hooks/useGetMe';
 import { SUCCESS_CODE } from 'configs';
 import dayjs from 'dayjs';
 import { cloneDeep, random } from 'lodash';
 import UserService from 'services/UserService';
-import FormSelectUser from 'components/form/FormSelectUser';
+import FormSelectUser from '@erp/shared/dist/components/form/FormSelectUser';
 import { FilterContent } from './styles';
-import { InAppEvent } from 'utils/FuseUtils';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
 import { HASH_POPUP } from 'configs/constant';
 
 const MyScheduner = ({

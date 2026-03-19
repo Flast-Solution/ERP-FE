@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from 'components/BreadcrumbCustom';
+import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
 import { Tabs } from 'antd';
 import Car from './Car';
 import Flight from './Flight';

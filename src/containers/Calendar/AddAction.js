@@ -1,18 +1,18 @@
 import { Form, Col, Row } from 'antd';
-import CustomButton from 'components/CustomButton';
-import FormDatePicker from 'components/form/FormDatePicker';
-import FormInput from 'components/form/FormInput';
-import FormRadioGroup from 'components/form/FormRadioGroup';
-import FormSelect from 'components/form/FormSelect';
-import FormSelectUser from 'components/form/FormSelectUser';
-import RestEditModal from 'components/RestLayout/RestEditModal';
+import CustomButton from '@erp/shared/dist/components/CustomButton';
+import FormDatePicker from '@erp/shared/dist/components/form/FormDatePicker';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
+import FormRadioGroup from '@erp/shared/dist/components/form/FormRadioGroup';
+import FormSelect from '@erp/shared/dist/components/form/FormSelect';
+import FormSelectUser from '@erp/shared/dist/components/form/FormSelectUser';
+import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
 import { SUCCESS_CODE } from 'configs';
-import useGetMe from 'hooks/useGetMe';
+import useGetMe from '@erp/shared/dist/hooks/useGetMe';
 import { initialCalendars } from 'pages/scheduler/utils';
 import { useCallback } from 'react';
-import { dateFormatOnSubmit } from 'utils/dataUtils';
-import { InAppEvent } from 'utils/FuseUtils';
-import RequestUtils from 'utils/RequestUtils';
+import { dateFormatOnSubmit } from '@erp/shared/dist/utils/dataUtils';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 
 const SETTUP_PEOPLE = [
   { type: 'persional', text: 'Persional' },

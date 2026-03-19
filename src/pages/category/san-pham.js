@@ -22,16 +22,16 @@
 import React, { useCallback, useState } from 'react';
 import { Button, message, Space } from 'antd';
 import { cloneDeep } from 'lodash';
-import RestList from "@/components/RestLayout/RestList";
-import useGetList from "@/hooks/useGetList";
+import RestList from "@erp/shared/dist/components/RestLayout/RestList";
+import useGetList from "@erp/shared/dist/hooks/useGetList";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@/components/BreadcrumbCustom';
+import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
 import Filter from '@/pages/category/Filter';
-import { InAppEvent } from "@/utils/FuseUtils";
+import { InAppEvent } from "@erp/shared/dist/utils/FuseUtils";
 import { GATEWAY, HASH_MODAL } from '@/configs';
-import { dateFormatOnSubmit, formatTime } from '@/utils/dataUtils';
-import CustomImage from '@/components/common/CustomImage';
-import RequestUtils from '@/utils/RequestUtils';
+import { dateFormatOnSubmit, formatTime } from '@erp/shared/dist/utils/dataUtils';
+import CustomImage from '@erp/shared/dist/components/common/CustomImage';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 
 const CateSanPham = () => {
 

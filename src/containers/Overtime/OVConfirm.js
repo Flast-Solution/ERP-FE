@@ -1,19 +1,19 @@
 import React, { useEffect, useCallback, useContext, useMemo, useState } from 'react';
-import RestEditModal from 'components/RestLayout/RestEditModal';
-import { InAppEvent } from 'utils/FuseUtils';
-import { f5List } from 'utils/dataUtils';
+import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
+import { f5List } from '@erp/shared/dist/utils/dataUtils';
 import OVReview from './OVReview';
-import useGetMe from 'hooks/useGetMe';
-import CustomButton from 'components/CustomButton';
+import useGetMe from '@erp/shared/dist/hooks/useGetMe';
+import CustomButton from '@erp/shared/dist/components/CustomButton';
 import { Popconfirm } from 'antd';
 import { 
   NGHI_PHEP_STATUS_DONE, 
   NGHI_PHEP_STATUS_REJECT, 
   NGHI_PHEP_STATUS_WAITING
 } from 'configs/constant';
-import FormTextArea from 'components/form/FormTextArea';
-import RequestUtils from 'utils/RequestUtils';
-import { FormContextCustom } from 'components/context/FormContextCustom';
+import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
+import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import { FormContextCustom } from '@erp/shared/dist/components/context/FormContextCustom';
 import { cloneDeep } from 'lodash';
 
 const BtnCancel = ({
