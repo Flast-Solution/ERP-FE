@@ -1,7 +1,6 @@
 import { Body, Container, Column, Head, Heading, Html, Preview, Row, Section, Text, } from "@react-email/components";
 import { NGHI_PHEP_META, NGHI_PHEP_STATUS_DONE, NGHI_PHEP_STATUS_WAITING } from "configs/constant";
-import { formatDateDayjs } from "@erp/shared/dist/utils/textUtils";
-import HeaderEmail from "./HeaderEmail";
+import { formatDateDayjs } from "utils/textUtils";
 import ESig from "./ESig";
 
 const nRow = {
@@ -67,7 +66,6 @@ export const XinNghiPhep = ({
       <Preview>Confirm your email address</Preview>
       <Body style={main}>
         <Container style={container}>
-          <HeaderEmail />
           <Heading style={h2}>ĐƠN XIN NGHỈ PHÉP (LEAVE OF ABSENCE FORM)</Heading>
           <Row>
             <Column style={{ width: "150px" }}>
