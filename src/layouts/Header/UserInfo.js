@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { GlobalOutlined, LogoutOutlined, ProfileOutlined, UserOutlined } from '@ant-design/icons';
@@ -44,6 +44,10 @@ function UserInfo() {
     moment.locale(e);
     localStorage.setItem('locale', e);
   }, [i18n]);
+
+  useEffect(() => {
+    setLocale(i18n.language);
+  }, [i18n.language]);
 
   const getClassItemLanguage = useCallback(
     language =>

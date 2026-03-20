@@ -8,20 +8,22 @@ import FormSelectUser from '@erp/shared/dist/components/form/FormSelectUser';
 import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
 import { SUCCESS_CODE } from 'configs';
 import useGetMe from '@erp/shared/dist/hooks/useGetMe';
-import { initialCalendars } from 'pages/scheduler/utils';
-import { useCallback } from 'react';
+import { buildCalendarsWithNames } from 'pages/scheduler/utils';
+import { useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { dateFormatOnSubmit } from '@erp/shared/dist/utils/dataUtils';
 import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
 import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 
-const SETTUP_PEOPLE = [
-  { type: 'persional', text: 'Persional' },
-  { type: 'department', text: 'Users' },
-  { type: 'all', text: 'All' }
-]
-
 const AddAction = ({ closeModal, data }) => {
 
+  const { t } = useTranslation();
+  const calendarOptions = useMemo(() => buildCalendarsWithNames(t), [t]);
+  const scopeOptions = useMemo(() => [
+    { type: 'persional', text: t('calendarPage.addModal.scopePersonal') },
+    { type: 'department', text: t('calendarPage.addModal.scopeDepartment') },
+    { type: 'all', text: t('calendarPage.addModal.scopeAll') },
+  ], [t]);
   const { user } = useGetMe();
   const onSubmit = useCallback(async (values) => {
     const { people, userIds, ...params } = values;
@@ -51,8 +53,8 @@ const AddAction = ({ closeModal, data }) => {
     if (isSuccess && (ret.id ?? 0) !== 0) {
       data?.callback?.(ret);
     }
-    InAppEvent.normalInfo(isSuccess ? 'Created event success .!' : 'Error created event .!');
-  }, [user, data]);
+    InAppEvent.normalInfo(isSuccess ? t('calendarPage.addModal.createSuccess') : t('calendarPage.addModal.createError'));
+  }, [user, data, t]);
 
   return (
     <RestEditModal
@@ -65,8 +67,8 @@ const AddAction = ({ closeModal, data }) => {
           <FormDatePicker
             style={{ width: '100%' }}
             name="start"
-            placeholder="Start of event"
-            label="Choise start of event"
+            placeholder={t('calendarPage.addModal.placeholderStart')}
+            label={t('calendarPage.addModal.labelStart')}
             required
           />
         </Col>
@@ -74,27 +76,27 @@ const AddAction = ({ closeModal, data }) => {
           <FormDatePicker
             style={{ width: '100%' }}
             name="end"
-            placeholder="End of event"
-            label="Choise end of event"
+            placeholder={t('calendarPage.addModal.placeholderEnd')}
+            label={t('calendarPage.addModal.labelEnd')}
             required
           />
         </Col>
         <Col xs={24} md={12}>
           <FormSelect
-            resourceData={initialCalendars}
+            resourceData={calendarOptions}
             name="calendarId"
-            placeholder="Choise type of event"
-            label="Type of event"
+            placeholder="calendarPage.addModal.placeholderEventType"
+            label="calendarPage.addModal.labelEventType"
             required
           />
         </Col>
         <Col xs={24} md={12}>
           <FormRadioGroup
-            resourceData={SETTUP_PEOPLE}
+            resourceData={scopeOptions}
             name="people"
             titleProp='text'
             valueProp='type'
-            label="User Or Department"
+            label="calendarPage.addModal.labelScope"
             required
           />
         </Col>
@@ -108,8 +110,8 @@ const AddAction = ({ closeModal, data }) => {
                 <FormSelectUser
                   mode="multiple"
                   name="userIds"
-                  placeholder="Join Users"
-                  label="Users list"
+                  placeholder="calendarPage.addModal.placeholderJoinUsers"
+                  label="calendarPage.addModal.labelUsersList"
                   required
                 />
               ) : ('');
@@ -119,15 +121,15 @@ const AddAction = ({ closeModal, data }) => {
         <Col xs={24} md={24}>
           <FormInput
             name="title"
-            placeholder="Short title"
-            label="Title"
+            placeholder="calendarPage.addModal.placeholderTitle"
+            label="calendarPage.addModal.labelTitleField"
             required
           />
         </Col>
         <Col xs={24} md={24}>
           <CustomButton
             htmlType="submit"
-            title="Tạo mới"
+            title="calendarPage.addModal.submitCreate"
             color="danger"
             variant="solid"
           />
