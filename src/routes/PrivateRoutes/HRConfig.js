@@ -6,7 +6,6 @@ const CalendarPage = React.lazy(() => import('pages/scheduler'));
 const BookingPage = React.lazy(() => import('pages/booking'));
 const LeavePage = React.lazy(() => import('pages/nghiphep'));
 const OvertimePage = React.lazy(() => import('pages/overtime'));
-const EmailPage = React.lazy(() => import('pages/email'));
 
 export const HRConfig = {
     auth: authRoles.user,
@@ -16,6 +15,5 @@ export const HRConfig = {
         { path: '/booking', element: <BookingPage /> },
         { path: '/leave', element: <LeavePage /> },
         { path: '/overtime', element: <OvertimePage /> },
-        { path: '/email', element: <EmailPage /> }
     ]
 };

@@ -25,77 +25,44 @@ export function subtractDate(d, steps) {
   return date;
 }
 
-export const initialCalendars = [
-  {
-    id: '0',
-    name: 'Overtime',
-    backgroundColor: '#00b0d8',
-    borderColor: '#9e5fff'
-  },
-  {
-    id: '1',
-    name: 'Unpaid leave',
-    backgroundColor: '#ec1c24',
-    borderColor: '#00a9ff',
-    dragBackgroundColor: '#00a9ff',
-  },
-  {
-    id: '2',
-    name: 'Work in the office',
-    backgroundColor: '#fdb933',
-    borderColor: '#00a9ff',
-    dragBackgroundColor: '#00a9ff',
-  },
-  {
-    id: '3',
-    name: 'Weekly break',
-    backgroundColor: '#f26f21',
-    borderColor: '#00a9ff',
-    dragBackgroundColor: '#00a9ff',
-  },
-  {
-    id: '4',
-    name: 'Sick leave with social insurance',
-    backgroundColor: '#231f20',
-    borderColor: '#00a9ff',
-    dragBackgroundColor: '#00a9ff',
-  },
-  {
-    id: '5',
-    name: 'Paid leave',
-    backgroundColor: '#fdb933',
-    borderColor: '#00a9ff',
-    dragBackgroundColor: '#00a9ff',
-  },
-  {
-    id: '6',
-    name: 'Holiday',
-    backgroundColor: '#0066b2',
-    borderColor: '#00a9ff',
-    dragBackgroundColor: '#00a9ff',
-  },
-  {
-    id: '7',
-    name: 'Leave according to company policy',
-    backgroundColor: '#4ba6c9',
-    borderColor: '#00a9ff',
-    dragBackgroundColor: '#00a9ff',
-  },
-  {
-    id: '8',
-    name: 'Business trip',
-    backgroundColor: '#4b23c9',
-    borderColor: '#00a9ff',
-    dragBackgroundColor: '#00a9ff',
-  },
-  {
-    id: '9',
-    name: 'Meeting schedule',
-    backgroundColor: '#4b23a5',
-    borderColor: '#00a9ff',
-    dragBackgroundColor: '#00a9ff'
-  }
+/* Editorial palette (ref: a.html) — names via i18n: calendarPage.types.{id} */
+export const calendarPalettes = [
+  { id: '0', backgroundColor: '#e3f2fd', borderColor: '#005bc1', dragBackgroundColor: '#005bc1' },
+  { id: '1', backgroundColor: '#ffebee', borderColor: '#a83836', dragBackgroundColor: '#a83836' },
+  { id: '2', backgroundColor: '#fff8e1', borderColor: '#f5a623', dragBackgroundColor: '#f5a623' },
+  { id: '3', backgroundColor: '#f5f7fa', borderColor: '#5c5f62', dragBackgroundColor: '#5c5f62' },
+  { id: '4', backgroundColor: '#eceff1', borderColor: '#455a64', dragBackgroundColor: '#455a64' },
+  { id: '5', backgroundColor: '#e8f5e9', borderColor: '#2e7d32', dragBackgroundColor: '#2e7d32' },
+  { id: '6', backgroundColor: '#e3f2fd', borderColor: '#0066b2', dragBackgroundColor: '#0066b2' },
+  { id: '7', backgroundColor: '#e0f7fa', borderColor: '#00838f', dragBackgroundColor: '#00838f' },
+  { id: '8', backgroundColor: '#ede7f6', borderColor: '#4b23c9', dragBackgroundColor: '#4b23c9' },
+  { id: '9', backgroundColor: '#f3e5f5', borderColor: '#6a1b9a', dragBackgroundColor: '#6a1b9a' },
 ];
+
+/** @param {(key: string) => string} t - useTranslation().t */
+export function buildCalendarsWithNames(t) {
+  return calendarPalettes.map((c) => ({
+    ...c,
+    name: t(`calendarPage.types.${c.id}`),
+  }));
+}
+
+/** Fallback English labels (e.g. AddAction before i18n wiring) */
+export const initialCalendars = buildCalendarsWithNames((key) => {
+  const map = {
+    'calendarPage.types.0': 'Overtime',
+    'calendarPage.types.1': 'Unpaid leave',
+    'calendarPage.types.2': 'Work in the office',
+    'calendarPage.types.3': 'Weekly break',
+    'calendarPage.types.4': 'Sick leave with social insurance',
+    'calendarPage.types.5': 'Paid leave',
+    'calendarPage.types.6': 'Holiday',
+    'calendarPage.types.7': 'Leave according to company policy',
+    'calendarPage.types.8': 'Business trip',
+    'calendarPage.types.9': 'Meeting schedule',
+  };
+  return map[key] || key;
+});
 
 export const AMPM = () => <><br /><br /></>;
 

@@ -1,3 +1,330 @@
+/* Scheduler - Editorial calendar style (ref: a.html) */
+.scheduler-nav-main {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.scheduler-nav-arrow {
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  color: #5a6062;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  transition: all 0.2s;
+}
+
+.scheduler-nav-arrow:hover {
+  background: #e5e9eb;
+  color: #2d3335;
+}
+
+.scheduler-view-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 24px;
+}
+
+.scheduler-view-nav button {
+  padding: 4px 12px;
+  border: none;
+  background: transparent;
+  color: #5a6062;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.scheduler-view-nav button:hover {
+  background: #e5e9eb;
+  color: #2d3335;
+}
+
+.scheduler-view-nav button.active {
+  color: #005bc1;
+  font-weight: 700;
+}
+
+.scheduler-filter {
+  min-width: 200px;
+}
+
+.scheduler-calendar-body {
+  min-height: 600px;
+}
+
+@media (max-width: 768px) {
+  .scheduler-nav-main {
+    flex-wrap: wrap;
+  }
+
+  .scheduler-view-nav {
+    margin-left: 0;
+    margin-top: 8px;
+    width: 100%;
+  }
+}
+
+/* Toast UI Calendar overrides - match editorial style */
+
+/* Active/Today date - white text on blue circle for contrast */
+.toastui-calendar-grid-cell-date .toastui-calendar-weekday-grid-date.toastui-calendar-weekday-grid-date-decorator {
+  color: #fff !important;
+  background-color: #005bc1 !important;
+}
+
+.toastui-calendar-template-monthDayNameItem {
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #5a6062 !important;
+}
+
+.toastui-calendar-day-view-day-name {
+  font-weight: 700 !important;
+  color: #5a6062 !important;
+}
+
+/* Event bars (weekday-event) - editorial format: rounded-lg, border-l-4, shadow-sm */
+.toastui-calendar-weekday-event-block {
+  margin-bottom: 2px;
+}
+
+.toastui-calendar-panel-event-wrapper .toastui-calendar-weekday-event,
+.toastui-calendar-weekday-event {
+  border-radius: 6px 0 0 6px !important;
+  border-left-width: 4px !important;
+  padding: 2px 8px 2px 10px !important;
+  min-height: 22px !important;
+  height: auto !important;
+  line-height: 20px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+  margin: 0 6px 2px 4px !important;
+}
+
+.toastui-calendar-weekday-event-title {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: inherit !important;
+}
+
+/* Ensure text contrast - darken on light backgrounds */
+.toastui-calendar-weekday-event {
+  color: #2d3335 !important;
+}
+
+/* Stacked events spacing */
+.toastui-calendar-weekday-events {
+  gap: 2px;
+}
+
+/* ========== Form Popup (Create/Edit Event) - Editorial style ========== */
+.toastui-calendar-form-container {
+  border: 1px solid #e5e9eb !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12) !important;
+  padding: 20px !important;
+}
+
+.toastui-calendar-popup-section {
+  min-height: 44px !important;
+  margin-bottom: 12px !important;
+}
+
+.toastui-calendar-popup-section-item,
+.toastui-calendar-popup-button {
+  border-radius: 8px !important;
+  color: #2d3335 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+.toastui-calendar-popup-section-item input {
+  color: #2d3335 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+.toastui-calendar-popup-section-item input::placeholder {
+  color: #5a6062 !important;
+  opacity: 0.9;
+}
+
+.toastui-calendar-popup-section-item .toastui-calendar-content,
+.toastui-calendar-dropdown-section .toastui-calendar-content {
+  color: #2d3335 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+/* Save button - primary blue */
+.toastui-calendar-popup-button.toastui-calendar-popup-confirm {
+  background-color: #005bc1 !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-weight: 700 !important;
+}
+
+.toastui-calendar-popup-button.toastui-calendar-popup-confirm:hover {
+  background-color: #004a9e !important;
+}
+
+/* Category dropdown button (Overtime, etc.) */
+.toastui-calendar-dropdown-section .toastui-calendar-popup-button {
+  border: 1px solid #adb3b5 !important;
+  min-height: 36px !important;
+}
+
+/* Dropdown menu - fix layout & contrast */
+.toastui-calendar-dropdown-menu {
+  border: 1px solid #e5e9eb !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  padding: 6px 0 !important;
+  margin-top: 4px !important;
+}
+
+.toastui-calendar-dropdown-menu-item {
+  display: flex !important;
+  align-items: center !important;
+  min-height: 36px !important;
+  height: auto !important;
+  padding: 8px 14px !important;
+  gap: 10px !important;
+  line-height: 1.4 !important;
+}
+
+.toastui-calendar-dropdown-menu-item .toastui-calendar-dot {
+  flex-shrink: 0 !important;
+  width: 10px !important;
+  height: 10px !important;
+  margin: 0 !important;
+}
+
+.toastui-calendar-dropdown-menu-item .toastui-calendar-content {
+  flex: 1 !important;
+  line-height: 1.4 !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  color: #2d3335 !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+}
+
+.toastui-calendar-dropdown-menu-item:hover {
+  background-color: #f1f4f5 !important;
+}
+
+/* Date picker section - better contrast */
+.toastui-calendar-popup-date-picker .toastui-calendar-content {
+  color: #2d3335 !important;
+  font-weight: 600 !important;
+}
+
+.toastui-calendar-popup-date-dash {
+  color: #5a6062 !important;
+  font-weight: 500 !important;
+}
+
+/* All day checkbox - label contrast */
+.toastui-calendar-popup-section-allday .toastui-calendar-content {
+  color: #2d3335 !important;
+  font-weight: 600 !important;
+}
+
+/* TUI Date Picker - contrast fix */
+.tui-calendar .tui-calendar-title-today {
+  color: #2d3335 !important;
+  background-color: #e5e9eb !important;
+  font-weight: 600 !important;
+}
+
+.tui-datepicker-input,
+.tui-datepicker-input > input {
+  border-color: #adb3b5 !important;
+  color: #2d3335 !important;
+  font-weight: 500 !important;
+}
+
+.tui-datepicker-input.tui-has-focus {
+  border-color: #005bc1 !important;
+  box-shadow: 0 0 0 2px rgba(0, 91, 193, 0.2);
+}
+
+.tui-calendar td,
+.tui-calendar th {
+  color: #5a6062 !important;
+}
+
+.tui-calendar .tui-calendar-title {
+  color: #2d3335 !important;
+  font-weight: 600 !important;
+}
+
+.tui-calendar .tui-calendar-today {
+  color: #005bc1 !important;
+  font-weight: 600 !important;
+}
+
+.tui-calendar .tui-calendar-btn-choice {
+  background-color: #005bc1 !important;
+}
+
+.tui-datepicker.tui-rangepicker .tui-is-selected-range {
+  background-color: rgba(0, 91, 193, 0.12) !important;
+}
+
+.tui-datepicker .tui-is-selectable:hover {
+  background-color: rgba(0, 91, 193, 0.08) !important;
+}
+
+/* Detail popup (click event) - contrast fix */
+.toastui-calendar-detail-container {
+  border: 1px solid #e5e9eb !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12) !important;
+}
+
+.toastui-calendar-detail-container .toastui-calendar-section-header {
+  color: #2d3335 !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+}
+
+.toastui-calendar-detail-container .toastui-calendar-content {
+  color: #2d3335 !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+}
+
+.toastui-calendar-event-title {
+  color: #2d3335 !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+}
+
+.toastui-calendar-detail-container .toastui-calendar-section-detail {
+  color: #2d3335 !important;
+}
+
+.toastui-calendar-detail-container .toastui-calendar-section-button .toastui-calendar-content {
+  color: #2d3335 !important;
+  font-weight: 600 !important;
+}
+
+/* Legacy - keep for compatibility */
 .c__today {
   border: 1px solid #ccc;
   padding: 3px 15px;

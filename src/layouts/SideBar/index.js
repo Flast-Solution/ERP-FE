@@ -126,7 +126,6 @@ function SideBar() {
       getItem(<Link to="/cleander">Lịch</Link>, 'cleander', <CalendarOutlined />),
       getItem(<Link to="/booking">Booking</Link>, 'booking', <BookOutlined />),
       getItem(<Link to="/leave">Nghỉ phép</Link>, 'leave', <RotateLeftOutlined />),
-      getItem(<Link to="/email">Email</Link>, 'email', <MailOutlined />),
       getItem(<Link to="/overtime">Tăng ca</Link>, 'overtime', <FieldTimeOutlined />)]), 
   ];
 

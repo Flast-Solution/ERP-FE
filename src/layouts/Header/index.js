@@ -19,23 +19,36 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { Badge } from 'antd';
+import { Badge, Tooltip } from 'antd';
 import { Link } from 'react-router-dom';
+import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import moment from 'moment';
 import useCollapseSidebar from '@erp/shared/dist/hooks/useCollapseSidebar';
 import SearchInput from './SearchInput';
 import ServiceSelect from './ServiceSelect';
 import HeaderWrapper from './styles';
 import CustomButton from '@erp/shared/dist/components/CustomButton';
-import { BellFilled, PlusOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { BellFilled, PlusOutlined, TranslationOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import UserInfo from './UserInfo';
 import useServiceId from '@erp/shared/dist/hooks/useServiceId';
 import { useNavigate } from "react-router-dom";
 
 const Header = () => {
 
+  const { t, i18n } = useTranslation();
   const { isCollapseSidebar, toggleCollapse } = useCollapseSidebar();
   const { serviceId, setServiceId } = useServiceId();
   let navigate = useNavigate();
+
+  const isVietnamese = String(i18n.language || 'vi').toLowerCase().startsWith('vi');
+
+  const toggleLanguage = useCallback(() => {
+    const next = isVietnamese ? 'en' : 'vi';
+    i18n.changeLanguage(next);
+    moment.locale(next);
+    localStorage.setItem('locale', next);
+  }, [i18n, isVietnamese]);
 
   return (
     <HeaderWrapper className="header">
@@ -63,6 +76,19 @@ const Header = () => {
             <BellFilled className="icon-noti" />
           </Badge>
         </Link>
+        <Tooltip title={isVietnamese ? t('header.languageToggleToEn') : t('header.languageToggleToVi')}>
+          <button
+            type="button"
+            className="header-language-toggle"
+            onClick={toggleLanguage}
+            aria-label={isVietnamese ? t('header.languageToggleToEn') : t('header.languageToggleToVi')}
+          >
+            {/* <TranslationOutlined className="header-language-toggle__icon" /> */}
+            <span className="header-language-toggle__badge">
+              {isVietnamese ? t('header.languageCurrentVi') : t('header.languageCurrentEn')}
+            </span>
+          </button>
+        </Tooltip>
         <UserInfo />
       </div>
     </HeaderWrapper>

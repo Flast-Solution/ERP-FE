@@ -3,14 +3,16 @@ import 'tui-date-picker/dist/tui-date-picker.min.css';
 import 'tui-time-picker/dist/tui-time-picker.min.css';
 import './style.css';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { LeftCircleOutlined, RightCircleOutlined } from '@ant-design/icons';
-import { Link } from "react-router-dom";
-import { Button, Col, Radio, Row } from 'antd';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { LeftOutlined, RightOutlined, PlusOutlined } from '@ant-design/icons';
+import { Button, Col } from 'antd';
+import { useTranslation } from 'react-i18next';
+import 'dayjs/locale/vi';
+import 'dayjs/locale/en';
 
 import Calendar from './Calendar';
 import { theme } from './theme';
-import { initialCalendars, clone } from './utils';
+import { buildCalendarsWithNames, clone } from './utils';
 import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
 import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@erp/shared/dist/utils/dataUtils';
 import useGetMe from '@erp/shared/dist/hooks/useGetMe';
@@ -19,13 +21,38 @@ import dayjs from 'dayjs';
 import { cloneDeep, random } from 'lodash';
 import UserService from 'services/UserService';
 import FormSelectUser from '@erp/shared/dist/components/form/FormSelectUser';
-import { FilterContent } from './styles';
+import {
+  FilterContent,
+  SchedulerWrapper,
+  SchedulerHeader,
+  HeaderLeft,
+  HeaderTitle,
+  NavGroup,
+  NavButton,
+  TodayButton,
+  CalendarBody
+} from './styles';
 import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
 import { HASH_POPUP } from 'configs/constant';
 
 const MyScheduner = ({
   showTimeSheet = (value) => value
 }) => {
+
+  const { t, i18n } = useTranslation();
+  const calendars = useMemo(() => buildCalendarsWithNames(t), [t]);
+  const dayNames = useMemo(
+    () => [
+      t('calendarPage.day.sun'),
+      t('calendarPage.day.mon'),
+      t('calendarPage.day.tue'),
+      t('calendarPage.day.wed'),
+      t('calendarPage.day.thu'),
+      t('calendarPage.day.fri'),
+      t('calendarPage.day.sat'),
+    ],
+    [t],
+  );
 
   const calendarRef = useRef(null);
   const [selectedDateRangeText, setSelectedDateRangeText] = useState('');
@@ -104,6 +131,54 @@ const MyScheduner = ({
     updateRenderRangeText();
   }, [selectedView, updateRenderRangeText]);
 
+  const dayjsLocale = String(i18n.language || 'vi').toLowerCase().startsWith('vi') ? 'vi' : 'en';
+
+  useEffect(() => {
+    dayjs.locale(dayjsLocale);
+  }, [dayjsLocale]);
+
+  const calendarTemplates = useMemo(() => ({
+    milestone(event) {
+      return `<span style="color: #fff; background-color: ${event.backgroundColor};">${event.title}</span>`;
+    },
+    allday(event) {
+      return `[${t('calendarPage.allDayPrefix')}] ${event.title}`;
+    },
+    time(event) {
+      const [ uName ] = event.attendees;
+      const tStart = formatTime(event.start, "HH:mm");
+      return String(uName ? '[' + uName + ']' : '').concat(" ").concat(tStart).concat(" ").concat(event.title);
+    },
+    /* Form popup (create / edit) — Toast UI template hooks */
+    popupIsAllday: () => t('calendarPage.popup.allDay'),
+    popupStateFree: () => t('calendarPage.popup.free'),
+    popupStateBusy: () => t('calendarPage.popup.busy'),
+    titlePlaceholder: () => t('calendarPage.popup.subject'),
+    locationPlaceholder: () => t('calendarPage.popup.location'),
+    startDatePlaceholder: () => t('calendarPage.popup.startDatePlaceholder'),
+    endDatePlaceholder: () => t('calendarPage.popup.endDatePlaceholder'),
+    popupSave: () => t('calendarPage.popup.save'),
+    popupUpdate: () => t('calendarPage.popup.update'),
+    popupEdit: () => t('calendarPage.popup.edit'),
+    popupDelete: () => t('calendarPage.popup.delete'),
+    popupDetailState({ state }) {
+      if (state === 'Free') return t('calendarPage.popup.free');
+      if (state === 'Busy' || !state) return t('calendarPage.popup.busy');
+      return state;
+    },
+    monthGridHeaderExceed(hiddenEventsCount) {
+      return t('calendarPage.popup.moreEvents', { count: hiddenEventsCount });
+    },
+    weekGridFooterExceed(hiddenEventsCount) {
+      return t('calendarPage.popup.moreEvents', { count: hiddenEventsCount });
+    },
+  }), [t]);
+
+  const timezoneZones = useMemo(() => ([
+    { timezoneName: 'Asia/Ho_Chi_Minh', displayLabel: t('calendarPage.timezoneHanoi'), tooltip: 'UTC+07:00' },
+    { timezoneName: 'Asia/Tokyo', displayLabel: t('calendarPage.timezoneTokyo'), tooltip: 'UTC+09:00' }
+  ]), [t]);
+
   const onAfterRenderEvent = (res) => {
     /*
     console.group('onAfterRenderEvent');
@@ -116,10 +191,6 @@ const MyScheduner = ({
     const { id, calendarId } = res;
     getCalInstance().deleteEvent(id, calendarId);
     RequestUtils.Post("/calendar/delete", { id });
-  };
-
-  const onChangeSelect = (ev) => {
-    setSelectedView(ev?.target?.value ?? 'month');
   };
 
   const onClickDayName = (res) => {
@@ -204,83 +275,126 @@ const MyScheduner = ({
 
   const onCreateAction = () => InAppEvent.emit(HASH_POPUP, {
     hash: 'calendar.add',
-    title: 'Add new Scheduner (Ex: Meet, Holiday ...)',
+    title: t('calendarPage.popupAddTitle'),
     data: {
       callback: (_) => setFilter((pre) => ({ ...pre, random: random() }))
     }
   });
 
+  const onToday = () => {
+    const calInstance = getCalInstance();
+    if (calInstance) {
+      calInstance.today();
+      updateRenderRangeText();
+    }
+  };
+
+  /** Tháng/năm header — luôn theo i18n (tránh locale mặc định EN trước khi useEffect chạy) */
+  const headerDateLabel = useMemo(() => {
+    const raw = selectedDateRangeText;
+    if (!raw) return '';
+    const loc = dayjsLocale;
+
+    const monthOnly = raw.match(/^(\d{4})-(\d{1,2})$/);
+    if (monthOnly) {
+      const y = parseInt(monthOnly[1], 10);
+      const m = parseInt(monthOnly[2], 10);
+      return dayjs(new Date(y, m - 1, 1)).locale(loc).format('MMMM YYYY');
+    }
+
+    const dayOnly = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (dayOnly) {
+      const y = parseInt(dayOnly[1], 10);
+      const mo = parseInt(dayOnly[2], 10);
+      const d = parseInt(dayOnly[3], 10);
+      return dayjs(new Date(y, mo - 1, d)).locale(loc).format('D MMMM YYYY');
+    }
+
+    return raw;
+  }, [selectedDateRangeText, dayjsLocale]);
+
   return (
-    <div>
-      <Row style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Col className='c__action_calender' xs={24} md={19}>
-          <Link className="c__today" to="#">Today</Link>
-          <LeftCircleOutlined onClick={() => onClickNavi("prev")} style={{ fontSize: 25, paddingLeft: 10, cursor: 'pointer' }} />
-          <RightCircleOutlined onClick={() => onClickNavi("next")} style={{ fontSize: 25, paddingLeft: 10, cursor: 'pointer' }} />
-          <span style={{ fontSize: 15, paddingLeft: 10 }}>{selectedDateRangeText}</span>
-          <div className='hidden-xs'>
-            <Radio.Group value={'small'} onChange={onChangeSelect} style={{ marginLeft: 15 }}>
-              <Radio.Button value="day">Ngày</Radio.Button>
-              <Radio.Button value="week">Tuần</Radio.Button>
-              <Radio.Button value="month">Tháng</Radio.Button>
-            </Radio.Group>
+    <SchedulerWrapper>
+      <SchedulerHeader>
+        <HeaderLeft>
+          <div className="scheduler-nav-main">
+            <HeaderTitle>{headerDateLabel}</HeaderTitle>
+            <NavGroup style={{ marginLeft: 16 }}>
+              <button
+                type="button"
+                className="scheduler-nav-arrow"
+                onClick={() => onClickNavi("prev")}
+                aria-label={t('calendarPage.ariaPrev')}
+              >
+                <LeftOutlined />
+              </button>
+              <button
+                type="button"
+                className="scheduler-nav-arrow"
+                onClick={() => onClickNavi("next")}
+                aria-label={t('calendarPage.ariaNext')}
+              >
+                <RightOutlined />
+              </button>
+            </NavGroup>
+            <TodayButton onClick={onToday}>{t('calendarPage.today')}</TodayButton>
           </div>
-          <FilterContent className='filter'>
-            <Col xs={24} md={19}>
+          <nav className="scheduler-view-nav">
+            <NavButton
+              className={selectedView === 'day' ? 'active' : ''}
+              onClick={() => setSelectedView('day')}
+            >
+              {t('calendarPage.viewDay')}
+            </NavButton>
+            <NavButton
+              className={selectedView === 'week' ? 'active' : ''}
+              onClick={() => setSelectedView('week')}
+            >
+              {t('calendarPage.viewWeek')}
+            </NavButton>
+            <NavButton
+              className={selectedView === 'month' ? 'active' : ''}
+              onClick={() => setSelectedView('month')}
+            >
+              {t('calendarPage.viewMonth')}
+            </NavButton>
+          </nav>
+          <FilterContent className="scheduler-filter" style={{ marginLeft: 0, flex: 1 }} gutter={12}>
+            <Col xs={24} md={12} lg={8}>
               <FormSelectUser
                 allowClear
-                name={"userIds"}
-                placeholder="Chọn tài khoản"
+                placeholder={t('calendarPage.selectAccount')}
                 onChange={(value) => setFilter((pre) => ({ ...pre, userIds: value }))}
+                name="userIds"
               />
             </Col>
-            <Col xs={24} md={5}>
-              <Button
-                onClick={() => onCreateAction()}
-                color="danger"
-                variant="outlined"
-                style={{ marginLeft: 10 }}
-              >
-                + Add Scheduler
+            <Col xs={24} md={12} lg={6}>
+              <Button type="primary" icon={<PlusOutlined />} onClick={onCreateAction}>
+                {t('calendarPage.addEvent')}
               </Button>
             </Col>
           </FilterContent>
-        </Col>
-        <Col className='c__action_table m-top-20-xs' xs={24} md={5}>
-          <Button color="primary" variant="dashed" onClick={() => showTimeSheet(true)}>Timesheet</Button>
-          <Button color="danger" variant="outlined" style={{ marginLeft: 10 }} onClick={() => showTimeSheet(false)}>Scheduler</Button>
-        </Col>
-      </Row>
+        </HeaderLeft>
+        <NavGroup>
+          <Button type="primary" ghost onClick={() => showTimeSheet(true)}>{t('calendarPage.timesheet')}</Button>
+          <Button style={{ marginLeft: 8 }} onClick={() => showTimeSheet(false)}>{t('calendarPage.scheduler')}</Button>
+        </NavGroup>
+      </SchedulerHeader>
+      <CalendarBody className="scheduler-calendar-body">
       <Calendar
-        height="100vh"
-        calendars={initialCalendars}
-        month={{ startDayOfWeek: 1 }}
+        height="calc(100vh - 180px)"
+        calendars={calendars}
+        month={{ startDayOfWeek: 1, dayNames }}
         events={dataCalender}
-        template={{
-          milestone(event) {
-            return `<span style="color: #fff; background-color: ${event.backgroundColor};">${event.title}</span>`;
-          },
-          allday(event) {
-            return `[All day] ${event.title}`;
-          },
-          time(event) {
-            const [ uName ] = event.attendees;
-            const tStart = formatTime(event.start, "HH:mm");
-            const showName = String(uName ? '[' + uName + ']' : '').concat(" ").concat(tStart).concat(" ").concat(event.title)
-            return showName;
-          }
-        }}
+        template={calendarTemplates}
         theme={theme}
-        timezone={{
-          zones: [
-            { timezoneName: 'Asia/Ho_Chi_Minh', displayLabel: 'HaNoi', tooltip: 'UTC+07:00' },
-            { timezoneName: 'Asia/Tokyo', displayLabel: 'Tokyo', tooltip: 'UTC+09:00' }
-          ]
-        }}
+        timezone={{ zones: timezoneZones }}
         useDetailPopup={true}
         useFormPopup={true}
         view={selectedView}
         week={{
+          startDayOfWeek: 1,
+          dayNames,
           showTimezoneCollapseButton: true,
           timezonesCollapsed: false,
           eventView: true,
@@ -295,7 +409,8 @@ const MyScheduner = ({
         onBeforeUpdateEvent={onBeforeUpdateEvent}
         onBeforeCreateEvent={onBeforeCreateEvent}
       />
-    </div>
+      </CalendarBody>
+    </SchedulerWrapper>
   );
 }
 

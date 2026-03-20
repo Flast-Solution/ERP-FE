@@ -92,6 +92,31 @@ const HeaderWrapper = styled(Layout.Header)`
       color: ${({ theme }) => theme.text.primary};
     }
   }
+  .header-language-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 10px;
+    padding: 6px 10px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: ${({ theme }) => theme.text.primary};
+    transition: background 0.2s, border-color 0.2s;
+    &:hover {
+      background: ${({ theme }) => theme.background?.input || '#f5f7fa'};
+      border-color: ${({ theme }) => theme.palette?.primary || '#ffc015'};
+    }
+  }
+  .header-language-toggle__icon {
+    font-size: 20px;
+  }
+  .header-language-toggle__badge {
+    font-size: 12px;
+    font-weight: 700;
+    min-width: 22px;
+    text-align: center;
+  }
   .reverse-trigger {
     transform: rotate(180deg);
   }
