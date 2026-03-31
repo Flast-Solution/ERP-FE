@@ -64,6 +64,7 @@ import { WebConfig } from './WebConfig';
 
 /* HR - Quản lý hành chính */
 import { HRConfig } from './HRConfig';
+import { QcConfig } from './QcConfig';
 
 const routeConfigs = [
     LoginConfig,
@@ -88,7 +89,8 @@ const routeConfigs = [
     AiAgentConfig,
     DragDropConfig,
     WebConfig,
-    HRConfig
+    HRConfig,
+    QcConfig
 ];
 
 const routes = [
