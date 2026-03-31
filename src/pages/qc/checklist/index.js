@@ -92,7 +92,7 @@ const ChecklistIndex = () => {
                 initialFilter={{ limit: 10, page: 1 }}
                 filter={<Filter />}
                 useGetAllQuery={useGetList}
-                apiPath={'qc-checklist/fetch'}
+                apiPath={'qms/qc-checklist/fetch'}
                 customClickCreate={onCreate}
                 columns={columns}
             />

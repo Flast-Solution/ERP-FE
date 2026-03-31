@@ -1,14 +1,38 @@
-import { Row, Col, Form } from 'antd';
+import React, { useCallback } from 'react';
+import { Row, Col } from 'antd';
 import FormInput from '@erp/shared/dist/components/form/FormInput';
 import FormInputNumber from '@erp/shared/dist/components/form/FormInputNumber';
 import FormSelect from '@erp/shared/dist/components/form/FormSelect';
 import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
 import FormHidden from '@erp/shared/dist/components/form/FormHidden';
-import BtnSubmit from '@erp/shared/dist/components/CustomButton/BtnSubmit';
+import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
+import QcService from 'services/QcService';
+import { f5List } from '@erp/shared/dist/utils/dataUtils';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
 
-const CriteriaForm = () => {
+const CriteriaForm = ({ data, closeModal }) => {
+
+    const onSubmit = useCallback(async (values) => {
+        const isUpdate = !!values.idQcCriteria;
+        const res = isUpdate 
+            ? await QcService.updateCriteria(values) 
+            : await QcService.addCriteria(values);
+        
+        const isSuccess = res?.errorCode === 200;
+        if (isSuccess) {
+            f5List('qms/qc-criteria/fetch');
+            closeModal && closeModal();
+        }
+        InAppEvent.normalInfo(isSuccess ? "Cập nhật thành công" : (res?.message || "Lỗi cập nhật, vui lòng thử lại sau"));
+    }, [closeModal]);
+
     return (
-        <Form layout="vertical">
+        <RestEditModal
+            isMergeRecordOnSubmit={true}
+            onSubmit={onSubmit}
+            record={data}
+            closeModal={closeModal}
+        >
             <Row gutter={16} style={{ marginTop: 20 }}>
                 <FormHidden name={'idQcCriteria'} />
                 <Col md={12} xs={24}>
@@ -117,12 +141,10 @@ const CriteriaForm = () => {
                         rows={3}
                     />
                 </Col>
-                <Col md={24} xs={24} style={{ textAlign: 'right', marginTop: 10 }}>
-                    <BtnSubmit text='Hoàn thành' />
-                </Col>
             </Row>
-        </Form>
+        </RestEditModal>
     );
 };
 
 export default CriteriaForm;
+

@@ -1,14 +1,38 @@
-import { Row, Col, Form } from 'antd';
+import React, { useCallback } from 'react';
+import { Row, Col } from 'antd';
 import FormInput from '@erp/shared/dist/components/form/FormInput';
 import FormSelect from '@erp/shared/dist/components/form/FormSelect';
 import FormSelectUser from '@erp/shared/dist/components/form/FormSelectUser';
 import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
 import FormHidden from '@erp/shared/dist/components/form/FormHidden';
-import BtnSubmit from '@erp/shared/dist/components/CustomButton/BtnSubmit';
+import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
+import QcService from 'services/QcService';
+import { f5List } from '@erp/shared/dist/utils/dataUtils';
+import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
 
-const ChecklistForm = () => {
+const ChecklistForm = ({ data, closeModal }) => {
+
+    const onSubmit = useCallback(async (values) => {
+        const isUpdate = !!values.idQcCheckList;
+        const res = isUpdate 
+            ? await QcService.updateChecklist(values) 
+            : await QcService.addChecklist(values);
+        
+        const isSuccess = res?.errorCode === 200;
+        if (isSuccess) {
+            f5List('qms/qc-checklist/fetch');
+            closeModal && closeModal();
+        }
+        InAppEvent.normalInfo(isSuccess ? "Cập nhật thành công" : (res?.message || "Lỗi cập nhật, vui lòng thử lại sau"));
+    }, [closeModal]);
+
     return (
-        <Form layout="vertical">
+        <RestEditModal
+            isMergeRecordOnSubmit={true}
+            onSubmit={onSubmit}
+            record={data}
+            closeModal={closeModal}
+        >
             <Row gutter={16} style={{ marginTop: 20 }}>
                 <FormHidden name={'idQcCheckList'} />
                 <Col md={12} xs={24}>
@@ -56,7 +80,7 @@ const ChecklistForm = () => {
                 </Col>
                 <Col md={24} xs={24}>
                     <FormSelectUser
-                        api="/qccriteria/list"
+                        api="cms/qc-criteria/list"
                         name={'criteriaIds'}
                         label="Danh sách tiêu chí"
                         placeholder="Chọn các tiêu chí"
@@ -74,12 +98,10 @@ const ChecklistForm = () => {
                         rows={3}
                     />
                 </Col>
-                <Col md={24} xs={24} style={{ textAlign: 'right', marginTop: 10 }}>
-                    <BtnSubmit text='Hoàn thành' />
-                </Col>
             </Row>
-        </Form>
+        </RestEditModal>
     );
 };
 
 export default ChecklistForm;
+

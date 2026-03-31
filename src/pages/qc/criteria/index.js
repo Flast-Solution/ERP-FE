@@ -97,7 +97,7 @@ const CriteriaIndex = () => {
                 initialFilter={{ limit: 10, page: 1 }}
                 filter={<Filter />}
                 useGetAllQuery={useGetList}
-                apiPath={'qms/qccriteria/fetch'}
+                apiPath={'qms/qc-criteria/fetch'}
                 customClickCreate={onCreate}
                 columns={columns}
             />
