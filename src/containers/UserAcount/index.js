@@ -19,13 +19,13 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
+import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
 import React, { useEffect, useState } from 'react'
 import UserForm from './UserForm';
-import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
-import { validateRegex } from '@erp/shared/dist/utils/validateUtils';
-import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
-import { f5List } from '@erp/shared/dist/utils/dataUtils';
+import RequestUtils from '@flast-erp/core/utils/RequestUtils';
+import { validateRegex } from '@flast-erp/core/utils/validateUtils';
+import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
+import { f5List } from '@flast-erp/core/utils/dataUtils';
 
 const UserAccount = ({ data }) => {
 

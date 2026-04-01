@@ -20,9 +20,9 @@
 /**************************************************************************/
 
 import { Row, Col } from 'antd';
-import FormDatePicker from '@erp/shared/dist/components/form/FormDatePicker';
-import FormInput from '@erp/shared/dist/components/form/FormInput';
-import FormSelect from '@erp/shared/dist/components/form/FormSelect';
+import FormDatePicker from '@flast-erp/core/components/form/FormDatePicker';
+import FormInput from '@flast-erp/core/components/form/FormInput';
+import FormSelect from '@flast-erp/core/components/form/FormSelect';
 import { STATUS_LEAD } from 'configs/constant';
 import { CHANNEL_SOURCE } from 'configs/localData';
 

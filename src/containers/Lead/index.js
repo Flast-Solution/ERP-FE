@@ -20,10 +20,10 @@
 /**************************************************************************/
 
 import React, { useState } from 'react';
-import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
-import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
-import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
-import { arrayNotEmpty, f5List } from '@erp/shared/dist/utils/dataUtils';
+import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
+import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
+import RequestUtils from '@flast-erp/core/utils/RequestUtils';
+import { arrayNotEmpty, f5List } from '@flast-erp/core/utils/dataUtils';
 import { GATEWAY, HASH_MODAL_CLOSE } from 'configs';
 import axios from "axios";
 import LeadForm from './LeadForm';

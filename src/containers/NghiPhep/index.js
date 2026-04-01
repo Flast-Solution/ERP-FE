@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
-import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
-import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
+import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
+import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 import NghiPhepForm from './NghiPhepForm';
-import { dateFormatOnSubmit, f5List } from '@erp/shared/dist/utils/dataUtils';
+import { dateFormatOnSubmit, f5List } from '@flast-erp/core/utils/dataUtils';
 import NPReview from './NPReview';
 import NPConfirm from './NPConfirm';
 import { Form } from 'antd';
 import { NGHI_PHEP_STATUS_WAITING } from 'configs/constant';
-import useGetMe from '@erp/shared/dist/hooks/useGetMe';
+import useGetMe from '@flast-erp/core/hooks/useGetMe';
 
 const UserNPForm = ({ closeModal, data }) => {
 

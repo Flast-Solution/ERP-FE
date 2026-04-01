@@ -13,14 +13,14 @@ import 'dayjs/locale/en';
 import Calendar from './Calendar';
 import { theme } from './theme';
 import { buildCalendarsWithNames, clone } from './utils';
-import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
-import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@erp/shared/dist/utils/dataUtils';
-import useGetMe from '@erp/shared/dist/hooks/useGetMe';
+import RequestUtils from '@flast-erp/core/utils/RequestUtils';
+import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils/dataUtils';
+import useGetMe from '@flast-erp/core/hooks/useGetMe';
 import { SUCCESS_CODE } from 'configs';
 import dayjs from 'dayjs';
 import { cloneDeep, random } from 'lodash';
 import UserService from 'services/UserService';
-import FormSelectUser from '@erp/shared/dist/components/form/FormSelectUser';
+import FormSelectUser from '@flast-erp/core/components/form/FormSelectUser';
 import {
   FilterContent,
   SchedulerWrapper,
@@ -32,7 +32,7 @@ import {
   TodayButton,
   CalendarBody
 } from './styles';
-import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
+import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import { HASH_POPUP } from 'configs/constant';
 
 const MyScheduner = ({

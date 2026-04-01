@@ -23,13 +23,13 @@ import React, { useState, useCallback } from 'react'
 import { Button, Pagination, Row, Col, Tooltip, Tag } from 'antd';
 import { ClockCircleOutlined } from '@ant-design/icons';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
-import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
+import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
+import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import { HASH_POPUP } from 'configs/constant';
-import ListLayoutStyles from '@erp/shared/dist/components/RestLayout/RestList/styles';
-import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
-import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
-import { arrayEmpty, formatMoney } from '@erp/shared/dist/utils/dataUtils';
+import ListLayoutStyles from '@flast-erp/core/components/RestLayout/RestList/styles';
+import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
+import RequestUtils from '@flast-erp/core/utils/RequestUtils';
+import { arrayEmpty, formatMoney } from '@flast-erp/core/utils/dataUtils';
 import {
   KanbanCardWrapper,
   TitleWrapper,

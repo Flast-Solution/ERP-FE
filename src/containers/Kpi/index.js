@@ -21,17 +21,17 @@
 
 import { useEffect } from "react";
 import { Form, Row, Col, message } from "antd";
-import FormHidden from "@erp/shared/dist/components/form/FormHidden";
-import CustomButton from "@erp/shared/dist/components/CustomButton";
-import FormListAddition from "@erp/shared/dist/components/form/FormListAddtion";
+import FormHidden from "@flast-erp/core/components/form/FormHidden";
+import CustomButton from "@flast-erp/core/components/CustomButton";
+import FormListAddition from "@flast-erp/core/components/form/FormListAddtion";
 import { FormListStyles } from "css/global";
-import FormInputNumber from "@erp/shared/dist/components/form/FormInputNumber";
-import FormSelect from "@erp/shared/dist/components/form/FormSelect";
-import FormSelectInfiniteBusinessUser from "@erp/shared/dist/components/form/SelectInfinite/FormSelectInfiniteBusinessUser";
+import FormInputNumber from "@flast-erp/core/components/form/FormInputNumber";
+import FormSelect from "@flast-erp/core/components/form/FormSelect";
+import FormSelectInfiniteBusinessUser from "@flast-erp/core/components/form/SelectInfinite/FormSelectInfiniteBusinessUser";
 import { KPI_TYPE } from "configs/localData";
-import FormDatePicker from "@erp/shared/dist/components/form/FormDatePicker";
-import { dateFormatOnSubmit } from "@erp/shared/dist/utils/dataUtils";
-import RequestUtils from "@erp/shared/dist/utils/RequestUtils";
+import FormDatePicker from "@flast-erp/core/components/form/FormDatePicker";
+import { dateFormatOnSubmit } from "@flast-erp/core/utils/dataUtils";
+import RequestUtils from "@flast-erp/core/utils/RequestUtils";
 
 const KPIForm = ({ onSave, kpi }) => {
 

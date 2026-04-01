@@ -20,11 +20,11 @@
 /**************************************************************************/
 
 import React from 'react';
-import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
+import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
 import Form7Day from 'containers/Lead3DayForm/Form3Day';
-import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
-import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
-import { f5List } from '@erp/shared/dist/utils/dataUtils';
+import RequestUtils from '@flast-erp/core/utils/RequestUtils';
+import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
+import { f5List } from '@flast-erp/core/utils/dataUtils';
 
 const CoHoi7DayForm = ({ data }) => {
 

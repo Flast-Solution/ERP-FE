@@ -21,10 +21,10 @@
 
 import React, { useState } from 'react';
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
+import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
 import ListOrder from 'containers/Order/List';
-import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
-import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
+import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 
 const OrderCancel = () => {
 

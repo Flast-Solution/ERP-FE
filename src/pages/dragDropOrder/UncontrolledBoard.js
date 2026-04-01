@@ -22,15 +22,15 @@
 import React, { useCallback } from 'react'
 import Board from "@asseinfo/react-kanban";
 import { Button, Input, message } from 'antd';
-import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 import { useState, useEffect } from 'react';
-import { arrayEmpty } from '@erp/shared/dist/utils/dataUtils';
+import { arrayEmpty } from '@flast-erp/core/utils/dataUtils';
 import { ContainerStyles } from './style';
-import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
+import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
 import KanbanCard from './KanbanCard';
 import { SUCCESS_CODE } from 'configs';
 import { isEmpty } from 'lodash';
-import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
+import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import { HASH_POPUP } from 'configs/constant';
 import '@asseinfo/react-kanban/dist/styles.css'
 

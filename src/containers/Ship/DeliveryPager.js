@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Typography, Table, Row, Col, message, Form } from 'antd';
-import HeaderCompany from '@erp/shared/dist/components/common/HeaderCompany';
+import HeaderCompany from '@flast-erp/core/components/common/HeaderCompany';
 import { StyledHeaderInvoice } from "css/global";
-import CustomButton from '@erp/shared/dist/components/CustomButton';
-import FormSelectAPI from '@erp/shared/dist/components/form/FormSelectAPI';
+import CustomButton from '@flast-erp/core/components/CustomButton';
+import FormSelectAPI from '@flast-erp/core/components/form/FormSelectAPI';
 import { useReactToPrint } from "react-to-print";
-import { arrayEmpty, f5List } from '@erp/shared/dist/utils/dataUtils';
-import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import { arrayEmpty, f5List } from '@flast-erp/core/utils/dataUtils';
+import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 
 const { Title, Text } = Typography;
 const generateListProduct = (warehouse, ship) => {

@@ -20,11 +20,11 @@
 /**************************************************************************/
 
 import { Row, Col } from 'antd';
-import FormInput from '@erp/shared/dist/components/form/FormInput';
-import FormSelect from '@erp/shared/dist/components/form/FormSelect';
-import FormDatePicker from '@erp/shared/dist/components/form/FormDatePicker';
+import FormInput from '@flast-erp/core/components/form/FormInput';
+import FormSelect from '@flast-erp/core/components/form/FormSelect';
+import FormDatePicker from '@flast-erp/core/components/form/FormDatePicker';
 import { ACTIVE_TYPES } from '@/configs/localData';
-import FormCategoryPost from '@erp/shared/dist/components/form/SelectInfinite/FormCategoryPost';
+import FormCategoryPost from '@flast-erp/core/components/form/SelectInfinite/FormCategoryPost';
 
 const ProductFilter = () => {
   return (

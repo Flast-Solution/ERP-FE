@@ -1,14 +1,14 @@
 import React, { useCallback, useState } from 'react';
-import RestList from "@erp/shared/dist/components/RestLayout/RestList";
-import useGetList from "@erp/shared/dist/hooks/useGetList";
+import RestList from "@flast-erp/core/components/RestLayout/RestList";
+import useGetList from "@flast-erp/core/hooks/useGetList";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
+import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
 import Filter from './Filter';
 import { Button } from 'antd';
-import { InAppEvent } from "@erp/shared/dist/utils/FuseUtils";
+import { InAppEvent } from "@flast-erp/core/utils/FuseUtils";
 import { HASH_MODAL } from 'configs';
-import { dateFormatOnSubmit, formatTime } from '@erp/shared/dist/utils/dataUtils';
-import useGetMe from '@erp/shared/dist/hooks/useGetMe';
+import { dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils/dataUtils';
+import useGetMe from '@flast-erp/core/hooks/useGetMe';
 import {
   NGHI_PHEP_META,
   NGHI_PHEP_STATUS_TEXT,

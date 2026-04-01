@@ -22,10 +22,10 @@
 import React, { useCallback, useState } from 'react';
 import { Table, Button, InputNumber, Select, Typography, message } from 'antd';
 import { ShowSkuDetail } from 'containers/Product/SkuView';
-import { arrayEmpty, arrayNotEmpty, formatMoney } from '@erp/shared/dist/utils/dataUtils';
-import { formatterInputNumber, parserInputNumber } from '@erp/shared/dist/utils/tools';
+import { arrayEmpty, arrayNotEmpty, formatMoney } from '@flast-erp/core/utils/dataUtils';
+import { formatterInputNumber, parserInputNumber } from '@flast-erp/core/utils/tools';
 import { HASH_POPUP } from 'configs/constant';
-import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
+import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import {
   SaveOutlined,
   TagOutlined,
@@ -37,9 +37,9 @@ import {
 } from '@ant-design/icons';
 import _ from 'lodash';
 import { HASH_MODAL, SUCCESS_CODE } from 'configs';
-import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 import OrderService, { getWarehouseByProduct } from 'services/OrderService';
-import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
+import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
 
 const { Text } = Typography;
 const warrantyOptions = [

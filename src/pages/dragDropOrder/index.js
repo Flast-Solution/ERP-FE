@@ -21,7 +21,7 @@
 
 import React, { useState } from 'react'
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
+import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
 import UncontrolledBoard from './UncontrolledBoard';
 
 const DragDropOrderPage = () => {

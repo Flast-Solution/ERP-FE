@@ -32,7 +32,7 @@ import history from "@/@history";
 import Authorization from '@/auth/Authorization';
 import MainLayout from '@/layouts/MainLayout';
 import MyPopup from '@/routes/PopupRoute';
-import Loading from '@erp/shared/dist/components/Loading';
+import Loading from '@flast-erp/core/components/Loading';
 import ModalRoutes from '@/routes/ModalRoutes';
 
 const ThemeRender = () => (

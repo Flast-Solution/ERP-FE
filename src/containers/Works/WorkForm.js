@@ -1,12 +1,12 @@
 import { Col, Row } from 'antd';
-import CustomButton from '@erp/shared/dist/components/CustomButton';
-import FormDatePicker from '@erp/shared/dist/components/form/FormDatePicker';
-import FormHidden from '@erp/shared/dist/components/form/FormHidden';
-import FormInput from '@erp/shared/dist/components/form/FormInput';
-import FormInputNumber from '@erp/shared/dist/components/form/FormInputNumber';
-import FormSelect from '@erp/shared/dist/components/form/FormSelect';
-import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
-import FormSelectInfiniteBusinessUser from '@erp/shared/dist/components/form/SelectInfinite/FormSelectInfiniteBusinessUser';
+import CustomButton from '@flast-erp/core/components/CustomButton';
+import FormDatePicker from '@flast-erp/core/components/form/FormDatePicker';
+import FormHidden from '@flast-erp/core/components/form/FormHidden';
+import FormInput from '@flast-erp/core/components/form/FormInput';
+import FormInputNumber from '@flast-erp/core/components/form/FormInputNumber';
+import FormSelect from '@flast-erp/core/components/form/FormSelect';
+import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
+import FormSelectInfiniteBusinessUser from '@flast-erp/core/components/form/SelectInfinite/FormSelectInfiniteBusinessUser';
 import { DEPARTMENT, PROJECT_STATUS_LIST } from 'configs/localData';
 
 const WorkForm = () => {

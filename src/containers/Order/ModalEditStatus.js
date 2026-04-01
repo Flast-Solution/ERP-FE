@@ -19,17 +19,17 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import FormListAddition from "@erp/shared/dist/components/form/FormListAddtion";
+import FormListAddition from "@flast-erp/core/components/form/FormListAddtion";
 import { Col, Form, ColorPicker, message } from 'antd';
-import FormInput from "@erp/shared/dist/components/form/FormInput";
-import FormSelect from "@erp/shared/dist/components/form/FormSelect";
+import FormInput from "@flast-erp/core/components/form/FormInput";
+import FormSelect from "@flast-erp/core/components/form/FormSelect";
 import { FormListStyles } from "css/global";
 import { useEffect } from "react";
-import RequestUtils from "@erp/shared/dist/utils/RequestUtils";
+import RequestUtils from "@flast-erp/core/utils/RequestUtils";
 import { SUCCESS_CODE } from "configs";
-import FormHidden from "@erp/shared/dist/components/form/FormHidden";
-import CustomButton from "@erp/shared/dist/components/CustomButton";
-import FormInputNumber from "@erp/shared/dist/components/form/FormInputNumber";
+import FormHidden from "@flast-erp/core/components/form/FormHidden";
+import CustomButton from "@flast-erp/core/components/CustomButton";
+import FormInputNumber from "@flast-erp/core/components/form/FormInputNumber";
 
 const ModalEditStatus = ({ listStatus, onSave }) => {
 

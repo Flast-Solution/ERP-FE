@@ -19,12 +19,12 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
+import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
 import Filter from '@/pages/faq/Filter';
-import { f5List } from '@erp/shared/dist/utils/dataUtils';
+import { f5List } from '@flast-erp/core/utils/dataUtils';
 import { HASH_MODAL } from '@/configs/constant';
-import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
-import CustomList from '@erp/shared/dist/components/RestLayout/CustomList';
+import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
+import CustomList from '@flast-erp/core/components/RestLayout/CustomList';
 import {
   GridWrapper,
   TitleWrapper,

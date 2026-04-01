@@ -21,7 +21,7 @@
 /**************************************************************************/
 
 import React, { useCallback, useEffect, useState } from 'react';
-import jwtService from '@erp/shared/dist/utils/jwtService';
+import jwtService from '@flast-erp/core/utils/jwtService';
 import { useStore } from "DataContext";
 import { ACTIONS } from 'configs';
 

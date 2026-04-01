@@ -1,16 +1,16 @@
 import { Row, Col, Form, Typography } from 'antd';
-import FormHidden from '@erp/shared/dist/components/form/FormHidden';
-import CustomButton from '@erp/shared/dist/components/CustomButton';
+import FormHidden from '@flast-erp/core/components/form/FormHidden';
+import CustomButton from '@flast-erp/core/components/CustomButton';
 import { HourglassOutlined } from '@ant-design/icons';
-import { FormContextCustom } from '@erp/shared/dist/components/context/FormContextCustom';
+import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
 import { useCallback, useContext } from 'react';
-import FormListAddition from '@erp/shared/dist/components/form/FormListAddtion';
+import FormListAddition from '@flast-erp/core/components/form/FormListAddtion';
 import HotelUserForm from './HotelUserForm';
-import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
-import FormInput from '@erp/shared/dist/components/form/FormInput';
-import FormRadioGroup from '@erp/shared/dist/components/form/FormRadioGroup';
+import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
+import FormInput from '@flast-erp/core/components/form/FormInput';
+import FormRadioGroup from '@flast-erp/core/components/form/FormRadioGroup';
 import { HOTEL_ROOM_PAY_TYPE } from 'configs/localData';
-import FormAutoComplete from '@erp/shared/dist/components/form/FormAutoComplete';
+import FormAutoComplete from '@flast-erp/core/components/form/FormAutoComplete';
 import HotelService from 'services/HotelService';
 
 const HotelBookForm = () => {

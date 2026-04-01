@@ -22,9 +22,9 @@
 import React, { useState } from 'react';
 import { Card, Row, Col, Tag, Flex, Typography, Divider, Space, Popover } from 'antd';
 import { StarOutlined, SmileOutlined, FlagOutlined, EditOutlined } from '@ant-design/icons';
-import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
-import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
-import { arrayEmpty } from '@erp/shared/dist/utils/dataUtils';
+import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
+import RequestUtils from '@flast-erp/core/utils/RequestUtils';
+import { arrayEmpty } from '@flast-erp/core/utils/dataUtils';
 
 const { Text, Paragraph } = Typography;
 const GetIssueLabels = (issues) => {

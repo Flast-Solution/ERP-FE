@@ -21,11 +21,11 @@
 
 import React from 'react'
 import { Col, Row } from 'antd'
-import FormInput from '@erp/shared/dist/components/form/FormInput'
-import FormAutoCompleteInfinite from '@erp/shared/dist/components/form/AutoCompleteInfinite/FormAutoCompleteInfinite'
-import FormSelectInfiniteBusinessUser from '@erp/shared/dist/components/form/SelectInfinite/FormSelectInfiniteBusinessUser'
-import { useGetAllProductQuery } from '@erp/shared/dist/hooks/useData'
-import FormDatePicker from '@erp/shared/dist/components/form/FormDatePicker'
+import FormInput from '@flast-erp/core/components/form/FormInput'
+import FormAutoCompleteInfinite from '@flast-erp/core/components/form/AutoCompleteInfinite/FormAutoCompleteInfinite'
+import FormSelectInfiniteBusinessUser from '@flast-erp/core/components/form/SelectInfinite/FormSelectInfiniteBusinessUser'
+import { useGetAllProductQuery } from '@flast-erp/core/hooks/useData'
+import FormDatePicker from '@flast-erp/core/components/form/FormDatePicker'
 
 const Filter = () => {
   return (

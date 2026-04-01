@@ -1,17 +1,17 @@
 import { Row, Col, Form, Button, Upload } from 'antd';
-import FormHidden from '@erp/shared/dist/components/form/FormHidden';
-import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
-import FormDatePicker from '@erp/shared/dist/components/form/FormDatePicker';
-import FormSelect from '@erp/shared/dist/components/form/FormSelect';
-import CustomButton from '@erp/shared/dist/components/CustomButton';
+import FormHidden from '@flast-erp/core/components/form/FormHidden';
+import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
+import FormDatePicker from '@flast-erp/core/components/form/FormDatePicker';
+import FormSelect from '@flast-erp/core/components/form/FormSelect';
+import CustomButton from '@flast-erp/core/components/CustomButton';
 import { UploadOutlined, DeleteTwoTone, HourglassOutlined } from '@ant-design/icons';
 import { NGHI_PHEP_META } from 'configs/constant';
-import FormInput from '@erp/shared/dist/components/form/FormInput';
-import { FormContextCustom } from '@erp/shared/dist/components/context/FormContextCustom';
+import FormInput from '@flast-erp/core/components/form/FormInput';
+import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
 import { useCallback, useContext, useEffect, useState } from 'react';
-import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
-import { arrayNotEmpty, string2Object } from '@erp/shared/dist/utils/dataUtils';
-import { getFileName } from '@erp/shared/dist/utils/fileUtils';
+import RequestUtils from '@flast-erp/core/utils/RequestUtils';
+import { arrayNotEmpty, string2Object } from '@flast-erp/core/utils/dataUtils';
+import { getFileName } from '@flast-erp/core/utils/fileUtils';
 import { GATEWAY } from 'configs';
 import { isArray } from 'lodash';
 

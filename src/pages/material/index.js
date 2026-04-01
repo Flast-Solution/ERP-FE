@@ -22,19 +22,19 @@
 import React, { useCallback, useState } from 'react';
 import { Button, Space, Popconfirm, Form, message, Row, Col } from 'antd';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
-import RestList from '@erp/shared/dist/components/RestLayout/RestList';
+import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
+import RestList from '@flast-erp/core/components/RestLayout/RestList';
 import Filter from './Filter';
-import useGetList from "@erp/shared/dist/hooks/useGetList";
-import { dateFormatOnSubmit, formatMoney, formatTime, f5List, arrayEmpty } from '@erp/shared/dist/utils/dataUtils';
+import useGetList from "@flast-erp/core/hooks/useGetList";
+import { dateFormatOnSubmit, formatMoney, formatTime, f5List, arrayEmpty } from '@flast-erp/core/utils/dataUtils';
 import { HASH_POPUP } from 'configs/constant';
-import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
+import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import { DeleteOutlined } from '@ant-design/icons';
-import FormInfiniteStock from '@erp/shared/dist/components/form/SelectInfinite/FormInfiniteStock';
-import FormInputNumber from '@erp/shared/dist/components/form/FormInputNumber';
-import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
-import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
-import FormInput from '@erp/shared/dist/components/form/FormInput';
+import FormInfiniteStock from '@flast-erp/core/components/form/SelectInfinite/FormInfiniteStock';
+import FormInputNumber from '@flast-erp/core/components/form/FormInputNumber';
+import RequestUtils from '@flast-erp/core/utils/RequestUtils';
+import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
+import FormInput from '@flast-erp/core/components/form/FormInput';
 import { SUCCESS_CODE } from 'configs';
 
 const PopconfirmImport = ({ form, record }) => {

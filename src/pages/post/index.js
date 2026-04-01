@@ -21,16 +21,16 @@
 
 import React, { useCallback, useState } from 'react';
 import { Button, message, Space } from 'antd';
-import RestList from "@erp/shared/dist/components/RestLayout/RestList";
-import useGetList from "@erp/shared/dist/hooks/useGetList";
+import RestList from "@flast-erp/core/components/RestLayout/RestList";
+import useGetList from "@flast-erp/core/hooks/useGetList";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
+import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
 import Filter from '@/pages/post/Filter';
 import { GATEWAY } from '@/configs';
-import { dateFormatOnSubmit, formatTime } from '@erp/shared/dist/utils/dataUtils';
-import CustomImage from '@erp/shared/dist/components/common/CustomImage';
-import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
-import { useNavigateSearch } from '@erp/shared/dist/hooks/useNavigateSearch';
+import { dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils/dataUtils';
+import CustomImage from '@flast-erp/core/components/common/CustomImage';
+import RequestUtils from '@flast-erp/core/utils/RequestUtils';
+import { useNavigateSearch } from '@flast-erp/core/hooks/useNavigateSearch';
 
 const Post = () => {
 

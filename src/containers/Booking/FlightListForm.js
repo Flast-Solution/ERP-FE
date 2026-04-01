@@ -1,10 +1,10 @@
 import FormStyles from './styles'
 import { Col, Typography } from 'antd';
-import FormDatePicker from '@erp/shared/dist/components/form/FormDatePicker';
-import FormInputNumber from '@erp/shared/dist/components/form/FormInputNumber';
-import FormSelectUser from '@erp/shared/dist/components/form/FormSelectUser';
-import FormInput from '@erp/shared/dist/components/form/FormInput';
-import FormSelect from '@erp/shared/dist/components/form/FormSelect';
+import FormDatePicker from '@flast-erp/core/components/form/FormDatePicker';
+import FormInputNumber from '@flast-erp/core/components/form/FormInputNumber';
+import FormSelectUser from '@flast-erp/core/components/form/FormSelectUser';
+import FormInput from '@flast-erp/core/components/form/FormInput';
+import FormSelect from '@flast-erp/core/components/form/FormSelect';
 import { FLIGHT_WAY_TYPE } from 'configs/localData';
 import UserService from 'services/UserService';
 

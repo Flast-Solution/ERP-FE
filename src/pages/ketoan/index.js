@@ -22,14 +22,14 @@
 import React, { useCallback, useState } from 'react';
 import { Button } from 'antd';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
-import RestList from '@erp/shared/dist/components/RestLayout/RestList';
+import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
+import RestList from '@flast-erp/core/components/RestLayout/RestList';
 import Filter from './Filter';
-import useGetList from "@erp/shared/dist/hooks/useGetList";
-import { dateFormatOnSubmit } from '@erp/shared/dist/utils/dataUtils';
+import useGetList from "@flast-erp/core/hooks/useGetList";
+import { dateFormatOnSubmit } from '@flast-erp/core/utils/dataUtils';
 import { ORDER_COLUMN_ACTION } from 'containers/Order/utils';
 import { HASH_MODAL } from 'configs';
-import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
+import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import OrderService from 'services/OrderService';
 
 const CongnoPage = () => {

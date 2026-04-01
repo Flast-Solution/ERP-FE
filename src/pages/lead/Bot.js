@@ -1,18 +1,18 @@
 import React, { useCallback, useState } from 'react';
-import RestList from "@erp/shared/dist/components/RestLayout/RestList";
-import useGetList from "@erp/shared/dist/hooks/useGetList";
+import RestList from "@flast-erp/core/components/RestLayout/RestList";
+import useGetList from "@flast-erp/core/hooks/useGetList";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
+import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
 import BotDataFilter from './BotDataFilter';
 import { Avatar, Button, message, Space } from 'antd';
-import { InAppEvent } from "@erp/shared/dist/utils/FuseUtils";
+import { InAppEvent } from "@flast-erp/core/utils/FuseUtils";
 import { CHANNEL_SOURCE_MAP_KEYS } from 'configs/localData';
 import { HASH_MODAL } from 'configs';
-import { arrayEmpty, formatTime } from '@erp/shared/dist/utils/dataUtils';
+import { arrayEmpty, formatTime } from '@flast-erp/core/utils/dataUtils';
 import OrderService from 'services/OrderService';
 import LeadService from 'services/LeadService';
 import { useNavigate } from 'react-router-dom';
-import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 
 const BotData = () => {
 

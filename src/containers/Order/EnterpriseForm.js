@@ -21,18 +21,18 @@
 
 import { useState, useCallback } from "react";
 import { Form, Row, Col, Button, Upload } from "antd";
-import CustomButton from "@erp/shared/dist/components/CustomButton";
-import FormAddress from "@erp/shared/dist/components/form/FormAddress";
-import FormHidden from "@erp/shared/dist/components/form/FormHidden";
-import FormInput from "@erp/shared/dist/components/form/FormInput";
+import CustomButton from "@flast-erp/core/components/CustomButton";
+import FormAddress from "@flast-erp/core/components/form/FormAddress";
+import FormHidden from "@flast-erp/core/components/form/FormHidden";
+import FormInput from "@flast-erp/core/components/form/FormInput";
 import { GATEWAY, SUCCESS_CODE } from "configs";
-import { useEffectAsync } from "@erp/shared/dist/hooks/MyHooks";
-import { arrayNotEmpty } from "@erp/shared/dist/utils/dataUtils";
-import RequestUtils from "@erp/shared/dist/utils/RequestUtils";
+import { useEffectAsync } from "@flast-erp/core/hooks/MyHooks";
+import { arrayNotEmpty } from "@flast-erp/core/utils/dataUtils";
+import RequestUtils from "@flast-erp/core/utils/RequestUtils";
 import { UploadOutlined } from '@ant-design/icons';
 import axios from "axios";
-import { InAppEvent } from "@erp/shared/dist/utils/FuseUtils";
-import FileUploadView from "@erp/shared/dist/components/common/File/FileUploadView";
+import { InAppEvent } from "@flast-erp/core/utils/FuseUtils";
+import FileUploadView from "@flast-erp/core/components/common/File/FileUploadView";
 
 const EnterpriseForm = ({ customerOrder }) => {
 

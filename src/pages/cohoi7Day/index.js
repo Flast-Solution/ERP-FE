@@ -22,17 +22,17 @@
 import React, { useCallback, useState } from 'react';
 import { Button } from 'antd';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
-import RestList from '@erp/shared/dist/components/RestLayout/RestList';
-import useGetList from "@erp/shared/dist/hooks/useGetList";
+import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
+import RestList from '@flast-erp/core/components/RestLayout/RestList';
+import useGetList from "@flast-erp/core/hooks/useGetList";
 import { HASH_MODAL } from 'configs';
-import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
+import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import { cloneDeep } from 'lodash';
-import { dateFormatOnSubmit } from '@erp/shared/dist/utils/dataUtils';
+import { dateFormatOnSubmit } from '@flast-erp/core/utils/dataUtils';
 import { ORDER_COLUMN_ACTION } from 'containers/Order/utils';
 import Filter from './Filter';
 import OrderService from 'services/OrderService';
-import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
+import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
 
 const CoHoi7DayPage = ( { type }) => {
 
