@@ -23,10 +23,17 @@ class RequestUtils {
 	static httpRequest(input, service, method = 'GET', params = '') {
 		const _uri = GATEWAY + service;
 		let getOrPost;
+		const config = {
+			withCredentials: true,
+			headers: {
+				'X-Requested-With': 'XMLHttpRequest',
+			}
+		};
+
 		if (method === 'GET') {
-			getOrPost = axios.get(_uri + this.encodeQueryData(input));
+			getOrPost = axios.get(_uri + this.encodeQueryData(input), config);
 		} else {
-			getOrPost = axios.post(_uri + this.encodeQueryData(params), input);
+			getOrPost = axios.post(_uri + this.encodeQueryData(params), input, config);
 		}
 		return getOrPost.then(({ data }) => {
 			return data;

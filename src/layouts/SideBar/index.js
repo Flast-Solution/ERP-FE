@@ -50,7 +50,6 @@ import {
   DeliveredProcedureOutlined,
   FileWordOutlined,
   SolutionOutlined,
-  MailOutlined,
   CalendarOutlined,
   BookOutlined,
   FieldTimeOutlined,
@@ -108,7 +107,11 @@ function SideBar() {
     getItem(<Link to="/product"> Sản phẩm</Link>, 'product_list', <UngroupOutlined />),
     getItem('Sản xuất', 'san_xuat', <BuildOutlined />, [
       getItem(<Link to="/material">Nguyên V.Liệu</Link>, 'material', <DeliveredProcedureOutlined />),
-      getItem(<Link to="/material/bom">Lệnh S.Xuất</Link>, 'material.bom', <FolderOpenOutlined />)
+      getItem(<Link to="/material/bom">Lệnh S.Xuất</Link>, 'material.bom', <FolderOpenOutlined />),
+      getItem('Quản lý QC', 'qc_management', <AuditOutlined />, [
+        getItem(<Link to="/qc/criteria">Tiêu chí QC</Link>, 'qc_criteria', <UnorderedListOutlined />),
+        getItem(<Link to="/qc/checklist">Bộ tiêu chí QC</Link>, 'qc_checklist', <OrderedListOutlined />)
+      ])
     ]),
     getItem('Web', 'web', <FileWordOutlined />, [
       getItem(<Link to="/category/san-pham">D.Mục sản phẩm</Link>, 'cate-san-pham', <span> - </span>),
