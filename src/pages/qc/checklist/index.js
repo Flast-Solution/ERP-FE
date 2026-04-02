@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import RestList from "@erp/shared/dist/components/RestLayout/RestList";
-import useGetList from "@erp/shared/dist/hooks/useGetList";
+import RestList from "@flast-erp/core/components/RestLayout/RestList";
+import useGetList from "@flast-erp/core/hooks/useGetList";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
+import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
 import Filter from './Filter';
 import { Button, Space, Tag } from 'antd';
-import { InAppEvent } from "@erp/shared/dist/utils/FuseUtils";
+import { InAppEvent } from "@flast-erp/core/utils/FuseUtils";
 import { HASH_MODAL } from 'configs';
 import { cloneDeep } from 'lodash';
 

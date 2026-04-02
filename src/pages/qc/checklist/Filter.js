@@ -1,6 +1,6 @@
 import { Row, Col } from 'antd';
-import FormInput from '@erp/shared/dist/components/form/FormInput';
-import FormSelect from '@erp/shared/dist/components/form/FormSelect';
+import FormInput from '@flast-erp/core/components/form/FormInput';
+import FormSelect from '@flast-erp/core/components/form/FormSelect';
 
 const ChecklistFilter = () => {
     return (

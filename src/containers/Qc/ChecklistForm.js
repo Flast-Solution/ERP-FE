@@ -1,14 +1,14 @@
 import React, { useCallback } from 'react';
 import { Row, Col } from 'antd';
-import FormInput from '@erp/shared/dist/components/form/FormInput';
-import FormSelect from '@erp/shared/dist/components/form/FormSelect';
-import FormSelectUser from '@erp/shared/dist/components/form/FormSelectUser';
-import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
-import FormHidden from '@erp/shared/dist/components/form/FormHidden';
-import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
+import FormInput from '@flast-erp/core/components/form/FormInput';
+import FormSelect from '@flast-erp/core/components/form/FormSelect';
+import FormSelectUser from '@flast-erp/core/components/form/FormSelectUser';
+import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
+import FormHidden from '@flast-erp/core/components/form/FormHidden';
+import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
 import QcService from 'services/QcService';
-import { f5List } from '@erp/shared/dist/utils/dataUtils';
-import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
+import { f5List } from '@flast-erp/core/utils/dataUtils';
+import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 
 const ChecklistForm = ({ data, closeModal }) => {
 
