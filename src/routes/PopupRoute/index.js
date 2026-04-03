@@ -21,9 +21,9 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { HASH_POPUP, HASH_POPUP_CLOSE } from 'configs/constant';
-import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
+import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import { Modal } from 'antd';
-import { NoFooter } from '@erp/shared/dist/components/common/NoFooter';
+import { NoFooter } from '@flast-erp/core/components/common/NoFooter';
 import { createGlobalStyle } from 'styled-components';
 
 import Order from './Order';

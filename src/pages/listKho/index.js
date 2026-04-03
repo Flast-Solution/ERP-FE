@@ -21,17 +21,17 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
-import RestList from '@erp/shared/dist/components/RestLayout/RestList';
+import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
+import RestList from '@flast-erp/core/components/RestLayout/RestList';
 import LeadFilter from './Filter';
-import useGetList from "@erp/shared/dist/hooks/useGetList";
-import { dateFormatOnSubmit, f5List } from '@erp/shared/dist/utils/dataUtils';
-import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
+import useGetList from "@flast-erp/core/hooks/useGetList";
+import { dateFormatOnSubmit, f5List } from '@flast-erp/core/utils/dataUtils';
+import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import { Button, Col, Form, Row } from 'antd';
 import ModaleStyles from 'pages/lead/style';
 import { useForm } from 'antd/es/form/Form';
-import FormInput from '@erp/shared/dist/components/form/FormInput';
-import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import FormInput from '@flast-erp/core/components/form/FormInput';
+import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 
 const ListWareHouse = () => {
 

@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { arrayEmpty, arrayNotEmpty, formatMoney } from "@erp/shared/dist/utils/dataUtils";
+import { arrayEmpty, arrayNotEmpty, formatMoney } from "@flast-erp/core/utils/dataUtils";
 import { SKUContent } from "./styles";
 import { Typography } from 'antd';
 const { Text } = Typography;

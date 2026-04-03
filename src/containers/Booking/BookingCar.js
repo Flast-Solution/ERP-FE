@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
-import { arrayNotEmpty, dateFormatOnSubmit } from '@erp/shared/dist/utils/dataUtils';
+import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
+import { arrayNotEmpty, dateFormatOnSubmit } from '@flast-erp/core/utils/dataUtils';
 import { Form } from 'antd';
 import { APP_FOLLOW_STATUS_WAITING } from 'configs/constant';
 import BookingCarPreview from './BookingCarPreview';
 import CarBookForm from './CarBookForm';
 import { cloneDeep } from 'lodash';
-import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
-import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
+import RequestUtils from '@flast-erp/core/utils/RequestUtils';
+import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import { SUCCESS_CODE } from 'configs';
 import CarService from 'services/CarService';
 

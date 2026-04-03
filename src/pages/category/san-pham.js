@@ -22,16 +22,16 @@
 import React, { useCallback, useState } from 'react';
 import { Button, message, Space } from 'antd';
 import { cloneDeep } from 'lodash';
-import RestList from "@erp/shared/dist/components/RestLayout/RestList";
-import useGetList from "@erp/shared/dist/hooks/useGetList";
+import RestList from "@flast-erp/core/components/RestLayout/RestList";
+import useGetList from "@flast-erp/core/hooks/useGetList";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
+import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
 import Filter from '@/pages/category/Filter';
-import { InAppEvent } from "@erp/shared/dist/utils/FuseUtils";
+import { InAppEvent } from "@flast-erp/core/utils/FuseUtils";
 import { GATEWAY, HASH_MODAL } from '@/configs';
-import { dateFormatOnSubmit, formatTime } from '@erp/shared/dist/utils/dataUtils';
-import CustomImage from '@erp/shared/dist/components/common/CustomImage';
-import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import { dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils/dataUtils';
+import CustomImage from '@flast-erp/core/components/common/CustomImage';
+import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 
 const CateSanPham = () => {
 

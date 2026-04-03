@@ -1,7 +1,7 @@
 import React from 'react';
 import { Column, Row, Section, Text, } from "@react-email/components";
 import { APP_FOLLOW_STATUS_REJECT } from "configs/constant";
-import { formatDate } from "@erp/shared/dist/utils/textUtils";
+import { formatDate } from "@flast-erp/core/utils/textUtils";
 
 const nRow = {
   marginBottom: "10px",

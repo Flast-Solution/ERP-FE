@@ -20,13 +20,13 @@
 /**************************************************************************/
 import React, { useCallback, useState, useRef } from 'react';
 import { Row, Col, message } from 'antd';
-import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
-import FormHidden from '@erp/shared/dist/components/form/FormHidden';
-import FormInput from '@erp/shared/dist/components/form/FormInput';
-import FormJoditEditor from '@erp/shared/dist/components/form/FormJoditEditor';
-import CustomButton from '@erp/shared/dist/components/CustomButton';
-import RequestUtils, { SUCCESS_CODE } from '@erp/shared/dist/utils/RequestUtils';
-import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
+import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
+import FormHidden from '@flast-erp/core/components/form/FormHidden';
+import FormInput from '@flast-erp/core/components/form/FormInput';
+import FormJoditEditor from '@flast-erp/core/components/form/FormJoditEditor';
+import CustomButton from '@flast-erp/core/components/CustomButton';
+import RequestUtils, { SUCCESS_CODE } from '@flast-erp/core/utils/RequestUtils';
+import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
 
 const FormFaq = ({ closeModal, data }) => {
 

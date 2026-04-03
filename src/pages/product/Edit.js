@@ -1,21 +1,21 @@
 import { useState, useRef, useCallback } from 'react';
 import { Row, Col, message } from 'antd';
-import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
+import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
 import { useParams } from 'react-router-dom';
-import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
+import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
 import { GATEWAY, SUCCESS_CODE } from '@/configs';
-import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
-import FormHidden from '@erp/shared/dist/components/form/FormHidden';
-import FormInput from '@erp/shared/dist/components/form/FormInput';
-import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
-import FormJoditEditor from '@erp/shared/dist/components/form/FormJoditEditor';
-import CustomButton from '@erp/shared/dist/components/CustomButton';
-import FormInfiniteCategory from '@erp/shared/dist/components/form/SelectInfinite/FormInfiniteCategory';
-import ImageUploader from '@erp/shared/dist/components/common/File/ImageUploader';
-import InfiniteFaq from '@erp/shared/dist/components/form/SelectInfinite/InfiniteFaq';
-import FormInputNumber from '@erp/shared/dist/components/form/FormInputNumber';
+import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
+import FormHidden from '@flast-erp/core/components/form/FormHidden';
+import FormInput from '@flast-erp/core/components/form/FormInput';
+import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
+import FormJoditEditor from '@flast-erp/core/components/form/FormJoditEditor';
+import CustomButton from '@flast-erp/core/components/CustomButton';
+import FormInfiniteCategory from '@flast-erp/core/components/form/SelectInfinite/FormInfiniteCategory';
+import ImageUploader from '@flast-erp/core/components/common/File/ImageUploader';
+import InfiniteFaq from '@flast-erp/core/components/form/SelectInfinite/InfiniteFaq';
+import FormInputNumber from '@flast-erp/core/components/form/FormInputNumber';
 
 const ProductEdit = () => {
 

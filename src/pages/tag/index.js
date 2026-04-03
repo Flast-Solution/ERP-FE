@@ -22,14 +22,14 @@
 
 import React, { useState } from 'react';
 import { message } from 'antd';
-import RestList from "@erp/shared/dist/components/RestLayout/RestList";
-import useGetList from "@erp/shared/dist/hooks/useGetList";
+import RestList from "@flast-erp/core/components/RestLayout/RestList";
+import useGetList from "@flast-erp/core/hooks/useGetList";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
+import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
 import Filter from '@/pages/tag/Filter';
 import { GATEWAY } from '@/configs';
-import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
-import { useNavigateSearch } from '@erp/shared/dist/hooks/useNavigateSearch';
+import RequestUtils from '@flast-erp/core/utils/RequestUtils';
+import { useNavigateSearch } from '@flast-erp/core/hooks/useNavigateSearch';
 
 const Tag = () => {
 

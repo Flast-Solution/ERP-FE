@@ -1,6 +1,6 @@
 import { Row, Col } from 'antd';
-import FormInput from '@erp/shared/dist/components/form/FormInput';
-import FormCheckbox from '@erp/shared/dist/components/form/FormCheckbox';
+import FormInput from '@flast-erp/core/components/form/FormInput';
+import FormCheckbox from '@flast-erp/core/components/form/FormCheckbox';
 
 const EmployeeFilter = () => {
   return (

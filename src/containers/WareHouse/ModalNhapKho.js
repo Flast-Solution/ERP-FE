@@ -21,21 +21,21 @@
 
 import React, { useState, useCallback } from 'react';
 import { Col, Form, message, Row } from 'antd';
-import { FormContextCustom } from '@erp/shared/dist/components/context/FormContextCustom';
-import FormSelectInfiniteProduct from '@erp/shared/dist/components/form/SelectInfinite/FormSelectInfiniteProduct';
-import FormSelect from '@erp/shared/dist/components/form/FormSelect';
-import FormInputNumber from '@erp/shared/dist/components/form/FormInputNumber';
-import BtnSubmit from '@erp/shared/dist/components/CustomButton/BtnSubmit';
-import FormSelectInfiniteProvider from '@erp/shared/dist/components/form/SelectInfinite/FormSelectInfiniteProvider';
-import FormInfiniteStock from '@erp/shared/dist/components/form/SelectInfinite/FormInfiniteStock';
-import FormHidden from '@erp/shared/dist/components/form/FormHidden';
-import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
+import FormSelectInfiniteProduct from '@flast-erp/core/components/form/SelectInfinite/FormSelectInfiniteProduct';
+import FormSelect from '@flast-erp/core/components/form/FormSelect';
+import FormInputNumber from '@flast-erp/core/components/form/FormInputNumber';
+import BtnSubmit from '@flast-erp/core/components/CustomButton/BtnSubmit';
+import FormSelectInfiniteProvider from '@flast-erp/core/components/form/SelectInfinite/FormSelectInfiniteProvider';
+import FormInfiniteStock from '@flast-erp/core/components/form/SelectInfinite/FormInfiniteStock';
+import FormHidden from '@flast-erp/core/components/form/FormHidden';
+import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 import WarehouseService from 'services/WarehouseService';
 import InStockTable from 'containers/WareHouse/InStockTable'
 import { ShowSkuDetail } from 'containers/Product/SkuView';
 import { isEmpty } from 'lodash';
-import { createMSkuDetails } from '@erp/shared/dist/utils/skuUtils';
-import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
+import { createMSkuDetails } from '@flast-erp/core/utils/skuUtils';
+import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
 
 const ModalNhapKho = ({
   product,

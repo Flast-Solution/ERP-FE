@@ -8,8 +8,8 @@ import FormHidden from '@erp/shared/dist/components/form/FormHidden';
 import BtnSubmit from '@erp/shared/dist/components/CustomButton/BtnSubmit';
 import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
 import QcService from 'services/QcService';
-import { f5List } from '@erp/shared/dist/utils/dataUtils';
-import { InAppEvent } from '@erp/shared/dist/utils/FuseUtils';
+import { f5List } from '@flast-erp/core/utils/dataUtils';
+import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 
 const CriteriaForm = ({ data, closeModal }) => {
 

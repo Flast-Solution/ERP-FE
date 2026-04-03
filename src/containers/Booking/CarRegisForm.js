@@ -1,18 +1,18 @@
-import FormCheckbox from '@erp/shared/dist/components/form/FormCheckbox';
+import FormCheckbox from '@flast-erp/core/components/form/FormCheckbox';
 import FormStyles from './styles'
 import { Form, Row, Col, Typography } from 'antd';
-import FormDatePicker from '@erp/shared/dist/components/form/FormDatePicker';
-import FormInput from '@erp/shared/dist/components/form/FormInput';
-import FormInputNumber from '@erp/shared/dist/components/form/FormInputNumber';
-import FormSelectUser from '@erp/shared/dist/components/form/FormSelectUser';
-import FormSelect from '@erp/shared/dist/components/form/FormSelect';
+import FormDatePicker from '@flast-erp/core/components/form/FormDatePicker';
+import FormInput from '@flast-erp/core/components/form/FormInput';
+import FormInputNumber from '@flast-erp/core/components/form/FormInputNumber';
+import FormSelectUser from '@flast-erp/core/components/form/FormSelectUser';
+import FormSelect from '@flast-erp/core/components/form/FormSelect';
 import { REGISTER_WORK_TYPE } from 'configs/localData';
-import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
+import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
 import UserService from 'services/UserService';
-import FormListAddition from '@erp/shared/dist/components/form/FormListAddtion';
+import FormListAddition from '@flast-erp/core/components/form/FormListAddtion';
 import { EnvironmentOutlined } from '@ant-design/icons';
 import CarService from 'services/CarService';
-import FormAutoComplete from '@erp/shared/dist/components/form/FormAutoComplete';
+import FormAutoComplete from '@flast-erp/core/components/form/FormAutoComplete';
 
 const CarListPickUp = ({ field }) => {
   const { name } = field || { name: 0 };

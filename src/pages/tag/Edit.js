@@ -1,18 +1,18 @@
 import { useState, useCallback, useContext } from 'react';
 import { Row, Col, message, Form } from 'antd';
 import { CloseOutlined } from '@ant-design/icons';
-import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
+import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
-import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
-import FormHidden from '@erp/shared/dist/components/form/FormHidden';
-import FormInput from '@erp/shared/dist/components/form/FormInput';
-import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
-import RequestUtils, { SUCCESS_CODE } from '@erp/shared/dist/utils/RequestUtils';
-import { useQueryParams } from '@erp/shared/dist/hooks/useQueryParams';
-import { useNavigateSearch } from '@erp/shared/dist/hooks/useNavigateSearch';
-import { FormContextCustom } from '@erp/shared/dist/components/context/FormContextCustom';
-import CustomButton from '@erp/shared/dist/components/CustomButton';
+import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
+import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
+import FormHidden from '@flast-erp/core/components/form/FormHidden';
+import FormInput from '@flast-erp/core/components/form/FormInput';
+import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
+import RequestUtils, { SUCCESS_CODE } from '@flast-erp/core/utils/RequestUtils';
+import { useQueryParams } from '@flast-erp/core/hooks/useQueryParams';
+import { useNavigateSearch } from '@flast-erp/core/hooks/useNavigateSearch';
+import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
+import CustomButton from '@flast-erp/core/components/CustomButton';
 
 const TagEdit = () => {
   const { get } = useQueryParams();

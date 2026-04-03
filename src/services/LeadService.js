@@ -1,4 +1,4 @@
-import RequestUtils, { SUCCESS_CODE } from '@erp/shared/dist/utils/RequestUtils';
+import RequestUtils, { SUCCESS_CODE } from '@flast-erp/core/utils/RequestUtils';
 
 const LeadService = {
   fetchByPhone: async (phone) => {

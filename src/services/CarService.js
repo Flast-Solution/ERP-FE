@@ -1,6 +1,6 @@
 import { SUCCESS_CODE } from 'configs';
-import { arrayNotEmpty } from '@erp/shared/dist/utils/dataUtils';
-import RequestUtils from '@erp/shared/dist/utils/RequestUtils';
+import { arrayNotEmpty } from '@flast-erp/core/utils/dataUtils';
+import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 
 const CarService = {
   allData: {},

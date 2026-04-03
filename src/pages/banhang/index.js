@@ -21,9 +21,9 @@
 
 import Order from 'containers/Order';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
+import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
 import { useParams } from "react-router-dom";
-import { useQueryParams } from '@erp/shared/dist/hooks/useQueryParams';
+import { useQueryParams } from '@flast-erp/core/hooks/useQueryParams';
 
 const title = 'Tạo cơ hội bán hàng';
 const BanHangPage = (props) => {

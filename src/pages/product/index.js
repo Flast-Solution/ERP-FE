@@ -20,20 +20,20 @@
 /**************************************************************************/
 
 import React, { useCallback, useState } from 'react';
-import RestList from "@erp/shared/dist/components/RestLayout/RestList";
-import useGetList from "@erp/shared/dist/hooks/useGetList";
+import RestList from "@flast-erp/core/components/RestLayout/RestList";
+import useGetList from "@flast-erp/core/hooks/useGetList";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@erp/shared/dist/components/BreadcrumbCustom';
+import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
 import Filter from './Filter';
 import { Button, Space } from 'antd';
-import { InAppEvent } from "@erp/shared/dist/utils/FuseUtils";
+import { InAppEvent } from "@flast-erp/core/utils/FuseUtils";
 import { GATEWAY, HASH_MODAL } from 'configs';
-import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@erp/shared/dist/utils/dataUtils';
+import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils/dataUtils';
 import ProductAttrService from 'services/ProductAttrService';
 import { cloneDeep } from 'lodash';
 import SkuView, { PriceView } from 'containers/Product/SkuView';
 import { Link } from 'react-router-dom';
-import CustomImage from '@erp/shared/dist/components/common/CustomImage';
+import CustomImage from '@flast-erp/core/components/common/CustomImage';
 
 const Index = () => {
 

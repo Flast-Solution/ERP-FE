@@ -20,7 +20,7 @@
 /**************************************************************************/
 
 import React, { useCallback, useEffect, useState } from 'react';
-import FuseUtils from '@erp/shared/dist/utils/FuseUtils';
+import FuseUtils from '@flast-erp/core/utils/FuseUtils';
 import { useStore } from "DataContext";
 import { useLocation, useNavigate, matchPath } from "react-router-dom";
 

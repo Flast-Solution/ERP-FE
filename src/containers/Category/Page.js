@@ -20,16 +20,16 @@
 /**************************************************************************/
 import React, { useCallback, useState } from 'react';
 import { Row, Col, message } from 'antd';
-import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
-import FormHidden from '@erp/shared/dist/components/form/FormHidden';
-import FormInput from '@erp/shared/dist/components/form/FormInput';
-import CustomButton from '@erp/shared/dist/components/CustomButton';
-import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
-import RequestUtils, { SUCCESS_CODE } from '@erp/shared/dist/utils/RequestUtils';
-import { useEffectAsync } from '@erp/shared/dist/hooks/MyHooks';
-import { f5List } from '@erp/shared/dist/utils/dataUtils';
+import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
+import FormHidden from '@flast-erp/core/components/form/FormHidden';
+import FormInput from '@flast-erp/core/components/form/FormInput';
+import CustomButton from '@flast-erp/core/components/CustomButton';
+import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
+import RequestUtils, { SUCCESS_CODE } from '@flast-erp/core/utils/RequestUtils';
+import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
+import { f5List } from '@flast-erp/core/utils/dataUtils';
 import MediaService from '@/services/MediaService';
-import ImageUploader from '@erp/shared/dist/components/common/File/ImageUploader';
+import ImageUploader from '@flast-erp/core/components/common/File/ImageUploader';
 import logger from '@/logger';
 
 const LOGGER_TAG = '[container/category/Page.js]';

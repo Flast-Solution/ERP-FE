@@ -3,7 +3,7 @@
 /**************************************************************************/
 
 import { SUCCESS_CODE } from "@/configs";
-import RequestUtils from "@erp/shared/dist/utils/RequestUtils";
+import RequestUtils from "@flast-erp/core/utils/RequestUtils";
 
 const QcService = {
   // QC Criteria
