@@ -1,11 +1,12 @@
 import React, { useCallback } from 'react';
 import { Row, Col } from 'antd';
-import FormInput from '@flast-erp/core/components/form/FormInput';
-import FormInputNumber from '@flast-erp/core/components/form/FormInputNumber';
-import FormSelect from '@flast-erp/core/components/form/FormSelect';
-import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
-import FormHidden from '@flast-erp/core/components/form/FormHidden';
-import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
+import FormInputNumber from '@erp/shared/dist/components/form/FormInputNumber';
+import FormSelect from '@erp/shared/dist/components/form/FormSelect';
+import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
+import FormHidden from '@erp/shared/dist/components/form/FormHidden';
+import BtnSubmit from '@erp/shared/dist/components/CustomButton/BtnSubmit';
+import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
 import QcService from 'services/QcService';
 import { f5List } from '@flast-erp/core/utils/dataUtils';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
@@ -140,6 +141,9 @@ const CriteriaForm = ({ data, closeModal }) => {
                         placeholder="Mô tả chi tiết"
                         rows={3}
                     />
+                </Col>
+                <Col md={24} xs={24} style={{ textAlign: 'right', marginTop: 10 }}>
+                    <BtnSubmit text='Hoàn thành' />
                 </Col>
             </Row>
         </RestEditModal>

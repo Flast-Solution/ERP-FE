@@ -1,11 +1,12 @@
 import React, { useCallback } from 'react';
 import { Row, Col } from 'antd';
-import FormInput from '@flast-erp/core/components/form/FormInput';
-import FormSelect from '@flast-erp/core/components/form/FormSelect';
-import FormSelectUser from '@flast-erp/core/components/form/FormSelectUser';
-import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
-import FormHidden from '@flast-erp/core/components/form/FormHidden';
-import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
+import FormInput from '@erp/shared/dist/components/form/FormInput';
+import FormSelect from '@erp/shared/dist/components/form/FormSelect';
+import FormSelectUser from '@erp/shared/dist/components/form/FormSelectUser';
+import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
+import FormHidden from '@erp/shared/dist/components/form/FormHidden';
+import BtnSubmit from '@erp/shared/dist/components/CustomButton/BtnSubmit';
+import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
 import QcService from 'services/QcService';
 import { f5List } from '@flast-erp/core/utils/dataUtils';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
@@ -97,6 +98,9 @@ const ChecklistForm = ({ data, closeModal }) => {
                         placeholder="Nhập mô tả bộ tiêu chí"
                         rows={3}
                     />
+                </Col>
+                <Col md={24} xs={24} style={{ textAlign: 'right', marginTop: 10 }}>
+                    <BtnSubmit text='Hoàn thành' />
                 </Col>
             </Row>
         </RestEditModal>
