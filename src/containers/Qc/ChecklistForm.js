@@ -21,7 +21,7 @@ const ChecklistForm = ({ data, closeModal }) => {
         
         const isSuccess = res?.errorCode === 200;
         if (isSuccess) {
-            f5List('qms/qc-checklist/fetch');
+            f5List('qms/qc-check-list/fetch');
             closeModal && closeModal();
         }
         InAppEvent.normalInfo(isSuccess ? "Cập nhật thành công" : (res?.message || "Lỗi cập nhật, vui lòng thử lại sau"));
@@ -82,7 +82,7 @@ const ChecklistForm = ({ data, closeModal }) => {
                 <Col md={24} xs={24}>
                     <FormSelectUser
                         api="cms/qc-criteria/list"
-                        name={'criteriaIds'}
+                        name={'idCriteriaList'}
                         label="Danh sách tiêu chí"
                         placeholder="Chọn các tiêu chí"
                         mode="multiple"

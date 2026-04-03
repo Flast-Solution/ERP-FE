@@ -90,7 +90,7 @@ const OrderService = {
     }
     let details = data.data;
     const pIds = details.map(i => i.productId).join(",");
-    const { data: products, errorCode: eCode } = await RequestUtils.Get("/product/fetch", { ids: pIds });
+    const { data: products, errorCode: eCode } = await RequestUtils.Get("/erp/product/fetch", { ids: pIds });
     if (eCode !== SUCCESS_CODE || arrayEmpty(products.embedded)) {
       return response;
     }
