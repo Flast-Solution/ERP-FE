@@ -5,6 +5,7 @@ import FormSelect from '@erp/shared/dist/components/form/FormSelect';
 import FormSelectUser from '@erp/shared/dist/components/form/FormSelectUser';
 import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
 import FormHidden from '@erp/shared/dist/components/form/FormHidden';
+import BtnSubmit from '@erp/shared/dist/components/CustomButton/BtnSubmit';
 import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
 import QcService from 'services/QcService';
 import { f5List } from '@erp/shared/dist/utils/dataUtils';
@@ -97,6 +98,9 @@ const ChecklistForm = ({ data, closeModal }) => {
                         placeholder="Nhập mô tả bộ tiêu chí"
                         rows={3}
                     />
+                </Col>
+                <Col md={24} xs={24} style={{ textAlign: 'right', marginTop: 10 }}>
+                    <BtnSubmit text='Hoàn thành' />
                 </Col>
             </Row>
         </RestEditModal>

@@ -5,6 +5,7 @@ import FormInputNumber from '@erp/shared/dist/components/form/FormInputNumber';
 import FormSelect from '@erp/shared/dist/components/form/FormSelect';
 import FormTextArea from '@erp/shared/dist/components/form/FormTextArea';
 import FormHidden from '@erp/shared/dist/components/form/FormHidden';
+import BtnSubmit from '@erp/shared/dist/components/CustomButton/BtnSubmit';
 import RestEditModal from '@erp/shared/dist/components/RestLayout/RestEditModal';
 import QcService from 'services/QcService';
 import { f5List } from '@erp/shared/dist/utils/dataUtils';
@@ -140,6 +141,9 @@ const CriteriaForm = ({ data, closeModal }) => {
                         placeholder="Mô tả chi tiết"
                         rows={3}
                     />
+                </Col>
+                <Col md={24} xs={24} style={{ textAlign: 'right', marginTop: 10 }}>
+                    <BtnSubmit text='Hoàn thành' />
                 </Col>
             </Row>
         </RestEditModal>
