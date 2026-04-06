@@ -22,7 +22,7 @@ const ChecklistIndex = () => {
         let data = cloneDeep(item);
         // Map criteria list object to array of IDs if needed for the form select
         if (Array.isArray(item.qcCriteriaList)) {
-            data.criteriaIds = item.qcCriteriaList.map(c => c.idQcCriteria);
+            data.idCriteriaList = item.qcCriteriaList.map(c => c.idQcCriteria);
         }
         
         InAppEvent.emit(HASH_MODAL, {
@@ -92,7 +92,7 @@ const ChecklistIndex = () => {
                 initialFilter={{ limit: 10, page: 1 }}
                 filter={<Filter />}
                 useGetAllQuery={useGetList}
-                apiPath={'qms/qc-checklist/fetch'}
+                apiPath={'qms/qc-check-list/fetch'}
                 customClickCreate={onCreate}
                 columns={columns}
             />

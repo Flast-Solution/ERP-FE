@@ -46,21 +46,21 @@ const CriteriaIndex = () => {
             render: (text, record) => <a onClick={() => onEdit(record)} style={{ cursor: 'pointer' }}>{text}</a>
         },
         {
-            title: "Loại",
-            dataIndex: 'evaluationType',
-            width: 150,
-            render: (type) => <Tag color="blue">{QC_EVALUATION_TYPES[type] || 'Unknown'}</Tag>
-        },
-        {
             title: "Trọng số",
             dataIndex: 'weight',
             width: 100,
             render: (weight) => weight ? `${weight}%` : '-'
         },
         {
-            title: "Đơn vị",
-            dataIndex: 'units',
+            title: "Phiên bản",
+            dataIndex: 'version',
             width: 100
+        },
+        {
+            title: "Loại",
+            dataIndex: 'evaluationType',
+            width: 150,
+            render: (type) => <Tag color="blue">{QC_EVALUATION_TYPES[type] || 'Unknown'}</Tag>
         },
         {
             title: "Trạng thái",
@@ -73,7 +73,7 @@ const CriteriaIndex = () => {
             )
         },
         {
-            title: "",
+            title: "Hành động",
             width: 100,
             fixed: 'right',
             render: (record) => (
