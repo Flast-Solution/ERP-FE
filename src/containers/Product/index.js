@@ -110,7 +110,7 @@ const Product = ({ closeModal, data }) => {
     const { errorCode } = await RequestUtils.Post("/product/save", body, params);
     const isSuccess = errorCode === 200;
     if (isSuccess) {
-      f5List('/erp/product/fetch');
+      f5List('/product/fetch');
     }
     InAppEvent.normalInfo(isSuccess ? "Cập nhật thành công" : "Lỗi cập nhật, vui lòng thử lại sau");
   }, [ data ]);

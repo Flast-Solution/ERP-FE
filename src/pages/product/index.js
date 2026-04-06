@@ -181,7 +181,7 @@ const Index = () => {
         filter={<Filter />}
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
-        apiPath={'erp/product/fetch'}
+        apiPath={'product/fetch'}
         customClickCreate={onCreateProduct}
         columns={CUSTOM_ACTION}
       />
