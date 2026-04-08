@@ -39,7 +39,7 @@ const CarListPickUp = ({ field }) => {
       </Col>
       <Col md={24} xs={24} style={{ marginTop: 10 }}>
         <FormSelectUser
-          api="/user/list"
+          api="/auth/user/list"
           titleProp='fullName'
           valueProp='fullName'
           mode="tags"

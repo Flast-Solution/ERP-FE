@@ -108,6 +108,7 @@ function SideBar() {
     getItem('Sản xuất', 'san_xuat', <BuildOutlined />, [
       getItem(<Link to="/material">Nguyên V.Liệu</Link>, 'material', <DeliveredProcedureOutlined />),
       getItem(<Link to="/material/bom">Lệnh S.Xuất</Link>, 'material.bom', <FolderOpenOutlined />),
+      getItem(<Link to="/sale/order-production">ĐH đang sản xuất</Link>, 'order.production', <BuildOutlined />),
       getItem('Quản lý QC', 'qc_management', <AuditOutlined />, [
         getItem(<Link to="/qc/criteria">Tiêu chí QC</Link>, 'qc_criteria', <UnorderedListOutlined />),
         getItem(<Link to="/qc/checklist">Bộ tiêu chí QC</Link>, 'qc_checklist', <OrderedListOutlined />)

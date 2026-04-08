@@ -40,7 +40,7 @@ const copyToClipboard = (text, setCopiedIndex, index) => {
   })
 };
 
-const ListOrder = ({ filter }) => {
+const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
 
   const navigate = useNavigate();
   const [ copiedIndex, setCopiedIndex ] = useState(null);
@@ -185,21 +185,33 @@ const ListOrder = ({ filter }) => {
           >
             Chi tiết
           </Button>
-          <Button 
-            size="small" 
-            style={{ color: "#fa8c16" }}
-          >
-            Báo giá
-          </Button>
+          {!hideQuoteButton && (
+            <Button
+              size="small"
+              style={{ color: "#fa8c16" }}
+            >
+              Báo giá
+            </Button>
+          )}
           { record.type === 'cohoi' &&
-            <Button 
-              size="small" 
+            <Button
+              size="small"
               style={{ color: "#16c5faff" }}
               onClick={() => navigate(String('/sale/ban-hang/').concat(record.id))}
             >
               <EditFilled />
             </Button>
           }
+          {extraActions?.map((action, index) => (
+            <Button
+              key={index}
+              size="small"
+              {...action}
+              onClick={() => action.onClick(record)}
+            >
+              {action.children}
+            </Button>
+          ))}
         </Space>
       )
     }
@@ -225,7 +237,7 @@ const ListOrder = ({ filter }) => {
       hasCreate={false}
       beforeSubmitFilter={beforeSubmitFilter}
       useGetAllQuery={useGetList}
-      apiPath={'order/fetch'}
+      apiPath={'erp/order/fetch'}
       columns={columns}
     />
   )

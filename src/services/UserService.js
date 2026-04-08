@@ -53,7 +53,7 @@ const UserService = {
     return [message, null];
   },
   async mapId2Name(ids = []) {
-    let users = await RequestUtils.GetAsList("/user/list-name-id", { ids });
+    let users = await RequestUtils.GetAsList("/auth/user/list-name-id", { ids });
     if (arrayEmpty(users)) {
       return {};
     }
@@ -114,7 +114,7 @@ const UserService = {
       }
       return datas;
     }
-    const { data: embedded, errorCode } = await RequestUtils.Get("/user/list", { ids: idNeedFetch });
+    const { data: embedded, errorCode } = await RequestUtils.Get("/auth/user/list", { ids: idNeedFetch });
     if (errorCode !== SUCCESS_CODE || !Array.isArray(embedded)) {
       return [];
     }
@@ -127,7 +127,7 @@ const UserService = {
     return datas;
   },
   async loadAll() {
-    const { data: embedded, errorCode } = await RequestUtils.Get("/user/list");
+    const { data: embedded, errorCode } = await RequestUtils.Get("/auth/user/list");
     if (errorCode !== SUCCESS_CODE || !Array.isArray(embedded)) {
       return [];
     }

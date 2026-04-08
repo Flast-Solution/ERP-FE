@@ -10,6 +10,11 @@ const QcRoute = [
         path: 'qc.checklist.edit',
         Component: React.lazy(() => import('containers/Qc/ChecklistForm')),
         modalOptions: { title: 'Bộ tiêu chí QC', width: 800 }
+    },
+    {
+        path: 'qc.checklist.assign',
+        Component: React.lazy(() => import('containers/Qc/ProductChecklistForm')),
+        modalOptions: { title: 'Gán bộ tiêu chí QC', width: 600 }
     }
 ];
 

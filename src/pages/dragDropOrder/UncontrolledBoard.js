@@ -81,7 +81,7 @@ const UncontrolledBoard = () => {
   const [ listStatus, setListStatus ] = useState([]);
 
   useEffectAsync(async () => {
-    const dataStatus = await RequestUtils.GetAsList("/order-status/fetch");
+    const dataStatus = await RequestUtils.GetAsList("/erp/order-status/fetch");
     setListStatus(dataStatus);
   }, [])
 
@@ -89,7 +89,7 @@ const UncontrolledBoard = () => {
     if (arrayEmpty(listStatus)) {
       return;
     }
-    const kanban = await RequestUtils.Get("/order/fetch-kanban");
+    const kanban = await RequestUtils.Get("/erp/order/fetch-kanban");
     const dataGenerate = generateDataInBoard(kanban.data, listStatus);
     setDataInBoard(dataGenerate);
     setDataOrigin(dataGenerate);
@@ -99,7 +99,7 @@ const UncontrolledBoard = () => {
 
     const column = dataInBoard[columnId - 1];
     const { id: status } = column;
-    const orders = await RequestUtils.GetAsList("/order/fetch-kanban-detail", { customerPhone: value, status });
+    const orders = await RequestUtils.GetAsList("/erp/order/fetch-kanban-detail", { customerPhone: value, status });
     let kanban = { [status]: orders };
 
     let orderStatus = listStatus.filter(i => i.id === status) ?? [];
