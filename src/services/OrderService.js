@@ -51,13 +51,13 @@ const OrderService = {
   },
   async fetchStatus() {
     if(arrayEmpty(this.allStatus)) {
-      this.allStatus = await RequestUtils.GetAsList("/order-status/fetch");
+      this.allStatus = await RequestUtils.GetAsList("/erp/order-status/fetch");
     }
     return this.allStatus;
   },
   async fetchService() {
     if(arrayEmpty(this.allService)) {
-      this.allService = await RequestUtils.GetAsList("/service/list");
+      this.allService = await RequestUtils.GetAsList("/erp/service/list");
     }
     return this.allService;
   },
@@ -84,13 +84,13 @@ const OrderService = {
     if (!orderId) {
       return response;
     }
-    let { data, errorCode } = await RequestUtils.Get("/order/view-on-edit", { orderId });
+    let { data, errorCode } = await RequestUtils.Get("/erp/order/view-on-edit", { orderId });
     if (errorCode !== SUCCESS_CODE || arrayEmpty(data.data)) {
       return response;
     }
     let details = data.data;
     const pIds = details.map(i => i.productId).join(",");
-    const { data: products, errorCode: eCode } = await RequestUtils.Get("/product/fetch", { ids: pIds });
+    const { data: products, errorCode: eCode } = await RequestUtils.Get("/erp/product/fetch", { ids: pIds });
     if (eCode !== SUCCESS_CODE || arrayEmpty(products.embedded)) {
       return response;
     }

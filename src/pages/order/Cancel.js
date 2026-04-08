@@ -32,7 +32,7 @@ const OrderCancel = () => {
   const [filter, setFilter] = useState({ type: "order", status: -1 });
 
   useEffectAsync(async () => {
-    const listStatus = await RequestUtils.GetAsList("/order-status/fetch");
+    const listStatus = await RequestUtils.GetAsList("/erp/order-status/fetch");
     const statusCancel = listStatus.find(i => i.name === "Hủy đơn")?.id ?? -1;
     setFilter(pre => ({ ...pre, status: statusCancel }))
   }, []);

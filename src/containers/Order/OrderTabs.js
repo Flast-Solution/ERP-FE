@@ -53,7 +53,7 @@ const OrderTabs = ({ data, title }) => {
       icon: <DollarOutlined />,
       component: <OrderPayment data={{
         ...dataInTabs,
-        onSave: (values) => f5List("order/fetch")
+        onSave: (values) => f5List("erp/order/fetch")
       }} />
     },
     {

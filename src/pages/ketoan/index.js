@@ -84,7 +84,7 @@ const CongnoPage = () => {
 				beforeSubmitFilter={beforeSubmitFilter}
 				useGetAllQuery={useGetList}
 				hasCreate={false}
-				apiPath={'order/fetch'}
+				apiPath={'erp/order/fetch'}
 				columns={CUSTOM_ACTION}
 			/>
 		</div>

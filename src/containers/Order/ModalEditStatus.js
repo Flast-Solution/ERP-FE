@@ -41,7 +41,7 @@ const ModalEditStatus = ({ listStatus, onSave }) => {
 
   const onSubmit = async (values) => {
     const { lists } = values;
-    const { data, errorCode, message: EMS } = await RequestUtils.Post("/order-status/save", lists);
+    const { data, errorCode, message: EMS } = await RequestUtils.Post("/erp/order-status/save", lists);
     if (errorCode === SUCCESS_CODE) {
       onSave(data);
     }

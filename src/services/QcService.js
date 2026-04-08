@@ -10,6 +10,9 @@ const QcService = {
   async fetchCriteria(params) {
     return await RequestUtils.Get("/qms/qc-criteria/list", params);
   },
+  async fetchCriteriaPaging(params) {
+    return await RequestUtils.Get("/qms/qc-criteria/fetch", params);
+  },
   async addCriteria(data) {
     return await RequestUtils.Post("/qms/qc-criteria/save", data);
   },
@@ -29,7 +32,7 @@ const QcService = {
 
   // QC Checklist
   async fetchChecklist(params) {
-    return await RequestUtils.Get("/qms/qc-check-list/list", params);
+    return await RequestUtils.Get("/qms/qc-check-list/fetch", params);
   },
   async addChecklist(data) {
     return await RequestUtils.Post("/qms/qc-check-list/save", data);

@@ -1,8 +1,7 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import { Row, Col } from 'antd';
 import FormInput from '@flast-erp/core/components/form/FormInput';
 import FormSelect from '@flast-erp/core/components/form/FormSelect';
-import FormSelectUser from '@flast-erp/core/components/form/FormSelectUser';
 import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
 import FormHidden from '@flast-erp/core/components/form/FormHidden';
 import BtnSubmit from '@flast-erp/core/components/CustomButton/BtnSubmit';
@@ -12,13 +11,124 @@ import { f5List } from '@flast-erp/core/utils/dataUtils';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 
 const ChecklistForm = ({ data, closeModal }) => {
+    const [criteriaData, setCriteriaData] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
+    const [searchKeyword, setSearchKeyword] = useState('');
+    const pageRef = useRef(1);
+    const totalRef = useRef(0);
+
+    // Giữ nguyên danh sách tiêu chí đã chọn từ data
+    const selectedCriteriaList = useMemo(() => {
+        if (data?.detail?.qcCriteriaList && Array.isArray(data.detail.qcCriteriaList)) {
+            return data.detail.qcCriteriaList;
+        }
+        return data?.qcCriteriaList && Array.isArray(data.qcCriteriaList) ? data.qcCriteriaList : [];
+    }, [data]);
+
+    // Merge selected items với data từ API
+    const mergeWithSelected = useCallback((apiData) => {
+        const merged = [...selectedCriteriaList];
+        apiData.forEach(item => {
+            if (!merged.find(existing => existing.idQcCriteria === item.idQcCriteria)) {
+                merged.push(item);
+            }
+        });
+        return merged;
+    }, [selectedCriteriaList]);
+
+    // Load data lần đầu
+    const loadInitialData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const res = await QcService.fetchCriteriaPaging({
+                limit: 10,
+                page: 1,
+                ...(searchKeyword && { keyword: searchKeyword })
+            });
+
+            if (res?.errorCode === 200) {
+                const apiData = res?.data?.embedded || [];
+                const totalElements = res?.data?.totalElements || 0;
+                totalRef.current = totalElements;
+
+                const mergedData = mergeWithSelected(apiData);
+                setCriteriaData(mergedData);
+                setHasMore(mergedData.length < totalElements);
+                pageRef.current = 1;
+            }
+        } catch (error) {
+            console.error('Error fetching criteria:', error);
+        } finally {
+            setLoading(false);
+        }
+    }, [searchKeyword, mergeWithSelected]);
+
+    // Load thêm data khi scroll tới Waypoint
+    const handleLoadMore = useCallback(async () => {
+        if (loading || !hasMore) return;
+
+        setLoading(true);
+        try {
+            const nextPage = pageRef.current + 1;
+            const res = await QcService.fetchCriteriaPaging({
+                limit: 10,
+                page: nextPage,
+                ...(searchKeyword && { keyword: searchKeyword })
+            });
+
+            if (res?.errorCode === 200) {
+                const newData = res?.data?.embedded || [];
+                const totalElements = res?.data?.totalElements || 0;
+                totalRef.current = totalElements;
+
+                setCriteriaData(prev => {
+                    const merged = [...prev];
+                    newData.forEach(item => {
+                        if (!merged.find(existing => existing.idQcCriteria === item.idQcCriteria)) {
+                            merged.push(item);
+                        }
+                    });
+                    return merged;
+                });
+
+                setHasMore(criteriaData.length + newData.length < totalElements);
+                pageRef.current = nextPage;
+            }
+        } catch (error) {
+            console.error('Error loading more criteria:', error);
+        } finally {
+            setLoading(false);
+        }
+    }, [loading, hasMore, searchKeyword, criteriaData.length]);
+
+    // Xử lý tìm kiếm
+    const handleSearch = useCallback((value) => {
+        setSearchKeyword(value);
+        pageRef.current = 1;
+        // Sẽ trigger loadInitialData qua useEffect
+    }, []);
+
+    // Effect cho search
+    useEffect(() => {
+        const delaySearch = setTimeout(() => {
+            loadInitialData();
+        }, 300); // Debounce 300ms
+        
+        return () => clearTimeout(delaySearch);
+    }, [searchKeyword, loadInitialData]);
+
+    // Khởi tạo data khi component mount
+    useEffect(() => {
+        loadInitialData();
+    }, []);
 
     const onSubmit = useCallback(async (values) => {
         const isUpdate = !!values.idQcCheckList;
-        const res = isUpdate 
-            ? await QcService.updateChecklist(values) 
+        const res = isUpdate
+            ? await QcService.updateChecklist(values)
             : await QcService.addChecklist(values);
-        
+
         const isSuccess = res?.errorCode === 200;
         if (isSuccess) {
             f5List('qms/qc-check-list/fetch');
@@ -53,8 +163,7 @@ const ChecklistForm = ({ data, closeModal }) => {
                     />
                 </Col>
                 <Col md={12} xs={24}>
-                    <FormSelectUser
-                        api="/product/fetch-type"
+                    <FormSelect
                         name={'productTypeId'}
                         label="Loại sản phẩm"
                         placeholder="Chọn loại sản phẩm"
@@ -80,15 +189,25 @@ const ChecklistForm = ({ data, closeModal }) => {
                     />
                 </Col>
                 <Col md={24} xs={24}>
-                    <FormSelectUser
-                        api="cms/qc-criteria/list"
+                    <FormSelect
                         name={'idCriteriaList'}
                         label="Danh sách tiêu chí"
                         placeholder="Chọn các tiêu chí"
                         mode="multiple"
+                        resourceData={criteriaData}
                         valueProp="idQcCriteria"
                         titleProp="qcCriteriaName"
-                        onData={(data) => Array.isArray(data?.embedded) ? data.embedded : []}
+                        loading={loading}
+                        enableWaypoint={hasMore}
+                        onEnter={handleLoadMore}
+                        onSearch={handleSearch}
+                        showSearch
+                        isFilterOption={false}
+                        filterOption={false}
+                        formatText={(value, record) => {
+                            if (!record) return value;
+                            return `${record.qcCriteriaCode} - ${record.qcCriteriaName}`;
+                        }}
                     />
                 </Col>
                 <Col md={24} xs={24}>
@@ -108,4 +227,3 @@ const ChecklistForm = ({ data, closeModal }) => {
 };
 
 export default ChecklistForm;
-

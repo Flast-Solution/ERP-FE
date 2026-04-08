@@ -77,6 +77,12 @@ const Index = () => {
     data: cloneDeep(item)
   });
 
+  const onAddChecklist = (item) => InAppEvent.emit(HASH_MODAL, {
+    hash: '#draw/qc.checklist.assign',
+    title: 'Gán Bộ tiêu chí QC cho sản phẩm #' + item.id,
+    data: cloneDeep(item)
+  });
+
   const [ title ] = useState("Danh sách sản phẩm");
   const CUSTOM_ACTION = [
     {
@@ -136,12 +142,13 @@ const Index = () => {
     },
     {
       title: "",
-      width: 140,
+      width: 200,
       fixed: 'right',
       render: (record) => (
         <Space gap={8}>
           <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size='small'>Detail</Button>
           <Button onClick={() => onAddBom(record)} size='small'>Bom</Button>
+          <Button onClick={() => onAddChecklist(record)} size='small'>Checklist</Button>
         </Space>
       )
     }
@@ -181,7 +188,7 @@ const Index = () => {
         filter={<Filter />}
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
-        apiPath={'product/fetch'}
+        apiPath={'erp/product/fetch'}
         customClickCreate={onCreateProduct}
         columns={CUSTOM_ACTION}
       />
