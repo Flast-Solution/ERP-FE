@@ -142,13 +142,13 @@ const Index = () => {
     },
     {
       title: "",
-      width: 200,
+      width: 150,
       fixed: 'right',
       render: (record) => (
         <Space gap={8}>
           <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size='small'>Detail</Button>
           <Button onClick={() => onAddBom(record)} size='small'>Bom</Button>
-          <Button onClick={() => onAddChecklist(record)} size='small'>Checklist</Button>
+          {/* <Button onClick={() => onAddChecklist(record)} size='small'>Checklist</Button> */}
         </Space>
       )
     }
