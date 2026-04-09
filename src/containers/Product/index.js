@@ -20,7 +20,7 @@
 /**************************************************************************/
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { message } from 'antd';
+import { message, Tabs } from 'antd';
 import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';
@@ -28,6 +28,8 @@ import { arrayEmpty, arrayNotEmpty, f5List } from '@flast-erp/core/utils/dataUti
 import ProductForm from './ProductForm';
 import ProductAttrService from 'services/ProductAttrService';
 import { cloneDeep } from 'lodash';
+import ProductChecklistForm from '../Qc/ProductChecklistForm';
+import { DollarOutlined, FileTextOutlined } from '@ant-design/icons';
 
 /**
  * @param [ {id: 10384, attributedId: 10023, attributedValueId: 10085}, ... ] oldSku
@@ -110,11 +112,34 @@ const Product = ({ closeModal, data }) => {
     const { errorCode } = await RequestUtils.Post("/product/save", body, params);
     const isSuccess = errorCode === 200;
     if (isSuccess) {
-      f5List('/erp/product/fetch');
+      f5List('/product/fetch');
     }
     InAppEvent.normalInfo(isSuccess ? "Cập nhật thành công" : "Lỗi cập nhật, vui lòng thử lại sau");
   }, [ data ]);
 
+
+   const tabData = [
+    {
+      key: 'form_product',
+      label: 'Thông tin sản phẩm',
+      icon: <DollarOutlined />,
+      component: <ProductForm />
+    },
+    {
+      key: 'check_listSP',
+      label: 'Tiêu chí QC sản phẩm',
+      icon: <FileTextOutlined />,
+      component: <ProductChecklistForm data={data} closeModal={closeModal}/>
+    },
+  ];
+  
+  const items = tabData.map(({ key, icon, label, component }) => ({
+    key,
+    label: (
+      <span> {icon} {label} </span>
+    ),
+    children: component
+  }));
   return (
     <RestEditModal
       isMergeRecordOnSubmit={false}
@@ -123,7 +148,7 @@ const Product = ({ closeModal, data }) => {
       record={record}
       closeModal={closeModal}
     >
-      <ProductForm />
+      <Tabs defaultActiveKey="1" items={items} />;
     </RestEditModal>
   )
 }
