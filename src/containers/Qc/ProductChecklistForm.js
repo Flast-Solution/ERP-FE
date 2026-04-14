@@ -197,7 +197,7 @@ const ProductChecklistForm = ({ data, closeModal }) => {
             ellipsis: true
         },
         {
-            title: 'Tên tiêu chí',
+            title: 'Tên tiêu chí ',
             dataIndex: 'qcCriteriaName',
             ellipsis: true
         },
@@ -208,11 +208,21 @@ const ProductChecklistForm = ({ data, closeModal }) => {
             render: (type) => EVALUATION_TYPE[type] || type || '-'
         },
         {
+            title: 'KQ đáng giá QC',
+            dataIndex: 'resultText',
+            width: 130,
+            render: (resultText) => (
+                <Tag color={resultText === "Đạt" ? 'green' : 'red'} style={{borderRadius: 50}}>
+                    {resultText}
+                </Tag>
+            )
+        },
+        {
             title: 'Trạng thái',
             dataIndex: 'isActive',
             width: 120,
             render: (isActive) => (
-                <Tag color={isActive === 1 ? 'green' : 'red'}>
+                <Tag color={isActive === 1 ? 'green' : 'red'} style={{borderRadius: 50}}>
                     {isActive === 1 ? 'Hoạt động' : 'Không hoạt động'}
                 </Tag>
             )
@@ -263,9 +273,38 @@ const ProductChecklistForm = ({ data, closeModal }) => {
 
                             if (selectedChecklists.length === 0) return null;
 
+                            const newSelectedChecklists = selectedChecklists.map(checklist => ({
+                                ...checklist,
+                                qcCriteriaList: checklist.qcCriteriaList.map(item => {
+                                    let resultText = "";
+                                    const type = item.evaluationType ?? (item.targetMin !== null ? 2 : 1);
+                                    // BOOLEAN
+                                    if (type === 1) {
+                                        resultText = item.targetValue || "--";
+                                    } else {
+                                        const value = Number(item?.targetValue);
+
+                                        if (
+                                            item?.targetMin !== null &&
+                                            item?.targetMax !== null &&
+                                            value >= item.targetMin &&
+                                            value <= item.targetMax
+                                        ) {
+                                            resultText = "Đạt";
+                                        } else {
+                                            resultText = "Không đạt";
+                                        }
+                                    }
+                                    return {
+                                        ...item,
+                                        resultText
+                                    };
+                                })
+                            }));
+
                             return (
                                 <div style={{ marginTop: 16 }}>
-                                    {selectedChecklists.map(checklist => (
+                                    {newSelectedChecklists.map(checklist => (
                                         <div key={checklist.idQcCheckList} style={{ marginBottom: 16 }}>
                                             <div style={{
                                                 fontWeight: 600,

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, message } from 'antd';
+import { Button, message, Tabs } from 'antd';
 import { Helmet } from "react-helmet";
 import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
 import ListOrder from 'containers/Order/List';
@@ -21,13 +21,13 @@ const OrderProductionPage = () => {
 
   const onEvaluate = (record) => {
     // TODO: Mở form đánh giá đơn hàng
-    message.info(`Đánh giá đơn hàng: ${record.code}`);
+    // message.info(`Đánh giá đơn hàng: ${record.code}`);
     // Ví dụ mở modal:
-    // InAppEvent.emit(HASH_MODAL, {
-    //   hash: '#draw/order.evaluate',
-    //   title: 'Đánh giá đơn hàng #' + record.code,
-    //   data: record
-    // });
+    InAppEvent.emit(HASH_MODAL, {
+      hash: '#draw/order.evaluate',
+      title: 'Đánh giá đơn hàng #' + record.code,
+      data: record
+    });
   };
 
   const extraActions = [
@@ -38,6 +38,19 @@ const OrderProductionPage = () => {
       onClick: onEvaluate
     }
   ];
+
+  const items = [
+    {
+      key: '1',
+      label: 'Đơn hàng đang SX',
+      children: <ListOrder filter={filter} hideQuoteButton={true} extraActions={extraActions} />
+    },
+    {
+      key: '2',
+      label: 'Danh sách lô hàng',
+      children: ''
+    },
+  ];
   
   return <>
     <Helmet>
@@ -46,8 +59,10 @@ const OrderProductionPage = () => {
     <CustomBreadcrumb
       data={[{ title: 'Trang chủ' }, { title: title }]}
     />
-    <ListOrder filter={filter} hideQuoteButton={true} extraActions={extraActions} />
+    {/* <ListOrder filter={filter} hideQuoteButton={true} extraActions={extraActions} /> */}
+    <Tabs defaultActiveKey="1" items={items} />
   </>
 };
 
 export default OrderProductionPage;
+
