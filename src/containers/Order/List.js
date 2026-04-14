@@ -50,6 +50,12 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
     data: { customerOrder }
   });
 
+  const onCreateQC = (customerOrder) => InAppEvent.emit(HASH_MODAL, {
+    hash: "#order.createQC",
+    title: "Tạo mới lô hàng " + customerOrder.code,
+    data: { customerOrder }
+  })
+
   const columns = [
     {
       title: 'Kinh doanh',
@@ -175,7 +181,7 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
       title: 'Action',
       key: 'action',
       fixed: 'right',
-      width: filter.type === 'cohoi' ? 200 : 160,
+      width: filter.type === 'cohoi' ? 200 : 250,
       render: (record) => (
         <Space gap={8}>
           <Button
@@ -202,6 +208,12 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
               <EditFilled />
             </Button>
           }
+          <Button
+            size="small"
+            onClick={() => onCreateQC(record)}
+          >
+            Tạo lô QC
+          </Button>
           {extraActions?.map((action, index) => (
             <Button
               key={index}

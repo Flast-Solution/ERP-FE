@@ -122,13 +122,11 @@ const Product = ({ closeModal, data }) => {
     {
       key: 'form_product',
       label: 'Thông tin sản phẩm',
-      icon: <DollarOutlined />,
       component: <ProductForm />
     },
     {
       key: 'check_listSP',
       label: 'Tiêu chí QC sản phẩm',
-      icon: <FileTextOutlined />,
       component: <ProductChecklistForm data={data} closeModal={closeModal}/>
     },
   ];

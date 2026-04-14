@@ -100,7 +100,7 @@ const MaterialPage = () => {
 
 	const onClickViewDetail = (material) => {
 		const onAfterSubmit = (values) => {
-			f5List("material/fetch");
+			f5List("/erp/material/fetch");
 		};
 		InAppEvent.emit(HASH_POPUP, {
 			hash: "material.add",
@@ -116,7 +116,7 @@ const MaterialPage = () => {
 			const { message: MSG, errorCode } = await RequestUtils.Post('/inventory/save', body);
 			message.success(MSG);
 			if(errorCode === SUCCESS_CODE) {
-				f5List("material/fetch");
+				f5List("/erp/material/fetch");
 			}
 		} catch (error) {
 			console.error('Error during import:', error);
@@ -128,7 +128,7 @@ const MaterialPage = () => {
 		const { message: MSG, errorCode } = await RequestUtils.Post('/material/delete/' + id, {});
 		message.success(MSG);
 		if(errorCode === SUCCESS_CODE) {
-			f5List("material/fetch");
+			f5List("/erp/material/fetch");
 		}
 	};
 
@@ -237,7 +237,7 @@ const MaterialPage = () => {
 				useGetAllQuery={useGetList}
 				hasCreate={true}
 				customClickCreate={() => onClickViewDetail({})}
-				apiPath={'material/fetch'}
+				apiPath={'/erp/material/fetch'}
 				columns={CUSTOM_ACTION}
 			/>
 		</div>

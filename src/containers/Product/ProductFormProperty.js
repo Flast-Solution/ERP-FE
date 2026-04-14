@@ -38,7 +38,7 @@ const ProductFormProperty = ({ field }) => {
           showSearch
           fnLoadData={(filter) => ProductAttrService.loadAll(filter)}
           onData={(values) => _.merge(values, record?.dRe?.attrs ?? [])}
-          apiPath={"attributed/fetch"}
+          apiPath={"/erp/attributed/fetch"}
           apiAddNewItem='attributed/save'
           name={[name, 'attributedId']}
           placeholder="Tên thuộc tính"
@@ -76,7 +76,7 @@ const FormPropertiesValue = ({ name, filter }) => {
         searchKey='value'
         required
         showSearch
-        apiPath='attributed/fetch-value-by-id'
+        apiPath='/erp/attributed/fetch-value-by-id'
         apiAddNewItem='attributed/save-value-by-id'
         name={[name, 'attributedValueId']}
         placeholder="Gía trị thuộc tính"
