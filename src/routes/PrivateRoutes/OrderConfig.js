@@ -24,7 +24,7 @@ import { authRoles } from 'auth';
 
 const OrderCancelPage = React.lazy(() => import('pages/order/Cancel'));
 const OrderPage = React.lazy(() => import('pages/order'));
-const OrderProductionPage = React.lazy(() => import('pages/order/Production'));
+const OrderProductionPage = React.lazy(() => import('pages/order/OrderProduction'));
 
 export const OrderConfig = {
     auth: authRoles.user,

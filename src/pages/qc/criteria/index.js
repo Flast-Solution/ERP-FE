@@ -58,7 +58,7 @@ const CriteriaIndex = () => {
             dataIndex: 'qcCriteriaName',
             width: 250,
             ellipsis: true,
-            render: (text, record) => <a onClick={() => onEdit(record)} style={{ cursor: 'pointer' }}>{text}</a>
+            render: (text, record) => <span onClick={() => onEdit(record)} style={{ cursor: 'pointer', color: '#1890ff' }}>{text}</span>
         },
         {
             title: "Trọng số",

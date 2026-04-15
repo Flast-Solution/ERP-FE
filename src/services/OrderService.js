@@ -75,7 +75,8 @@ const OrderService = {
       const { details } = item;
       item.products = details.map((detail, id) => ({ id: id + 1, name: detail.productName }));
       item.detailstatus = details.map((detail, id) => ({ ...getColorMeta(detail), id: id + 1 }));
-      delete item.details;
+      // Keep details for creating batch inspection
+      // delete item.details;
     }
     return { embedded: response.embedded, page: response.page };
   },
