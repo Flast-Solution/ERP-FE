@@ -183,10 +183,10 @@ const ProductChecklistForm = ({ data, closeModal }) => {
     }, []);
 
     const EVALUATION_TYPE = {
-        0: 'Không đánh giá',
-        1: 'Định tính',
-        2: 'Định lượng',
-        3: 'Số liệu'
+        1: 'Đạt/Không đạt',
+        2: 'Thang điểm',
+        3: 'Định lượng',
+        4: 'Mô tả'
     };
 
     const criteriaColumns = [

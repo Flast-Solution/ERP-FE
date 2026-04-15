@@ -46,6 +46,11 @@ const OrderRoute = [
     path: 'order.evaluate',
     Component: React.lazy(() => import('@/containers/Order/OrderEvaluate')),
     modalOptions: { title: '', width: 750 }
+  },
+  {
+    path: 'order.select.detail',
+    Component: React.lazy(() => import('containers/Order/SelectDetailModal')),
+    modalOptions: { title: 'Chọn sản phẩm', width: 900 }
   }
 ];
 

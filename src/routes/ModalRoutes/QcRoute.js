@@ -20,6 +20,11 @@ const QcRoute = [
         path: 'qc.criteria.error',
         Component: React.lazy(() => import('containers/Qc/AddFormListError')),
         modalOptions: { title: 'Thêm lỗi bộ tiêu chí', width: 600 }
+    },
+    {
+        path: 'qc.inspection.batch',
+        Component: React.lazy(() => import('containers/Qc/QcInspectionBatchForm')),
+        modalOptions: { title: 'Tạo mới Lô hàng', width: 700 }
     }
 ];
 

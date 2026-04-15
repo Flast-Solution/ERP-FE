@@ -20,13 +20,15 @@ const OrderProductionPage = () => {
   };
 
   const onEvaluate = (record) => {
-    // TODO: Mở form đánh giá đơn hàng
-    // message.info(`Đánh giá đơn hàng: ${record.code}`);
-    // Ví dụ mở modal:
+    // Mở form tạo lô kiểm tra chất lượng
     InAppEvent.emit(HASH_MODAL, {
-      hash: '#draw/order.evaluate',
-      title: 'Đánh giá đơn hàng #' + record.code,
-      data: record
+      hash: '#qc.inspection.batch',
+      title: 'Lô kiểm tra - ' + (record.code || record.orderDetailCode),
+      data: {
+        orderDetailCode: record.code,
+        productCode: record.productCode,
+        customerOrder: record
+      }
     });
   };
 
