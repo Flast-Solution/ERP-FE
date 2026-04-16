@@ -96,7 +96,7 @@ const CriteriaIndex = () => {
                 return (
                     <Space>
                         <Button type="primary" ghost onClick={() => onEdit(record)} size='small'>Sửa</Button>
-                        {isPass ? "" : <Button color="danger" variant="solid"size='small' onClick={() => onError(record)}>Nhập lỗi</Button>}
+                        {/* {isPass ? "" : <Button color="danger" variant="solid"size='small' onClick={() => onError(record)}>Nhập lỗi</Button>} */}
                     </Space>
                 )
             }

@@ -43,14 +43,14 @@ const StyledModal = styled.div`
     }
 `;
 
-const QcInspectionBatchForm = ({ data, closeModal }) => {
+const QcInspectionBatchForm = ({data}) => {
 
     const [form] = Form.useForm();
     const [testingNumbers, setTestingNumbers] = useState([]);
     const [loading, setLoading] = useState(false);
 
     // Lấy danh sách order details từ data
-    const orderDetails = data?.orderDetails || [];
+    const orderDetails = data || [];
 
     // State để lưu detail đang được chọn
     const [selectedDetailIndex, setSelectedDetailIndex] = useState(0);
@@ -591,9 +591,9 @@ const QcInspectionBatchForm = ({ data, closeModal }) => {
                 }
                 
                 // Reset editing state
-                setEditingBatch(null);
-                setEditingTestingNumbers([]);
-                closeModal();
+                // setEditingBatch(null);
+                // setEditingTestingNumbers([]);
+                // closeModal();
             } else {
                 message.error(res?.message || 'Lỗi, vui lòng thử lại sau');
             }
@@ -668,7 +668,7 @@ const QcInspectionBatchForm = ({ data, closeModal }) => {
                 // Reset form
                 setTestingNumbers([]);
                 form.resetFields();
-                closeModal();
+                // closeModal();
             } else {
                 message.error(res?.message || 'Lỗi, vui lòng thử lại sau');
             }
@@ -687,15 +687,16 @@ const QcInspectionBatchForm = ({ data, closeModal }) => {
 
     return (
         <StyledModal>
-            <RestEditModal
+            {/* <RestEditModal
                 isMergeRecordOnSubmit={false}
                 onSubmit={onSubmit}
                 record={recordData}
                 closeModal={closeModal}
                 form={form}
                 footer={null}
-            >
+            > */}
                 {/* Tabs: Danh sách lô hàng đã tạo */}
+                <Form form={form} onFinish={onSubmit} layout="vertical">
                 <Tabs
                     activeKey={activeTab}
                     onChange={setActiveTab}
@@ -715,8 +716,8 @@ const QcInspectionBatchForm = ({ data, closeModal }) => {
 
                 {/* Tabs content */}
                 {activeTab === 'new' ? (
-                    <>
-                        <Row gutter={[16, 16]}>
+                    <div>
+                        <Row gutter={16} style={{border: '1px solid rgb(240, 240, 240)', borderRadius: 6, padding: 10 }}>
                             <FormHidden name={'id'} />
 
                             <Col md={12} xs={24}>
@@ -912,23 +913,23 @@ const QcInspectionBatchForm = ({ data, closeModal }) => {
                 <Divider />
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-                    <Button onClick={closeModal}>Hủy bỏ</Button>
+                    {/* <Button onClick={closeModal}>Hủy bỏ</Button> */}
                     <Button type="primary" onClick={() => form.submit()} loading={loading}>
                         Tạo mới
                     </Button>
                 </div>
-                    </>
+                    </div>
                 ) : (
                     <>
                         {/* Hiển thị và chỉnh sửa thông tin lô hàng đã tạo */}
                         {editingBatch && (
                             <>
                                 {/* Batch Info - Editable */}
-                                <Row gutter={[16, 16]}>
+                                <Row gutter={[16, 16]} style={{border: '1px solid rgb(240, 240, 240)', borderRadius: 6, padding: 20 }}>
                                     <Col md={12} xs={24}>
                                         <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>MÃ LÔ HÀNG</div>
                                         <Input
-                                            value={editingBatch.lotCode || editingBatch.idQcInspectionBatch || ''}
+                                            defaultValue={editingBatch.lotCode || editingBatch.idQcInspectionBatch || ''}
                                             onChange={e => setEditingBatch({ ...editingBatch, lotCode: e.target.value })}
                                             placeholder="Vd: LOT-2026-0414"
                                         />
@@ -946,7 +947,7 @@ const QcInspectionBatchForm = ({ data, closeModal }) => {
                                     <Col md={12} xs={24}>
                                         <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>NGƯỜI PHỤ TRÁCH</div>
                                         <Input
-                                            value={editingBatch.idInspector || ''}
+                                            defaultValue={editingBatch.idInspector || ''}
                                             onChange={e => setEditingBatch({ ...editingBatch, idInspector: e.target.value })}
                                             placeholder="ID người phụ trách"
                                         />
@@ -1103,7 +1104,7 @@ const QcInspectionBatchForm = ({ data, closeModal }) => {
                                 <Divider />
 
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-                                    <Button onClick={onCancelEditing}>Hủy</Button>
+                                    {/* <Button onClick={onCancelEditing}>Hủy</Button> */}
                                     <Button type="primary" onClick={onUpdateBatch} loading={loading}>
                                         Cập nhật
                                     </Button>
@@ -1112,7 +1113,8 @@ const QcInspectionBatchForm = ({ data, closeModal }) => {
                         )}
                     </>
                 )}
-            </RestEditModal>
+            </Form>
+            {/* </RestEditModal> */}
 
             <Modal
                 title="Thêm đơn vị kiểm tra"
@@ -1156,3 +1158,7 @@ const QcInspectionBatchForm = ({ data, closeModal }) => {
 };
 
 export default QcInspectionBatchForm;
+
+
+
+
