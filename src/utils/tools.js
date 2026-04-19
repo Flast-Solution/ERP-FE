@@ -1,8 +1,11 @@
-import { CUSTOMERS_TAB_KEYS } from 'configs';
 import { GATEWAY } from 'configs';
 import { pickBy, identity } from 'lodash'
 import { notification } from 'antd';
 import i18next from 'i18next';
+
+const CUSTOMERS_TAB_KEYS = {
+  individuals: 'individuals'
+};
 
 export const showNotifyError = (description) => {
   notification.error({

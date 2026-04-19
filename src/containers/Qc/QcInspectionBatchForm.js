@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from 'react';
+﻿import React, { useCallback, useState, useEffect } from 'react';
 import { Row, Col, Button, message, Tag, Select, Input, InputNumber, Form, DatePicker, Divider, Tabs, Spin, Modal } from 'antd';
 import { PlusOutlined, DeleteOutlined, UserOutlined } from '@ant-design/icons';
 import FormInput from '@flast-erp/core/components/form/FormInput';
@@ -41,7 +41,295 @@ const StyledModal = styled.div`
             text-align: center;
         }
     }
+    
+    .criteria-row {
+        display: grid;
+        grid-template-columns: minmax(100px, 160px) minmax(200px, 1fr) minmax(280px, 380px) minmax(300px, 400px);
+        gap: 16px;
+        padding: 12px 14px;
+        border-top: 1px solid #f5f5f5;
+        align-items: center;
+
+        @media (max-width: 1200px) {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .criteria-code {
+        font-size: 12px;
+        color: #666;
+        font-weight: 500;
+    }
+    
+    .criteria-info {
+        .criteria-name {
+            font-weight: 500;
+            color: #262626;
+            margin-bottom: 4px;
+        }
+        .criteria-description {
+            font-size: 12px;
+            color: #999;
+            line-height: 1.4;
+            margin-bottom: 4px;
+        }
+        .criteria-label {
+            font-size: 11px;
+            color: #666;
+            display: inline-flex;
+            gap: 4px;
+            align-items: center;
+        }
+    }
+    
+    .evaluation-type {
+        font-size: 12px;
+        color: #666;
+        padding: 4px 8px;
+        background: #f5f7ff;
+        border-radius: 4px;
+    }
+    
+    .evaluation-inputs {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        
+        .passed-failed-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            min-width: 170px;
+        }
+        
+        .score-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            min-width: 260px;
+            width: 100%;
+        }
+        
+        .ant-input-number,
+        input {
+            flex: 1;
+            min-width: 110px;
+            width: 100%;
+        }
+    }
+    
+    .checklist-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 14px;
+        background: #f5f7ff;
+        font-weight: 600;
+        font-size: 14px;
+        border-bottom: 1px solid #e8e8ff;
+        
+        .header-title {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex: 1;
+        }
+        
+        .header-count {
+            font-size: 12px;
+            color: #666;
+            font-weight: 400;
+        }
+    }
 `;
+
+// Component để render một tiêu chí đánh giá
+const ERROR_LEVEL_OPTIONS = [
+    { value: 'MINOR', label: 'Nhẹ' },
+    { value: 'MAJOR', label: 'Trung bình' },
+    { value: 'CRITICAL', label: 'Nặng' }
+];
+
+const CriterionRow = ({ criterion, evaluationTypeMap, onUpdate, testIndex, checklistIndex, criterionIndex, defectOptions = [], defectMap = {} }) => {
+    const getEvaluationTypeLabel = (criterion) => {
+        const base = evaluationTypeMap[criterion.evaluationType] || criterion.evaluationType || '-';
+        const minScore = criterion.scaleMin ?? criterion.minScore ?? criterion.targetMin;
+        const maxScore = criterion.scaleMax ?? criterion.maxScore ?? criterion.targetMax;
+        const requiredMin = criterion.targetMin ?? criterion.minAcceptable ?? criterion.lowerBound;
+        const unit = criterion.units ?? criterion.unit ?? criterion.measureUnit;
+
+        if (criterion.evaluationType === 2) {
+            let label = base;
+            if (minScore !== undefined && maxScore !== undefined) {
+                label += ` (${minScore} - ${maxScore})`;
+            }
+            if (requiredMin !== undefined) {
+                label += ` - Yêu cầu tối thiểu: ${requiredMin}`;
+            }
+            return label;
+        }
+
+        if (criterion.evaluationType === 3) {
+            let label = base;
+            if (minScore !== undefined && maxScore !== undefined) {
+                label += ` (${minScore} - ${maxScore})`;
+            }
+            if (unit) {
+                label += ` - Đơn vị đo: ${unit}`;
+            }
+            return label;
+        }
+
+        return base;
+    };
+
+    return (
+        <div className="criteria-row">
+            <div>
+                <div className="criteria-code">{criterion.qcCriteriaCode || criterion.code || '--'}</div>
+            </div>
+
+            <div className="criteria-info">
+                <div className="criteria-name">{criterion.qcCriteriaName || criterion.name || '-'}</div>
+                {criterion.description && (
+                    <div className="criteria-description">{criterion.description}</div>
+                )}
+                <div className="criteria-label">Loại: <span className="evaluation-type">{getEvaluationTypeLabel(criterion)}</span></div>
+            </div>
+
+            <div className="evaluation-inputs">
+                {criterion.evaluationType === 1 ? (
+                    <>
+                        <div className="passed-failed-group">
+                            <Button
+                                size="small"
+                                type={criterion.inspectionResult === 1 ? 'primary' : 'default'}
+                                onClick={() => onUpdate(testIndex, checklistIndex, criterionIndex, 'inspectionResult', 1)}
+                                style={{ minWidth: '70px' }}
+                            >
+                                ✓ Đạt
+                            </Button>
+                            <Button
+                                size="small"
+                                danger
+                                type={criterion.inspectionResult === 0 ? 'primary' : 'default'}
+                                onClick={() => onUpdate(testIndex, checklistIndex, criterionIndex, 'inspectionResult', 0)}
+                                style={{ minWidth: '90px' }}
+                            >
+                                ✗ Không đạt
+                            </Button>
+                        </div>
+                        <Input
+                            value={criterion.comment || ''}
+                            onChange={e => onUpdate(testIndex, checklistIndex, criterionIndex, 'comment', e.target.value)}
+                            placeholder="Ghi chú"
+                            size="small"
+                            style={{ minWidth: '150px' }}
+                        />
+                    </>
+                ) : criterion.evaluationType === 2 || criterion.evaluationType === 3 ? (
+                    <div className="score-group">
+                        <InputNumber
+                            value={criterion.score ?? 0}
+                            onChange={val => onUpdate(testIndex, checklistIndex, criterionIndex, 'score', val)}
+                            size="small"
+                            placeholder="Điểm"
+                            min={criterion.minScore}
+                            max={criterion.maxScore}
+                            style={{ minWidth: '110px', width: '100%' }}
+                        />
+                        <Input
+                            value={criterion.comment || ''}
+                            onChange={e => onUpdate(testIndex, checklistIndex, criterionIndex, 'comment', e.target.value)}
+                            placeholder="Ghi chú"
+                            size="small"
+                            style={{ minWidth: '150px', width: '100%' }}
+                        />
+                    </div>
+                ) : (
+                    <Input
+                        value={criterion.comment || ''}
+                        onChange={e => onUpdate(testIndex, checklistIndex, criterionIndex, 'comment', e.target.value)}
+                        placeholder="Ghi chú"
+                        size="small"
+                        style={{ minWidth: '150px' }}
+                    />
+                )}
+            </div>
+
+            <div className="error-info">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '14px' }}>⚠️</span>
+                    <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>Thông tin lỗi</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <Select
+                        value={criterion.errorCode || ''}
+                        onChange={val => {
+                            const selectedDefect = defectMap[val] || {};
+                            onUpdate(testIndex, checklistIndex, criterionIndex, 'errorCode', val);
+                            onUpdate(testIndex, checklistIndex, criterionIndex, 'errorLevel', selectedDefect.severity || '');
+                            onUpdate(testIndex, checklistIndex, criterionIndex, 'errorDescription', selectedDefect.description || '');
+                        }}
+                        placeholder="Chọn mã lỗi"
+                        size="small"
+                        style={{ width: '100%' }}
+                        options={defectOptions || []}
+                    />
+                    <Input
+                        value={criterion.errorLevel ? String(criterion.errorLevel) : ''}
+                        placeholder="Mức độ"
+                        size="small"
+                        style={{ width: '100%' }}
+                        disabled
+                    />
+                    <Input.TextArea
+                        value={criterion.errorDescription || ''}
+                        placeholder="Mô tả lỗi"
+                        size="small"
+                        rows={2}
+                        style={{ width: '100%' }}
+                        disabled
+                    />
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Component để render bộ tiêu chí kiểm tra
+const ChecklistGroup = ({ checklist, testingNumbers, testIndex, productChecklists, onUpdateCriterion, evaluationTypeMap, checklistNumericIndex, defectOptions, defectMap }) => {
+    const item = checklist;
+    
+    return (
+        <div style={{ marginBottom: 20, border: '1px solid #e8e8ff', borderRadius: 8, overflow: 'hidden' }}>
+            <div className="checklist-header">
+                <div className="header-title">
+                    {item.qcCheckListCode || item.checkListCode} • {item.qcCheckListName || item.checkListName || 'Bộ tiêu chí'}
+                </div>
+                <div className="header-count">{(item.qcCriteriaList?.length || 0)} tiêu chí</div>
+            </div>
+            <div>
+                {(item.qcCriteriaList || []).map((criterion, criterionIndex) => (
+                    <CriterionRow
+                        key={criterion.idQcCriteria || criterion.id || criterionIndex}
+                        criterion={criterion}
+                        evaluationTypeMap={evaluationTypeMap}
+                        onUpdate={onUpdateCriterion}
+                        testIndex={testIndex}
+                        checklistIndex={checklistNumericIndex}
+                        criterionIndex={criterionIndex}
+                        defectOptions={defectOptions}
+                        defectMap={defectMap}
+                    />
+                ))}
+            </div>
+        </div>
+    );
+};
 
 const QcInspectionBatchForm = ({data}) => {
 
@@ -69,6 +357,8 @@ const QcInspectionBatchForm = ({data}) => {
     const [productChecklists, setProductChecklists] = useState([]);
     const [loadingProductChecklists, setLoadingProductChecklists] = useState(false);
     const [resolvedProductCode, setResolvedProductCode] = useState(null);
+    const [defectOptions, setDefectOptions] = useState([]);
+    const [defectMap, setDefectMap] = useState({});
 
     // Modal states for testing number
     const [isModalVisible, setIsModalVisible] = useState(false);
@@ -114,6 +404,36 @@ const QcInspectionBatchForm = ({data}) => {
         return base;
     };
 
+    const loadDefects = useCallback(async (productCode) => {
+        const all = [];
+        let page = 1;
+        const limit = 100;
+        while (true) {
+            const res = await RequestUtils.Get('/qms/qc-defect/fetch', { page, limit, productCode });
+            const embedded = Array.isArray(res?.data?.embedded) ? res.data.embedded : [];
+            if (!embedded.length) break;
+            all.push(...embedded);
+            if (embedded.length < limit || page >= 20) break;
+            page += 1;
+        }
+
+        const options = all
+            .filter(item => item?.defectCode)
+            .map(item => ({
+                value: item.defectCode,
+                label: `${item.defectCode} - ${item.defectName || ''}`.trim()
+            }));
+
+        const map = {};
+        all.forEach(item => {
+            if (item?.defectCode) {
+                map[item.defectCode] = item;
+            }
+        });
+        setDefectOptions(options);
+        setDefectMap(map);
+    }, []);
+
     useEffect(() => {
         if (testingNumbers.length === 0) {
             setActiveTestingTab('0');
@@ -130,7 +450,7 @@ const QcInspectionBatchForm = ({data}) => {
         }
     }, [editingTestingNumbers.length, activeEditingTestingTab]);
 
-    const getProductCode = () => selectedDetail?.productCode || selectedDetail?.product?.code || data?.productCode || data?.product?.code || resolvedProductCode;
+    const getProductCode = useCallback(() => selectedDetail?.productCode || selectedDetail?.product?.code || data?.productCode || data?.product?.code || resolvedProductCode, [selectedDetail, data, resolvedProductCode]);
 
     const fetchProductInfoById = useCallback(async (productId) => {
         if (!productId) {
@@ -160,7 +480,10 @@ const QcInspectionBatchForm = ({data}) => {
                 ...item,
                 inspectionResult: 1,
                 comment: '',
-                score: 0
+                score: 0,
+                errorCode: '',
+                errorLevel: '',
+                errorDescription: ''
             }))
         }));
     }, [productChecklists]);
@@ -184,6 +507,7 @@ const QcInspectionBatchForm = ({data}) => {
                     const unit = criterion.evaluationType === 2
                         ? (criterion.unit ?? 'điểm')
                         : (criterion.evaluationType === 3 ? (criterion.unit ?? criterion.units ?? criterion.measureUnit ?? null) : null);
+                    const defectId = criterion.errorCode ? defectMap[criterion.errorCode]?.idQcDefect : null;
                     return {
                         idQcCriteria: criterion.idQcCriteria || criterion.id,
                         idQcChecklist: checklist.idQcCheckList || checklist.id,
@@ -196,7 +520,8 @@ const QcInspectionBatchForm = ({data}) => {
                         unit,
                         scoreAchieved: criterion.score ?? null,
                         scoreMax,
-                        inspected_at: criterion.inspected_at ?? moment().format('YYYY-MM-DD HH:mm:ss')
+                        inspected_at: criterion.inspected_at ?? moment().format('YYYY-MM-DD HH:mm:ss'),
+                        ...(defectId ? { defect: { idQcDefect: defectId } } : {})
                     };
                 })
             }))
@@ -243,7 +568,10 @@ const QcInspectionBatchForm = ({data}) => {
                         unit: result.unit ?? criterion.unit,
                         scoreAchieved: result.scoreAchieved ?? criterion.scoreAchieved,
                         scoreMax: result.scoreMax ?? criterion.scoreMax,
-                        inspected_at: result.inspected_at ?? criterion.inspected_at
+                        inspected_at: result.inspected_at ?? criterion.inspected_at,
+                        errorCode: result.defect?.defectCode ?? result.errorCode ?? criterion.errorCode,
+                        errorLevel: result.defect?.severity ?? result.errorLevel ?? criterion.errorLevel,
+                        errorDescription: result.defect?.defectName ?? result.defect?.description ?? result.errorDescription ?? criterion.errorDescription
                     };
                 }
                 return criterion;
@@ -318,6 +646,10 @@ const QcInspectionBatchForm = ({data}) => {
         }));
     }, [productChecklists, buildCriteriaTemplate]);
 
+    useEffect(() => {
+        loadDefects(getProductCode());
+    }, [loadDefects, getProductCode]);
+
     // Fetch inspection batches khi mở form hoặc khi chọn detail khác
     useEffect(() => {
         const fetchBatches = async () => {
@@ -364,6 +696,33 @@ const QcInspectionBatchForm = ({data}) => {
             const batch = inspectionBatches[batchIndex];
             if (batch) {
                 setEditingBatch({ ...batch });
+                
+                // Extract and merge defects from results into defectMap and defectOptions
+                const defectsFromResults = new Map();
+                (batch.testingNumberList || []).forEach(testingNumber => {
+                    (testingNumber.resultList || []).forEach(result => {
+                        if (result.defect?.defectCode) {
+                            defectsFromResults.set(result.defect.defectCode, result.defect);
+                        }
+                    });
+                });
+                
+                // Merge with existing defectMap
+                const mergedDefectMap = { ...defectMap };
+                const mergedOptions = [...defectOptions];
+                defectsFromResults.forEach((defect, code) => {
+                    if (!mergedDefectMap[code]) {
+                        mergedDefectMap[code] = defect;
+                        mergedOptions.push({
+                            value: code,
+                            label: `${code} - ${defect.defectName || ''}`.trim()
+                        });
+                    }
+                });
+                
+                setDefectMap(mergedDefectMap);
+                setDefectOptions(mergedOptions);
+                
                 // Merge results into testing numbers
                 const testingNumbersWithResults = (batch.testingNumberList || []).map(testingNumber => {
                     // Use productChecklists as base structure and merge results
@@ -385,7 +744,11 @@ const QcInspectionBatchForm = ({data}) => {
                                     unit: result.unit ?? criterion.unit,
                                     scoreAchieved: result.scoreAchieved,
                                     scoreMax: result.scoreMax,
-                                    inspected_at: result.inspected_at
+                                    inspected_at: result.inspected_at,
+                                    errorCode: result.defect?.defectCode ?? result.errorCode ?? criterion.errorCode,
+                                    errorLevel: result.defect?.severity ?? result.errorLevel ?? criterion.errorLevel,
+                                    errorDescription: result.defect?.defectName ?? result.defect?.description ?? result.errorDescription ?? criterion.errorDescription,
+                                    _resultDefect: result.defect || null
                                 };
                             }
                             return criterion;
@@ -447,6 +810,33 @@ const QcInspectionBatchForm = ({data}) => {
     // Functions for editing existing batch
     const startEditingBatch = (batch) => {
         setEditingBatch({ ...batch });
+        
+        // Extract and merge defects from results into defectMap and defectOptions
+        const defectsFromResults = new Map();
+        (batch.testingNumberList || []).forEach(testingNumber => {
+            (testingNumber.resultList || []).forEach(result => {
+                if (result.defect?.defectCode) {
+                    defectsFromResults.set(result.defect.defectCode, result.defect);
+                }
+            });
+        });
+        
+        // Merge with existing defectMap
+        const mergedDefectMap = { ...defectMap };
+        const mergedOptions = [...defectOptions];
+        defectsFromResults.forEach((defect, code) => {
+            if (!mergedDefectMap[code]) {
+                mergedDefectMap[code] = defect;
+                mergedOptions.push({
+                    value: code,
+                    label: `${code} - ${defect.defectName || ''}`.trim()
+                });
+            }
+        });
+        
+        setDefectMap(mergedDefectMap);
+        setDefectOptions(mergedOptions);
+        
         // Merge results into testing numbers
         const testingNumbersWithResults = (batch.testingNumberList || []).map(testingNumber => {
             // Use productChecklists as base structure and merge results
@@ -468,7 +858,11 @@ const QcInspectionBatchForm = ({data}) => {
                             unit: result.unit ?? criterion.unit,
                             scoreAchieved: result.scoreAchieved,
                             scoreMax: result.scoreMax,
-                            inspected_at: result.inspected_at
+                            inspected_at: result.inspected_at,
+                            errorCode: result.defect?.defectCode ?? result.errorCode ?? criterion.errorCode,
+                            errorLevel: result.defect?.severity ?? result.errorLevel ?? criterion.errorLevel,
+                            errorDescription: result.defect?.defectName ?? result.defect?.description ?? result.errorDescription ?? criterion.errorDescription,
+                            _resultDefect: result.defect || null
                         };
                     }
                     return criterion;
@@ -545,6 +939,41 @@ const QcInspectionBatchForm = ({data}) => {
         }));
     };
 
+    const syncDefectUpdatesFromTestingNumbers = useCallback(async (testList = []) => {
+        const saveTasks = [];
+        for (const testing of testList) {
+            for (const checklist of (testing?.criteriaChecklist || [])) {
+                for (const criterion of (checklist?.qcCriteriaList || [])) {
+                    if (!criterion?.errorCode) continue;
+                    const selectedDefect = defectMap[criterion.errorCode];
+                    if (!selectedDefect?.idQcDefect) continue;
+
+                    const nextDescription = criterion.errorDescription ?? selectedDefect.description ?? '';
+                    const nextSeverity = criterion.errorLevel || selectedDefect.severity || '';
+                    const hasChanged = (nextDescription !== (selectedDefect.description || ''))
+                        || (nextSeverity !== (selectedDefect.severity || ''));
+                    if (!hasChanged) continue;
+
+                    saveTasks.push(
+                        RequestUtils.Post('/qms/qc-defect/save', {
+                            idQcDefect: selectedDefect.idQcDefect,
+                            defectCode: selectedDefect.defectCode || criterion.errorCode,
+                            defectName: selectedDefect.defectName || '',
+                            severity: nextSeverity,
+                            productCode: selectedDefect.productCode || '',
+                            imageUrl: selectedDefect.imageUrl || '',
+                            description: nextDescription
+                        })
+                    );
+                }
+            }
+        }
+        if (saveTasks.length) {
+            await Promise.all(saveTasks);
+            await loadDefects(getProductCode());
+        }
+    }, [defectMap, getProductCode, loadDefects]);
+
     const onUpdateBatch = async () => {
         if (!editingBatch) return;
 
@@ -566,6 +995,7 @@ const QcInspectionBatchForm = ({data}) => {
 
         setLoading(true);
         try {
+            await syncDefectUpdatesFromTestingNumbers(editingTestingNumbers);
             const res = await RequestUtils.Post('/qms/qc-inspection-batch/save', body);
             const isSuccess = res?.errorCode === 200;
             if (isSuccess) {
@@ -639,6 +1069,7 @@ const QcInspectionBatchForm = ({data}) => {
 
         setLoading(true);
         try {
+            await syncDefectUpdatesFromTestingNumbers(testingNumbers);
             const res = await RequestUtils.Post('/qms/qc-inspection-batch/save', body);
             const isSuccess = res?.errorCode === 200;
             if (isSuccess) {
@@ -825,79 +1256,23 @@ const QcInspectionBatchForm = ({data}) => {
                                     label: item.qcTestingNumberName || `Lần ${index + 1}`,
                                     children: (
                                         <div style={{ padding: 16 }}>
-                                            <div style={{ marginTop: 0 }}>
-                                                <div style={{ marginBottom: 12, fontWeight: 600 }}>Bộ tiêu chí đánh giá</div>
-                                                {(item.criteriaChecklist || productChecklists).map((checklist, checklistIndex) => (
-                                                    <div key={checklist.idQcCheckList || checklist.id} style={{ marginBottom: 16, border: '1px solid #e8e8ff', borderRadius: 8, overflow: 'hidden' }}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#f5f7ff', fontWeight: 600 }}>
-                                                            <div>{checklist.qcCheckListCode || checklist.checkListCode || 'Bộ tiêu chí'} - {checklist.qcCheckListName || checklist.checkListName || ''}</div>
-                                                            <div style={{ fontSize: 12, color: '#888' }}>({(checklist.qcCriteriaList?.length || 0)} tiêu chí)</div>
-                                                        </div>
-                                                        {(checklist.qcCriteriaList || []).map((criterion, criterionIndex) => (
-                                                            <div key={criterion.idQcCriteria || criterion.id || criterionIndex} style={{ display: 'grid', gridTemplateColumns: '120px 1.5fr 110px 220px', gap: 12, padding: '12px 14px', borderTop: criterionIndex === 0 ? '1px solid #f0f0f0' : '1px solid #f5f5f5', alignItems: 'center' }}>
-                                                                <div style={{ fontSize: 12, color: '#666' }}>{criterion.qcCriteriaCode || '--'}</div>
-                                                                <div>
-                                                                    <div style={{ fontWeight: 500 }}>{criterion.qcCriteriaName || '-'}</div>
-                                                                    {criterion.description && <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>{criterion.description}</div>}
-                                                                </div>
-                                                                <div style={{ fontSize: 12, color: '#666' }}>{getEvaluationTypeLabel(criterion)}</div>
-                                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
-                                                                    {criterion.evaluationType === 1 ? (
-                                                                        <>
-                                                                            <div style={{ display: 'flex', gap: 8 }}>
-                                                                                <Button
-                                                                                    size="small"
-                                                                                    type={criterion.inspectionResult === 1 ? 'primary' : 'default'}
-                                                                                    onClick={() => updateTestingNumberCriterion(index, checklistIndex, criterionIndex, 'inspectionResult', 1)}
-                                                                                >
-                                                                                    Đạt
-                                                                                </Button>
-                                                                                <Button
-                                                                                    size="small"
-                                                                                    type={criterion.inspectionResult === 0 ? 'primary' : 'default'}
-                                                                                    onClick={() => updateTestingNumberCriterion(index, checklistIndex, criterionIndex, 'inspectionResult', 0)}
-                                                                                >
-                                                                                    Không đạt
-                                                                                </Button>
-                                                                            </div>
-                                                                            <Input
-                                                                                value={criterion.comment || ''}
-                                                                                onChange={e => updateTestingNumberCriterion(index, checklistIndex, criterionIndex, 'comment', e.target.value)}
-                                                                                placeholder="Ghi chú"
-                                                                                size="small"
-                                                                            />
-                                                                        </>
-                                                                    ) : criterion.evaluationType === 2 || criterion.evaluationType === 3 ? (
-                                                                        <>
-                                                                            <div style={{ fontSize: 12, color: '#666' }}>
-                                                                                {criterion.minScore !== undefined && criterion.maxScore !== undefined ? `Điểm: ${criterion.minScore} - ${criterion.maxScore}` : 'Điểm'}
-                                                                            </div>
-                                                                            <InputNumber
-                                                                                value={criterion.score || 0}
-                                                                                onChange={val => updateTestingNumberCriterion(index, checklistIndex, criterionIndex, 'score', val)}
-                                                                                size="small"
-                                                                                style={{ width: '100%' }}
-                                                                                placeholder="Nhập điểm"
-                                                                            />
-                                                                            <Input
-                                                                                value={criterion.comment || ''}
-                                                                                onChange={e => updateTestingNumberCriterion(index, checklistIndex, criterionIndex, 'comment', e.target.value)}
-                                                                                placeholder="Ghi chú"
-                                                                                size="small"
-                                                                            />
-                                                                        </>
-                                                                    ) : (
-                                                                        <Input
-                                                                            value={criterion.comment || ''}
-                                                                            onChange={e => updateTestingNumberCriterion(index, checklistIndex, criterionIndex, 'comment', e.target.value)}
-                                                                            placeholder="Ghi chú"
-                                                                            size="small"
-                                                                        />
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
+                                            <div style={{ marginBottom: 20 }}>
+                                                <div style={{ marginBottom: 16, fontWeight: 600, fontSize: 14, color: '#262626' }}>
+                                                    Bộ tiêu chí đánh giá
+                                                </div>
+                                                {(item.criteriaChecklist || productChecklists).map((checklist, checklistNumericIndex) => (
+                                                    <ChecklistGroup
+                                                        key={`${checklist.idQcCheckList || checklist.id || checklist.qcCheckListCode}-${checklist.qcCheckListName}-${checklistNumericIndex}`}
+                                                        checklist={checklist}
+                                                        testingNumbers={[item]}
+                                                        testIndex={0}
+                                                        productChecklists={productChecklists}
+                                                        onUpdateCriterion={updateTestingNumberCriterion}
+                                                        evaluationTypeMap={EVALUATION_TYPE}
+                                                        checklistNumericIndex={checklistNumericIndex}
+                                                        defectOptions={defectOptions}
+                                                        defectMap={defectMap}
+                                                    />
                                                 ))}
                                             </div>
                                         </div>
@@ -1014,81 +1389,23 @@ const QcInspectionBatchForm = ({data}) => {
                                             label: item.qcTestingNumberName || `Lần ${index + 1}`,
                                             children: (
                                                 <div style={{ padding: 16 }}>
-                                                    <div style={{ marginTop: 0 }}>
-                                                        <div style={{ marginBottom: 12, fontWeight: 600 }}>Bộ tiêu chí đánh giá</div>
-                                                        {(item.criteriaChecklist || productChecklists).map((checklist, checklistIndex) => (
-                                                            <div key={checklist.idQcCheckList || checklist.id} style={{ marginBottom: 16, border: '1px solid #e8e8ff', borderRadius: 8, overflow: 'hidden' }}>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#f5f7ff', fontWeight: 600 }}>
-                                                                    <div>{checklist.qcCheckListCode || checklist.checkListCode || 'Bộ tiêu chí'} - {checklist.qcCheckListName || checklist.checkListName || ''}</div>
-                                                                    <div style={{ fontSize: 12, color: '#888' }}>({(checklist.qcCriteriaList?.length || 0)} tiêu chí)</div>
-                                                                </div>
-                                                                {(checklist.qcCriteriaList || []).map((criterion, criterionIndex) => (
-                                                                    <div key={criterion.idQcCriteria || criterion.id || criterionIndex} style={{ display: 'grid', gridTemplateColumns: '120px 1.5fr 110px 220px', gap: 12, padding: '12px 14px', borderTop: criterionIndex === 0 ? '1px solid #f0f0f0' : '1px solid #f5f5f5', alignItems: 'center' }}>
-                                                                        <div style={{ fontSize: 12, color: '#666' }}>{criterion.qcCriteriaCode || '--'}</div>
-                                                                        <div>
-                                                                            <div style={{ fontWeight: 500 }}>{criterion.qcCriteriaName || '-'}</div>
-                                                                            {criterion.description && <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>{criterion.description}</div>}
-                                                                        </div>
-                                                                        <div style={{ fontSize: 12, color: '#666' }}>{getEvaluationTypeLabel(criterion)}</div>
-                                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
-                                                                            {criterion.evaluationType === 1 ? (
-                                                                                <>
-                                                                                    <div style={{ display: 'flex', gap: 8 }}>
-                                                                                        <Button
-                                                                                            size="small"
-                                                                                            type={criterion.inspectionResult === 1 ? 'primary' : 'default'}
-                                                                                            onClick={() => updateEditingTestingNumberCriterion(index, checklistIndex, criterionIndex, 'inspectionResult', 1)}
-                                                                                        >
-                                                                                            Đạt
-                                                                                        </Button>
-                                                                                        <Button
-                                                                                            size="small"
-                                                                                            type={criterion.inspectionResult === 0 ? 'primary' : 'default'}
-                                                                                            onClick={() => updateEditingTestingNumberCriterion(index, checklistIndex, criterionIndex, 'inspectionResult', 0)}
-                                                                                        >
-                                                                                            Không đạt
-                                                                                        </Button>
-                                                                                    </div>
-                                                                                    <Input
-                                                                                        value={criterion.comment || ''}
-                                                                                        onChange={e => updateEditingTestingNumberCriterion(index, checklistIndex, criterionIndex, 'comment', e.target.value)}
-                                                                                        placeholder="Ghi chú"
-                                                                                        size="small"
-                                                                                    />
-                                                                                </>
-                                                                            ) : criterion.evaluationType === 2 || criterion.evaluationType === 3 ? (
-                                                                                <>
-                                                                                    <div style={{ fontSize: 12, color: '#666' }}>
-                                                                                        {criterion.minScore !== undefined && criterion.maxScore !== undefined ? `Điểm: ${criterion.minScore} - ${criterion.maxScore}` : 'Điểm'}
-                                                                                    </div>
-                                                                                    <InputNumber
-                                                                                        value={criterion.score || 0}
-                                                                                        onChange={val => updateEditingTestingNumberCriterion(index, checklistIndex, criterionIndex, 'score', val)}
-                                                                                        size="small"
-                                                                                        style={{ width: '100%' }}
-                                                                                        placeholder="Nhập điểm"
-                                                                                        min={criterion.minScore}
-                                                                                        max={criterion.maxScore}
-                                                                                    />
-                                                                                    <Input
-                                                                                        value={criterion.comment || ''}
-                                                                                        onChange={e => updateEditingTestingNumberCriterion(index, checklistIndex, criterionIndex, 'comment', e.target.value)}
-                                                                                        placeholder="Ghi chú"
-                                                                                        size="small"
-                                                                                    />
-                                                                                </>
-                                                                            ) : (
-                                                                                <Input
-                                                                                    value={criterion.comment || ''}
-                                                                                    onChange={e => updateEditingTestingNumberCriterion(index, checklistIndex, criterionIndex, 'comment', e.target.value)}
-                                                                                    placeholder="Ghi chú"
-                                                                                    size="small"
-                                                                                />
-                                                                            )}
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
+                                                    <div style={{ marginBottom: 20 }}>
+                                                        <div style={{ marginBottom: 16, fontWeight: 600, fontSize: 14, color: '#262626' }}>
+                                                            Bộ tiêu chí đánh giá
+                                                        </div>
+                                                        {(item.criteriaChecklist || productChecklists).map((checklist, checklistNumericIndex) => (
+                                                            <ChecklistGroup
+                                                                key={`${checklist.idQcCheckList || checklist.id || checklist.qcCheckListCode}-${checklist.qcCheckListName}-${checklistNumericIndex}`}
+                                                                checklist={checklist}
+                                                                testingNumbers={[item]}
+                                                                testIndex={0}
+                                                                productChecklists={productChecklists}
+                                                                onUpdateCriterion={updateEditingTestingNumberCriterion}
+                                                                evaluationTypeMap={EVALUATION_TYPE}
+                                                                checklistNumericIndex={checklistNumericIndex}
+                                                                defectOptions={defectOptions}
+                                                                defectMap={defectMap}
+                                                            />
                                                         ))}
                                                     </div>
                                                 </div>
@@ -1158,6 +1475,8 @@ const QcInspectionBatchForm = ({data}) => {
 };
 
 export default QcInspectionBatchForm;
+
+
 
 
 
