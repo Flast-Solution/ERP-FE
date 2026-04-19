@@ -54,6 +54,20 @@ const QcService = {
   // Mapping Criteria to Checklist
   async addCriteriaToChecklist(checkListId, idCriteriaList) {
     return await RequestUtils.Post("/cms/qc-checklist/add-criteria", { checkListId, idCriteriaList });
+  },
+
+  // QC Defect
+  async fetchDefect(params) {
+    return await RequestUtils.Get("/qms/qc-defect/fetch", params);
+  },
+  async addDefect(data) {
+    return await RequestUtils.Post("/qms/qc-defect/save", data);
+  },
+  async updateDefect(data) {
+    return await RequestUtils.Post("/qms/qc-defect/save", data);
+  },
+  async deleteDefect(id) {
+    return await RequestUtils.Post("/qms/qc-defect/delete", { id });
   }
 };
 

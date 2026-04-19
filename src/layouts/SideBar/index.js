@@ -111,8 +111,9 @@ function SideBar() {
       getItem(<Link to="/sale/order-production">ĐH đang sản xuất</Link>, 'order.production', <BuildOutlined />),
     ]),
     getItem('Quản lý QC', 'qc_management', <AuditOutlined />, [
-      getItem(<Link to="/qc/criteria">Tiêu chí QC</Link>, 'qc_criteria', <UnorderedListOutlined />),
-      getItem(<Link to="/qc/checklist">Bộ tiêu chí QC</Link>, 'qc_checklist', <OrderedListOutlined />)
+      getItem(<Link to="/qc/criteria">Tiêu chí</Link>, 'qc_criteria', <UnorderedListOutlined />),
+      getItem(<Link to="/qc/checklist">Bộ tiêu chí</Link>, 'qc_checklist', <OrderedListOutlined />),
+      getItem(<Link to="/qc/defect">Danh sách lỗi</Link>, 'qc_defect', <DeleteOutlined />)
     ]),
     getItem('Web', 'web', <FileWordOutlined />, [
       getItem(<Link to="/category/san-pham">D.Mục sản phẩm</Link>, 'cate-san-pham', <span> - </span>),

@@ -4,27 +4,32 @@ const QcRoute = [
     {
         path: 'qc.criteria.edit',
         Component: React.lazy(() => import('containers/Qc/CriteriaForm')),
-        modalOptions: { title: 'Tiêu chí QC', width: 800 }
+        modalOptions: { title: 'Tieu chi QC', width: 800 }
     },
     {
         path: 'qc.checklist.edit',
         Component: React.lazy(() => import('containers/Qc/ChecklistForm')),
-        modalOptions: { title: 'Bộ tiêu chí QC', width: 800 }
+        modalOptions: { title: 'Bo tieu chi QC', width: 800 }
     },
     {
         path: 'qc.checklist.assign',
         Component: React.lazy(() => import('containers/Qc/ProductChecklistForm')),
-        modalOptions: { title: 'Gán bộ tiêu chí QC', width: 600 }
+        modalOptions: { title: 'Gan bo tieu chi QC', width: 600 }
     },
     {
         path: 'qc.criteria.error',
         Component: React.lazy(() => import('containers/Qc/AddFormListError')),
-        modalOptions: { title: 'Thêm lỗi bộ tiêu chí', width: 600 }
+        modalOptions: { title: 'Them loi bo tieu chi', width: 600 }
+    },
+    {
+        path: 'qc.defect.edit',
+        Component: React.lazy(() => import('containers/Qc/DefectForm')),
+        modalOptions: { title: 'Loi QC', width: 700 }
     },
     {
         path: 'qc.inspection.batch',
         Component: React.lazy(() => import('containers/Qc/QcInspectionBatchForm')),
-        modalOptions: { title: 'Tạo mới Lô hàng', width: 700 }
+        modalOptions: { title: 'Tao moi Lo hang', width: 700 }
     }
 ];
 
