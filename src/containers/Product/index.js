@@ -20,7 +20,7 @@
 /**************************************************************************/
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { message, Tabs } from 'antd';
+import { message } from 'antd';
 import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';
@@ -28,8 +28,6 @@ import { arrayEmpty, arrayNotEmpty, f5List } from '@flast-erp/core/utils/dataUti
 import ProductForm from './ProductForm';
 import ProductAttrService from 'services/ProductAttrService';
 import { cloneDeep } from 'lodash';
-import ProductChecklistForm from '../Qc/ProductChecklistForm';
-import { DollarOutlined, FileTextOutlined } from '@ant-design/icons';
 
 /**
  * @param [ {id: 10384, attributedId: 10023, attributedValueId: 10085}, ... ] oldSku
@@ -117,27 +115,6 @@ const Product = ({ closeModal, data }) => {
     InAppEvent.normalInfo(isSuccess ? "Cập nhật thành công" : "Lỗi cập nhật, vui lòng thử lại sau");
   }, [ data ]);
 
-
-   const tabData = [
-    {
-      key: 'form_product',
-      label: 'Thông tin sản phẩm',
-      component: <ProductForm />
-    },
-    {
-      key: 'check_listSP',
-      label: 'Tiêu chí QC sản phẩm',
-      component: <ProductChecklistForm data={data} closeModal={closeModal}/>
-    },
-  ];
-  
-  const items = tabData.map(({ key, icon, label, component }) => ({
-    key,
-    label: (
-      <span> {icon} {label} </span>
-    ),
-    children: component
-  }));
   return (
     <RestEditModal
       isMergeRecordOnSubmit={false}
@@ -146,7 +123,7 @@ const Product = ({ closeModal, data }) => {
       record={record}
       closeModal={closeModal}
     >
-      <Tabs defaultActiveKey="1" items={items} />;
+      <ProductForm />
     </RestEditModal>
   )
 }

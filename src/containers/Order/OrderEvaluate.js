@@ -3,15 +3,11 @@ import { Col, Form, Row, Typography } from 'antd'
 import { SwitcherOutlined } from '@ant-design/icons'
 import FormListAddition from '@flast-erp/core/components/form/FormListAddtion';
 import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
-import FormHidden from '@flast-erp/core/components/form/FormHidden';
 import FormInput from '@flast-erp/core/components/form/FormInput';
 import BtnSubmit from '@flast-erp/core/components/CustomButton/BtnSubmit';
 import RequestUtils, { SUCCESS_CODE } from '@flast-erp/core/utils/RequestUtils';
-import { FormListStyles } from '@/css/global';
-// import DefectItem from './DefectItem';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import FormEvaluate from './FormEvaluate';
-// import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 
 const OrderEvaluate = ({ data, closeModal }) => {
     const [form] = Form.useForm(); 
@@ -28,7 +24,7 @@ const OrderEvaluate = ({ data, closeModal }) => {
         } catch (error) {
             InAppEvent.normalError('Cập nhât thất bại !');
         }
-    }, [closeModal]);
+    }, []);
 
     return (
         <RestEditModal

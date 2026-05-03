@@ -31,6 +31,7 @@ import FormSelect from '@flast-erp/core/components/form/FormSelect';
 import { PRODUCT_STATUS } from 'configs/localData';
 import { FormListStyles } from "css/global";
 import FormInputNumber from '@flast-erp/core/components/form/FormInputNumber';
+import FormInfiniteQcProduct from '@/components/FormInfiniteQcProduct';
 
 const ProductForm = () => {
   return (
@@ -153,6 +154,17 @@ const ProductForm = () => {
             <FormOpenInfo />
           </FormListAddition>
         </Col>
+
+        <Col md={24} xs={24}>
+          <Typography.Title level={5}>
+            <SwitcherOutlined />
+            <span style={{ marginLeft: 20 }}>Kiểm định chất lượng sản phẩm (Nếu có)</span>
+          </Typography.Title>
+          <FormInfiniteQcProduct 
+            placeholder="Chọn trong danh sách"
+          />
+        </Col>
+
         <Col md={24} xs={24}>
           <CustomButton
             htmlType="submit"
@@ -164,7 +176,7 @@ const ProductForm = () => {
       </Row>
     </>
   )
-}
+};
 
 const FormOpenInfo = ({ field }) => {
   const { name } = field || { name: 0 };
@@ -193,6 +205,6 @@ const FormOpenInfo = ({ field }) => {
       </Col>
     </FormListStyles>
   )
-}
+};
 
 export default ProductForm;

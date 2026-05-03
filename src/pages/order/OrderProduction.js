@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
 import { Helmet } from "react-helmet";
-import { message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
 import ListOrder from 'containers/Order/List';
-import { InAppEvent } from "@flast-erp/core/utils/FuseUtils";
-import { HASH_MODAL } from 'configs';
 
 // Status ID của trạng thái "Đang sản xuất"
 const STATUS_PRODUCTION = 2;

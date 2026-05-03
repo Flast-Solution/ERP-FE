@@ -1,9 +1,7 @@
 ﻿import React, { useCallback, useState, useEffect } from 'react';
-import { Row, Col, Button, message, Tag, Select, Input, InputNumber, Form, DatePicker, Divider, Tabs, Spin, Modal } from 'antd';
-import { PlusOutlined, DeleteOutlined, UserOutlined } from '@ant-design/icons';
-import FormInput from '@flast-erp/core/components/form/FormInput';
+import { Row, Col, Button, message, Tag, Select, Input, InputNumber, Form, DatePicker, Divider, Tabs, Modal } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 import FormHidden from '@flast-erp/core/components/form/FormHidden';
-import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
 import FormSelectUser from '@flast-erp/core/components/form/FormSelectUser';
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 import { f5List } from '@flast-erp/core/utils/dataUtils';
@@ -145,13 +143,6 @@ const StyledModal = styled.div`
         }
     }
 `;
-
-// Component để render một tiêu chí đánh giá
-const ERROR_LEVEL_OPTIONS = [
-    { value: 'MINOR', label: 'Nhẹ' },
-    { value: 'MAJOR', label: 'Trung bình' },
-    { value: 'CRITICAL', label: 'Nặng' }
-];
 
 const CriterionRow = ({ criterion, evaluationTypeMap, onUpdate, testIndex, checklistIndex, criterionIndex, defectOptions = [], defectMap = {} }) => {
     const getEvaluationTypeLabel = (criterion) => {
@@ -355,7 +346,6 @@ const QcInspectionBatchForm = ({data}) => {
     const [activeTestingTab, setActiveTestingTab] = useState('0');
     const [activeEditingTestingTab, setActiveEditingTestingTab] = useState('0');
     const [productChecklists, setProductChecklists] = useState([]);
-    const [loadingProductChecklists, setLoadingProductChecklists] = useState(false);
     const [resolvedProductCode, setResolvedProductCode] = useState(null);
     const [defectOptions, setDefectOptions] = useState([]);
     const [defectMap, setDefectMap] = useState({});
@@ -370,38 +360,6 @@ const QcInspectionBatchForm = ({data}) => {
         2: 'Thang điểm',
         3: 'Định lượng',
         4: 'Mô tả'
-    };
-
-    const getEvaluationTypeLabel = (criterion) => {
-        const base = EVALUATION_TYPE[criterion.evaluationType] || criterion.evaluationType || '-';
-        const minScore = criterion.scaleMin ?? criterion.minScore ?? criterion.targetMin;
-        const maxScore = criterion.scaleMax ?? criterion.maxScore ?? criterion.targetMax;
-        const requiredMin = criterion.targetMin ?? criterion.minAcceptable ?? criterion.lowerBound;
-        const unit = criterion.units ?? criterion.unit ?? criterion.measureUnit;
-
-        if (criterion.evaluationType === 2) {
-            let label = base;
-            if (minScore !== undefined && maxScore !== undefined) {
-                label += ` (${minScore} - ${maxScore})`;
-            }
-            if (requiredMin !== undefined) {
-                label += ` - Yêu cầu tối thiểu: ${requiredMin}`;
-            }
-            return label;
-        }
-
-        if (criterion.evaluationType === 3) {
-            let label = base;
-            if (minScore !== undefined && maxScore !== undefined) {
-                label += ` (${minScore} - ${maxScore})`;
-            }
-            if (unit) {
-                label += ` - Đơn vị đo: ${unit}`;
-            }
-            return label;
-        }
-
-        return base;
     };
 
     const loadDefects = useCallback(async (productCode) => {
@@ -450,7 +408,13 @@ const QcInspectionBatchForm = ({data}) => {
         }
     }, [editingTestingNumbers.length, activeEditingTestingTab]);
 
-    const getProductCode = useCallback(() => selectedDetail?.productCode || selectedDetail?.product?.code || data?.productCode || data?.product?.code || resolvedProductCode, [selectedDetail, data, resolvedProductCode]);
+    const getProductCode = useCallback(() => 
+        selectedDetail?.productCode 
+        || selectedDetail?.product?.code 
+        || data?.productCode 
+        || data?.product?.code 
+        || resolvedProductCode, 
+    [data, resolvedProductCode]);
 
     const fetchProductInfoById = useCallback(async (productId) => {
         if (!productId) {
@@ -541,51 +505,11 @@ const QcInspectionBatchForm = ({data}) => {
         }
     };
 
-    const mergeResultsIntoCriteria = (testingNumber) => {
-        const resultMap = {};
-        const resultList = testingNumber.resultList || [];
-        
-        // Build map: idQcCriteria -> result
-        resultList.forEach(result => {
-            const key = `${result.idQcChecklist}-${result.idQcCriteria}`;
-            resultMap[key] = result;
-        });
-
-        // Merge results into criteriaChecklist
-        return (testingNumber.criteriaChecklist || []).map(checklist => ({
-            ...checklist,
-            qcCriteriaList: (checklist.qcCriteriaList || []).map(criterion => {
-                const key = `${checklist.idQcCheckList || checklist.id}-${criterion.idQcCriteria || criterion.id}`;
-                const result = resultMap[key];
-                
-                if (result) {
-                    return {
-                        ...criterion,
-                        inspectionResult: result.valueBoolean ?? criterion.inspectionResult,
-                        score: result.valueScore ?? criterion.score,
-                        quantity: result.valueQuantity ?? criterion.quantity,
-                        comment: result.valueText ?? criterion.comment,
-                        unit: result.unit ?? criterion.unit,
-                        scoreAchieved: result.scoreAchieved ?? criterion.scoreAchieved,
-                        scoreMax: result.scoreMax ?? criterion.scoreMax,
-                        inspected_at: result.inspected_at ?? criterion.inspected_at,
-                        errorCode: result.defect?.defectCode ?? result.errorCode ?? criterion.errorCode,
-                        errorLevel: result.defect?.severity ?? result.errorLevel ?? criterion.errorLevel,
-                        errorDescription: result.defect?.defectName ?? result.defect?.description ?? result.errorDescription ?? criterion.errorDescription
-                    };
-                }
-                return criterion;
-            })
-        }));
-    };
-
     const loadProductChecklist = useCallback(async (productCode) => {
         if (!productCode) {
             setProductChecklists([]);
             return;
         }
-
-        setLoadingProductChecklists(true);
         try {
             const res = await RequestUtils.Get('/qms/product-checklist/get-product', { productCode });
             if (res?.errorCode === 200) {
@@ -603,8 +527,6 @@ const QcInspectionBatchForm = ({data}) => {
         } catch (error) {
             console.error('Error fetching product checklist:', error);
             setProductChecklists([]);
-        } finally {
-            setLoadingProductChecklists(false);
         }
     }, []);
 
@@ -775,22 +697,6 @@ const QcInspectionBatchForm = ({data}) => {
         setIsModalVisible(true);
     };
 
-    const removeTestingNumber = (index) => {
-        setTestingNumbers(prev => {
-            const next = prev.filter((_, i) => i !== index);
-            if (Number(activeTestingTab) >= next.length) {
-                setActiveTestingTab(String(Math.max(0, next.length - 1)));
-            }
-            return next;
-        });
-    };
-
-    const updateTestingNumber = (index, field, value) => {
-        setTestingNumbers(prev => prev.map((item, i) =>
-            i === index ? { ...item, [field]: value } : item
-        ));
-    };
-
     const updateTestingNumberCriterion = (testIndex, checklistIndex, criterionIndex, field, value) => {
         setTestingNumbers(prev => prev.map((item, i) => {
             if (i !== testIndex) return item;
@@ -805,77 +711,6 @@ const QcInspectionBatchForm = ({data}) => {
             });
             return { ...item, criteriaChecklist };
         }));
-    };
-
-    // Functions for editing existing batch
-    const startEditingBatch = (batch) => {
-        setEditingBatch({ ...batch });
-        
-        // Extract and merge defects from results into defectMap and defectOptions
-        const defectsFromResults = new Map();
-        (batch.testingNumberList || []).forEach(testingNumber => {
-            (testingNumber.resultList || []).forEach(result => {
-                if (result.defect?.defectCode) {
-                    defectsFromResults.set(result.defect.defectCode, result.defect);
-                }
-            });
-        });
-        
-        // Merge with existing defectMap
-        const mergedDefectMap = { ...defectMap };
-        const mergedOptions = [...defectOptions];
-        defectsFromResults.forEach((defect, code) => {
-            if (!mergedDefectMap[code]) {
-                mergedDefectMap[code] = defect;
-                mergedOptions.push({
-                    value: code,
-                    label: `${code} - ${defect.defectName || ''}`.trim()
-                });
-            }
-        });
-        
-        setDefectMap(mergedDefectMap);
-        setDefectOptions(mergedOptions);
-        
-        // Merge results into testing numbers
-        const testingNumbersWithResults = (batch.testingNumberList || []).map(testingNumber => {
-            // Use productChecklists as base structure and merge results
-            const criteriaChecklist = productChecklists.map(checklist => ({
-                ...checklist,
-                qcCriteriaList: (checklist.qcCriteriaList || []).map(criterion => {
-                    const result = (testingNumber.resultList || []).find(r => 
-                        r.idQcChecklist === (checklist.idQcCheckList || checklist.id) &&
-                        r.idQcCriteria === (criterion.idQcCriteria || criterion.id)
-                    );
-                    
-                    if (result) {
-                        return {
-                            ...criterion,
-                            inspectionResult: result.valueBoolean ?? criterion.inspectionResult,
-                            score: result.valueScore ?? criterion.score,
-                            quantity: result.valueQuantity ?? criterion.quantity,
-                            comment: result.valueText ?? criterion.comment,
-                            unit: result.unit ?? criterion.unit,
-                            scoreAchieved: result.scoreAchieved,
-                            scoreMax: result.scoreMax,
-                            inspected_at: result.inspected_at,
-                            errorCode: result.defect?.defectCode ?? result.errorCode ?? criterion.errorCode,
-                            errorLevel: result.defect?.severity ?? result.errorLevel ?? criterion.errorLevel,
-                            errorDescription: result.defect?.defectName ?? result.defect?.description ?? result.errorDescription ?? criterion.errorDescription,
-                            _resultDefect: result.defect || null
-                        };
-                    }
-                    return criterion;
-                })
-            }));
-            
-            return {
-                ...testingNumber,
-                criteriaChecklist,
-                qcTestingNumberName: testingNumber.QcTestingNumberName || testingNumber.qcTestingNumberName
-            };
-        });
-        setEditingTestingNumbers(testingNumbersWithResults);
     };
 
     const addEditingTestingNumber = () => {
@@ -905,22 +740,6 @@ const QcInspectionBatchForm = ({data}) => {
     const handleModalCancel = () => {
         setIsModalVisible(false);
         setCurrentTestingData({});
-    };
-
-    const removeEditingTestingNumber = (index) => {
-        setEditingTestingNumbers(prev => {
-            const next = prev.filter((_, i) => i !== index);
-            if (Number(activeEditingTestingTab) >= next.length) {
-                setActiveEditingTestingTab(String(Math.max(0, next.length - 1)));
-            }
-            return next;
-        });
-    };
-
-    const updateEditingTestingNumber = (index, field, value) => {
-        setEditingTestingNumbers(prev => prev.map((item, i) =>
-            i === index ? { ...item, [field]: value } : item
-        ));
     };
 
     const updateEditingTestingNumberCriterion = (testIndex, checklistIndex, criterionIndex, field, value) => {
@@ -1035,11 +854,6 @@ const QcInspectionBatchForm = ({data}) => {
         }
     };
 
-    const onCancelEditing = () => {
-        setEditingBatch(null);
-        setEditingTestingNumbers([]);
-    };
-
     const onSubmit = async (values) => {
         if (testingNumbers.length === 0) {
             message.warning('Vui lòng thêm ít nhất 1 lần kiểm tra');
@@ -1109,11 +923,6 @@ const QcInspectionBatchForm = ({data}) => {
         } finally {
             setLoading(false);
         }
-    };
-
-    const recordData = {
-        ...data,
-        inspectionDate: moment()
     };
 
     return (

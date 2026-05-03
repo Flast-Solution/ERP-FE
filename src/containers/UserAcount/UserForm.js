@@ -25,7 +25,7 @@ import CustomButton from '@flast-erp/core/components/CustomButton'
 import FormHidden from '@flast-erp/core/components/form/FormHidden'
 import FormInput from '@flast-erp/core/components/form/FormInput'
 import FormSelect from '@flast-erp/core/components/form/FormSelect'
-import { ACTIVE_TYPES, USER_STATUS } from 'configs/localData'
+import { USER_STATUS } from 'configs/localData'
 
 const UserForm = ({ listProFile }) => {
 	return (

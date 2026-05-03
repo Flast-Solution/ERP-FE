@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react'
-import { Col, Row, Typography } from 'antd'
+import { Col, Row } from 'antd'
 import moment from 'moment';
 import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
 import FormInput from '@flast-erp/core/components/form/FormInput';

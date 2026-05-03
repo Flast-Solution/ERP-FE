@@ -135,7 +135,7 @@ const ChecklistForm = ({ data, closeModal }) => {
             closeModal && closeModal();
         }
         InAppEvent.normalInfo(isSuccess ? "Cập nhật thành công" : (res?.message || "Lỗi cập nhật, vui lòng thử lại sau"));
-    }, [closeModal]);
+    }, []);
 
     return (
         <RestEditModal

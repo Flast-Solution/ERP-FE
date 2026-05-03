@@ -77,12 +77,6 @@ const Index = () => {
     data: cloneDeep(item)
   });
 
-  const onAddChecklist = (item) => InAppEvent.emit(HASH_MODAL, {
-    hash: '#draw/qc.checklist.assign',
-    title: 'Gán Bộ tiêu chí QC cho sản phẩm #' + item.id,
-    data: cloneDeep(item)
-  });
-
   const [ title ] = useState("Danh sách sản phẩm");
   const CUSTOM_ACTION = [
     {
