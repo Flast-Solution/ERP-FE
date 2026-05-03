@@ -20,7 +20,7 @@ const LeadCollectionForm = ({ data }) => {
 
   const onFinish = async (values) => {
     const { message: MSG } = await RequestUtils.Post("/data-collection/save", values);
-    f5List("data-collection/fetch");
+    f5List("erp/data-collection/fetch");
     message.info(MSG);
   }
 

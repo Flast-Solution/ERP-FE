@@ -32,9 +32,9 @@ const OverTime = ({ closeModal, data }) => {
   const onSubmit = useCallback( async (values) => {
     let params = (values?.id ?? '') === '' ? {} : { id: values.id };
     let uri = params?.id ? 'update' : 'create';
-    let nUri = String("/over-time/").concat(uri);
+    let nUri = String("/erp/over-time/").concat(uri);
     const { errorCode } = await RequestUtils.Post(nUri, values, params);
-    f5List('over-time/fetch');
+    f5List('erp/over-time/fetch');
     InAppEvent.normalInfo(errorCode === 200 ? "Cập nhật thành công" : "Lỗi cập nhật, vui lòng thử lại sau");
   }, []);
 

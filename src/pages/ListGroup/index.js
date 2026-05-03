@@ -132,7 +132,7 @@ const ListUserGroup = () => {
         filter={<LeadFilter />}
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
-        apiPath={'user-group/fetch'}
+        apiPath={'erp/user-group/fetch'}
         customClickCreate={onCreateLead}
         columns={CUSTOM_ACTION}
       />

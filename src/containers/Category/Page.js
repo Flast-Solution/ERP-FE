@@ -52,12 +52,12 @@ const FormCatePage = ({ closeModal, data }) => {
     message.info(MEG);
     if (SUCCESS_CODE === errorCode) {
       setRecord(pre => ({ ...pre, ...data }));
-      f5List("category/page/fetch");
+      f5List("erp/category/page/fetch");
     }
   }, []);
 
   const onUpdateFeaturedImage = useCallback(async (imageId) => {
-    RequestUtils.Post("/category/page/image-featured/" + imageId);
+    RequestUtils.Post("/erp/category/page/image-featured/" + imageId);
   }, []);
 
   return (

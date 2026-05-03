@@ -88,7 +88,7 @@ const Employee = () => {
         initialFilter={{ limit: 10, page: 1 }}
         filter={<EmployeeFilter />}
         useGetAllQuery={useGetList}
-        apiPath={'user/fetch-user-department'}
+        apiPath={'auth/user/fetch-user-department'}
         customClickCreate={onCreateUser}
         columns={CUSTOM_ACTION}
       />

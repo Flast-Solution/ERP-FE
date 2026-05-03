@@ -43,7 +43,7 @@ const CustomerAddressForm = ({ data }) => {
   const onSubmit = async (values) => {
     dateFormatOnSubmit(values, ['dateOfBirth'], "YYYY-MM-DD");
     const { customerAddress, ...customer } = values;
-    const { errorCode, message: MSG, data } = await RequestUtils.Post("/customer/save", {
+    const { errorCode, message: MSG, data } = await RequestUtils.Post("/erp/customer/save", {
       ...customer,
       customerAddress
     });
@@ -57,7 +57,7 @@ const CustomerAddressForm = ({ data }) => {
     if(!iCustomer?.id) {
       return;
     }
-    const customerAddress = await RequestUtils.GetAsList("/customer/find-address", { id: iCustomer.id});
+    const customerAddress = await RequestUtils.GetAsList("/erp/customer/find-address", { id: iCustomer.id});
     setRecord({...iCustomer, customerAddress})
   }, [iCustomer]);
 

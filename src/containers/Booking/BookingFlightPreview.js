@@ -15,7 +15,7 @@ const BookingFlightPreview = ({
   const [management, setManagement] = useState({});
 
   useEffect(() => {
-    RequestUtils.Get("/user/fetch-level-manager", { idUser: user.id }).then(({ data, errorCode }) => {
+    RequestUtils.Get("/auth/user/fetch-level-manager", { idUser: user.id }).then(({ data, errorCode }) => {
       if (errorCode === SUCCESS_API_CODE) {
         setManagement(data);
       }
@@ -26,7 +26,7 @@ const BookingFlightPreview = ({
     (async () => {
       let owrnerInfo = user;
       if (record?.userId && owrnerInfo?.id !== record?.userId) {
-        const { data: dOwrner, errorCode: code } = await RequestUtils.Get("/auth/user/list", { ids: record.userId });
+        const { data: dOwrner, errorCode: code } = await RequestUtils.Get("/erp/user/list", { ids: record.userId });
         if (code === SUCCESS_API_CODE && Array.isArray(dOwrner) && dOwrner.find(i => i.id === record.userId)) {
           owrnerInfo = dOwrner.find(i => i.id === record.userId)
         }

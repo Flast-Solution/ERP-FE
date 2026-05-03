@@ -46,14 +46,14 @@ const UserService = {
     }
   },
   async findId(id) {
-    const { data, errorCode, message } = await RequestUtils.Get("/user/find-id", { id });
+    const { data, errorCode, message } = await RequestUtils.Get("/erp/user/find-id", { id });
     if (errorCode === SUCCESS_CODE) {
       return [null, data];
     }
     return [message, null];
   },
   async mapId2Name(ids = []) {
-    let users = await RequestUtils.GetAsList("/auth/user/list-name-id", { ids });
+    let users = await RequestUtils.GetAsList("/erp/user/list-name-id", { ids });
     if (arrayEmpty(users)) {
       return {};
     }
@@ -88,7 +88,7 @@ const UserService = {
     if (this.cacheItems[id]) {
       return this.cacheItems[id];
     }
-    const { data, errorCode } = await RequestUtils.Get("/user/find-id", { id });
+    const { data, errorCode } = await RequestUtils.Get("/erp/user/find-id", { id });
     if (errorCode !== SUCCESS_CODE) {
       return [];
     }
@@ -114,7 +114,7 @@ const UserService = {
       }
       return datas;
     }
-    const { data: embedded, errorCode } = await RequestUtils.Get("/auth/user/list", { ids: idNeedFetch });
+    const { data: embedded, errorCode } = await RequestUtils.Get("/erp/user/list", { ids: idNeedFetch });
     if (errorCode !== SUCCESS_CODE || !Array.isArray(embedded)) {
       return [];
     }
@@ -127,7 +127,7 @@ const UserService = {
     return datas;
   },
   async loadAll() {
-    const { data: embedded, errorCode } = await RequestUtils.Get("/auth/user/list");
+    const { data: embedded, errorCode } = await RequestUtils.Get("/erp/user/list");
     if (errorCode !== SUCCESS_CODE || !Array.isArray(embedded)) {
       return [];
     }

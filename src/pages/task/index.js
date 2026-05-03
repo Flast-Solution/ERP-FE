@@ -104,7 +104,7 @@ const TASK = () => {
   }, []);
 
   const onDelete = useCallback(async (id) => {
-    const { message: MSG } = await RequestUtils.Post("/works/delete/" + id, {});
+    const { message: MSG } = await RequestUtils.Post("/erp/works/delete/" + id, {});
     message.info(MSG);
     f5List("works/fetch");
   }, []);
@@ -124,7 +124,7 @@ const TASK = () => {
   };
 
   const saveProgress = async (record) => {
-    const { message: MSG } = await RequestUtils.Post("/works/save", {...record, progress: tempProgress });
+    const { message: MSG } = await RequestUtils.Post("/erp/works/save", {...record, progress: tempProgress });
     message.info(MSG);
     f5List("works/fetch");
     setEditingProgress(null);

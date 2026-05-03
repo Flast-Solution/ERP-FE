@@ -48,11 +48,11 @@ const BtnCancel = ({
       nItem.noteCheck = values.note;
       applyStyleDaKy("daKiemTra", "Không duyệt");
       nItem.status = NGHI_PHEP_STATUS_REJECT;
-      const uri = "/leave-of-absence/check-leave-of";
+      const uri = "/erp/leave-of-absence/check-leave-of";
       RequestUtils.Post(uri, { ...data, ...nItem }).then(({ message }) => {
         InAppEvent.normalInfo(message);
       });
-      f5List('leave-of-absence/fetch');
+      f5List('erp/leave-of-absence/fetch');
     });
     /* eslint-disable-next-line  */
   }, [data, form]);
@@ -86,11 +86,11 @@ const NPConfirm = ({ closeModal, data }) => {
     let nItem = {};
     nItem.status = NGHI_PHEP_STATUS_DONE;
     applyStyleDaKy("daKiemTra", "Đã duyệt");
-    const uri = "/leave-of-absence/check-leave-of";
+    const uri = "/erp/leave-of-absence/check-leave-of";
     RequestUtils.Post(uri, { ...data, ...nItem }).then(({ message }) => {
       InAppEvent.normalInfo(message);
     });
-    f5List('leave-of-absence/fetch');
+    f5List('erp/leave-of-absence/fetch');
     closeModal()
     /* eslint-disable-next-line  */
   }, [data]);

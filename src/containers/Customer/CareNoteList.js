@@ -153,7 +153,7 @@ const CareNoteList = ({ customerId }) => {
     if (!customerId) {
       return;
     }
-    const cares = await RequestUtils.GetAsList("/cs/fetch", { customerId, asList: true });
+    const cares = await RequestUtils.GetAsList("/erp/cs/fetch", { customerId, asList: true });
     setCustomerCareNotes(cares);
   }, [customerId]);
 

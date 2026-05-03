@@ -29,7 +29,7 @@ const ChartActivityLead = ({ activityLead }) => {
 
   useEffect(() => {
     (async () => {
-      const { data } = await RequestUtils.Get('/auth/user/list-sale');
+      const { data } = await RequestUtils.Get('/erp/user/list-sale');
       if (data) {
         setListSale(data);
       }

@@ -28,7 +28,7 @@ const HistoryPay = ({ orderId }) => {
   const [historyPayment, setData] = useState([]);
   useEffect(() => {
     if (orderId) {
-      RequestUtils.Get("/pay/list-by-order-id", { orderId: orderId }).then(dataArray).then(setData);
+      RequestUtils.Get("/erp/pay/list-by-order-id", { orderId: orderId }).then(dataArray).then(setData);
     }
   }, [orderId]);
 

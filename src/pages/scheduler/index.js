@@ -47,7 +47,7 @@ const Scheduner = () => {
   const [ items, setItems ] = useState([]);
 
   const [queryParams, setQueryParams] = useState({
-    resource: 'time-sheet/fetch-tickes',
+    resource: 'erp/time-sheet/fetch-tickes',
     limit: 100,
     userId: user.id,
     month: month + 1,

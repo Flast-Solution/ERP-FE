@@ -131,7 +131,7 @@ const ListEnterprise = () => {
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
         hasCreate={false}
-        apiPath={'customer/fetch-customer-enterprise'}
+        apiPath={'erp/customer/fetch-customer-enterprise'}
         columns={CUSTOM_ACTION}
       />
     </div>

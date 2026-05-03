@@ -148,7 +148,7 @@ const Lead3DayPage = () => {
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
         hasCreate={false}
-        apiPath={'cs/3day-fetch'}
+        apiPath={'erp/cs/3day-fetch'}
         columns={CUSTOM_ACTION}
       />
     </div>

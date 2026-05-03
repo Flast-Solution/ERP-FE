@@ -139,7 +139,7 @@ const ListUser = () => {
         filter={<LeadFilter />}
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
-        apiPath={'user/list'}
+        apiPath={'erp/user/list'}
         customClickCreate={onCreateLead}
         columns={CUSTOM_ACTION}
       />

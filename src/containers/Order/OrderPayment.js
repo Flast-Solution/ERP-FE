@@ -57,7 +57,7 @@ const OrderPayment = ({ data }) => {
   }, [form, customerOrder]);
 
   const onSubmitPayment = useCallback(async (values) => {
-    const { data, errorCode, message: MSG } = await RequestUtils.Post("/pay/manual", {
+    const { data, errorCode, message: MSG } = await RequestUtils.Post("/erp/pay/manual", {
       orderId: customerOrder.id,
       ...values
     })

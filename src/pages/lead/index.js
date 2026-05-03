@@ -48,7 +48,7 @@ const LeadPage = () => {
 
   useEffect(() => {
     RequestUtils.GetAsList('/service/list').then(setlistServices);
-    RequestUtils.GetAsList('/user/list-name-id').then(setListSale);
+    RequestUtils.GetAsList('/erp/user/list-name-id').then(setListSale);
   }, [])
 
   useEffect(() => {
