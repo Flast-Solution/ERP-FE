@@ -44,7 +44,7 @@ const ChecklistIndex = () => {
             dataIndex: 'qcCheckListName',
             width: 300,
             ellipsis: true,
-            render: (text, record) => <a onClick={() => onEdit(record)} style={{ cursor: 'pointer' }}>{text}</a>
+            render: (text, record) => <a href='/#' onClick={() => onEdit(record)} style={{ cursor: 'pointer' }}>{text}</a>
         },
         {
             title: "Phiên bản",

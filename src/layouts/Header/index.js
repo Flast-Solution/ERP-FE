@@ -29,7 +29,7 @@ import SearchInput from './SearchInput';
 import ServiceSelect from './ServiceSelect';
 import HeaderWrapper from './styles';
 import CustomButton from '@flast-erp/core/components/CustomButton';
-import { BellFilled, PlusOutlined, TranslationOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { BellFilled, PlusOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import UserInfo from './UserInfo';
 import useServiceId from '@flast-erp/core/hooks/useServiceId';
 import { useNavigate } from "react-router-dom";

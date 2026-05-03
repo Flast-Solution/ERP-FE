@@ -16,15 +16,6 @@ const QC_EVALUATION_TYPES = {
     4: 'TEXT'
 };
 
-const checkPass = (item) => {
-  const value = Number(item.targetValue);
-
-  return item.evaluationType === 1
-    ? item.targetValue === "Đạt"
-    : value >= item.targetMin &&
-      (item.targetMax == null || value <= item.targetMax);
-};
-
 const CriteriaIndex = () => {
     const [title] = useState("Quản lý Tiêu chí QC");
 
@@ -37,12 +28,6 @@ const CriteriaIndex = () => {
     const onEdit = (item) => InAppEvent.emit(HASH_MODAL, {
         hash: '#draw/qc.criteria.edit',
         title: 'Sửa Tiêu chí QC # ' + item.idQcCriteria,
-        data: cloneDeep(item)
-    });
-
-    const onError = (item) => InAppEvent.emit(HASH_MODAL, {
-        hash: '#draw/qc.criteria.error',
-        title: 'Thêm lỗi theo tiêu chí # ' + item.idQcCriteria,
         data: cloneDeep(item)
     });
 
@@ -92,7 +77,6 @@ const CriteriaIndex = () => {
             width: 120,
             fixed: 'right',
             render: (record) => {
-                const isPass = checkPass(record);
                 return (
                     <Space>
                         <Button type="primary" ghost onClick={() => onEdit(record)} size='small'>Sửa</Button>

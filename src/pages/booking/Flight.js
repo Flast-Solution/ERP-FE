@@ -7,7 +7,7 @@ import Filter from './Filter';
 import { Button, Flex, Typography } from 'antd';
 import { InAppEvent } from "@flast-erp/core/utils/FuseUtils";
 import { HASH_MODAL } from 'configs';
-import { arrayEmpty, dateFormatOnSubmit, formatTime, formatMoney, arrayNotEmpty } from '@flast-erp/core/utils/dataUtils';
+import { dateFormatOnSubmit, formatTime, formatMoney, arrayNotEmpty } from '@flast-erp/core/utils/dataUtils';
 import useGetMe from '@flast-erp/core/hooks/useGetMe';
 import {
   APP_FOLLOW_STATUS_CONFIRM,
@@ -123,7 +123,8 @@ const Flight = () => {
       render: (record) => (
         <Flex gap={'small'}>
           <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size='small'>{textBtn(record)}</Button>
-          {record.status == APP_FOLLOW_STATUS_DONE && <Button color="primary" variant="solid" onClick={() => onExport(record)} size='small'>{<DownloadOutlined />}</Button>
+          { Number(record.status) === APP_FOLLOW_STATUS_DONE && 
+            <Button color="primary" variant="solid" onClick={() => onExport(record)} size='small'>{<DownloadOutlined />}</Button>
           }
         </Flex>
       )

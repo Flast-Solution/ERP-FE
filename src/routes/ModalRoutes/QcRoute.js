@@ -12,11 +12,6 @@ const QcRoute = [
         modalOptions: { title: 'Bo tieu chi QC', width: 800 }
     },
     {
-        path: 'qc.checklist.assign',
-        Component: React.lazy(() => import('containers/Qc/ProductChecklistForm')),
-        modalOptions: { title: 'Gan bo tieu chi QC', width: 600 }
-    },
-    {
         path: 'qc.criteria.error',
         Component: React.lazy(() => import('containers/Qc/AddFormListError')),
         modalOptions: { title: 'Them loi bo tieu chi', width: 600 }

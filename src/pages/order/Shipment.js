@@ -1,6 +1,5 @@
 import React, { useState} from 'react';
 
-import moment from 'moment';
 import { Helmet } from "react-helmet";
 import { useLocation } from 'react-router-dom';
 import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';

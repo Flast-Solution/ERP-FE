@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Row, Col, Button, message, Tag, Select, Input, InputNumber, Form, DatePicker, Divider, Tabs, Spin, Modal } from 'antd';
+import React, { useCallback, useState, useEffect } from 'react';
+import { Row, Col, Button, message, Tag, Select, Input, InputNumber, Form, DatePicker, Divider, Tabs, Modal } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import FormHidden from '@flast-erp/core/components/form/FormHidden';
 import FormSelectUser from '@flast-erp/core/components/form/FormSelectUser';
@@ -278,7 +278,6 @@ const QcInspectionBatchForm = ({ data }) => {
     const [activeTestingTab, setActiveTestingTab] = useState('0');
     const [activeEditingTestingTab, setActiveEditingTestingTab] = useState('0');
     const [productChecklists, setProductChecklists] = useState([]);
-    const [loadingProductChecklists, setLoadingProductChecklists] = useState(false);
     const [resolvedProductCode, setResolvedProductCode] = useState(null);
     const [defectOptions, setDefectOptions] = useState([]);
     const [defectMap, setDefectMap] = useState({});
@@ -296,140 +295,7 @@ const QcInspectionBatchForm = ({ data }) => {
         4: 'Mô tả'
     }), []);
 
-    const getChecklistId = useCallback(checklist => checklist?.idQcCheckList || checklist?.id, []);
-
-    const normalizeCheckListIds = useCallback(ids => {
-        return Array.isArray(ids) ? ids.filter(item => item !== null && item !== undefined).map(Number).filter(item => !Number.isNaN(item)) : [];
-    }, []);
-
-    const createDraftCriterion = useCallback((criterion, existingCriterion) => ({
-        ...criterion,
-        ...existingCriterion,
-        inspectionResult: existingCriterion?.inspectionResult ?? 1,
-        comment: existingCriterion?.comment ?? '',
-        score: existingCriterion?.score ?? 0,
-        quantity: existingCriterion?.quantity ?? 0,
-        errorCode: existingCriterion?.errorCode ?? '',
-        errorLevel: existingCriterion?.errorLevel ?? '',
-        errorDescription: existingCriterion?.errorDescription ?? ''
-    }), []);
-
-    const arraysEqual = useCallback((a, b) => {
-        if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
-        return a.every((item, index) => item === b[index]);
-    }, []);
-
-    const mapTestingNumbersToSavedIds = useCallback((localTestingNumbers, serverTestingNumbers = []) => {
-        return localTestingNumbers.map(local => {
-            const normalizedLocalIds = normalizeCheckListIds(local.checkListIds);
-            const matched = serverTestingNumbers.find(server => {
-                const normalizedServerIds = normalizeCheckListIds(server.checkListIds);
-                return server.qcTestingNumberName === local.qcTestingNumberName && arraysEqual(normalizedServerIds, normalizedLocalIds);
-            });
-            return {
-                ...local,
-                idQcTestingNumber: matched?.idQcTestingNumber || matched?.id || local.idQcTestingNumber || local.id
-            };
-        });
-    }, [arraysEqual, normalizeCheckListIds]);
-
-    const buildCriteriaChecklistByIds = useCallback((checkListIds, existingCriteriaChecklist = []) => {
-        const selectedIds = normalizeCheckListIds(checkListIds);
-        if (!selectedIds.length) return [];
-
-        const checklistMap = new Map(productChecklists.map(item => [getChecklistId(item), item]));
-        const existingChecklistMap = new Map((existingCriteriaChecklist || []).map(item => [getChecklistId(item), item]));
-
-        return selectedIds
-            .map(id => {
-                const sourceChecklist = checklistMap.get(id);
-                if (!sourceChecklist) return null;
-                const existingChecklist = existingChecklistMap.get(id);
-                const existingCriteriaMap = new Map((existingChecklist?.qcCriteriaList || []).map(item => [item.idQcCriteria || item.id, item]));
-                return {
-                    ...sourceChecklist,
-                    qcCriteriaList: (sourceChecklist.qcCriteriaList || []).map(criterion => createDraftCriterion(
-                        criterion,
-                        existingCriteriaMap.get(criterion.idQcCriteria || criterion.id)
-                    ))
-                };
-            })
-            .filter(Boolean);
-    }, [createDraftCriterion, getChecklistId, normalizeCheckListIds, productChecklists]);
-
-    const createNewTestingNumber = useCallback(() => ({
-        qcTestingNumberName: '',
-        overallResult: 1,
-        note: '',
-        isActive: 1,
-        checkListIds: [],
-        criteriaChecklist: []
-    }), []);
-
-    const applyChecklistSelection = useCallback((item, nextCheckListIds) => {
-        const normalizedIds = normalizeCheckListIds(nextCheckListIds);
-        return {
-            ...item,
-            checkListIds: normalizedIds,
-            criteriaChecklist: buildCriteriaChecklistByIds(normalizedIds, item.criteriaChecklist)
-        };
-    }, [buildCriteriaChecklistByIds, normalizeCheckListIds]);
-
-    const getProductCode = useCallback(
-        () => selectedDetail?.productCode || selectedDetail?.product?.code || data?.productCode || data?.product?.code || resolvedProductCode,
-        [selectedDetail, data, resolvedProductCode]
-    );
-
-    const checklistOptions = useMemo(() => {
-        return productChecklists.map(item => ({
-            value: getChecklistId(item),
-            label: `${item.qcCheckListCode || item.checkListCode || ''} - ${item.qcCheckListName || item.checkListName || 'Bộ tiêu chí'}`
-        }));
-    }, [getChecklistId, productChecklists]);
-
-    const buildInspectionResultPayload = useCallback((testingNumber) => {
-        const idQcTestingNumber = testingNumber.idQcTestingNumber || testingNumber.id;
-        return {
-            idQcTestingNumber,
-            inspectionCheckList: (testingNumber.criteriaChecklist || []).map(checklist => ({
-                idQcChecklist: getChecklistId(checklist),
-                qcInspectionResultList: (checklist.qcCriteriaList || []).map(criterion => {
-                    const scoreMax = criterion.scaleMax ?? criterion.maxScore ?? criterion.targetMax ?? null;
-                    const unit = criterion.evaluationType === 2
-                        ? (criterion.unit ?? 'điểm')
-                        : (criterion.evaluationType === 3 ? (criterion.unit ?? criterion.units ?? criterion.measureUnit ?? null) : null);
-                    const defectId = criterion.errorCode ? defectMap[criterion.errorCode]?.idQcDefect : null;
-                    return {
-                        idQcCriteria: criterion.idQcCriteria || criterion.id,
-                        evaluationType: criterion.evaluationType,
-                        valueBoolean: criterion.evaluationType === 1 ? (criterion.inspectionResult ?? null) : null,
-                        valueScore: criterion.evaluationType === 2 ? (criterion.score ?? null) : null,
-                        valueQuantity: criterion.evaluationType === 3 ? (criterion.quantity ?? criterion.valueQuantity ?? null) : null,
-                        valueText: criterion.comment ?? null,
-                        unit,
-                        ...(criterion.evaluationType === 2 ? { scoreAchieved: criterion.score ?? null, scoreMax } : {}),
-                        ...(defectId ? { defect: { idQcDefect: defectId } } : {})
-                    };
-                })
-            }))
-        };
-    }, [defectMap, getChecklistId]);
-
-    const saveInspectionResults = useCallback(async (batchId, testingList) => {
-        if (!batchId || !Array.isArray(testingList)) return;
-        for (const testingNumber of testingList) {
-            if (!Array.isArray(testingNumber.criteriaChecklist) || !testingNumber.criteriaChecklist.length) continue;
-            await RequestUtils.Post('/qms/qc-inspection-result/save', buildInspectionResultPayload(testingNumber));
-        }
-    }, [buildInspectionResultPayload]);
-
-    const loadDefects = useCallback(async productCode => {
-        if (!productCode) {
-            setDefectOptions([]);
-            setDefectMap({});
-            return;
-        }
-
+    const loadDefects = useCallback(async (productCode) => {
         const all = [];
         let page = 1;
         const limit = 100;
@@ -461,7 +327,31 @@ const QcInspectionBatchForm = ({ data }) => {
         setDefectMap(nextMap);
     }, []);
 
-    const fetchProductInfoById = useCallback(async productId => {
+    useEffect(() => {
+        if (testingNumbers.length === 0) {
+            setActiveTestingTab('0');
+        } else if (Number(activeTestingTab) >= testingNumbers.length) {
+            setActiveTestingTab(String(testingNumbers.length - 1));
+        }
+    }, [testingNumbers.length, activeTestingTab]);
+
+    useEffect(() => {
+        if (editingTestingNumbers.length === 0) {
+            setActiveEditingTestingTab('0');
+        } else if (Number(activeEditingTestingTab) >= editingTestingNumbers.length) {
+            setActiveEditingTestingTab(String(editingTestingNumbers.length - 1));
+        }
+    }, [editingTestingNumbers.length, activeEditingTestingTab]);
+
+    const getProductCode = useCallback(() => 
+        selectedDetail?.productCode 
+        || selectedDetail?.product?.code 
+        || data?.productCode 
+        || data?.product?.code 
+        || resolvedProductCode, 
+    [data, resolvedProductCode]);
+
+    const fetchProductInfoById = useCallback(async (productId) => {
         if (!productId) {
             setResolvedProductCode(null);
             return null;
@@ -482,13 +372,79 @@ const QcInspectionBatchForm = ({ data }) => {
         return null;
     }, []);
 
-    const loadProductChecklist = useCallback(async productCode => {
+    const buildCriteriaTemplate = useCallback(() => {
+        return productChecklists.map(checklist => ({
+            ...checklist,
+            qcCriteriaList: (checklist.qcCriteriaList || []).map(item => ({
+                ...item,
+                inspectionResult: 1,
+                comment: '',
+                score: 0,
+                errorCode: '',
+                errorLevel: '',
+                errorDescription: ''
+            }))
+        }));
+    }, [productChecklists]);
+
+    const createNewTestingNumber = () => ({
+        qcTestingNumberName: '',
+        overallResult: 1,
+        note: '',
+        isActive: 1,
+        criteriaChecklist: buildCriteriaTemplate()
+    });
+
+    const buildInspectionResultPayload = (testingNumber, batchId) => {
+        const idQcTestingNumber = testingNumber.idQcTestingNumber || testingNumber.id;
+        return {
+            idQcTestingNumber,
+            inspectionCheckList: (testingNumber.criteriaChecklist || []).map(checklist => ({
+                idQcChecklist: checklist.idQcCheckList || checklist.id,
+                qcInspectionResultList: (checklist.qcCriteriaList || []).map(criterion => {
+                    const scoreMax = criterion.scaleMax ?? criterion.maxScore ?? criterion.targetMax ?? null;
+                    const unit = criterion.evaluationType === 2
+                        ? (criterion.unit ?? 'điểm')
+                        : (criterion.evaluationType === 3 ? (criterion.unit ?? criterion.units ?? criterion.measureUnit ?? null) : null);
+                    const defectId = criterion.errorCode ? defectMap[criterion.errorCode]?.idQcDefect : null;
+                    return {
+                        idQcCriteria: criterion.idQcCriteria || criterion.id,
+                        idQcChecklist: checklist.idQcCheckList || checklist.id,
+                        idQcInspectionBatch: batchId,
+                        evaluationType: criterion.evaluationType,
+                        valueBoolean: criterion.evaluationType === 1 ? (criterion.inspectionResult ?? null) : null,
+                        valueScore: criterion.evaluationType === 2 ? (criterion.score ?? null) : null,
+                        valueQuantity: criterion.evaluationType === 3 ? (criterion.quantity ?? criterion.valueQuantity ?? null) : null,
+                        valueText: criterion.comment ?? null,
+                        unit,
+                        scoreAchieved: criterion.score ?? null,
+                        scoreMax,
+                        inspected_at: criterion.inspected_at ?? moment().format('YYYY-MM-DD HH:mm:ss'),
+                        ...(defectId ? { defect: { idQcDefect: defectId } } : {})
+                    };
+                })
+            }))
+        };
+    };
+
+    const saveInspectionResults = async (batchId, testingList) => {
+        if (!batchId || !Array.isArray(testingList)) return;
+
+        for (const testingNumber of testingList) {
+            const payload = buildInspectionResultPayload(testingNumber, batchId);
+            try {
+                await RequestUtils.Post('/qms/qc-inspection-result/save', payload);
+            } catch (error) {
+                console.error('Error saving inspection result:', error, payload);
+            }
+        }
+    };
+
+    const loadProductChecklist = useCallback(async (productCode) => {
         if (!productCode) {
             setProductChecklists([]);
             return;
         }
-
-        setLoadingProductChecklists(true);
         try {
             const res = await RequestUtils.Get('/qms/product-checklist/get-product', { productCode });
             if (res?.errorCode === 200) {
@@ -506,8 +462,6 @@ const QcInspectionBatchForm = ({ data }) => {
         } catch (error) {
             console.error('Error fetching product checklist:', error);
             setProductChecklists([]);
-        } finally {
-            setLoadingProductChecklists(false);
         }
     }, []);
 
@@ -724,6 +678,22 @@ const QcInspectionBatchForm = ({ data }) => {
         setIsModalVisible(true);
     };
 
+    const updateTestingNumberCriterion = (testIndex, checklistIndex, criterionIndex, field, value) => {
+        setTestingNumbers(prev => prev.map((item, i) => {
+            if (i !== testIndex) return item;
+            const criteriaChecklist = (item.criteriaChecklist || []).map((checklist, ci) => {
+                if (ci !== checklistIndex) return checklist;
+                return {
+                    ...checklist,
+                    qcCriteriaList: checklist.qcCriteriaList.map((criterion, cj) =>
+                        cj === criterionIndex ? { ...criterion, [field]: value } : criterion
+                    )
+                };
+            });
+            return { ...item, criteriaChecklist };
+        }));
+    };
+
     const addEditingTestingNumber = () => {
         setModalMode('edit');
         setCurrentTestingData(createNewTestingNumber());
@@ -759,54 +729,27 @@ const QcInspectionBatchForm = ({ data }) => {
         setCurrentTestingData({});
     };
 
-    const updateTestingNumberCriterion = (testIndex, checklistIndex, criterionIndex, field, value) => {
-        setTestingNumbers(prev => prev.map((item, index) => {
-            if (index !== testIndex) return item;
-            return {
-                ...item,
-                criteriaChecklist: (item.criteriaChecklist || []).map((checklist, ci) => {
-                    if (ci !== checklistIndex) return checklist;
-                    return {
-                        ...checklist,
-                        qcCriteriaList: checklist.qcCriteriaList.map((criterion, cj) => cj === criterionIndex ? { ...criterion, [field]: value } : criterion)
-                    };
-                })
-            };
-        }));
-    };
-
     const updateEditingTestingNumberCriterion = (testIndex, checklistIndex, criterionIndex, field, value) => {
-        setEditingTestingNumbers(prev => prev.map((item, index) => {
-            if (index !== testIndex) return item;
-            return {
-                ...item,
-                criteriaChecklist: (item.criteriaChecklist || []).map((checklist, ci) => {
-                    if (ci !== checklistIndex) return checklist;
-                    return {
-                        ...checklist,
-                        qcCriteriaList: checklist.qcCriteriaList.map((criterion, cj) => cj === criterionIndex ? { ...criterion, [field]: value } : criterion)
-                    };
-                })
-            };
+        setEditingTestingNumbers(prev => prev.map((item, i) => {
+            if (i !== testIndex) return item;
+            const criteriaChecklist = (item.criteriaChecklist || []).map((checklist, ci) => {
+                if (ci !== checklistIndex) return checklist;
+                return {
+                    ...checklist,
+                    qcCriteriaList: checklist.qcCriteriaList.map((criterion, cj) =>
+                        cj === criterionIndex ? { ...criterion, [field]: value } : criterion
+                    )
+                };
+            });
+            return { ...item, criteriaChecklist };
         }));
     };
 
-    const buildBatchSaveBody = useCallback((batchInfo, testingList, values = {}) => ({
-        idQcInspectionBatch: batchInfo?.idQcInspectionBatch || batchInfo?.id || null,
-        orderDetailCode: selectedDetail?.orderDetailCode || data?.orderDetailCode,
-        productCode: getProductCode(),
-        qcInspectionBatchName: values.qcInspectionBatchName || batchInfo?.qcInspectionBatchName || data?.qcInspectionBatchName || '',
-        numberProductBatch: values.numberProductBatch ?? batchInfo?.numberProductBatch ?? data?.numberProductBatch ?? 0,
-        isActive: 1,
-        testingNumberList: testingList.map(item => ({
-            qcTestingNumberName: item.qcTestingNumberName,
-            overallResult: item.overallResult,
-            checkListIds: normalizeCheckListIds(item.checkListIds)
-        }))
-    }), [data, getProductCode, normalizeCheckListIds, selectedDetail?.orderDetailCode]);
-
-    const onSubmit = async values => {
-        if (!validateTestingList(testingNumbers)) return;
+    const onSubmit = async (values) => {
+        if (testingNumbers.length === 0) {
+            message.warning('Vui lòng thêm ít nhất 1 lần kiểm tra');
+            return;
+        }
 
         const body = buildBatchSaveBody(null, testingNumbers, values);
 
@@ -838,77 +781,6 @@ const QcInspectionBatchForm = ({ data }) => {
             setLoading(false);
         }
     };
-
-    const onUpdateBatch = async () => {
-        if (!editingBatch) return;
-        if (!validateTestingList(editingTestingNumbers)) return;
-
-        const body = buildBatchSaveBody(editingBatch, editingTestingNumbers);
-
-        setLoading(true);
-        try {
-            await syncDefectUpdatesFromTestingNumbers(editingTestingNumbers);
-            const res = await RequestUtils.Post('/qms/qc-inspection-batch/save', body);
-            if (res?.errorCode === 200) {
-                message.success('Cập nhật lô hàng thành công');
-                const nextBatches = await refreshInspectionBatches(selectedDetail?.orderDetailCode);
-                const updatedBatch = nextBatches.find(item => item.idQcInspectionBatch === editingBatch.idQcInspectionBatch || item.id === editingBatch.id);
-                if (updatedBatch) {
-                    const batchId = updatedBatch.idQcInspectionBatch || updatedBatch.id;
-                    const mergedTestingNumbers = mapTestingNumbersToSavedIds(editingTestingNumbers, updatedBatch.testingNumberList);
-                    await saveInspectionResults(batchId, mergedTestingNumbers);
-                    await refreshInspectionBatches(selectedDetail?.orderDetailCode);
-                }
-            } else {
-                message.error(res?.message || 'Lỗi, vui lòng thử lại sau');
-            }
-        } catch (error) {
-            console.error('Error updating inspection batch:', error);
-            message.error('Lỗi, vui lòng thử lại sau');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const renderTestingTabContent = (item, onChecklistChange, onCriterionUpdate) => (
-        <div style={{ padding: 16 }}>
-            <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-                <Col span={24}>
-                    <div style={{ marginBottom: 8, fontWeight: 600, fontSize: 14, color: '#262626' }}>Bộ tiêu chí áp dụng cho đơn vị kiểm tra</div>
-                    <Select
-                        mode="multiple"
-                        value={normalizeCheckListIds(item.checkListIds)}
-                        onChange={onChecklistChange}
-                        style={{ width: '100%' }}
-                        placeholder="Chọn bộ tiêu chí cho đơn vị kiểm tra này"
-                        options={checklistOptions}
-                        optionFilterProp="label"
-                    />
-                </Col>
-            </Row>
-
-            <div style={{ marginBottom: 20 }}>
-                <div style={{ marginBottom: 16, fontWeight: 600, fontSize: 14, color: '#262626' }}>Tiêu chí đánh giá</div>
-                {(item.criteriaChecklist || []).length > 0 ? (
-                    (item.criteriaChecklist || []).map((checklist, checklistNumericIndex) => (
-                        <ChecklistGroup
-                            key={`${getChecklistId(checklist)}-${checklistNumericIndex}`}
-                            checklist={checklist}
-                            onUpdateCriterion={onCriterionUpdate}
-                            evaluationTypeMap={EVALUATION_TYPE}
-                            checklistNumericIndex={checklistNumericIndex}
-                            defectOptions={defectOptions}
-                            defectMap={defectMap}
-                        />
-                    ))
-                ) : (
-                    <div style={{ textAlign: 'center', padding: 24, color: '#999', border: '1px dashed #d9d9d9', borderRadius: 8 }}>
-                        Chọn ít nhất 1 bộ tiêu chí để nhập kết quả cho đơn vị kiểm tra này.
-                    </div>
-                )}
-            </div>
-        </div>
-    );
 
     return (
         <StyledModal>
