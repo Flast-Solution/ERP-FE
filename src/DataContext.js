@@ -40,7 +40,7 @@ function storeReducer(state, action) {
     ...state,
     [varible]: data
   }
-}
+};
 
 export const DataProvider = ({ children }) => {
   const [state, dispatch] = useReducer(storeReducer, {
@@ -64,7 +64,7 @@ export const DataProvider = ({ children }) => {
       {children}
     </DataContext.Provider>
   )
-}
+};
 
 export function useStore() {
   const context = React.useContext(DataContext)
@@ -72,6 +72,6 @@ export function useStore() {
     throw new Error('useCount must be used within a StoreProvider')
   }
   return context
-}
+};
 
 export default DataContext;

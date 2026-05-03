@@ -18,12 +18,13 @@
 /* Đội ngũ phát triển mong rằng phần mềm được sử dụng đúng mục đích và    */
 /* có trách nghiệm                                                        */
 /**************************************************************************/
+
 import React from "react";
-import 'Main.less';
+import '@/Main.less';
 import { useEffect, Suspense } from 'react';
 import { ThemeProvider } from 'styled-components';
 import theme from '@/theme';
-import i18n from './i18n';
+import i18n from '@/i18n';
 import moment from 'moment';
 import { Auth } from '@/auth';
 import { DataProvider } from '@/DataContext';
@@ -61,7 +62,7 @@ function App() {
         <ThemeRender />
       </BrowserRouter>
     </DataProvider>
-  );
-}
+  )
+};
 
 export default App;
