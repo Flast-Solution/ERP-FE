@@ -39,7 +39,7 @@ const CarListPickUp = ({ field }) => {
       </Col>
       <Col md={24} xs={24} style={{ marginTop: 10 }}>
         <FormSelectUser
-          api="/auth/user/list"
+          api="/erp/user/list"
           titleProp='fullName'
           valueProp='fullName'
           mode="tags"
@@ -99,7 +99,7 @@ const CarRegisForm = ({ field }) => {
       <Col md={12} xs={24}>
         <FormSelectUser
           required
-          api="/info/fetch-supplier"
+          api="/erp/info/fetch-supplier"
           label="Đối tác cung cấp dịch vụ/Supplier"
           placeholder={'Supplier'}
           name={[name, 'supplier']}
@@ -111,7 +111,7 @@ const CarRegisForm = ({ field }) => {
       <Col md={12} xs={24}>
         <FormSelectUser
           required
-          api="/info/fetch-type-car"
+          api="/erp/info/fetch-type-car"
           label="Chủng loại xe/ Car type"
           placeholder={"Car type"}
           name={[name, 'typeCar']}
@@ -172,7 +172,7 @@ const CarRegisForm = ({ field }) => {
                 <Col md={24} xs={24}>
                   <FormSelectUser
                     mode="multiple"
-                    api="/user/list"
+                    api="/erp/user/list"
                     titleProp='fullName'
                     name={[name, 'userId']}
                     onChange={(values) => {

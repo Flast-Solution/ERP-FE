@@ -60,7 +60,7 @@ const EnterpriseForm = ({ customerOrder }) => {
     if (!customerOrder) {
       return;
     }
-    const { data, errorCode } = await RequestUtils.Get("/customer/fetch-customer-enterprise", {
+    const { data, errorCode } = await RequestUtils.Get("/erp/customer/fetch-customer-enterprise", {
       code: customerOrder.code,
       limit: 1
     });
@@ -82,7 +82,7 @@ const EnterpriseForm = ({ customerOrder }) => {
     for (const [key, value] of Object.entries(values).filter(([_, value]) => Boolean(value))) {
       formData.append(key, value);
     }
-    const endpoint = RequestUtils.generateUrlGetParams("/customer/create-enterprise", {
+    const endpoint = RequestUtils.generateUrlGetParams("/erp/customer/create-enterprise", {
       orderId: customerOrder.id
     })
     axios.post(String(GATEWAY).concat(endpoint), formData).then(d => d.data).then(

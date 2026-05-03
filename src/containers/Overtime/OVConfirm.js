@@ -35,11 +35,11 @@ const BtnCancel = ({
       if (reEditStatus) {
         nItem.overTimeReality = { ...reEditStatus, status: NGHI_PHEP_STATUS_REJECT };
       }
-      const uri = "/over-time/check-leave-of";
+      const uri = "/erp/over-time/check-leave-of";
       RequestUtils.Post(uri, { ...data, ...nItem }).then(({ message }) => {
         InAppEvent.normalInfo(message);
       });
-      f5List('over-time/fetch');
+      f5List('erp/over-time/fetch');
     });
     /* eslint-disable-next-line  */
   }, [data, form]);
@@ -107,11 +107,11 @@ const NPConfirm = ({ closeModal, data }) => {
       values.overTimeReality.status = NGHI_PHEP_STATUS_DONE;
     }
     applyStyleDaKy("daKiemTra", "Đã duyệt");
-    const uri = "/over-time/check-leave-of";
+    const uri = "/erp/over-time/check-leave-of";
     RequestUtils.Post(uri, { ...values, ...nItem }).then(({ message }) => {
       InAppEvent.normalInfo(message);
     });
-    f5List('over-time/fetch');
+    f5List('erp/over-time/fetch');
     closeModal()
     /* eslint-disable-next-line  */
   }, [record]);

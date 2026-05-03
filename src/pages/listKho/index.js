@@ -100,7 +100,7 @@ const ListWareHouse = () => {
   }
 
   const onHandleCreateWareHouse = async (value) => {
-    const data = detailWareHouse ? await RequestUtils.Post('/warehouse/update-stock', value) : await RequestUtils.Post('/warehouse/created-stock', value);
+    const data = detailWareHouse ? await RequestUtils.Post('/erp/warehouse/update-stock', value) : await RequestUtils.Post('/erp/warehouse/created-stock', value);
     if (data.errorCode) {
       f5List('warehouse/fetch-stock');
       setIsOpen(false);

@@ -22,6 +22,7 @@
 export const SUCCESS_CODE = 200;
 export const GATE_EVN = {
   Loc: 'http://157.10.199.138:9080/api',
+  // Loc: '/api',
   Pro: 'https://biz.api.flast.vn',
   Web: 'https://flast-vn',
   AiA: 'https://service.aicuatui.vn'

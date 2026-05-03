@@ -84,7 +84,7 @@ const DuyetTienPage = () => {
 				beforeSubmitFilter={beforeSubmitFilter}
 				useGetAllQuery={useGetList}
 				hasCreate={false}
-				apiPath={'pay/list-order-payment'}
+				apiPath={'erp/pay/list-order-payment'}
 				columns={CUSTOM_ACTION}
 			/>
 		</div>

@@ -68,7 +68,7 @@ const MyScheduner = ({
   useEffect(() => {
     let dataFilter = cloneDeep(filter);
     dateFormatOnSubmit(dataFilter, ['from', 'to']);
-    RequestUtils.Get("/calendar/fetch", dataFilter).then(async ({ data, errorCode }) => {
+    RequestUtils.Get("/erp/calendar/fetch", dataFilter).then(async ({ data, errorCode }) => {
       if (errorCode !== SUCCESS_CODE || arrayEmpty(data)) {
         setDataCalender([]);
         return;
@@ -190,7 +190,7 @@ const MyScheduner = ({
   const onBeforeDeleteEvent = (res) => {
     const { id, calendarId } = res;
     getCalInstance().deleteEvent(id, calendarId);
-    RequestUtils.Post("/calendar/delete", { id });
+    RequestUtils.Post("/erp/calendar/delete", { id });
   };
 
   const onClickDayName = (res) => {
@@ -240,7 +240,7 @@ const MyScheduner = ({
     const userId = UserService.fetchIdBySSoId(ssoId);
     let data = { ...values, ...changes, userId, start: start.d?.d, end: end.d?.d };
     dateFormatOnSubmit(data, ['start', 'end']);
-    RequestUtils.Post("/calendar/create", data);
+    RequestUtils.Post("/erp/calendar/create", data);
     getCalInstance().updateEvent(targetEvent.id, targetEvent.calendarId, changes);
   };
 
@@ -266,7 +266,7 @@ const MyScheduner = ({
     const { id, start, end, ...values } = event;
     let data = { ...values, start: start.d?.d, end: end.d?.d };
     dateFormatOnSubmit(data, ['start', 'end']);
-    const { data: ret, errorCode } = await RequestUtils.Post("/calendar/create", { ...data });
+    const { data: ret, errorCode } = await RequestUtils.Post("/erp/calendar/create", { ...data });
     if (errorCode === SUCCESS_CODE && (ret.id ?? 0) !== 0) {
       event.id = String(ret.id);
       getCalInstance().createEvents([event]);

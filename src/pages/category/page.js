@@ -139,7 +139,7 @@ const CatePage = () => {
         filter={<Filter />}
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
-        apiPath={'category/page/fetch'}
+        apiPath={'erp/category/page/fetch'}
         customClickCreate={onCreateCatePage}
         columns={CUSTOM_ACTION}
       />

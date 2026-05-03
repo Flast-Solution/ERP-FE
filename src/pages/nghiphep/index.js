@@ -134,7 +134,7 @@ const User = () => {
         filter={<Filter />}
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
-        apiPath={'leave-of-absence/fetch'}
+        apiPath={'erp/leave-of-absence/fetch'}
         customClickCreate={onCreateUser}
         columns={CUSTOM_ACTION}
       />

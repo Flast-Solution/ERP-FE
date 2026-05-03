@@ -64,7 +64,7 @@ const Car = () => {
   }
 
   const onExport = (item) => {
-    RequestUtils.downloadFile('/tickes-bus/export-excel', item, 'bookingCar')
+    RequestUtils.downloadFile('/erp/tickes-bus/export-excel', item, 'bookingCar')
   }
 
   const onCreate = () => InAppEvent.emit(HASH_MODAL, {
@@ -176,7 +176,7 @@ const Car = () => {
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
         onData={onLoadData}
-        apiPath={'tickes-bus/fetch'}
+        apiPath={'erp/tickes-bus/fetch'}
         customClickCreate={onCreate}
         columns={CUSTOM_ACTION}
       />

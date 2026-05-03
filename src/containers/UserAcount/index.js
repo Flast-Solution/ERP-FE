@@ -33,7 +33,7 @@ const UserAccount = ({ data }) => {
   const [ listProFile, setListProFile ] = useState([]);
 
   useEffect(() => {
-    RequestUtils.GetAsList('/auth/user/list-role').then(setListProFile);
+    RequestUtils.GetAsList('/erp/user/list-role').then(setListProFile);
   }, [])
 
   useEffect(() => {
@@ -68,7 +68,7 @@ const UserAccount = ({ data }) => {
       const { message } = await RequestUtils.Post('/user/create', dataUpdate);
       InAppEvent.normalSuccess(message);
     }
-    f5List("user/list");
+    f5List("erp/user/list");
   }
 
   return (

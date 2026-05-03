@@ -27,7 +27,7 @@ const WarehouseService = {
     this.allStatus = [];
   },
   async fetch(filter = {}) {
-    const { data, errorCode } = await RequestUtils.Get("/warehouse/fetch", filter);
+    const { data, errorCode } = await RequestUtils.Get("/erp/warehouse/fetch", filter);
     if (errorCode !== SUCCESS_CODE) {
       return { embedded: [], page: {} };
     }

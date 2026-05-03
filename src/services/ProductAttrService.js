@@ -78,7 +78,7 @@ const ProductAttrService = {
       }
       return datas;
     }
-    const { data: embedded, errorCode } = await RequestUtils.Get("/attributed/fetch-attr-ids", { ids: idNeedFetch });
+    const { data: embedded, errorCode } = await RequestUtils.Get("/erp/attributed/fetch-attr-ids", { ids: idNeedFetch });
     if (errorCode !== SUCCESS_CODE) {
       return [];
     }
@@ -109,7 +109,7 @@ const ProductAttrService = {
       }
       return datas;
     }
-    const { data: embedded, errorCode } = await RequestUtils.Get("/attributed/fetch-value-by-ids", { ids: idNeedFetch });
+    const { data: embedded, errorCode } = await RequestUtils.Get("/erp/attributed/fetch-value-by-ids", { ids: idNeedFetch });
     if (errorCode !== SUCCESS_CODE) {
       return [];
     }

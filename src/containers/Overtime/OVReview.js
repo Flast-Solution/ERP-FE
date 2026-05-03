@@ -26,7 +26,7 @@ const OVReview = ({
     (async () => {
       let owrnerInfo = user;
       if(record?.userId && owrnerInfo?.id !== record?.userId) {
-        const { data: dOwrner, errorCode: code } = await RequestUtils.Get("/auth/user/list", { ids: record.userId});
+        const { data: dOwrner, errorCode: code } = await RequestUtils.Get("/erp/user/list", { ids: record.userId});
         if(code === SUCCESS_API_CODE && Array.isArray(dOwrner) && dOwrner.find(i => i.id === record.userId)) {
           owrnerInfo = dOwrner.find(i => i.id === record.userId)
         }

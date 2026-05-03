@@ -76,7 +76,7 @@ const CustomerProfile = () => {
   const [ iCustomer, setCustomer ] = useState({});
 
   useEffectAsync(async () => {
-    let { data, errorCode } = await RequestUtils.Get('/customer/report-by-id/' + id);
+    let { data, errorCode } = await RequestUtils.Get('/erp/customer/report-by-id/' + id);
     if (errorCode !== SUCCESS_CODE) {
       return;
     }

@@ -51,7 +51,7 @@ const BookingCar = ({ closeModal, data }) => {
     }
     let params = (values?.id ?? '') === '' ? {} : { id: values.id };
     let uri = params?.id ? 'update' : 'create';
-    let nUri = String("/tickes-bus/").concat(uri);
+    let nUri = String("/erp/tickes-bus/").concat(uri);
     RequestUtils.Post(nUri, values, params).then(({ errorCode, message }) => {
       InAppEvent.normalInfo(errorCode === SUCCESS_CODE ? message : "Lỗi gửi thông tin đặt xe .!");
     });

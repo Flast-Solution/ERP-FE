@@ -62,7 +62,7 @@ const ProductForm = () => {
         <Col md={12} xs={24}>
           <FormSelectAPI
             required
-            apiPath='provider/fetch'
+            apiPath='erp/provider/fetch'
             apiAddNewItem='provider/save'
             onData={(data) => data?.embedded ?? []}
             label="Nhà cung cấp"

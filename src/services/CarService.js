@@ -17,7 +17,7 @@ const CarService = {
     if (arrayNotEmpty(this.allData)) {
       return this.allData;
     }
-    const { data, errorCode } = await RequestUtils.Get("/tickes-bus/fetch-address");
+    const { data, errorCode } = await RequestUtils.Get("/erp/tickes-bus/fetch-address");
     if (errorCode !== SUCCESS_CODE) {
       return [];
     }

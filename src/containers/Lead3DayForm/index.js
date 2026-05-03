@@ -39,7 +39,7 @@ const Lead3DayForm = ({ data }) => {
       active, 
       ...information 
     } = dataCreate;
-    const { errorCode, message } = await RequestUtils.Post("/cs/3day-update", {
+    const { errorCode, message } = await RequestUtils.Post("/erp/cs/3day-update", {
       priority,
       cause,
       action,
@@ -48,7 +48,7 @@ const Lead3DayForm = ({ data }) => {
       information: { ...information, newFeatures, supportRequest },
     });
     if (errorCode === 200) {
-      f5List('cs/3day-fetch');
+      f5List('erp/cs/3day-fetch');
     }
     InAppEvent.normalSuccess(message);
   }

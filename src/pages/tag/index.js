@@ -73,7 +73,7 @@ const Tag = () => {
             data={[{ title: 'Trang chủ' }, { title: title }]}
         />
         <RestList
-            apiPath={GATEWAY + "/tag/get-list"}
+            apiPath={"/erp/tag/get-list"}
             useGetAllQuery={useGetList}
             columns={CUSTOM_ACTION}
             filter={<Filter />}

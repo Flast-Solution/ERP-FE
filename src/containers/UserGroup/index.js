@@ -34,9 +34,9 @@ const UserAccount = ({ data }) => {
   }, [data]);
 
   const onSubmit = async (values) => {
-    const { message: MSG } = await RequestUtils.Post("/user-group/save", values);
+    const { message: MSG } = await RequestUtils.Post("/erp/user-group/save", values);
     message.info(MSG);
-    f5List("user-group/fetch");
+    f5List("erp/user-group/fetch");
   }
 
   return (

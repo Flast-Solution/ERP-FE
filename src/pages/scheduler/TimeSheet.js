@@ -255,7 +255,7 @@ const TimeSheet = ({
     const date = dayjs(new Date(year, month, dateEdit));
     let data = { date, dateStartValue, dateEndValue };
     dateFormatOnSubmit(data, ['date'], "YYYY-MM-DD");
-    RequestUtils.Post("/time-sheet/update-additional", data).then(d => {
+    RequestUtils.Post("/erp/time-sheet/update-additional", data).then(d => {
       if (d.errorCode === SUCCESS_CODE) {
         setReload(pre => !pre);
       }
@@ -300,9 +300,9 @@ const TimeSheet = ({
     let additionalFilter = { userId, month, year, limit: 100 };
 
     Promise.all([
-      RequestUtils.Get("/calendar/fetch", filter).then(dataArray),
+      RequestUtils.Get("/erp/calendar/fetch", filter).then(dataArray),
       //RequestUtils.Get("/calendar/fetch", { ...filter, userIds: '0' }).then(dataArray),
-      RequestUtils.Get("/time-sheet/get-additional", additionalFilter).then(dataObj).then(d => d?.embedded ?? [])
+      RequestUtils.Get("/erp/time-sheet/get-additional", additionalFilter).then(dataObj).then(d => d?.embedded ?? [])
     ]).then(([idata, additional]) => {
       UserService.timeSheetClear();
       let periods = genColumnsTimeSheet({ date });
@@ -318,9 +318,9 @@ const TimeSheet = ({
 
   const onSubmit = async () => {
     let params = { userId, month, year, status: APP_FOLLOW_STATUS_WAITING }
-    const { errorCode } = await RequestUtils.Post("/time-sheet/create-form", params);
+    const { errorCode } = await RequestUtils.Post("/erp/time-sheet/create-form", params);
     InAppEvent.normalInfo(errorCode === SUCCESS_CODE ? 'Success submit timesheet !' : 'Error submit timesheet !');
-    f5List("time-sheet/fetch-tickes");
+    f5List("erp/time-sheet/fetch-tickes");
     return true;
   }
 
@@ -354,9 +354,9 @@ const Footer = ({ onSubmit, record }) => {
 
   const onClickChecked = async (status) => {
     let params = { ...record, status };
-    const { errorCode } = await RequestUtils.Post("/time-sheet/create-form", params);
+    const { errorCode } = await RequestUtils.Post("/erp/time-sheet/create-form", params);
     InAppEvent.normalInfo(errorCode === SUCCESS_CODE ? 'Success confirm timesheet !' : 'Error confirm timesheet !');
-    f5List("time-sheet/fetch-tickes");
+    f5List("erp/time-sheet/fetch-tickes");
   }
 
   if (isLeader() && record?.status === APP_FOLLOW_STATUS_WAITING) {

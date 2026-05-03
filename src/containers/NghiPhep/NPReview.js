@@ -31,9 +31,9 @@ const NPReview = ({
     let params = record;
     params.status = 3;
     let uri = 'update';
-    let nUri = String("/leave-of-absence/").concat(uri);
+    let nUri = String("/erp/leave-of-absence/").concat(uri);
     const { errorCode } = await RequestUtils.Post(nUri, params);
-    f5List('leave-of-absence/fetch');
+    f5List('erp/leave-of-absence/fetch');
     InAppEvent.normalInfo(errorCode === 200 ? "Cập nhật thành công" : "Lỗi cập nhật, vui lòng thử lại sau");
   }, [record]);
 
@@ -41,7 +41,7 @@ const NPReview = ({
     (async () => {
       let owrnerInfo = user;
       if (record?.userId && owrnerInfo?.id !== record?.userId) {
-        const { data: dOwrner, errorCode: code } = await RequestUtils.Get("/auth/user/list", { ids: record.userId });
+        const { data: dOwrner, errorCode: code } = await RequestUtils.Get("/erp/user/list", { ids: record.userId });
         if (code === SUCCESS_API_CODE && Array.isArray(dOwrner) && dOwrner.find(i => i.id === record.userId)) {
           owrnerInfo = dOwrner.find(i => i.id === record.userId)
         }

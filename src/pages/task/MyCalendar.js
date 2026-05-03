@@ -19,7 +19,7 @@ export default function MyCalendar() {
   const [ events, setEvents ] = useState([]);
 
   useEffectAsync(async () => {
-    const { data, errorCode } = await RequestUtils.Get("/works/find/" + projectId);
+    const { data, errorCode } = await RequestUtils.Get("/erp/works/find/" + projectId);
     if(errorCode !== 200) {
       return;
     }
@@ -28,7 +28,7 @@ export default function MyCalendar() {
   }, [projectId]);
 
   const handleDelete = async (id) => {
-    const { errorCode, message: MSG } = await RequestUtils.Post(String("/works/delete/task/").concat(id), {});
+    const { errorCode, message: MSG } = await RequestUtils.Post(String("/erp/works/delete/task/").concat(id), {});
     message.success(MSG);
     if(errorCode === 200) {
       setEvents(events.filter(event => event.id !== id));
@@ -51,7 +51,7 @@ export default function MyCalendar() {
         setEvents([...events, newEvent]);
       }
       let { id: taskIdentity, ...dataPost } = newEvent;
-      let { message: MSG, data } = await RequestUtils.Post("/works/save/task", {
+      let { message: MSG, data } = await RequestUtils.Post("/erp/works/save/task", {
         ...dataPost,
         projectId,
         taskIdentity

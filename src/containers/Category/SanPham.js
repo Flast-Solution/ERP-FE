@@ -56,7 +56,7 @@ const FormCateSanPHam = ({ closeModal, data }) => {
     message.info(MEG);
     if (SUCCESS_CODE === errorCode) {
       setRecord(pre => ({ ...pre, ...data }));
-      f5List("category/product/fetch");
+      f5List("erp/category/product/fetch");
     }
   }, []);
 

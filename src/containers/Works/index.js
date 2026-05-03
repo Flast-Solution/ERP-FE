@@ -34,7 +34,7 @@ const WorkContainer = ({ data }) => {
   }, [data])
 
   const onSubmit = async (values) => {
-    const { message: MSG } = await RequestUtils.Post("/works/save", values);
+    const { message: MSG } = await RequestUtils.Post("/erp/works/save", values);
     message.info(MSG);
     f5List("works/fetch");
   }

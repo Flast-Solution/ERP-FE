@@ -40,7 +40,7 @@ const ListCustomerRetail = () => {
   let navigate = useNavigate();
 
   const handleTagsChange = async (record, newTags) => {
-    RequestUtils.Post(`/customer/tags/save/${record.id}`, { tags: newTags });
+    RequestUtils.Post(`/erp/customer/tags/save/${record.id}`, { tags: newTags });
   };
 
   const CUSTOM_ACTION = [
@@ -133,7 +133,7 @@ const ListCustomerRetail = () => {
     const mUser = await UserService.mapId2Name(saleIds);
 
     const customerIds = embedded.map(u => u.id);
-    let { data: tags, errorCode } = await RequestUtils.Get("/customer/tags/fetch", { ids: customerIds });
+    let { data: tags, errorCode } = await RequestUtils.Get("/erp/customer/tags/fetch", { ids: customerIds });
     if (errorCode !== SUCCESS_CODE) {
       tags = {};
     }
@@ -173,7 +173,7 @@ const ListCustomerRetail = () => {
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
         hasCreate={false}
-        apiPath={'customer/fetch-customer-personal'}
+        apiPath={'erp/customer/fetch-customer-personal'}
         columns={CUSTOM_ACTION}
       />
     </div>

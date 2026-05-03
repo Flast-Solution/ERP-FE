@@ -90,7 +90,7 @@ const HotelUserForm = ({ field }) => {
       <Col md={24} xs={24}>
         <FormSelectUser
           mode="multiple"
-          api="/auth/user/list"
+          api="/erp/user/list"
           titleProp='fullName'
           name={[name, 'userId']}
           onChange={(values) => {

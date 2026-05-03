@@ -38,7 +38,7 @@ const FormFaq = ({ closeModal, data }) => {
   }, [ data ]);
 
   const onSubmit = useCallback(async (body) => {
-    const { data, message: MEG, errorCode } = await RequestUtils.Post("/faq/save", body);
+    const { data, message: MEG, errorCode } = await RequestUtils.Post("/erp/faq/save", body);
     message.info(MEG);
     if(SUCCESS_CODE === errorCode && typeof data?.onSave === 'function') {
       data.onSave(data);

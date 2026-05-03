@@ -139,7 +139,7 @@ const CateSanPham = () => {
         filter={<Filter />}
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
-        apiPath={'category/product/fetch'}
+        apiPath={'erp/category/product/fetch'}
         customClickCreate={onCreateCateSanPHam}
         columns={CUSTOM_ACTION}
       />

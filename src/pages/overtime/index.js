@@ -126,7 +126,7 @@ const Overtime = () => {
 				filter={<Filter />}
         beforeSubmitFilter={beforeSubmitFilter}
 				useGetAllQuery={ useGetList }
-				apiPath={'over-time/fetch'}
+				apiPath={'erp/over-time/fetch'}
         customClickCreate={onCreate}
 				columns={CUSTOM_ACTION}
 			/>
