@@ -20,9 +20,9 @@
 /**************************************************************************/
 
 import React from 'react';
-import { authRoles } from 'auth';
+import { authRoles } from '@/auth';
 
-const DragDropConfigPage = React.lazy(() => import('pages/dragDropOrder'));
+const DragDropConfigPage = React.lazy(() => import('@/pages/dragDropOrder'));
 export const DragDropConfig = {
     auth: authRoles.user,
     routes: [

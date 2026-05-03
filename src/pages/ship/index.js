@@ -29,7 +29,7 @@ import useGetList from "@flast-erp/core/hooks/useGetList";
 import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils/dataUtils';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import { ShowSkuDetail } from 'containers/Product/SkuView';
-import { HASH_MODAL } from 'configs/constant';
+import { HASH_MODAL } from '@/configs/constant';
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 
 const ShipPage = () => {

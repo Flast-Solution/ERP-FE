@@ -27,12 +27,12 @@ import LeadFilter from './LeadFilter';
 import useGetList from "@flast-erp/core/hooks/useGetList";
 import { Button, Tag } from 'antd';
 import { arrayEmpty, dateFormatOnSubmit } from '@flast-erp/core/utils/dataUtils';
-import { getColorStatusLead, getStatusLead } from 'configs/constant';
+import { getColorStatusLead, getStatusLead } from '@/configs/constant';
 import { HASH_MODAL } from 'configs';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import { cloneDeep } from 'lodash';
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';
-import { CHANNEL_SOURCE_MAP_KEYS } from 'configs/localData';
+import { CHANNEL_SOURCE_MAP_KEYS } from '@/configs/localData';
 
 const Lead3DayPage = () => {
 

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
 import { arrayNotEmpty, dateFormatOnSubmit } from '@flast-erp/core/utils/dataUtils';
 import { Form } from 'antd';
-import { APP_FOLLOW_STATUS_WAITING } from 'configs/constant';
+import { APP_FOLLOW_STATUS_WAITING } from '@/configs/constant';
 import { cloneDeep } from 'lodash';
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';

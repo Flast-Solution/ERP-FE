@@ -20,7 +20,7 @@
 /**************************************************************************/
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { HASH_POPUP, HASH_POPUP_CLOSE } from 'configs/constant';
+import { HASH_POPUP, HASH_POPUP_CLOSE } from '@/configs/constant';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import { Modal } from 'antd';
 import { NoFooter } from '@flast-erp/core/components/common/NoFooter';
@@ -46,17 +46,17 @@ const CustomModalStyles = createGlobalStyle`
 const Common = [
   {
     path: 'task.add',
-    Component: React.lazy(() => import('containers/Works/TaskForm')),
+    Component: React.lazy(() => import('@/containers/Works/TaskForm')),
     modalOptions: { title: '', width: 600 }
   },
   {
     path: 'material.add',
-    Component: React.lazy(() => import('containers/Material')),
+    Component: React.lazy(() => import('@/containers/Material')),
     modalOptions: { title: '', width: 600 }
   },
   {
     path: 'calendar.add',
-    Component: React.lazy(() => import('containers/Calendar/AddAction')),
+    Component: React.lazy(() => import('@/containers/Calendar/AddAction')),
     modalOptions: { title: '', width: 650 }
   }
 ];

@@ -33,10 +33,10 @@ import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 import { cloneDeep } from 'lodash';
 import ModaleStyles from './style';
-import FormSelect from '@flast-erp/core/components/form/FormSelect';
+import FormSelect from '@/form-flast/FormSelect';
 import { NoFooter } from '@flast-erp/core/components/common/NoFooter';
 import { useNavigate } from "react-router-dom";
-import { CHANNEL_SOURCE_MAP_KEYS } from 'configs/localData';
+import { CHANNEL_SOURCE_MAP_KEYS } from '@/configs/localData';
 
 const LeadPage = () => {
 

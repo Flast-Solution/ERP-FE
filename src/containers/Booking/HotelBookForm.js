@@ -1,16 +1,16 @@
 import { Row, Col, Form, Typography } from 'antd';
-import FormHidden from '@flast-erp/core/components/form/FormHidden';
+import FormHidden from '@/form-flast/FormHidden';
 import CustomButton from '@flast-erp/core/components/CustomButton';
 import { HourglassOutlined } from '@ant-design/icons';
 import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
 import { useCallback, useContext } from 'react';
-import FormListAddition from '@flast-erp/core/components/form/FormListAddtion';
+import FormListAddition from '@/form-flast/FormListAddtion';
 import HotelUserForm from './HotelUserForm';
-import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
-import FormInput from '@flast-erp/core/components/form/FormInput';
-import FormRadioGroup from '@flast-erp/core/components/form/FormRadioGroup';
-import { HOTEL_ROOM_PAY_TYPE } from 'configs/localData';
-import FormAutoComplete from '@flast-erp/core/components/form/FormAutoComplete';
+import FormTextArea from '@/form-flast/FormTextArea';
+import FormInput from '@/form-flast/FormInput';
+import FormRadioGroup from '@/form-flast/FormRadioGroup';
+import { HOTEL_ROOM_PAY_TYPE } from '@/configs/localData';
+import FormAutoComplete from '@/form-flast/FormAutoComplete';
 import HotelService from 'services/HotelService';
 
 const HotelBookForm = () => {

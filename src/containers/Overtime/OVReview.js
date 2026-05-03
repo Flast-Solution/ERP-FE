@@ -1,9 +1,9 @@
 import { render } from '@react-email/render';
 import { useEffect, useState } from 'react';
 import EOvertime from 'containers/Email/EOvertime';
-import { useStore } from "DataContext";
+import { useStore } from "@/DataContext";
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';
-import { SUCCESS_API_CODE } from 'configs/constant';
+import { SUCCESS_API_CODE } from '@/configs/constant';
 
 const OVReview = ({
   record,

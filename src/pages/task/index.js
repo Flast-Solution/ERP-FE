@@ -39,7 +39,7 @@ import RestList from '@flast-erp/core/components/RestLayout/RestList';
 import { arrayEmpty, dateFormatOnSubmit, f5List, formatMoney, formatTime } from '@flast-erp/core/utils/dataUtils';
 import { useCallback } from 'react';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
-import { HASH_MODAL } from 'configs';
+import { HASH_MODAL } from '@/configs';
 import {
   CalendarOutlined, 
   DollarCircleOutlined, 
@@ -49,8 +49,8 @@ import {
   CheckOutlined,
   CloseOutlined
 } from '@ant-design/icons';
-import { DEPARTMENT_MAP_KEYS_VALUE } from 'configs/localData';
-import UserService from 'services/UserService';
+import { DEPARTMENT_MAP_KEYS_VALUE } from '@/configs/localData';
+import UserService from '@/services/UserService';
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 import { useNavigate } from 'react-router-dom';
 

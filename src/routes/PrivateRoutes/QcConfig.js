@@ -1,9 +1,9 @@
 import React from 'react';
-import { authRoles } from 'auth';
+import { authRoles } from '@/auth';
 
-const CriteriaPage = React.lazy(() => import('pages/qc/criteria'));
-const ChecklistPage = React.lazy(() => import('pages/qc/checklist'));
-const DefectPage = React.lazy(() => import('pages/qc/defect'));
+const CriteriaPage = React.lazy(() => import('@/pages/qc/criteria'));
+const ChecklistPage = React.lazy(() => import('@/pages/qc/checklist'));
+const DefectPage = React.lazy(() => import('@/pages/qc/defect'));
 
 export const QcConfig = {
     auth: authRoles.admin,

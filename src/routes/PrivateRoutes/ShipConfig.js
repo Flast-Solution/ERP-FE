@@ -20,9 +20,9 @@
 /**************************************************************************/
 
 import React from 'react';
-import { authRoles } from 'auth';
+import { authRoles } from '@/auth';
 
-const ShipPage = React.lazy(() => import('pages/ship'));
+const ShipPage = React.lazy(() => import('@/pages/ship'));
 export const ShipConfig = {
     auth: authRoles.user,
     routes: [

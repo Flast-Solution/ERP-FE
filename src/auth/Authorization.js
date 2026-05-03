@@ -21,7 +21,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import FuseUtils from '@flast-erp/core/utils/FuseUtils';
-import { useStore } from "DataContext";
+import { useStore } from "@/DataContext";
 import { useLocation, useNavigate, matchPath } from "react-router-dom";
 
 const LOGIN_PATH = '/login';

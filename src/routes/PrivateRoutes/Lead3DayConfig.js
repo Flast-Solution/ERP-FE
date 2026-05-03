@@ -20,9 +20,9 @@
 /**************************************************************************/
 
 import React from 'react';
-import { authRoles } from 'auth';
+import { authRoles } from '@/auth';
 
-const Lead3DayPage = React.lazy(() => import('pages/lead3Day'));
+const Lead3DayPage = React.lazy(() => import('@/pages/lead3Day'));
 export const Lead3DayConfig = {
     auth: authRoles.admin,
     routes: [

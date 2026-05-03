@@ -6,7 +6,7 @@ import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
 import BotDataFilter from './BotDataFilter';
 import { Avatar, Button, message, Space } from 'antd';
 import { InAppEvent } from "@flast-erp/core/utils/FuseUtils";
-import { CHANNEL_SOURCE_MAP_KEYS } from 'configs/localData';
+import { CHANNEL_SOURCE_MAP_KEYS } from '@/configs/localData';
 import { HASH_MODAL } from 'configs';
 import { arrayEmpty, formatTime } from '@flast-erp/core/utils/dataUtils';
 import OrderService from 'services/OrderService';

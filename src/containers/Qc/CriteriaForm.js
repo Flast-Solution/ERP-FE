@@ -1,10 +1,10 @@
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { Row, Col, Form } from 'antd';
-import FormInput from '@flast-erp/core/components/form/FormInput';
-import FormInputNumber from '@flast-erp/core/components/form/FormInputNumber';
-import FormSelect from '@flast-erp/core/components/form/FormSelect';
-import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
-import FormHidden from '@flast-erp/core/components/form/FormHidden';
+import FormInput from '@/form-flast/FormInput';
+import FormInputNumber from '@/form-flast/FormInputNumber';
+import FormSelect from '@/form-flast/FormSelect';
+import FormTextArea from '@/form-flast/FormTextArea';
+import FormHidden from '@/form-flast/FormHidden';
 import BtnSubmit from '@flast-erp/core/components/CustomButton/BtnSubmit';
 import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
 import QcService from 'services/QcService';

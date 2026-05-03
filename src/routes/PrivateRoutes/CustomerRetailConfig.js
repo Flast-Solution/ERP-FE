@@ -20,11 +20,11 @@
 /**************************************************************************/
 
 import React from 'react';
-import { authRoles } from 'auth';
+import { authRoles } from '@/auth';
 
-const CustomerRetail = React.lazy(() => import('pages/customer'));
-const CustomerProfile = React.lazy(() => import('pages/customer/CustomerProfile'));
-const EnterpriseList = React.lazy(() => import('pages/customer/ListEnterprise'));
+const CustomerRetail = React.lazy(() => import('@/pages/customer'));
+const CustomerProfile = React.lazy(() => import('@/pages/customer/CustomerProfile'));
+const EnterpriseList = React.lazy(() => import('@/pages/customer/ListEnterprise'));
 
 export const CustomerConfig = {
     auth: authRoles.user,

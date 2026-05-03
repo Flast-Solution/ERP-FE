@@ -2,11 +2,11 @@ import React, { useCallback } from 'react'
 import { Col, Row } from 'antd'
 import moment from 'moment';
 import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
-import FormInput from '@flast-erp/core/components/form/FormInput';
-import FormInputNumber from '@flast-erp/core/components/form/FormInputNumber';
+import FormInput from '@/form-flast/FormInput';
+import FormInputNumber from '@/form-flast/FormInputNumber';
 import BtnSubmit from '@flast-erp/core/components/CustomButton/BtnSubmit';
 import RequestUtils, { SUCCESS_CODE } from '@flast-erp/core/utils/RequestUtils';
-import FormDatePicker from '@flast-erp/core/components/form/FormDatePicker';
+import FormDatePicker from '@/form-flast/FormDatePicker';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import { f5List } from '@flast-erp/core/utils/dataUtils';
 

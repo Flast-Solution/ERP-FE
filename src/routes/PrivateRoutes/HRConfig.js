@@ -1,11 +1,11 @@
 import React from 'react';
-import { authRoles } from 'auth';
+import { authRoles } from '@/auth';
 
-const EmployeePage = React.lazy(() => import('pages/employee'));
-const CalendarPage = React.lazy(() => import('pages/scheduler'));
-const BookingPage = React.lazy(() => import('pages/booking'));
-const LeavePage = React.lazy(() => import('pages/nghiphep'));
-const OvertimePage = React.lazy(() => import('pages/overtime'));
+const EmployeePage = React.lazy(() => import('@/pages/employee'));
+const CalendarPage = React.lazy(() => import('@/pages/scheduler'));
+const BookingPage = React.lazy(() => import('@/pages/booking'));
+const LeavePage = React.lazy(() => import('@/pages/nghiphep'));
+const OvertimePage = React.lazy(() => import('@/pages/overtime'));
 
 export const HRConfig = {
     auth: authRoles.user,

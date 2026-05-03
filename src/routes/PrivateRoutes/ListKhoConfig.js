@@ -20,9 +20,9 @@
 /**************************************************************************/
 
 import React from 'react';
-import { authRoles } from 'auth';
+import { authRoles } from '@/auth';
 
-const WareHouse = React.lazy(() => import('pages/listKho'));
+const WareHouse = React.lazy(() => import('@/pages/listKho'));
 export const WareHouseConfig = {
     auth: authRoles.user,
     routes: [

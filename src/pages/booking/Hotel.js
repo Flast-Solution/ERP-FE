@@ -15,7 +15,7 @@ import {
   APP_FOLLOW_STATUS_WAITING,
   APP_FOLLOW_STATUS_DONE,
   APP_FOLLOW_STATUS_REJECT
-} from 'configs/constant';
+} from '@/configs/constant';
 import { OTContent } from './styles';
 import { formatDateDayjs } from '@flast-erp/core/utils/textUtils';
 import UserService from 'services/UserService';

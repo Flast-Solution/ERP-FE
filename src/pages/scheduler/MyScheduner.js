@@ -20,7 +20,7 @@ import { SUCCESS_CODE } from 'configs';
 import dayjs from 'dayjs';
 import { cloneDeep, random } from 'lodash';
 import UserService from 'services/UserService';
-import FormSelectUser from '@flast-erp/core/components/form/FormSelectUser';
+import FormSelectUser from '@/form-flast/FormSelectUser';
 import {
   FilterContent,
   SchedulerWrapper,
@@ -33,7 +33,7 @@ import {
   CalendarBody
 } from './styles';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
-import { HASH_POPUP } from 'configs/constant';
+import { HASH_POPUP } from '@/configs/constant';
 
 const MyScheduner = ({
   showTimeSheet = (value) => value

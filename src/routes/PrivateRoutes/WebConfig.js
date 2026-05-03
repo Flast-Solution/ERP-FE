@@ -1,13 +1,13 @@
 import React from 'react';
-import { authRoles } from 'auth';
+import { authRoles } from '@/auth';
 
-const CateSanPhamPage = React.lazy(() => import('pages/category/san-pham'));
-const CatePage = React.lazy(() => import('pages/category/page'));
-const FaqPage = React.lazy(() => import('pages/faq'));
-const ContentPage = React.lazy(() => import('pages/post'));
-const ContentEdit = React.lazy(() => import('pages/post/Edit'));
-const TagPage = React.lazy(() => import('pages/tag'));
-const TagEditPage = React.lazy(() => import('pages/tag/Edit'));
+const CateSanPhamPage = React.lazy(() => import('@/pages/category/san-pham'));
+const CatePage = React.lazy(() => import('@/pages/category/page'));
+const FaqPage = React.lazy(() => import('@/pages/faq'));
+const ContentPage = React.lazy(() => import('@/pages/post'));
+const ContentEdit = React.lazy(() => import('@/pages/post/Edit'));
+const TagPage = React.lazy(() => import('@/pages/tag'));
+const TagEditPage = React.lazy(() => import('@/pages/tag/Edit'));
 
 export const WebConfig = {
   auth    : authRoles.user,

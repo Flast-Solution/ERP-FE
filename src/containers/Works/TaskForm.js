@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { Form, DatePicker, ColorPicker, Row, Col, Slider, Button, Flex } from 'antd';
-import FormInput from '@flast-erp/core/components/form/FormInput';
-import FormSelect from '@flast-erp/core/components/form/FormSelect';
-import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
-import { PROJECT_TASK_STATUS_LIST } from 'configs/localData';
+import FormInput from '@/form-flast/FormInput';
+import FormSelect from '@/form-flast/FormSelect';
+import FormTextArea from '@/form-flast/FormTextArea';
+import { PROJECT_TASK_STATUS_LIST } from '@/configs/localData';
 import { isEmpty } from 'lodash';
 import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
 import dayjs from 'dayjs';
-import FormSelectInfiniteBusinessUser from '@flast-erp/core/components/form/SelectInfinite/FormSelectInfiniteBusinessUser';
+import FormSelectInfiniteBusinessUser from '@/form-flast/SelectInfinite/FormSelectInfiniteBusinessUser';
 
 const { RangePicker } = DatePicker;
 const TaskForm = ({ 

@@ -24,7 +24,8 @@ const CracoLessPlugin = require("craco-less");
 module.exports = {
   webpack: {
     alias: {
-      '@': path.resolve(__dirname, 'src')
+      "@/form-flast/*": path.resolve(__dirname, 'node_modules/@flast-erp/core/components/form/*'),
+      '@/*': path.resolve(__dirname, 'src/*'),
     }
   },
   plugins: [
@@ -38,13 +39,6 @@ module.exports = {
     }
   ],
   devServer: {
-    port: 3000,
-    proxy: {
-      '/api': {
-        target: 'http://157.10.199.138:9080',
-        changeOrigin: true,
-        secure: false,
-      }
-    }
+    port: 3000
   }
 };

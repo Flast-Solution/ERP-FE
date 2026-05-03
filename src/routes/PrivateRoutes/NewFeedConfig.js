@@ -20,9 +20,9 @@
 /**************************************************************************/
 
 import React from 'react';
-import { authRoles } from 'auth';
+import { authRoles } from '@/auth';
 
-const NewFeedPage = React.lazy(() => import('pages/newFeed'));
+const NewFeedPage = React.lazy(() => import('@/pages/newFeed'));
 export const NewfeedConfig = {
     auth: authRoles.admin,
     routes: [

@@ -18,7 +18,7 @@ import UserService from 'services/UserService';
 import { useUpdateEffect } from '@flast-erp/core/hooks/MyHooks';
 import { cloneDeep } from 'lodash';
 import CustomButton from '@flast-erp/core/components/CustomButton';
-import { APP_FOLLOW_STATUS_CONFIRM, APP_FOLLOW_STATUS_DONE, APP_FOLLOW_STATUS_REJECT, APP_FOLLOW_STATUS_WAITING } from 'configs/constant';
+import { APP_FOLLOW_STATUS_CONFIRM, APP_FOLLOW_STATUS_DONE, APP_FOLLOW_STATUS_REJECT, APP_FOLLOW_STATUS_WAITING } from '@/configs/constant';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 
 const ITEM_AMPM_IN_TABLE = 1;

@@ -20,7 +20,7 @@
 /**************************************************************************/
 
 import { Col, Row } from 'antd'
-import FormInput from '@flast-erp/core/components/form/FormInput'
+import FormInput from '@/form-flast/FormInput'
 import React from 'react'
 
 const Filter = () => {

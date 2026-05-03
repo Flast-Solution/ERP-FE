@@ -21,13 +21,13 @@
 import React from 'react'
 import { Col, Row, Form, Slider, Checkbox } from 'antd'
 import CustomButton from '@flast-erp/core/components/CustomButton'
-import FormSelect from '@flast-erp/core/components/form/FormSelect'
-import FormTextArea from '@flast-erp/core/components/form/FormTextArea'
-import FormInputNumber from '@flast-erp/core/components/form/FormInputNumber'
+import FormSelect from '@/form-flast/FormSelect'
+import FormTextArea from '@/form-flast/FormTextArea'
+import FormInputNumber from '@/form-flast/FormInputNumber'
 import GroupStyles from './style'
-import { PRIORITY_TYPE_TAGS } from 'configs/localData'
-import FormSelectInfiniteBusinessUser from '@flast-erp/core/components/form/SelectInfinite/FormSelectInfiniteBusinessUser'
-import FormDatePicker from '@flast-erp/core/components/form/FormDatePicker'
+import { PRIORITY_TYPE_TAGS } from '@/configs/localData'
+import FormSelectInfiniteBusinessUser from '@/form-flast/SelectInfinite/FormSelectInfiniteBusinessUser'
+import FormDatePicker from '@/form-flast/FormDatePicker'
 
 const CAUSE_3_DAY = [
   { name: "Đang trao đổi " },

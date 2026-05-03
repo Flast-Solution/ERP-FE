@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Typography, Table, Row, Col, message, Form } from 'antd';
 import HeaderCompany from '@flast-erp/core/components/common/HeaderCompany';
-import { StyledHeaderInvoice } from "css/global";
+import { StyledHeaderInvoice } from "@/css/global";
 import CustomButton from '@flast-erp/core/components/CustomButton';
-import FormSelectAPI from '@flast-erp/core/components/form/FormSelectAPI';
+import FormSelectAPI from '@/form-flast/FormSelectAPI';
 import { useReactToPrint } from "react-to-print";
 import { arrayEmpty, f5List } from '@flast-erp/core/utils/dataUtils';
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';

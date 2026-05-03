@@ -7,11 +7,11 @@ import { arrayNotEmpty, dateFormatOnSubmit, f5List } from '@flast-erp/core/utils
 import OVReview from './OVReview';
 import { Form, Typography } from 'antd';
 import { FormOutlined } from '@ant-design/icons';
-import { NGHI_PHEP_STATUS_WAITING } from 'configs/constant';
-import { useStore } from "DataContext";
+import { NGHI_PHEP_STATUS_WAITING } from '@/configs/constant';
+import { useStore } from "@/DataContext";
 import useGetMe from '@flast-erp/core/hooks/useGetMe';
 import RegisForm from './RegisForm';
-import FormListAddition from '@flast-erp/core/components/form/FormListAddtion';
+import FormListAddition from '@/form-flast/FormListAddtion';
 import CustomButton from '@flast-erp/core/components/CustomButton';
 import { cloneDeep } from "lodash";
 

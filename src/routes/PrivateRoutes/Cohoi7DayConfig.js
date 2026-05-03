@@ -1,7 +1,7 @@
 import React from 'react';
-import { authRoles } from 'auth';
+import { authRoles } from '@/auth';
 
-const Cohoi7DayPage = React.lazy(() => import('pages/cohoi7Day'));
+const Cohoi7DayPage = React.lazy(() => import('@/pages/cohoi7Day'));
 export const Cohoi7DayConfig = {
     auth    : authRoles.admin,
     routes  : [

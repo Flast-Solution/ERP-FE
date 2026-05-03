@@ -20,7 +20,7 @@
 /**************************************************************************/
 
 import React, { useEffect, useMemo } from 'react';
-import { useStore } from "DataContext";
+import { useStore } from "@/DataContext";
 import InAppNotify from './InAppNotify';
 import ContainerLayouts from "./ContainerLayout";
 import OrderService from 'services/OrderService';

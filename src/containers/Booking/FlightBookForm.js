@@ -1,13 +1,13 @@
 import { Row, Col, Form } from 'antd';
-import FormHidden from '@flast-erp/core/components/form/FormHidden';
+import FormHidden from '@/form-flast/FormHidden';
 import CustomButton from '@flast-erp/core/components/CustomButton';
 import { HourglassOutlined } from '@ant-design/icons';
 import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
 import { useCallback, useContext } from 'react';
-import FormListAddition from '@flast-erp/core/components/form/FormListAddtion';
-import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
+import FormListAddition from '@/form-flast/FormListAddtion';
+import FormTextArea from '@/form-flast/FormTextArea';
 import FlightListForm from './FlightListForm';
-import FormDatePicker from '@flast-erp/core/components/form/FormDatePicker';
+import FormDatePicker from '@/form-flast/FormDatePicker';
 
 const FlightBookForm = () => {
 

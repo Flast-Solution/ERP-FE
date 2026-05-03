@@ -24,12 +24,12 @@ import React from 'react';
 const CommonRoute = [
   {
     path: 'work.edit',
-    Component: React.lazy(() => import('containers/Works')),
+    Component: React.lazy(() => import('@/containers/Works')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'customer.edit',
-    Component: React.lazy(() => import('containers/Customer/CustomerAddressForm')),
+    Component: React.lazy(() => import('@/containers/Customer/CustomerAddressForm')),
     modalOptions: { title: '', width: 750 }
   }
 ];

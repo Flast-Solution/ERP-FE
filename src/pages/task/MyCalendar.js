@@ -7,7 +7,7 @@ import listPlugin from '@fullcalendar/list';
 import { message } from 'antd';
 import dayjs from 'dayjs';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
-import { HASH_POPUP } from 'configs/constant';
+import { HASH_POPUP } from '@/configs/constant';
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 import { useParams } from 'react-router-dom';
 import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';

@@ -20,10 +20,10 @@
 /**************************************************************************/
 
 import React from 'react';
-import { authRoles } from 'auth';
+import { authRoles } from '@/auth';
 
-const ProductPage = React.lazy(() => import('pages/product'));
-const ProductEditPage = React.lazy(() => import('pages/product/Edit'));
+const ProductPage = React.lazy(() => import('@/pages/product'));
+const ProductEditPage = React.lazy(() => import('@/pages/product/Edit'));
 
 export const ProductConfig = {
     auth: authRoles.admin,

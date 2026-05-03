@@ -24,12 +24,12 @@ import React from 'react';
 const productRoute = [
   {
     path: 'product.edit',
-    Component: React.lazy(() => import('containers/Product')),
+    Component: React.lazy(() => import('@/containers/Product')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'product.bom',
-    Component: React.lazy(() => import('containers/Product/Bom')),
+    Component: React.lazy(() => import('@/containers/Product/Bom')),
     modalOptions: { title: '', width: 750 }
   }
 ];

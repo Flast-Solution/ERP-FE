@@ -26,7 +26,7 @@ import RestList from '@flast-erp/core/components/RestLayout/RestList';
 import LeadFilter from './Filter';
 import useGetList from "@flast-erp/core/hooks/useGetList";
 import { dateFormatOnSubmit } from '@flast-erp/core/utils/dataUtils';
-import { GATEWAY, HASH_MODAL } from 'configs';
+import { GATEWAY, HASH_MODAL } from '@/configs';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import { Button, Image } from 'antd';
 

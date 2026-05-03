@@ -20,8 +20,8 @@
 /**************************************************************************/
 
 import { Col, Row } from 'antd'
-import FormInput from '@flast-erp/core/components/form/FormInput'
-import FormSelect from '@flast-erp/core/components/form/FormSelect'
+import FormInput from '@/form-flast/FormInput'
+import FormSelect from '@/form-flast/FormSelect'
 import React from 'react'
 
 const Filter = ({ sale }) => {

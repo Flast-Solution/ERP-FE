@@ -20,9 +20,9 @@
 /**************************************************************************/
 
 import React from 'react';
-import { authRoles } from 'auth';
+import { authRoles } from '@/auth';
 
-const ListAcountPage = React.lazy(() => import('pages/ListAccount'));
+const ListAcountPage = React.lazy(() => import('@/pages/ListAccount'));
 export const ListAcountConfig = {
     auth: authRoles.user,
     routes: [

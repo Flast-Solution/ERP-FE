@@ -1,10 +1,10 @@
 import { Form, Col, Row } from 'antd';
 import CustomButton from '@flast-erp/core/components/CustomButton';
-import FormDatePicker from '@flast-erp/core/components/form/FormDatePicker';
-import FormInput from '@flast-erp/core/components/form/FormInput';
-import FormRadioGroup from '@flast-erp/core/components/form/FormRadioGroup';
-import FormSelect from '@flast-erp/core/components/form/FormSelect';
-import FormSelectUser from '@flast-erp/core/components/form/FormSelectUser';
+import FormDatePicker from '@/form-flast/FormDatePicker';
+import FormInput from '@/form-flast/FormInput';
+import FormRadioGroup from '@/form-flast/FormRadioGroup';
+import FormSelect from '@/form-flast/FormSelect';
+import FormSelectUser from '@/form-flast/FormSelectUser';
 import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
 import { SUCCESS_CODE } from 'configs';
 import useGetMe from '@flast-erp/core/hooks/useGetMe';

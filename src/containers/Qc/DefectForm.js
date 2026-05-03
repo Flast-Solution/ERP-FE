@@ -1,19 +1,19 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { Row, Col, Button, Upload, Image, Space, Form } from 'antd';
 import { DeleteOutlined, UploadOutlined } from '@ant-design/icons';
-import FormInput from '@flast-erp/core/components/form/FormInput';
-import FormSelect from '@flast-erp/core/components/form/FormSelect';
-import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
-import FormHidden from '@flast-erp/core/components/form/FormHidden';
+import FormInput from '@/form-flast/FormInput';
+import FormSelect from '@/form-flast/FormSelect';
+import FormTextArea from '@/form-flast/FormTextArea';
+import FormHidden from '@/form-flast/FormHidden';
 import BtnSubmit from '@flast-erp/core/components/CustomButton/BtnSubmit';
 import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
 import QcService from 'services/QcService';
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 import { f5List } from '@flast-erp/core/utils/dataUtils';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
-import { GATEWAY } from 'configs';
-import { getStaticImageUrl } from 'utils/tools';
+import { GATEWAY } from '@/configs';
+import { getStaticImageUrl } from '@/utils/tools';
 
 const PAGE_LIMIT = 10;
 
@@ -342,7 +342,7 @@ const DefectForm = ({ data, closeModal }) => {
                 </Col>
             </Row>
         </RestEditModal>
-    );
+    )
 };
 
 export default DefectForm;

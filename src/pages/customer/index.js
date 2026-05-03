@@ -28,7 +28,7 @@ import useGetList from '@flast-erp/core/hooks/useGetList';
 import { Button } from 'antd';
 import { arrayEmpty, arrayNotEmpty, dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils/dataUtils';
 import UserService from 'services/UserService';
-import { CHANNEL_SOURCE_MAP_KEYS } from 'configs/localData';
+import { CHANNEL_SOURCE_MAP_KEYS } from '@/configs/localData';
 import { useNavigate } from 'react-router-dom';
 import TagEditor from './TagEditor';
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';

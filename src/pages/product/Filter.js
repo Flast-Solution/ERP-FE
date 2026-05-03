@@ -20,10 +20,10 @@
 /**************************************************************************/
 
 import { Row, Col } from 'antd';
-import FormInput from '@flast-erp/core/components/form/FormInput';
-import FormSelectUser from '@flast-erp/core/components/form/FormSelectUser';
-import FormSelect from '@flast-erp/core/components/form/FormSelect';
-import FormDatePicker from '@flast-erp/core/components/form/FormDatePicker';
+import FormInput from '@/form-flast/FormInput';
+import FormSelectUser from '@/form-flast/FormSelectUser';
+import FormSelect from '@/form-flast/FormSelect';
+import FormDatePicker from '@/form-flast/FormDatePicker';
 
 const ProductFilter = () => {
   return (

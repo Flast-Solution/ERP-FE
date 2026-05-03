@@ -19,15 +19,15 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import FormCascader from '@flast-erp/core/components/form/FormCascader';
-import FormListAddition from '@flast-erp/core/components/form/FormListAddtion';
+import FormCascader from '@/form-flast/FormCascader';
+import FormListAddition from '@/form-flast/FormListAddtion';
 import { FormPriceStyle } from './styles';
 import { Col, Row } from 'antd';
-import FormInputNumber from '@flast-erp/core/components/form/FormInputNumber';
+import FormInputNumber from '@/form-flast/FormInputNumber';
 import { useEffect, useState } from 'react';
 import { isEmpty } from 'lodash';
 import ProductAttrService from 'services/ProductAttrService';
-import FormInput from '@flast-erp/core/components/form/FormInput';
+import FormInput from '@/form-flast/FormInput';
 
 /** 
  * listProperties Data simple

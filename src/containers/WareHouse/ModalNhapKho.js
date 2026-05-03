@@ -22,13 +22,13 @@
 import React, { useState, useCallback } from 'react';
 import { Col, Form, message, Row } from 'antd';
 import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
-import FormSelectInfiniteProduct from '@flast-erp/core/components/form/SelectInfinite/FormSelectInfiniteProduct';
-import FormSelect from '@flast-erp/core/components/form/FormSelect';
-import FormInputNumber from '@flast-erp/core/components/form/FormInputNumber';
+import FormSelectInfiniteProduct from '@/form-flast/SelectInfinite/FormSelectInfiniteProduct';
+import FormSelect from '@/form-flast/FormSelect';
+import FormInputNumber from '@/form-flast/FormInputNumber';
 import BtnSubmit from '@flast-erp/core/components/CustomButton/BtnSubmit';
-import FormSelectInfiniteProvider from '@flast-erp/core/components/form/SelectInfinite/FormSelectInfiniteProvider';
-import FormInfiniteStock from '@flast-erp/core/components/form/SelectInfinite/FormInfiniteStock';
-import FormHidden from '@flast-erp/core/components/form/FormHidden';
+import FormSelectInfiniteProvider from '@/form-flast/SelectInfinite/FormSelectInfiniteProvider';
+import FormInfiniteStock from '@/form-flast/SelectInfinite/FormInfiniteStock';
+import FormHidden from '@/form-flast/FormHidden';
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 import WarehouseService from 'services/WarehouseService';
 import InStockTable from 'containers/WareHouse/InStockTable'

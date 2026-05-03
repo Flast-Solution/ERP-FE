@@ -25,7 +25,7 @@ import { ClockCircleOutlined } from '@ant-design/icons';
 import { Helmet } from 'react-helmet';
 import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
-import { HASH_POPUP } from 'configs/constant';
+import { HASH_POPUP } from '@/configs/constant';
 import ListLayoutStyles from '@flast-erp/core/components/RestLayout/RestList/styles';
 import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';

@@ -20,9 +20,9 @@
 /**************************************************************************/
 
 import React from 'react';
-import { authRoles } from 'auth';
+import { authRoles } from '@/auth';
 
-const AiAgentPage = React.lazy(() => import('pages/ai-agent'));
+const AiAgentPage = React.lazy(() => import('@/pages/ai-agent'));
 export const AiAgentConfig = {
     auth: authRoles.user,
     routes: [

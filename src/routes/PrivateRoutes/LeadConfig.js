@@ -20,10 +20,10 @@
 /**************************************************************************/
 
 import React from 'react';
-import { authRoles } from 'auth';
+import { authRoles } from '@/auth';
 
-const LeadPage = React.lazy(() => import('pages/lead'));
-const BotPage = React.lazy(() => import('pages/lead/Bot'));
+const LeadPage = React.lazy(() => import('@/pages/lead'));
+const BotPage = React.lazy(() => import('@/pages/lead/Bot'));
 
 export const LeadConfig = {
     auth: authRoles.user,

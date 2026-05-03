@@ -21,15 +21,15 @@
 
 import { useEffect } from "react";
 import { Form, Row, Col, message } from "antd";
-import FormHidden from "@flast-erp/core/components/form/FormHidden";
+import FormHidden from "@/form-flast/FormHidden";
 import CustomButton from "@flast-erp/core/components/CustomButton";
-import FormListAddition from "@flast-erp/core/components/form/FormListAddtion";
-import { FormListStyles } from "css/global";
-import FormInputNumber from "@flast-erp/core/components/form/FormInputNumber";
-import FormSelect from "@flast-erp/core/components/form/FormSelect";
-import FormSelectInfiniteBusinessUser from "@flast-erp/core/components/form/SelectInfinite/FormSelectInfiniteBusinessUser";
-import { KPI_TYPE } from "configs/localData";
-import FormDatePicker from "@flast-erp/core/components/form/FormDatePicker";
+import FormListAddition from "@/form-flast/FormListAddtion";
+import { FormListStyles } from "@/css/global";
+import FormInputNumber from "@/form-flast/FormInputNumber";
+import FormSelect from "@/form-flast/FormSelect";
+import FormSelectInfiniteBusinessUser from "@/form-flast/SelectInfinite/FormSelectInfiniteBusinessUser";
+import { KPI_TYPE } from "@/configs/localData";
+import FormDatePicker from "@/form-flast/FormDatePicker";
 import { dateFormatOnSubmit } from "@flast-erp/core/utils/dataUtils";
 import RequestUtils from "@flast-erp/core/utils/RequestUtils";
 

@@ -1,8 +1,7 @@
-import { GATEWAY } from 'configs';
+import { GATEWAY } from '@/configs';
 import axios from 'axios';
-import { SUCCESS_API_CODE } from 'configs/constant';
+import { SUCCESS_API_CODE } from '@/configs/constant';
 import fileDownload from 'js-file-download';
-import { result } from 'lodash';
 
 class RequestUtils {
 

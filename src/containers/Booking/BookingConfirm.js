@@ -10,8 +10,8 @@ import {
   APP_FOLLOW_STATUS_DONE,
   APP_FOLLOW_STATUS_REJECT,
   APP_FOLLOW_STATUS_WAITING
-} from 'configs/constant';
-import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
+} from '@/configs/constant';
+import FormTextArea from '@/form-flast/FormTextArea';
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
 import { cloneDeep } from 'lodash';

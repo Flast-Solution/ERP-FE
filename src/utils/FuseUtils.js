@@ -1,4 +1,4 @@
-import { CHANGE_STORE, HASH_MODAL, INAPP_NOTIFICATION_EMITTER } from 'configs';
+import { CHANGE_STORE, HASH_MODAL, INAPP_NOTIFICATION_EMITTER } from '@/configs';
 
 class EventEmitter {
 
