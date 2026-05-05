@@ -150,7 +150,7 @@ const ChecklistForm = ({ data, closeModal }) => {
                     <FormInput
                         required
                         name={'qcCheckListCode'}
-                        label="Mã bộ tiêu chí"
+                        label="Mã bộ quy trình"
                         placeholder="Vd: QC-CL-001"
                     />
                 </Col>
@@ -158,7 +158,7 @@ const ChecklistForm = ({ data, closeModal }) => {
                     <FormInput
                         required
                         name={'qcCheckListName'}
-                        label="Tên bộ tiêu chí"
+                        label="Tên bộ quy trình"
                         placeholder="Vd: Checklist kiểm tra áo sơ mi"
                     />
                 </Col>
@@ -191,7 +191,7 @@ const ChecklistForm = ({ data, closeModal }) => {
                 <Col md={24} xs={24}>
                     <FormSelect
                         name={'idCriteriaList'}
-                        label="Danh sách tiêu chí"
+                        label="Danh sách quy trình"
                         placeholder="Chọn các tiêu chí"
                         mode="multiple"
                         resourceData={criteriaData}
@@ -214,7 +214,7 @@ const ChecklistForm = ({ data, closeModal }) => {
                     <FormTextArea
                         name={'description'}
                         label="Mô tả"
-                        placeholder="Nhập mô tả bộ tiêu chí"
+                        placeholder="Nhập mô tả bộ quy trình"
                         rows={3}
                     />
                 </Col>
