@@ -61,6 +61,7 @@ import { AiAgentConfig } from './AiAgentConfig';
 
 /* Web */
 import { WebConfig } from './WebConfig';
+import { WorkflowDesignerConfig } from './WorkflowDesignerConfig';
 
 /* HR - Quản lý hành chính */
 import { HRConfig } from './HRConfig';
@@ -90,7 +91,8 @@ const routeConfigs = [
     DragDropConfig,
     WebConfig,
     HRConfig,
-    QcConfig
+    QcConfig,
+    WorkflowDesignerConfig
 ];
 
 const routes = [
