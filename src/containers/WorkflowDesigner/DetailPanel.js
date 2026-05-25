@@ -20,17 +20,13 @@ const DetailPanel = () => {
           <span>Chọn một step hoặc transition để chỉnh sửa</span>
         </EmptySelection>
       )
-    }
-
-    if (selectedType === 'node') {
+    } else if (selectedType === 'node') {
       return <StepForm node={selectedItem} />
-    }
-
-    if (selectedType === 'edge') {
+    } else if (selectedType === 'edge') {
       return <TransitionForm edge={selectedItem} />
+    } else {
+      return null
     }
-
-    return null
   }
 
   const titleMap = {

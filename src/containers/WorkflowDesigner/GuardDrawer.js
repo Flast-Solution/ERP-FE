@@ -12,58 +12,83 @@ import {
 
 const { TextArea } = Input
 
-// ─── Dynamic config fields ────────────────────────────────────────────────────
+const buildGroupedFieldOptions = (nodeForms = []) =>
+  nodeForms.filter((form) => form.fields?.length > 0).map((form) => ({
+    label: form.name,
+    options: form.fields.map((f) => ({
+      value: f.fieldKey,
+      label: `${f.label} (${f.inputType})`,
+    })),
+  }))
 
-const ConfigFields = ({ fields = [], localForm }) =>
-  fields.map((f) => {
+const ConfigFields = ({ fields = [], nodeForms = [] }) => {
+
+  const groupedFieldOptions = buildGroupedFieldOptions(nodeForms)
+  const hasFormFields = groupedFieldOptions.length > 0
+
+  return fields.map((f) => {
     const rules = f.required ? [{ required: true, message: `Nhập ${f.label}` }] : []
+    const name = ['config', f.name]
+
+    if (f.name === 'field_name' && hasFormFields) {
+      return (
+        <Form.Item key={f.name} name={name} label={f.label} rules={rules}>
+          <Select
+            showSearch
+            placeholder="Chọn field từ form"
+            options={groupedFieldOptions}
+            optionFilterProp="label"
+            allowClear
+          />
+        </Form.Item>
+      )
+    }
 
     if (f.type === 'textarea')
       return (
-        <Form.Item key={f.name} name={['config', f.name]} label={f.label} rules={rules}>
+        <Form.Item key={f.name} name={name} label={f.label} rules={rules}>
           <TextArea rows={3} />
         </Form.Item>
       )
+
     if (f.type === 'number')
       return (
-        <Form.Item key={f.name} name={['config', f.name]} label={f.label} rules={rules}>
+        <Form.Item key={f.name} name={name} label={f.label} rules={rules}>
           <InputNumber style={{ width: '100%' }} min={0} />
         </Form.Item>
       )
+
     if (f.type === 'select')
       return (
-        <Form.Item key={f.name} name={['config', f.name]} label={f.label} rules={rules}>
+        <Form.Item key={f.name} name={name} label={f.label} rules={rules}>
           <Select options={f.options} />
         </Form.Item>
       )
+
     return (
-      <Form.Item key={f.name} name={['config', f.name]} label={f.label} rules={rules}>
+      <Form.Item key={f.name} name={name} label={f.label} rules={rules}>
         <Input />
       </Form.Item>
     )
   })
+}
 
-// ─── GuardDrawer ──────────────────────────────────────────────────────────────
 /**
- * Dùng form cục bộ (localForm) để giữ state tạm.
- * Chỉ ghi vào parentForm khi user bấm "Xác nhận".
- * Bấm X = huỷ, nếu guard mới (isNew=true) thì xoá luôn.
- *
  * Props:
- *   parentForm   — Form instance của TransitionForm
  *   guardIndex   — index trong guards array
- *   initialValue — giá trị ban đầu { type, config }
- *   isNew        — true nếu vừa được tạo (chưa xác nhận lần nào)
- *   onConfirm    — (values) => void  — lưu vào parentForm
- *   onCancel     — () => void        — đóng, không lưu
- *   onRemove     — () => void        — xoá guard khỏi list
+ *   initialValue — { type, config }
+ *   nodeForms    — node.data.forms[] từ source node (cho field_name Select)
+ *   onConfirm    — (values) => void
+ *   onCancel     — () => void
  */
 const GuardDrawer = ({
   guardIndex,
   initialValue,
+  nodeForms = [],
   onConfirm,
   onCancel,
 }) => {
+
   const [localForm] = Form.useForm()
   const [guardType, setGuardType] = useState(initialValue?.type ?? 'form_field')
   const configFields = GUARD_TYPES[guardType]?.configFields ?? []
@@ -71,7 +96,7 @@ const GuardDrawer = ({
 
   const handleTypeChange = (val) => {
     setGuardType(val)
-    localForm.setFieldsValue({ config: {} }) // reset config khi đổi type
+    localForm.setFieldsValue({ config: {} })
   }
 
   const handleConfirm = () => {
@@ -84,7 +109,6 @@ const GuardDrawer = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
-      {/* ── Header ── */}
       <DrawerHeader>
         <div>
           <DrawerTitle>Guard #{guardIndex + 1}</DrawerTitle>
@@ -101,11 +125,11 @@ const GuardDrawer = ({
         />
       </DrawerHeader>
 
-      {/* ── Body ── */}
       <PanelBody $padding="16px" style={{ flex: 1, overflowY: 'auto' }}>
         <Form
           form={localForm}
           layout="vertical"
+          size="small"
           initialValues={{
             type: initialValue?.type ?? 'form_field',
             config: initialValue?.config ?? {},
@@ -119,26 +143,20 @@ const GuardDrawer = ({
             <>
               <Divider style={{ margin: '4px 0 12px' }} />
               <SectionLabel>Cấu hình</SectionLabel>
-              <ConfigFields fields={configFields} localForm={localForm} />
+              <ConfigFields
+                fields={configFields}
+                nodeForms={nodeForms}
+              />
             </>
           )}
         </Form>
       </PanelBody>
 
-      {/* ── Footer: Xác nhận ── */}
       <DrawerFooter>
-        <Button
-          type="primary"
-          size="small"
-          block
-          onClick={handleConfirm}
-        >
+        <Button type="primary" size="small" block onClick={handleConfirm}>
           Xác nhận
         </Button>
-        <Button
-          size="small"
-          onClick={onCancel}
-        >
+        <Button size="small" onClick={onCancel}>
           Huỷ
         </Button>
       </DrawerFooter>

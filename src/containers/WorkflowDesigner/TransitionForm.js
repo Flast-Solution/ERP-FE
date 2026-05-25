@@ -24,21 +24,18 @@ import {
 } from './transitionForm.styles'
 import GuardDrawer from './GuardDrawer'
 
-// ─── TransitionForm ───────────────────────────────────────────────────────────
-
 const TransitionForm = ({ edge }) => {
+  
   const [form] = Form.useForm()
   const nodes = useNodes()
   const updateEdgeData = useUpdateEdgeData()
 
-  // guards giữ trong local state để render luôn cập nhật
   const [guards, setGuards] = useState(edge.data?.guards ?? [])
-
-  // null = màn chính | { index, isNew } = GuardDrawer
   const [activeGuard, setActiveGuard] = useState(null)
 
   const fromNode = nodes.find((n) => n.id === edge.source)
   const toNode = nodes.find((n) => n.id === edge.target)
+  const sourceForms = fromNode?.data?.forms ?? []
 
   useEffect(() => {
     setActiveGuard(null)
@@ -48,9 +45,9 @@ const TransitionForm = ({ edge }) => {
       allowed_roles: edge.data?.allowed_roles ?? [],
       require_note: edge.data?.require_note ?? false,
     })
-  }, [edge.id]) // eslint-disable-line react-hooks/exhaustive-deps
+    /* eslint-disable-next-line */
+  }, [edge.id])
 
-  // Helper: sync guards + form fields vào store
   const syncToStore = (nextGuards, overrides = {}) => {
     const formValues = form.getFieldsValue()
     updateEdgeData(edge.id, {
@@ -60,12 +57,9 @@ const TransitionForm = ({ edge }) => {
     })
   }
 
-  // Sync các field ở màn chính (allowed_roles, require_note)
   const handleValuesChange = (_, allValues) => {
     updateEdgeData(edge.id, { ...allValues, guards })
   }
-
-  // ── Guard handlers ────────────────────────────────────────────────────────
 
   const handleAddGuard = () => {
     const newGuard = { type: 'form_field', config: {} }
@@ -78,7 +72,6 @@ const TransitionForm = ({ edge }) => {
     setActiveGuard({ index, isNew: false })
   }
 
-  // Xác nhận từ GuardDrawer → cập nhật guards state + store
   const handleConfirmGuard = (values) => {
     const nextGuards = guards.map((g, i) =>
       i === activeGuard.index ? values : g
@@ -88,7 +81,6 @@ const TransitionForm = ({ edge }) => {
     setActiveGuard(null)
   }
 
-  // Huỷ: nếu isNew thì xoá placeholder vừa thêm
   const handleCancelGuard = () => {
     if (activeGuard?.isNew) {
       const nextGuards = guards.slice(0, activeGuard.index)
@@ -98,7 +90,6 @@ const TransitionForm = ({ edge }) => {
     setActiveGuard(null)
   }
 
-  // Xoá guard trực tiếp từ row ngoài
   const handleRemoveGuard = (index, e) => {
     e.stopPropagation()
     const nextGuards = guards.filter((_, i) => i !== index)
@@ -106,12 +97,11 @@ const TransitionForm = ({ edge }) => {
     syncToStore(nextGuards)
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
-
   return (
     <Form
       form={form}
       layout="vertical"
+      size="small"
       onValuesChange={handleValuesChange}
       style={{ height: '100%' }}
     >
@@ -226,6 +216,7 @@ const TransitionForm = ({ edge }) => {
               <GuardDrawer
                 guardIndex={activeGuard.index}
                 initialValue={guards[activeGuard.index]}
+                nodeForms={sourceForms}
                 onConfirm={handleConfirmGuard}
                 onCancel={handleCancelGuard}
               />

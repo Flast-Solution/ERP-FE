@@ -1,7 +1,7 @@
 import FuseUtils, { InAppEvent } from './FuseUtils';
 import axios from 'axios';
 import { CHANGE_STORE, ACTIONS } from "@/configs";
-import RequestUtils from './RequestUtils';
+import RequestUtils from "@flast-erp/core/utils/RequestUtils";
 
 class jwtService extends FuseUtils.EventEmitter {
 

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { Form, Tag, Button } from 'antd'
 import { DeleteOutlined } from '@ant-design/icons'
+import { InAppEvent } from '@flast-erp/core/utils/FuseUtils'
+import { HASH_POPUP } from '@/configs/constant'
 import FormInput from '@/form-flast/FormInput'
 import { useStepTypes, useUpdateNodeData } from '@/hooks/useWorkflowStore'
 import { ACTION_TYPES } from '@/store/workflowConstants'
@@ -23,9 +25,6 @@ import {
   FormCardName,
   FormCardMeta,
 } from './StepForm.style'
-
-// ─── ActionSection ────────────────────────────────────────────────────────────
-// Dùng cho cả "on_enter" và "on_exit"
 
 const ActionSection = ({ title, trigger, actions, onAdd, onRemove }) => {
   const filtered = actions.filter((a) => (a.trigger ?? 'on_enter') === trigger)
@@ -65,14 +64,14 @@ const ActionSection = ({ title, trigger, actions, onAdd, onRemove }) => {
   )
 }
 
-// ─── StepForm ─────────────────────────────────────────────────────────────────
 
 const StepForm = ({ node }) => {
+
   const [form] = Form.useForm()
   const updateNodeData = useUpdateNodeData()
   const stepTypes = useStepTypes()
 
-  // actions giữ local state như guards trong TransitionForm
+  /* actions giữ local state như guards trong TransitionForm */
   const [actions, setActions] = useState(node.data.actions ?? [])
 
   useEffect(() => {
@@ -83,14 +82,14 @@ const StepForm = ({ node }) => {
       code: node.data.code,
       type: node.data.type,
     })
-  }, [node.id]) // eslint-disable-line react-hooks/exhaustive-deps
+    /* eslint-disable-next-line */
+  }, [node.id])
 
-  // Sync field thường (label, code, type) → store
+  /* Sync field thường (label, code, type) → store */
   const handleValuesChange = (_, allValues) => {
     updateNodeData(node.id, { ...allValues, actions })
   }
 
-  // Auto-slug code khi gõ label
   const handleLabelChange = (e) => {
     const currentCode = form.getFieldValue('code')
     if (currentCode === slugifyCode(node.data.label)) {
@@ -100,24 +99,38 @@ const StepForm = ({ node }) => {
     }
   }
 
-  // Chọn loại bước
   const handleTypeSelect = (key) => {
     form.setFieldValue('type', key)
     updateNodeData(node.id, { ...form.getFieldsValue(), type: key, actions })
   }
 
-  // Thêm action mặc định theo trigger
   const handleAddAction = (trigger) => {
     const next = [...actions, { type: 'send_email', trigger, config: {} }]
     setActions(next)
     updateNodeData(node.id, { ...form.getFieldsValue(), actions: next })
   }
 
-  // Xoá action theo index toàn cục
   const handleRemoveAction = (index) => {
     const next = actions.filter((_, i) => i !== index)
     setActions(next)
     updateNodeData(node.id, { ...form.getFieldsValue(), actions: next })
+  }
+
+  const handleAttachForm = () => {
+    InAppEvent.emit(HASH_POPUP, {
+      hash: 'workflow.step.attach-form',
+      title: '',
+      data: {
+        attachedForms: node.data.forms ?? [],
+        onSave: (selectedForms) => {
+          updateNodeData(node.id, {
+            ...form.getFieldsValue(),
+            actions,
+            forms: selectedForms,
+          })
+        },
+      },
+    })
   }
 
   const currentType = Form.useWatch('type', form)
@@ -200,18 +213,21 @@ const StepForm = ({ node }) => {
       <Section>
         <SectionHeader>
           <SectionTitle>Form gắn vào bước</SectionTitle>
-          <SectionAction type="button">Gắn form</SectionAction>
+          <SectionAction type="button" onClick={handleAttachForm}>Gắn form</SectionAction>
         </SectionHeader>
 
         {(node.data.forms ?? []).length === 0 ? (
           <EmptyState>Chưa có form nào được gắn.</EmptyState>
         ) : (
           (node.data.forms ?? []).map((f, i) => (
-            <FormCard key={i}>
+            <FormCard key={f.id ?? i}>
               <FormCardInfo>
                 <FormCardName>{f.name}</FormCardName>
                 <FormCardMeta>
-                  {[f.template_id && `template_id ${f.template_id}`, f.fields && `${f.fields} fields`, f.standard].filter(Boolean).join(' · ')}
+                  {[
+                    f.domain,
+                    f.fields?.length != null && `${f.fields.length} fields`,
+                  ].filter(Boolean).join(' · ')}
                 </FormCardMeta>
               </FormCardInfo>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
@@ -247,6 +263,6 @@ const StepForm = ({ node }) => {
       </Section>
     </Form>
   )
-}
+};
 
-export default StepForm
+export default StepForm;
