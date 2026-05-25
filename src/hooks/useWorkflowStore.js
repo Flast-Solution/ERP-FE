@@ -1,5 +1,10 @@
 import useWorkflowStore from '@/store/workflowStore'
 
+// ─── Step types (palette) ─────────────────────────────────────────────────────
+export const useStepTypes = () => useWorkflowStore((s) => s.stepTypes)
+export const useSetStepTypes = () => useWorkflowStore((s) => s.setStepTypes)
+export const useResetStepTypes = () => useWorkflowStore((s) => s.resetStepTypes)
+
 // ─── Process ──────────────────────────────────────────────────────────────────
 export const useProcess = () => useWorkflowStore((s) => s.process)
 export const useSetProcess = () => useWorkflowStore((s) => s.setProcess)

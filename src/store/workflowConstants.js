@@ -2,32 +2,32 @@
 // Mỗi entry map sang antd token color để StepNode & StepPanel dùng chung
 export const STEP_TYPES = {
   start: {
-    label: 'Start',
-    color: '#1677ff',       // antd blue
+    label: 'Bước đầu',
+    color: '#1677ff',
     bgColor: '#e6f4ff',
     borderColor: '#91caff',
   },
   process: {
-    label: 'Process',
-    color: '#52c41a',       // antd green
-    bgColor: '#f6ffed',
-    borderColor: '#b7eb8f',
+    label: 'Bước kiểm tra',
+    color: '#1677ff',
+    bgColor: '#e6f4ff',
+    borderColor: '#91caff',
   },
   approval: {
-    label: 'Approval',
-    color: '#fa8c16',       // antd orange
+    label: 'Bước duyệt',
+    color: '#fa8c16',
     bgColor: '#fff7e6',
     borderColor: '#ffd591',
   },
   condition: {
-    label: 'Condition',
-    color: '#722ed1',       // antd purple
-    bgColor: '#f9f0ff',
-    borderColor: '#d3adf7',
+    label: 'Bước đạt / cấp',
+    color: '#52c41a',
+    bgColor: '#f6ffed',
+    borderColor: '#b7eb8f',
   },
   end: {
-    label: 'End',
-    color: '#f5222d',       // antd red
+    label: 'Bước không đạt',
+    color: '#f5222d',
     bgColor: '#fff1f0',
     borderColor: '#ffa39e',
   },

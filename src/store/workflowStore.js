@@ -1,11 +1,10 @@
 import { create } from 'zustand'
 import { addEdge, applyNodeChanges, applyEdgeChanges } from 'reactflow'
-import { DEFAULT_STEP, DEFAULT_TRANSITION } from './workflowConstants'
+import { DEFAULT_STEP, DEFAULT_TRANSITION, STEP_TYPES } from './workflowConstants'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const generateId = () => `id_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
 
-// Snapshot dùng cho undo/redo — chỉ lưu nodes + edges
 const snapshot = (nodes, edges) => ({
   nodes: JSON.parse(JSON.stringify(nodes)),
   edges: JSON.parse(JSON.stringify(edges)),
@@ -52,8 +51,26 @@ const initialEdges = [
   },
 ]
 
+// Default stepTypes từ constants — Backend sẽ ghi đè qua setStepTypes()
+const initialStepTypes = Object.entries(STEP_TYPES).map(([key, config]) => ({
+  key,
+  ...config,
+}))
+
 // ─── Store ────────────────────────────────────────────────────────────────────
 const useWorkflowStore = create((set, get) => ({
+
+  // ── Step types (palette "Thêm bước") ─────────────────────────────────────────
+  // Mặc định lấy từ STEP_TYPES constant, Backend có thể ghi đè qua setStepTypes()
+  // Mỗi item: { key, label, color, bgColor, borderColor }
+  stepTypes: initialStepTypes,
+
+  // Gọi khi API trả về danh sách loại bước
+  // Ví dụ: store.getState().setStepTypes(apiResponse)
+  setStepTypes: (types) => set({ stepTypes: types }),
+
+  // Reset về default constants
+  resetStepTypes: () => set({ stepTypes: initialStepTypes }),
 
   // ── Process info ────────────────────────────────────────────────────────────
   process: {
@@ -76,13 +93,17 @@ const useWorkflowStore = create((set, get) => ({
     }))
   },
 
-  addNode: (position) => {
+  addNode: (position, stepType) => {
     const id = generateId()
     const newNode = {
       id,
       type: 'stepNode',
       position,
-      data: { ...DEFAULT_STEP, code: `step_${id.slice(-5)}` },
+      data: {
+        ...DEFAULT_STEP,
+        type: stepType ?? 'process',
+        code: `step_${id.slice(-5)}`,
+      },
     }
     set((state) => {
       const next = [...state.nodes, newNode]
@@ -109,7 +130,6 @@ const useWorkflowStore = create((set, get) => ({
   deleteNode: (nodeId) => {
     set((state) => {
       const nextNodes = state.nodes.filter((n) => n.id !== nodeId)
-      // Xoá cả edges liên quan
       const nextEdges = state.edges.filter(
         (e) => e.source !== nodeId && e.target !== nodeId
       )
@@ -172,15 +192,13 @@ const useWorkflowStore = create((set, get) => ({
     })
   },
 
-  // ── Selection (node hoặc edge) ────────────────────────────────────────────────
-  // selectedType: 'node' | 'edge' | null
+  // ── Selection ────────────────────────────────────────────────────────────────
   selectedId: null,
   selectedType: null,
 
   setSelected: (id, type) => set({ selectedId: id, selectedType: type }),
   clearSelected: () => set({ selectedId: null, selectedType: null }),
 
-  // Computed: lấy data của item đang được chọn
   getSelectedItem: () => {
     const { selectedId, selectedType, nodes, edges } = get()
     if (!selectedId) return null
@@ -189,9 +207,9 @@ const useWorkflowStore = create((set, get) => ({
     return null
   },
 
-  // ── History (undo / redo) ─────────────────────────────────────────────────────
-  history: [],      // stack quá khứ [{nodes, edges}, ...]
-  future: [],       // stack tương lai
+  // ── History ──────────────────────────────────────────────────────────────────
+  history: [],
+  future: [],
 
   undo: () => {
     set((state) => {
@@ -239,7 +257,6 @@ const useWorkflowStore = create((set, get) => ({
     }),
 
   // ── Load từ JSON (import) ─────────────────────────────────────────────────────
-  // Gọi sau khi workflowSerializer.jsonToFlow() parse xong
   loadFlow: ({ nodes, edges, process: processInfo }) => {
     set({
       nodes: nodes ?? [],
@@ -253,8 +270,7 @@ const useWorkflowStore = create((set, get) => ({
   },
 }))
 
-// ─── Internal helper — push vào history stack ─────────────────────────────────
-// Trả về partial state để spread vào set()
+// ─── Internal helper ──────────────────────────────────────────────────────────
 function pushHistory(state, nextNodes, nextEdges) {
   const newHistory = [
     ...state.history,
@@ -262,7 +278,7 @@ function pushHistory(state, nextNodes, nextEdges) {
   ].slice(-MAX_HISTORY)
   return {
     history: newHistory,
-    future: [], // reset future mỗi khi có thay đổi mới
+    future: [],
   }
 }
 
