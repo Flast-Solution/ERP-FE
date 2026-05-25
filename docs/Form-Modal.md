@@ -12,6 +12,7 @@
 ```js
 import FormInput        from '@/form-flast/FormInput'
 import FormSelect       from '@/form-flast/FormSelect'
+import FormSelectAPI    from '@/form-flast/FormSelectAPI'   // Select từ API endpoint
 import FormInputNumber  from '@/form-flast/FormInputNumber'
 import FormHidden       from '@/form-flast/FormHidden'
 import FormListAddition from '@/form-flast/FormListAddtion'   // chú ý typo "Addtion"
@@ -44,7 +45,96 @@ import { FormListStyles } from '@/css/global'
 
 ---
 
-## 2. Mở modal — 3 bước bắt buộc
+---
+
+## 2. FormSelectAPI — Select dữ liệu từ API endpoint
+
+`FormSelectAPI` tự fetch data từ API, có search debounce 600ms, add-new-item inline, tự wrap `Form.Item`.
+
+### Props quan trọng
+
+| Prop | Type | Default | Mô tả |
+|------|------|---------|-------|
+| `name` | string/array | — | Tên field trong Form |
+| `label` | string | `''` | Label hiển thị (tự dịch qua i18n) |
+| `apiPath` | string | `''` | Endpoint GET, **không có** dấu `/` đầu. VD: `'erp/products'` |
+| `valueProp` | string | `'id'` | Field dùng làm value của option |
+| `titleProp` | string | `'name'` | Field dùng làm label của option |
+| `searchKey` | string | `'name'` | Query param khi user search |
+| `required` | bool | — | Bắt buộc chọn |
+| `placeholder` | string | — | Placeholder (tự dịch i18n) |
+| `isFetchOnMount` | bool | `true` | Fetch ngay khi mount |
+| `filter` | object | — | Query params mặc định gửi kèm khi fetch |
+| `onData` | `(data) => data` | — | Transform data trước khi render options |
+| `fnLoadData` | `(filter) => Promise` | — | Custom fetch thay thế `apiPath` |
+| `formatText` | `(value, item) => string` | — | Custom label text của option |
+| `formatValue` | `(value, item) => any` | — | Custom value của option |
+| `onChangeGetSelectedItem` | `(value, item) => void` | — | Callback trả về cả object item khi chọn |
+| `apiAddNewItem` | string | `''` | Endpoint POST để thêm item mới inline |
+| `createDefaultValues` | object | — | Default values kèm theo khi POST add-new |
+| `isShowModalCreateNewItem` | bool | — | Ẩn input add-new, dùng modal riêng thay thế |
+| `onCreateNewItem` | `() => bool` | — | Custom handler add-new, return `true` để chặn default behavior |
+
+### Ví dụ cơ bản — fetch từ API
+
+```js
+<FormSelectAPI
+  name="product_id"
+  label="Sản phẩm"
+  apiPath="erp/products"
+  required
+  placeholder="Chọn sản phẩm"
+  valueProp="id"
+  titleProp="name"
+  searchKey="name"
+/>
+```
+
+### Ví dụ nâng cao — transform data + callback lấy item
+
+```js
+<FormSelectAPI
+  name="user_id"
+  label="Nhân viên"
+  apiPath="erp/users"
+  valueProp="id"
+  titleProp="full_name"
+  filter={{ role: 'staff', status: 1 }}
+  onData={(data) => data.filter((u) => u.active)}
+  formatText={(val, item) => `${item.full_name} (${item.code})`}
+  onChangeGetSelectedItem={(value, item) => setSelectedUser(item)}
+/>
+```
+
+### Ví dụ add-new inline trong dropdown
+
+```js
+<FormSelectAPI
+  name="category_id"
+  label="Danh mục"
+  apiPath="erp/categories"
+  apiAddNewItem="erp/categories/create"
+  searchKey="name"
+  createDefaultValues={{ type: 'product' }}
+/>
+```
+
+### Ví dụ dùng fnLoadData thay apiPath (local data hoặc custom fetch)
+
+```js
+<FormSelectAPI
+  name="step_type"
+  label="Loại bước"
+  fnLoadData={() => Promise.resolve(stepTypes)}
+  valueProp="key"
+  titleProp="label"
+  isFetchOnMount
+/>
+```
+
+---
+
+## 3. Mở modal — 3 bước bắt buộc
 
 ### Bước 1: Đăng ký modal (trong `routes/ModalRoutes/`)
 
@@ -167,6 +257,8 @@ export default ModalTenContainer
 ## 3. Checklist trước khi submit code
 
 - [ ] Tất cả field input dùng `@/form-flast/*`, không dùng antd Input/Select trực tiếp
+- [ ] Select từ API dùng `FormSelectAPI` với `apiPath` không có dấu `/` đầu
+- [ ] `FormSelectAPI` dùng `fnLoadData` khi data đã có sẵn local (không cần fetch)
 - [ ] `InAppEvent` import từ `@flast-erp/core/utils/FuseUtils`
 - [ ] `HASH_POPUP` import từ `@/configs/constant`
 - [ ] Modal container nhận `onSave` và gọi đúng sau khi API thành công
