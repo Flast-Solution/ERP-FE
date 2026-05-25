@@ -74,15 +74,14 @@ const useWorkflowStore = create((set, get) => ({
 
   // ── Process info ────────────────────────────────────────────────────────────
   process: {
-    name: 'New Process',
-    code: 'new_process',
+    name: 'New Tạo luồng xử lý nghiệp vụ',
+    code: 'new_process_business',
     description: '',
   },
 
-  setProcess: (partial) =>
-    set((state) => ({
-      process: { ...state.process, ...partial },
-    })),
+  setProcess: (partial) => set((state) => ({
+    process: { ...state.process, ...partial },
+  })),
 
   // ── Nodes ────────────────────────────────────────────────────────────────────
   nodes: initialNodes,

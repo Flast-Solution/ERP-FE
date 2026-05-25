@@ -106,7 +106,6 @@ const GuardDrawer = ({
         <Form
           form={localForm}
           layout="vertical"
-          size="small"
           initialValues={{
             type: initialValue?.type ?? 'form_field',
             config: initialValue?.config ?? {},

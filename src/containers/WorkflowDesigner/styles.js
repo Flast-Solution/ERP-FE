@@ -6,7 +6,7 @@ const { Sider } = Layout
 // ─── Layout shells ────────────────────────────────────────────────────────────
 
 export const DesignerLayout = styled(Layout)`
-  height: 100vh;
+  height: calc(100vh - 170px);
   overflow: hidden;
   background: #f5f5f5;
 `

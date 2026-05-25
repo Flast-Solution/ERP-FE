@@ -1,14 +1,20 @@
 import React from 'react'
-import { Empty } from 'antd'
+import { Empty, Tooltip } from 'antd'
+import { PlusOutlined } from '@ant-design/icons'
 import {
   useNodes,
   useSelectedId,
   useSetSelected,
   useStepTypes,
+  useSetStepTypes,
 } from '@/hooks/useWorkflowStore'
+import { HASH_POPUP } from '@/configs/constant'
+import { InAppEvent } from '@flast-erp/core/utils/FuseUtils'
 import {
   PanelContainer,
+  SectionTitleRow,
   SectionTitle,
+  AddIconBtn,
   PaletteWrapper,
   TypePill,
   TypePillLeft,
@@ -53,15 +59,13 @@ const TypeItem = ({ stepType }) => {
 // ─── ExistingStepItem — list row ──────────────────────────────────────────────
 
 const ExistingStepItem = ({ node, stepTypes, isActive, onClick }) => {
-  // Tìm config màu từ stepTypes trong store theo node.data.type
   const typeConfig = stepTypes.find((t) => t.key === node.data?.type)
   const color = typeConfig?.color ?? '#8c8c8c'
-  const label = node.data?.label || 'Untitled'
 
   return (
     <StepRow $active={isActive} onClick={onClick}>
       <StepRowDot $color={color} />
-      <StepRowLabel>{label}</StepRowLabel>
+      <StepRowLabel>{node.data?.label || 'Untitled'}</StepRowLabel>
       <StepRowCode>{node.data?.code}</StepRowCode>
     </StepRow>
   )
@@ -74,13 +78,34 @@ const StepPanel = () => {
   const selectedId = useSelectedId()
   const setSelected = useSetSelected()
   const stepTypes = useStepTypes()
+  const setStepTypes = useSetStepTypes()
+
+  // Mở modal cấu hình loại bước
+  const handleOpenConfig = () => {
+    InAppEvent.emit(HASH_POPUP, {
+      hash: 'workflow.step-types.config',
+      title: 'Cấu hình loại bước',
+      data: {
+        stepTypes,
+        onSave: (updatedTypes) => setStepTypes(updatedTypes),
+      },
+    })
+  }
 
   return (
     <PanelContainer>
 
-      {/* ── Palette "Thêm bước" — scroll khi > 250px ── */}
-      <SectionTitle>Thêm bước</SectionTitle>
+      {/* ── Header "Thêm bước" + nút cấu hình ── */}
+      <SectionTitleRow>
+        <SectionTitle>Thêm bước</SectionTitle>
+        <Tooltip title="Cấu hình loại bước">
+          <AddIconBtn onClick={handleOpenConfig}>
+            <PlusOutlined style={{ fontSize: 10 }} />
+          </AddIconBtn>
+        </Tooltip>
+      </SectionTitleRow>
 
+      {/* Palette pills — scroll khi > 250px */}
       <PaletteWrapper>
         {stepTypes.map((stepType) => (
           <TypeItem key={stepType.key} stepType={stepType} />
@@ -90,12 +115,14 @@ const StepPanel = () => {
       <PaletteDivider />
 
       {/* ── Danh sách bước hiện có ── */}
-      <SectionTitle>
-        Bước trong quy trình{' '}
-        {nodes.length > 0 && (
-          <span style={{ color: '#262626' }}>{nodes.length}</span>
-        )}
-      </SectionTitle>
+      <SectionTitleRow style={{ paddingBottom: 8 }}>
+        <SectionTitle>
+          Bước trong quy trình{' '}
+          {nodes.length > 0 && (
+            <span style={{ color: '#262626' }}>{nodes.length}</span>
+          )}
+        </SectionTitle>
+      </SectionTitleRow>
 
       <StepListWrapper>
         {nodes.length === 0 ? (

@@ -1,128 +1,250 @@
-import React, { useEffect } from 'react'
-import { Form, Input, Select, Button, Divider } from 'antd'
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
-import { STEP_TYPE_OPTIONS, ACTION_TYPE_OPTIONS, ACTION_TRIGGER_OPTIONS } from '@/store/workflowConstants'
-import { useUpdateNodeData } from '@/hooks/useWorkflowStore'
+import React, { useEffect, useState } from 'react'
+import { Form, Tag, Button } from 'antd'
+import { DeleteOutlined } from '@ant-design/icons'
+import FormInput from '@/form-flast/FormInput'
+import { useStepTypes, useUpdateNodeData } from '@/hooks/useWorkflowStore'
+import { ACTION_TYPES } from '@/store/workflowConstants'
 import { slugifyCode } from '@/utils/workflowValidators'
-import { SectionLabel, ActionCard } from './styles'
+import {
+  Section,
+  SectionDivider,
+  SectionHeader,
+  SectionTitle,
+  SectionAction,
+  FieldHint,
+  TypePillGroup,
+  TypePillBtn,
+  EmptyState,
+  ActionItem,
+  ActionItemLabel,
+  ActionItemMeta,
+  FormCard,
+  FormCardInfo,
+  FormCardName,
+  FormCardMeta,
+} from './StepForm.style'
 
-const { TextArea } = Input
+// ─── ActionSection ────────────────────────────────────────────────────────────
+// Dùng cho cả "on_enter" và "on_exit"
+
+const ActionSection = ({ title, trigger, actions, onAdd, onRemove }) => {
+  const filtered = actions.filter((a) => (a.trigger ?? 'on_enter') === trigger)
+
+  return (
+    <Section>
+      <SectionHeader>
+        <SectionTitle>{title}</SectionTitle>
+        <SectionAction onClick={() => onAdd(trigger)}>Thêm</SectionAction>
+      </SectionHeader>
+
+      {filtered.length === 0 ? (
+        <EmptyState>Chưa có hành động {trigger}.</EmptyState>
+      ) : (
+        filtered.map((action, idx) => {
+          const globalIdx = actions.indexOf(action)
+          return (
+            <ActionItem key={idx}>
+              <div>
+                <ActionItemLabel>
+                  {ACTION_TYPES[action.type]?.label ?? action.type}
+                </ActionItemLabel>
+                <ActionItemMeta>{trigger}</ActionItemMeta>
+              </div>
+              <Button
+                type="text"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={() => onRemove(globalIdx)}
+              />
+            </ActionItem>
+          )
+        })
+      )}
+    </Section>
+  )
+}
+
+// ─── StepForm ─────────────────────────────────────────────────────────────────
 
 const StepForm = ({ node }) => {
   const [form] = Form.useForm()
   const updateNodeData = useUpdateNodeData()
+  const stepTypes = useStepTypes()
+
+  // actions giữ local state như guards trong TransitionForm
+  const [actions, setActions] = useState(node.data.actions ?? [])
 
   useEffect(() => {
+    const nextActions = node.data.actions ?? []
+    setActions(nextActions)
     form.setFieldsValue({
       label: node.data.label,
       code: node.data.code,
       type: node.data.type,
-      description: node.data.description,
-      actions: node.data.actions ?? [],
     })
   }, [node.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Sync field thường (label, code, type) → store
   const handleValuesChange = (_, allValues) => {
-    updateNodeData(node.id, allValues)
+    updateNodeData(node.id, { ...allValues, actions })
   }
 
+  // Auto-slug code khi gõ label
   const handleLabelChange = (e) => {
     const currentCode = form.getFieldValue('code')
     if (currentCode === slugifyCode(node.data.label)) {
       const newCode = slugifyCode(e.target.value)
       form.setFieldValue('code', newCode)
-      updateNodeData(node.id, { ...form.getFieldsValue(), code: newCode })
+      updateNodeData(node.id, { ...form.getFieldsValue(), code: newCode, actions })
     }
   }
+
+  // Chọn loại bước
+  const handleTypeSelect = (key) => {
+    form.setFieldValue('type', key)
+    updateNodeData(node.id, { ...form.getFieldsValue(), type: key, actions })
+  }
+
+  // Thêm action mặc định theo trigger
+  const handleAddAction = (trigger) => {
+    const next = [...actions, { type: 'send_email', trigger, config: {} }]
+    setActions(next)
+    updateNodeData(node.id, { ...form.getFieldsValue(), actions: next })
+  }
+
+  // Xoá action theo index toàn cục
+  const handleRemoveAction = (index) => {
+    const next = actions.filter((_, i) => i !== index)
+    setActions(next)
+    updateNodeData(node.id, { ...form.getFieldsValue(), actions: next })
+  }
+
+  const currentType = Form.useWatch('type', form)
 
   return (
     <Form
       form={form}
       layout="vertical"
-      size="small"
       onValuesChange={handleValuesChange}
+      style={{ paddingBottom: 24 }}
     >
-      {/* ── Thông tin step ── */}
-      <SectionLabel>Thông tin step</SectionLabel>
+      {/* ══ Bước ══ */}
+      <Section>
+        <SectionTitle style={{ marginBottom: 12 }}>Bước</SectionTitle>
 
-      <Form.Item
-        name="label"
-        label="Label"
-        rules={[{ required: true, message: 'Nhập label' }]}
-      >
-        <Input placeholder="vd: Confirmed" onChange={handleLabelChange} />
-      </Form.Item>
+        <FormInput
+          name="label"
+          label="Tên hiển thị"
+          placeholder="vd: Độ bền màu"
+          required
+          onChange={handleLabelChange}
+        />
 
-      <Form.Item
-        name="code"
-        label="Code"
-        rules={[
-          { required: true, message: 'Nhập code' },
-          { pattern: /^[a-z0-9_]+$/, message: 'Chỉ dùng chữ thường, số, dấu _' },
-        ]}
-      >
-        <Input placeholder="vd: confirmed" style={{ fontFamily: 'monospace' }} />
-      </Form.Item>
+        <FormInput
+          name="code"
+          label="Mã bước"
+          placeholder="vd: fastness"
+          required
+          style={{ fontFamily: 'monospace' }}
+          rules={[
+            { pattern: /^[a-z0-9_]+$/, message: 'Chỉ dùng chữ thường, số, dấu _' },
+          ]}
+        />
+        <FieldHint>
+          Dùng trong API và conditions. Không đổi sau khi xuất bản.
+        </FieldHint>
 
-      <Form.Item name="type" label="Loại step">
-        <Select options={STEP_TYPE_OPTIONS} />
-      </Form.Item>
-
-      <Form.Item name="description" label="Mô tả">
-        <TextArea rows={2} placeholder="Mô tả ngắn về bước này" />
-      </Form.Item>
-
-      <Divider style={{ margin: '4px 0 12px' }} />
-
-      {/* ── Actions ── */}
-      <Form.List name="actions">
-        {(fields, { add, remove }) => (
-          <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <SectionLabel style={{ margin: 0 }}>
-                Actions{' '}
-                {fields.length > 0 && (
-                  <span style={{ color: '#1677ff' }}>{fields.length}</span>
-                )}
-              </SectionLabel>
-              <Button
-                type="link"
-                size="small"
-                icon={<PlusOutlined />}
-                style={{ padding: 0, fontSize: 12 }}
-                onClick={() => add({ type: 'send_email', trigger: 'on_enter', config: {} })}
+        {/* Loại bước — pill radio */}
+        <Form.Item name="type" label="Loại bước" style={{ marginBottom: 0 }}>
+          <TypePillGroup>
+            {stepTypes.map((t) => (
+              <TypePillBtn
+                key={t.key}
+                type="button"
+                $active={currentType === t.key}
+                onClick={() => handleTypeSelect(t.key)}
               >
-                Thêm action
-              </Button>
-            </div>
-
-            {fields.map(({ key, name: listName, ...restField }) => (
-              <ActionCard key={key}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: '#389e0d' }}>
-                    Action #{listName + 1}
-                  </span>
-                  <Button
-                    type="text"
-                    size="small"
-                    danger
-                    icon={<DeleteOutlined />}
-                    onClick={() => remove(listName)}
-                  />
-                </div>
-
-                <Form.Item {...restField} name={[listName, 'type']} label="Loại action">
-                  <Select options={ACTION_TYPE_OPTIONS} />
-                </Form.Item>
-
-                <Form.Item {...restField} name={[listName, 'trigger']} label="Trigger" style={{ marginBottom: 0 }}>
-                  <Select options={ACTION_TRIGGER_OPTIONS} />
-                </Form.Item>
-              </ActionCard>
+                {t.label}
+              </TypePillBtn>
             ))}
-          </>
+          </TypePillGroup>
+        </Form.Item>
+      </Section>
+
+      <SectionDivider />
+
+      {/* ══ Hành động khi vào bước ══ */}
+      <ActionSection
+        title="Hành động khi vào bước"
+        trigger="on_enter"
+        actions={actions}
+        onAdd={handleAddAction}
+        onRemove={handleRemoveAction}
+      />
+
+      <SectionDivider />
+
+      {/* ══ Hành động khi rời bước ══ */}
+      <ActionSection
+        title="Hành động khi rời bước"
+        trigger="on_exit"
+        actions={actions}
+        onAdd={handleAddAction}
+        onRemove={handleRemoveAction}
+      />
+
+      <SectionDivider />
+
+      {/* ══ Form gắn vào bước ══ */}
+      <Section>
+        <SectionHeader>
+          <SectionTitle>Form gắn vào bước</SectionTitle>
+          <SectionAction type="button">Gắn form</SectionAction>
+        </SectionHeader>
+
+        {(node.data.forms ?? []).length === 0 ? (
+          <EmptyState>Chưa có form nào được gắn.</EmptyState>
+        ) : (
+          (node.data.forms ?? []).map((f, i) => (
+            <FormCard key={i}>
+              <FormCardInfo>
+                <FormCardName>{f.name}</FormCardName>
+                <FormCardMeta>
+                  {[f.template_id && `template_id ${f.template_id}`, f.fields && `${f.fields} fields`, f.standard].filter(Boolean).join(' · ')}
+                </FormCardMeta>
+              </FormCardInfo>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                {f.required && (
+                  <Tag
+                    style={{
+                      borderRadius: 20,
+                      fontSize: 11,
+                      padding: '0 10px',
+                      background: '#e6f4ff',
+                      borderColor: '#91caff',
+                      color: '#1677ff',
+                      margin: 0,
+                    }}
+                  >
+                    Bắt buộc
+                  </Tag>
+                )}
+                <Button
+                  type="text"
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => {
+                    const next = (node.data.forms ?? []).filter((_, j) => j !== i)
+                    updateNodeData(node.id, { ...form.getFieldsValue(), actions, forms: next })
+                  }}
+                />
+              </div>
+            </FormCard>
+          ))
         )}
-      </Form.List>
+      </Section>
     </Form>
   )
 }

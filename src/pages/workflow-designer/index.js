@@ -1,22 +1,27 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Layout, Input, Typography } from 'antd'
 import { FlowCanvas, StepPanel, DetailPanel } from '@/containers/WorkflowDesigner'
-import {
-  useProcess,
-  useSetProcess,
-} from '@/hooks/useWorkflowStore'
+import { useProcess, useSetProcess } from '@/hooks/useWorkflowStore'
 import {
   DesignerLayout,
   LeftSider,
   RightSider,
 } from '@/containers/WorkflowDesigner/styles'
+import useCollapseSidebar from '@flast-erp/core/hooks/useCollapseSidebar';
 
 const { Content } = Layout
 const { Text } = Typography
 
 const WorkflowDesignerPage = () => {
+
   const process = useProcess()
   const setProcess = useSetProcess()
+  const { toggleCollapse } = useCollapseSidebar();
+  
+  useEffect(() => {
+    toggleCollapse();
+    /* eslint-disable-next-line */
+  }, []);
 
   return (
     <DesignerLayout>
@@ -41,24 +46,17 @@ const WorkflowDesignerPage = () => {
             flexShrink: 0,
           }}
         >
-          <Text style={{ fontSize: 12, color: '#8c8c8c', whiteSpace: 'nowrap' }}>
-            Process name:
-          </Text>
           <Input
             value={process.name}
             onChange={(e) => setProcess({ name: e.target.value })}
             onBlur={(e) =>
               setProcess({
                 name: e.target.value,
-                code: e.target.value
-                  .toLowerCase()
-                  .replace(/\s+/g, '_')
-                  .replace(/[^a-z0-9_]/g, ''),
+                code: e.target.value.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
               })
             }
-            size="small"
             style={{ maxWidth: 260, fontWeight: 500 }}
-            placeholder="Tên process"
+            placeholder="Tạo luồng xử lý nghiệp vụ"
           />
           <Text style={{ fontSize: 11, color: '#bfbfbf', fontFamily: 'monospace' }}>
             [{process.code}]

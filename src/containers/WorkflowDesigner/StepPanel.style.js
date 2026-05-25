@@ -7,14 +7,43 @@ export const PanelContainer = styled.div`
   overflow: hidden;
 `
 
+// Row chứa title + icon action bên phải
+export const SectionTitleRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 8px;
+  flex-shrink: 0;
+`
+
 export const SectionTitle = styled.div`
   font-size: 11px;
   font-weight: 700;
   color: #8c8c8c;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  padding: 14px 16px 8px;
-  flex-shrink: 0;
+`
+
+// Nút icon + nhỏ bên phải section header
+export const AddIconBtn = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid #d9d9d9;
+  background: transparent;
+  color: #8c8c8c;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: border-color 0.15s, color 0.15s;
+
+  &:hover {
+    border-color: #1677ff;
+    color: #1677ff;
+  }
 `
 
 // ─── Palette "Thêm bước" ──────────────────────────────────────────────────────

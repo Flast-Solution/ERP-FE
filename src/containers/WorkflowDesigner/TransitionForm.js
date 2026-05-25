@@ -112,7 +112,6 @@ const TransitionForm = ({ edge }) => {
     <Form
       form={form}
       layout="vertical"
-      size="small"
       onValuesChange={handleValuesChange}
       style={{ height: '100%' }}
     >
