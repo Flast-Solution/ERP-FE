@@ -18,6 +18,9 @@ import {
   CloseOutlined,
   HistoryOutlined,
   SaveOutlined,
+  DeploymentUnitOutlined,
+  LoadingOutlined,
+  WarningOutlined,
 } from '@ant-design/icons'
 import FormInput       from '@/form-flast/FormInput'
 import FormInputNumber from '@/form-flast/FormInputNumber'
@@ -48,13 +51,15 @@ import {
   CodePane,
   CodeSubHead,
   CodePath,
-  CodeBlock,
+  CodeEditorWrapper,
+  CodeTextarea,
+  BuildStatusBar,
+  BuildStatusText,
   ModalFooter,
   FooterLeft,
   FooterRight,
 } from './index.style'
 
-// ─── Render từng field dùng @flast-erp components ────────────────────────────
 
 const FieldPreview = ({ field }) => {
   const { inputType, fieldKey, label, isRequired, config = {} } = field
@@ -223,9 +228,8 @@ const FieldPreview = ({ field }) => {
   }
 }
 
-// ─── Form UI pane ─────────────────────────────────────────────────────────────
-
 const FormUITab = ({ schema, viewport }) => {
+
   const [form] = Form.useForm()
   const { fields = [] } = schema
 
@@ -251,13 +255,15 @@ const FormUITab = ({ schema, viewport }) => {
   )
 }
 
-// ─── JSX code pane ────────────────────────────────────────────────────────────
+const JSXCodeTab = ({ schema, templateId }) => {
 
-const JSXCodeTab = ({ schema }) => {
-  const [copied, setCopied] = useState(false)
-  const timerRef = useRef(null)
+  const [jsxCode,     setJsxCode]     = useState(() => buildJSX(schema).plain)
+  const [copied,      setCopied]      = useState(false)
+  const [buildStatus, setBuildStatus] = useState('idle')
+  const [buildMsg,    setBuildMsg]    = useState('')
+  const [previewUrl,  setPreviewUrl]  = useState('')
 
-  const { plain, html } = buildJSX(schema)
+  const copyTimerRef = useRef(null)
 
   const domain       = schema.meta?.domain ?? 'step'
   const templateSlug = schema.meta?.name
@@ -266,11 +272,49 @@ const JSXCodeTab = ({ schema }) => {
   const filePath = `forms/${templateSlug}_${domain}.jsx`
 
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(plain)
+    navigator.clipboard.writeText(jsxCode)
     setCopied(true)
-    clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => setCopied(false), 1400)
-  }, [plain])
+    clearTimeout(copyTimerRef.current)
+    copyTimerRef.current = setTimeout(() => setCopied(false), 1400)
+  }, [jsxCode])
+
+  const buildPreview = async (params) => {
+    return { previewUrl: ""}
+  }
+
+  const handleBuild = useCallback(async () => {
+    if (!templateId) {
+      setBuildStatus('error')
+      setBuildMsg('Cần lưu form trước khi build preview.')
+      return
+    }
+    setBuildStatus('building')
+    setBuildMsg('Đang build...')
+    try {
+      const { previewUrl: url } = await buildPreview(
+        templateId,
+        jsxCode,
+        ({ status, progress }) => {
+          setBuildStatus(status)
+          setBuildMsg(progress ?? '')
+        }
+      )
+      setPreviewUrl(url)
+      setBuildStatus('done')
+      setBuildMsg('Build thành công')
+    } catch (err) {
+      setBuildStatus('error')
+      setBuildMsg(err.message)
+    }
+  }, [templateId, jsxCode])
+
+  const btnStyle = {
+    background: 'rgba(255,255,255,0.10)',
+    border    : '1px solid rgba(255,255,255,0.18)',
+    color     : '#e2e8f0',
+    fontSize  : 11,
+    height    : 24,
+  }
 
   return (
     <CodePane>
@@ -280,31 +324,64 @@ const JSXCodeTab = ({ schema }) => {
           size="small"
           icon={copied ? <CheckOutlined /> : <CopyOutlined />}
           onClick={handleCopy}
-          style={{
-            background: 'rgba(255,255,255,0.10)',
-            border    : '1px solid rgba(255,255,255,0.18)',
-            color     : copied ? '#86efac' : '#e2e8f0',
-            fontSize  : 11,
-            height    : 24,
-            transition: 'color 0.2s',
-          }}
+          style={{ ...btnStyle, color: copied ? '#86efac' : '#e2e8f0' }}
         >
-          {copied ? 'Đã copy' : 'Copy JSX'}
+          {copied ? 'Đã copy' : 'Copy'}
         </Button>
       </CodeSubHead>
 
-      <CodeBlock dangerouslySetInnerHTML={{ __html: html }} />
+      <CodeEditorWrapper>
+        <CodeTextarea
+          value={jsxCode}
+          onChange={e => setJsxCode(e.target.value)}
+          spellCheck={false}
+          autoCorrect="off"
+          autoCapitalize="off"
+        />
+      </CodeEditorWrapper>
+
+      <BuildStatusBar>
+        <BuildStatusText $status={buildStatus}>
+          {buildStatus === 'building' && <LoadingOutlined spin />}
+          {buildStatus === 'error'    && <WarningOutlined />}
+          {buildStatus === 'done'     && <CheckOutlined />}
+          {buildMsg || (buildStatus === 'idle' ? 'Sửa code rồi bấm Build để xem trước' : '')}
+        </BuildStatusText>
+
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {buildStatus === 'done' && previewUrl && (
+            <Button
+              size="small"
+              style={{ ...btnStyle, color: '#86efac' }}
+              onClick={() => window.open(previewUrl, '_blank')}
+            >
+              Xem preview ↗
+            </Button>
+          )}
+          <Button
+            size="small"
+            type="primary"
+            icon={buildStatus === 'building'
+              ? <LoadingOutlined spin />
+              : <DeploymentUnitOutlined />
+            }
+            onClick={handleBuild}
+            disabled={buildStatus === 'building' || !jsxCode.trim()}
+            style={{ height: 24, fontSize: 11 }}
+          >
+            Build preview
+          </Button>
+        </div>
+      </BuildStatusBar>
     </CodePane>
   )
 }
 
-// ─── Main modal ───────────────────────────────────────────────────────────────
-
 const PreviewModal = ({ open, mode = 'ui', schema, onClose, onSave }) => {
+
   const [activeTab, setActiveTab] = useState(mode)
   const [viewport,  setViewport]  = useState('desktop')
 
-  // Sync tab khi prop mode thay đổi
   useState(() => { setActiveTab(mode) }, [mode])
 
   if (!open) return null
@@ -371,7 +448,7 @@ const PreviewModal = ({ open, mode = 'ui', schema, onClose, onSave }) => {
               <FormUITab schema={schema} viewport={viewport} />
             </FormUIPane>
           ) : (
-            <JSXCodeTab schema={schema} />
+            <JSXCodeTab schema={schema} templateId={schema?.meta?.id} />
           )}
         </PaneWrapper>
 

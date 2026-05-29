@@ -1,7 +1,5 @@
 import styled, { keyframes } from 'styled-components'
 
-// ─── Motion ───────────────────────────────────────────────────────────────────
-
 const modalPop = keyframes`
   from { transform: translateY(8px) scale(0.98); opacity: 0; }
   to   { transform: translateY(0)   scale(1);    opacity: 1; }
@@ -25,7 +23,7 @@ export const ModalWrapper = styled.div`
   border-radius: 8px;
   width: 100%;
   max-width: 960px;
-  max-height: calc(100vh - 80px);
+  height: calc(100vh - 80px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -106,6 +104,7 @@ export const TabBarRight = styled.div`
 
 export const PaneWrapper = styled.div`
   flex: 1;
+  min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -131,7 +130,6 @@ export const ViewportControl = styled.div`
   border: 1px solid #e4e4e7;
   border-radius: 6px;
   overflow: hidden;
-  align-self: flex-start;
 `
 
 export const ViewportBtn = styled.button`
@@ -176,6 +174,7 @@ export const FormCardFooter = styled.div`
 
 export const CodePane = styled.div`
   flex: 1;
+  min-height: 0;
   overflow: hidden;
   background: #0f172a;
   display: flex;
@@ -197,6 +196,7 @@ export const CodePath = styled.span`
   color: #94a3b8;
 `
 
+/* CodeBlock giữ lại để không break import cũ — alias sang CodeHighlight */
 export const CodeBlock = styled.pre`
   flex: 1;
   overflow: auto;
@@ -208,7 +208,6 @@ export const CodeBlock = styled.pre`
   color: #e2e8f0;
   background: transparent;
 
-  /* Token colors */
   .tk-tag     { color: #93c5fd; }
   .tk-attr    { color: #c4b5fd; }
   .tk-string  { color: #86efac; }
@@ -216,6 +215,69 @@ export const CodeBlock = styled.pre`
   .tk-boolean { color: #fcd34d; }
   .tk-comment { color: #6b7280; font-style: italic; }
   .tk-punct   { color: #94a3b8; }
+`
+
+// ─── Code editor — textarea thuần ───────────────────────────────────────────
+
+export const CodeEditorWrapper = styled.div`
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+`
+
+export const CodeTextarea = styled.textarea`
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 16px 20px;
+  font-family: 'SFMono-Regular', Consolas, 'Courier New', monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #e2e8f0;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  overflow: auto;
+  white-space: pre;
+  tab-size: 2;
+  box-sizing: border-box;
+  caret-color: #e2e8f0;
+
+  &::selection {
+    background: #1e40af;
+    color: #e2e8f0;
+  }
+
+  &::-webkit-scrollbar { width: 6px; height: 6px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+`
+
+/* Không dùng nữa — giữ export để không break import */
+export const CodeHighlight = styled.pre`display: none;`
+
+export const BuildStatusBar = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 14px;
+  background: #0f172a;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+  gap: 8px;
+`
+
+export const BuildStatusText = styled.span`
+  font-size: 11px;
+  color: ${({ $status }) =>
+    $status === 'done'     ? '#86efac' :
+    $status === 'error'    ? '#fca5a5' :
+    $status === 'building' ? '#fcd34d' :
+    '#6b7280'};
+  display: flex;
+  align-items: center;
+  gap: 5px;
 `
 
 // ─── Footer ───────────────────────────────────────────────────────────────────
