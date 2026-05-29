@@ -435,6 +435,17 @@ const FieldConfigPanel = () => {
               <FieldKeyHint>Tự động sinh từ nhãn. Dùng làm key trong API.</FieldKeyHint>
             )}
 
+            {/* Placeholder — chỉ hiện với type có text input */}
+            {['text','textarea','number','decimal','date','datetime','select','multi_select','lookup'].includes(field.inputType) && (
+              <Form.Item label="Placeholder" style={{ marginBottom: 12 }}>
+                <Input
+                  placeholder="Nhập gợi ý cho người dùng..."
+                  value={field.config?.placeholder ?? ''}
+                  onChange={e => updateConfig(field._id, { placeholder: e.target.value })}
+                />
+              </Form.Item>
+            )}
+
             {/* Kiểu input — readonly badge */}
             <Form.Item label="Kiểu input" style={{ marginBottom: 12 }}>
               <InputTypeBadge>

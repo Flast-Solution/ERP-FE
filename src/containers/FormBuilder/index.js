@@ -30,7 +30,7 @@ import {
   closestCenter,
 } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
-
+import PreviewModal from '@/containers/PreviewModal'
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 import useFormBuilderStore from '@/store/useFormBuilderStore'
 import { FIELD_TYPE_MAP }  from '@/utils/fieldTypes'
@@ -111,6 +111,8 @@ const FormBuilder = ({
   const [loading,      setLoading]      = useState(false)
   const [saving,       setSaving]       = useState(false)
   const [activeDragId, setActiveDragId] = useState(null)
+  const [previewOpen,   setPreviewOpen]   = useState(false)
+  const [previewMode,   setPreviewMode]   = useState('ui')
 
   const templateMeta  = useFormBuilderStore(s => s.templateMeta)
   const fields        = useFormBuilderStore(s => s.fields)
@@ -220,6 +222,11 @@ const FormBuilder = ({
     })
   }, [templateMeta, fields, onOpenAI])
 
+  const handlePreview = useCallback((mode = 'ui') => {
+    setPreviewMode(mode)
+    setPreviewOpen(true)
+  }, [])
+
   if (loading) {
     return (
       <BuilderLayout style={{ alignItems: 'center', justifyContent: 'center' }}>
@@ -256,7 +263,7 @@ const FormBuilder = ({
           <ToolbarRight>
 
             {/* Preview split button */}
-            <PreviewButton onPreview={mode => onPreview?.(mode)} />
+            <PreviewButton onPreview={handlePreview} />
 
             {/* AI Agent CTA */}
             <AIAgentBtn onClick={handleOpenAI}>
@@ -311,7 +318,18 @@ const FormBuilder = ({
       <DragOverlay dropAnimation={null}>
         {activeDragType && <FieldTypeDragGhost type={activeDragType} />}
       </DragOverlay>
-
+      
+      {/* ── Preview modal ── */}
+      <PreviewModal
+        open={previewOpen}
+        mode={previewMode}
+        schema={{ meta: templateMeta, fields }}
+        onClose={() => setPreviewOpen(false)}
+        onSave={() => { 
+          setPreviewOpen(false); 
+          handleSave();
+        }}
+      />
     </DndContext>
   )
 }
