@@ -1,7 +1,7 @@
 /**
  * useFormBuilderStore.js
  *
- * Zustand store cho Form Builder (màn hình A5 — Workflow BE doc).
+ * Zustand store cho Form Builder.
  *
  * State:
  *   templateMeta   — thông tin FormTemplate (id, name, domain, description, enabled)
@@ -58,12 +58,9 @@ function createField(type) {
   };
 }
 
-// ─── Store ───────────────────────────────────────────────────────────────────
 
 const useFormBuilderStore = create(
   immer((set, get) => ({
-
-    // ── State ──────────────────────────────────────────────────────────────
 
     templateMeta: {
       id         : null,
@@ -82,15 +79,11 @@ const useFormBuilderStore = create(
      */
     savedFieldKeys: new Set(),
 
-    // ── Template meta ──────────────────────────────────────────────────────
-
     setTemplateMeta(patch) {
       set(state => {
         Object.assign(state.templateMeta, patch);
       });
     },
-
-    // ── Load từ API (edit mode) ────────────────────────────────────────────
 
     /**
      * Khởi tạo store từ data trả về BE (GET /form-templates/:id).
@@ -134,7 +127,6 @@ const useFormBuilderStore = create(
       });
     },
 
-    // ── Fields CRUD ────────────────────────────────────────────────────────
 
     /**
      * Thêm field mới vào cuối canvas (hoặc tại index chỉ định).
@@ -229,8 +221,6 @@ const useFormBuilderStore = create(
       });
     },
 
-    // ── Selection ──────────────────────────────────────────────────────────
-
     selectField(_id) {
       set(state => { state.selectedId = _id; });
     },
@@ -238,8 +228,6 @@ const useFormBuilderStore = create(
     clearSelection() {
       set(state => { state.selectedId = null; });
     },
-
-    // ── Selectors (computed) ───────────────────────────────────────────────
 
     /** Field đang được chọn, hoặc null */
     getSelectedField() {
@@ -258,7 +246,6 @@ const useFormBuilderStore = create(
       return fields.some(f => f._id !== selfId && f.fieldKey === fieldKey);
     },
 
-    // ── Serialize để gửi lên BE ────────────────────────────────────────────
 
     /**
      * Trả về payload POST/PUT cho BE.
@@ -278,7 +265,7 @@ const useFormBuilderStore = create(
           isRequired  : f.isRequired,
           isSearchable: f.isSearchable,
           isIndexed   : f.isIndexed,
-          sortOrder   : index,              // tính lại theo thứ tự canvas
+          sortOrder   : index,
           enabled     : f.enabled,
           config      : f.config,
           refDomain   : f.refDomain,
@@ -288,8 +275,6 @@ const useFormBuilderStore = create(
         })),
       };
     },
-
-    // ── Reset ──────────────────────────────────────────────────────────────
 
     reset() {
       set(state => {
