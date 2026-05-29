@@ -9,7 +9,7 @@ import { cloneDeep } from 'lodash';
 import { f5List } from '@flast-erp/core/utils/dataUtils';
 import { HASH_MODAL } from 'configs';
 import QcService from 'services/QcService';
-import { getStaticImageUrl } from 'utils/tools';
+import { getStaticImageUrl } from '@/utils/tools';
 import Filter from './Filter';
 
 const SEVERITY_COLOR_MAP = {

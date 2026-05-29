@@ -21,8 +21,8 @@
 
 import { useContext, useMemo } from 'react';
 import { Col, Form } from 'antd';
-import FormSelectAPI from '@flast-erp/core/components/form/FormSelectAPI';
-import { FormListStyles } from "css/global";
+import FormSelectAPI from '@/form-flast/FormSelectAPI';
+import { FormListStyles } from "@/css/global";
 import ProductAttrService from 'services/ProductAttrService';
 import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
 import _ from "lodash";

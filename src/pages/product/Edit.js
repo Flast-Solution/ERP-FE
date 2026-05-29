@@ -7,15 +7,15 @@ import { Helmet } from "react-helmet";
 import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
 import { GATEWAY, SUCCESS_CODE } from '@/configs';
 import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
-import FormHidden from '@flast-erp/core/components/form/FormHidden';
-import FormInput from '@flast-erp/core/components/form/FormInput';
-import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
-import FormJoditEditor from '@flast-erp/core/components/form/FormJoditEditor';
+import FormHidden from '@/form-flast/FormHidden';
+import FormInput from '@/form-flast/FormInput';
+import FormTextArea from '@/form-flast/FormTextArea';
+import FormJoditEditor from '@/form-flast/FormJoditEditor';
 import CustomButton from '@flast-erp/core/components/CustomButton';
-import FormInfiniteCategory from '@flast-erp/core/components/form/SelectInfinite/FormInfiniteCategory';
+import FormInfiniteCategory from '@/form-flast/SelectInfinite/FormInfiniteCategory';
 import ImageUploader from '@flast-erp/core/components/common/File/ImageUploader';
-import InfiniteFaq from '@flast-erp/core/components/form/SelectInfinite/InfiniteFaq';
-import FormInputNumber from '@flast-erp/core/components/form/FormInputNumber';
+import InfiniteFaq from '@/form-flast/SelectInfinite/InfiniteFaq';
+import FormInputNumber from '@/form-flast/FormInputNumber';
 
 const ProductEdit = () => {
 

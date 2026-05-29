@@ -27,14 +27,14 @@ import RestList from '@flast-erp/core/components/RestLayout/RestList';
 import Filter from './Filter';
 import useGetList from "@flast-erp/core/hooks/useGetList";
 import { dateFormatOnSubmit, formatMoney, formatTime, f5List, arrayEmpty } from '@flast-erp/core/utils/dataUtils';
-import { HASH_POPUP } from 'configs/constant';
+import { HASH_POPUP } from '@/configs/constant';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import { DeleteOutlined } from '@ant-design/icons';
-import FormInfiniteStock from '@flast-erp/core/components/form/SelectInfinite/FormInfiniteStock';
-import FormInputNumber from '@flast-erp/core/components/form/FormInputNumber';
+import FormInfiniteStock from '@/form-flast/SelectInfinite/FormInfiniteStock';
+import FormInputNumber from '@/form-flast/FormInputNumber';
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';
-import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
-import FormInput from '@flast-erp/core/components/form/FormInput';
+import FormTextArea from '@/form-flast/FormTextArea';
+import FormInput from '@/form-flast/FormInput';
 import { SUCCESS_CODE } from 'configs';
 
 const PopconfirmImport = ({ form, record }) => {

@@ -21,15 +21,15 @@
 
 import { useState, useEffect, useContext } from 'react';
 import { Row, Col, Tag, List, Button } from 'antd';
-import FormHidden from '@flast-erp/core/components/form/FormHidden';
+import FormHidden from '@/form-flast/FormHidden';
 import CustomButton from '@flast-erp/core/components/CustomButton';
-import FormInput from '@flast-erp/core/components/form/FormInput';
-import FormSelect from '@flast-erp/core/components/form/FormSelect';
+import FormInput from '@/form-flast/FormInput';
+import FormSelect from '@/form-flast/FormSelect';
 import Dragger from 'antd/es/upload/Dragger';
-import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
-import { CHANNEL_SOURCE } from 'configs/localData';
+import FormTextArea from '@/form-flast/FormTextArea';
+import { CHANNEL_SOURCE } from '@/configs/localData';
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';
-import FormSelectInfiniteProduct from '@flast-erp/core/components/form/SelectInfinite/FormSelectInfiniteProduct';
+import FormSelectInfiniteProduct from '@/form-flast/SelectInfinite/FormSelectInfiniteProduct';
 import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
 import { arrayEmpty, arrayNotEmpty } from '@flast-erp/core/utils/dataUtils';
 import { DeleteOutlined } from '@ant-design/icons';

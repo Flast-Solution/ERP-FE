@@ -20,19 +20,19 @@
 /**************************************************************************/
 import { useState, useContext } from 'react';
 import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
-import FormListAddition from "@flast-erp/core/components/form/FormListAddtion";
+import FormListAddition from "@/form-flast/FormListAddtion";
 import { Col, Row, Typography, Form, message } from 'antd';
 import { SwitcherOutlined } from '@ant-design/icons';
-import FormSelectInfiniteMaterial from '@flast-erp/core/components/form/SelectInfinite/FormSelectInfiniteMaterial';
-import FormInputNumber from '@flast-erp/core/components/form/FormInputNumber';
-import FormHidden from '@flast-erp/core/components/form/FormHidden';
+import FormSelectInfiniteMaterial from '@/form-flast/SelectInfinite/FormSelectInfiniteMaterial';
+import FormInputNumber from '@/form-flast/FormInputNumber';
+import FormHidden from '@/form-flast/FormHidden';
 import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
 import CustomButton from '@flast-erp/core/components/CustomButton';
-import FormInput from '@flast-erp/core/components/form/FormInput';
+import FormInput from '@/form-flast/FormInput';
 import { arrayEmpty, formatMoney } from '@flast-erp/core/utils/dataUtils';
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
-import FormSelect from '@flast-erp/core/components/form/FormSelect';
+import FormSelect from '@/form-flast/FormSelect';
 
 const ProductBomContainer = ({ closeModal, data }) => {
 

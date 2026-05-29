@@ -4,8 +4,8 @@ import axios from 'axios';
 import { PlusCircleOutlined } from '@ant-design/icons';
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
-import FormInput from '@flast-erp/core/components/form/FormInput';
-import FormCheckbox from '@flast-erp/core/components/form/FormCheckbox';
+import FormInput from '@/form-flast/FormInput';
+import FormCheckbox from '@/form-flast/FormCheckbox';
 import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
 import { GATEWAY, HASH_MODAL } from 'configs';
 

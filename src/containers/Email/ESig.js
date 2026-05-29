@@ -1,6 +1,6 @@
 import React from 'react';
 import { Column, Row, Section, Text, } from "@react-email/components";
-import { APP_FOLLOW_STATUS_REJECT } from "configs/constant";
+import { APP_FOLLOW_STATUS_REJECT } from "@/configs/constant";
 import { formatDate } from "@flast-erp/core/utils/textUtils";
 
 const nRow = {

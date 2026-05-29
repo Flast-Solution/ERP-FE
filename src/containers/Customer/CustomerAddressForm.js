@@ -21,20 +21,20 @@
 
 import React, { useState } from "react";
 import { Col, Row, Form, message } from "antd";
-import FormInput from "@flast-erp/core/components/form/FormInput";
-import FormSelect from "@flast-erp/core/components/form/FormSelect";
+import FormInput from "@/form-flast/FormInput";
+import FormSelect from "@/form-flast/FormSelect";
 import RestEditModal from "@flast-erp/core/components/RestLayout/RestEditModal";
-import FormDatePicker from "@flast-erp/core/components/form/FormDatePicker";
-import FormListAddition from "@flast-erp/core/components/form/FormListAddtion";
-import { FormListStyles } from "css/global";
+import FormDatePicker from "@/form-flast/FormDatePicker";
+import FormListAddition from "@/form-flast/FormListAddtion";
+import { FormListStyles } from "@/css/global";
 import CustomButton from "@flast-erp/core/components/CustomButton";
-import FormSelectInfiniteProvince from "@flast-erp/core/components/form/SelectInfinite/FormSelectInfiniteProvince";
+import FormSelectInfiniteProvince from "@/form-flast/SelectInfinite/FormSelectInfiniteProvince";
 import { useEffectAsync } from "@flast-erp/core/hooks/MyHooks";
 import RequestUtils from "@flast-erp/core/utils/RequestUtils";
-import FormCheckbox from "@flast-erp/core/components/form/FormCheckbox";
+import FormCheckbox from "@/form-flast/FormCheckbox";
 import { dateFormatOnSubmit } from "@flast-erp/core/utils/dataUtils";
-import FormHidden from "@flast-erp/core/components/form/FormHidden";
-import { SUCCESS_CODE } from "configs";
+import FormHidden from "@/form-flast/FormHidden";
+import { SUCCESS_CODE } from "@/configs";
 
 const CustomerAddressForm = ({ data }) => {
 

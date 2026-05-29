@@ -21,10 +21,10 @@
 import React, { useCallback, useState } from 'react';
 import { Row, Col, message } from 'antd';
 import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
-import FormHidden from '@flast-erp/core/components/form/FormHidden';
-import FormInput from '@flast-erp/core/components/form/FormInput';
+import FormHidden from '@/form-flast/FormHidden';
+import FormInput from '@/form-flast/FormInput';
 import CustomButton from '@flast-erp/core/components/CustomButton';
-import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
+import FormTextArea from '@/form-flast/FormTextArea';
 import RequestUtils, { SUCCESS_CODE } from '@flast-erp/core/utils/RequestUtils';
 import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
 import { f5List } from '@flast-erp/core/utils/dataUtils';

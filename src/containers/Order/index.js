@@ -24,7 +24,7 @@ import { Table, Button, InputNumber, Select, Typography, message } from 'antd';
 import { ShowSkuDetail } from 'containers/Product/SkuView';
 import { arrayEmpty, arrayNotEmpty, formatMoney } from '@flast-erp/core/utils/dataUtils';
 import { formatterInputNumber, parserInputNumber } from '@flast-erp/core/utils/tools';
-import { HASH_POPUP } from 'configs/constant';
+import { HASH_POPUP } from '@/configs/constant';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import {
   SaveOutlined,

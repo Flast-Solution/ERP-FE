@@ -29,7 +29,7 @@ import { formatPhoneNumber } from '@flast-erp/core/utils/tools';
 import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
 import UserService from 'services/UserService';
 import HeaderCompany from '@flast-erp/core/components/common/HeaderCompany';
-import { StyledHeaderInvoice } from "css/global";
+import { StyledHeaderInvoice } from "@/css/global";
 
 const { Title, Text } = Typography;
 

@@ -1,9 +1,9 @@
 import React, { useCallback } from 'react'
 import { Col, Form, Row, Typography } from 'antd'
 import { SwitcherOutlined } from '@ant-design/icons'
-import FormListAddition from '@flast-erp/core/components/form/FormListAddtion';
+import FormListAddition from '@/form-flast/FormListAddtion';
 import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
-import FormInput from '@flast-erp/core/components/form/FormInput';
+import FormInput from '@/form-flast/FormInput';
 import BtnSubmit from '@flast-erp/core/components/CustomButton/BtnSubmit';
 import RequestUtils, { SUCCESS_CODE } from '@flast-erp/core/utils/RequestUtils';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';

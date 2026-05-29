@@ -15,10 +15,10 @@ import {
   APP_FOLLOW_STATUS_WAITING,
   APP_FOLLOW_STATUS_DONE,
   APP_FOLLOW_STATUS_REJECT
-} from 'configs/constant';
+} from '@/configs/constant';
 import { OTContent } from './styles';
 import UserService from 'services/UserService';
-import { CAR_WORK_TYPE } from 'configs/localData';
+import { CAR_WORK_TYPE } from '@/configs/localData';
 import CarService from 'services/CarService';
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 import { DownloadOutlined } from '@ant-design/icons';

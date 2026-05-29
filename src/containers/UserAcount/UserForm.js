@@ -22,10 +22,10 @@
 import React from 'react'
 import { Col, Row } from 'antd'
 import CustomButton from '@flast-erp/core/components/CustomButton'
-import FormHidden from '@flast-erp/core/components/form/FormHidden'
-import FormInput from '@flast-erp/core/components/form/FormInput'
-import FormSelect from '@flast-erp/core/components/form/FormSelect'
-import { USER_STATUS } from 'configs/localData'
+import FormHidden from '@/form-flast/FormHidden'
+import FormInput from '@/form-flast/FormInput'
+import FormSelect from '@/form-flast/FormSelect'
+import { USER_STATUS } from '@/configs/localData'
 
 const UserForm = ({ listProFile }) => {
 	return (

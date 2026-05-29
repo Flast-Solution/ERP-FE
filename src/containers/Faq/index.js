@@ -21,9 +21,9 @@
 import React, { useCallback, useState, useRef } from 'react';
 import { Row, Col, message } from 'antd';
 import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
-import FormHidden from '@flast-erp/core/components/form/FormHidden';
-import FormInput from '@flast-erp/core/components/form/FormInput';
-import FormJoditEditor from '@flast-erp/core/components/form/FormJoditEditor';
+import FormHidden from '@/form-flast/FormHidden';
+import FormInput from '@/form-flast/FormInput';
+import FormJoditEditor from '@/form-flast/FormJoditEditor';
 import CustomButton from '@flast-erp/core/components/CustomButton';
 import RequestUtils, { SUCCESS_CODE } from '@flast-erp/core/utils/RequestUtils';
 import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';

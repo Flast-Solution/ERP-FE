@@ -22,8 +22,8 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import jwtService from '@flast-erp/core/utils/jwtService';
-import { useStore } from "DataContext";
-import { ACTIONS } from 'configs';
+import { useStore } from "@/DataContext";
+import { ACTIONS } from '@/configs';
 
 const log = (value) => console.log('[auth.Auth] ', value);
 const Auth = (props) => {

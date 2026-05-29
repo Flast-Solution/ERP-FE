@@ -24,17 +24,17 @@ import React from 'react';
 const OrderRoute = [
   {
     path: 'order.payment',
-    Component: React.lazy(() => import('containers/Order/OrderPayment')),
+    Component: React.lazy(() => import('@/containers/Order/OrderPayment')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'order.invoice',
-    Component: React.lazy(() => import('containers/Order/Invoice')),
+    Component: React.lazy(() => import('@/containers/Order/Invoice')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'order.tabs',
-    Component: React.lazy(() => import('containers/Order/OrderTabs')),
+    Component: React.lazy(() => import('@/containers/Order/OrderTabs')),
     modalOptions: { title: '', width: 750 }
   },
   {
@@ -49,7 +49,7 @@ const OrderRoute = [
   },
   {
     path: 'order.select.detail',
-    Component: React.lazy(() => import('containers/Order/SelectDetailModal')),
+    Component: React.lazy(() => import('@/containers/Order/SelectDetailModal')),
     modalOptions: { title: 'Chọn sản phẩm', width: 900 }
   }
 ];

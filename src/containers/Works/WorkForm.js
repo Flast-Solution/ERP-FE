@@ -1,13 +1,13 @@
 import { Col, Row } from 'antd';
 import CustomButton from '@flast-erp/core/components/CustomButton';
-import FormDatePicker from '@flast-erp/core/components/form/FormDatePicker';
-import FormHidden from '@flast-erp/core/components/form/FormHidden';
-import FormInput from '@flast-erp/core/components/form/FormInput';
-import FormInputNumber from '@flast-erp/core/components/form/FormInputNumber';
-import FormSelect from '@flast-erp/core/components/form/FormSelect';
-import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
-import FormSelectInfiniteBusinessUser from '@flast-erp/core/components/form/SelectInfinite/FormSelectInfiniteBusinessUser';
-import { DEPARTMENT, PROJECT_STATUS_LIST } from 'configs/localData';
+import FormDatePicker from '@/form-flast/FormDatePicker';
+import FormHidden from '@/form-flast/FormHidden';
+import FormInput from '@/form-flast/FormInput';
+import FormInputNumber from '@/form-flast/FormInputNumber';
+import FormSelect from '@/form-flast/FormSelect';
+import FormTextArea from '@/form-flast/FormTextArea';
+import FormSelectInfiniteBusinessUser from '@/form-flast/SelectInfinite/FormSelectInfiniteBusinessUser';
+import { DEPARTMENT, PROJECT_STATUS_LIST } from '@/configs/localData';
 
 const WorkForm = () => {
   return (

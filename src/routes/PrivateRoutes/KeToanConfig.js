@@ -1,8 +1,8 @@
 import React from 'react';
-import { authRoles } from 'auth';
+import { authRoles } from '@/auth';
 
-const DuyetTienPage = React.lazy(() => import('pages/ketoan/DuyetTien'));
-const CongnoConfigPage = React.lazy(() => import('pages/ketoan'));
+const DuyetTienPage = React.lazy(() => import('@/pages/ketoan/DuyetTien'));
+const CongnoConfigPage = React.lazy(() => import('@/pages/ketoan'));
 
 export const KeToanConfig = {
     auth    : authRoles.user,

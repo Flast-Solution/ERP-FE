@@ -20,9 +20,9 @@
 /**************************************************************************/
 
 import { Row, Col } from 'antd';
-import FormDatePicker from '@flast-erp/core/components/form/FormDatePicker';
-import FormInput from '@flast-erp/core/components/form/FormInput';
-import FormSelectInfiniteBusinessUser from '@flast-erp/core/components/form/SelectInfinite/FormSelectInfiniteBusinessUser';
+import FormDatePicker from '@/form-flast/FormDatePicker';
+import FormInput from '@/form-flast/FormInput';
+import FormSelectInfiniteBusinessUser from '@/form-flast/SelectInfinite/FormSelectInfiniteBusinessUser';
 
 const Filter = () => (
   <Row gutter={16}>
@@ -52,6 +52,6 @@ const Filter = () => (
       />
     </Col>
   </Row>
-)
+);
 
 export default Filter;

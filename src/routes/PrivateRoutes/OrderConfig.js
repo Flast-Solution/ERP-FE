@@ -20,12 +20,12 @@
 /**************************************************************************/
 
 import React from 'react';
-import { authRoles } from 'auth';
+import { authRoles } from '@/auth';
 
-const OrderCancelPage = React.lazy(() => import('pages/order/Cancel'));
-const OrderPage = React.lazy(() => import('pages/order'));
-const OrderProductionPage = React.lazy(() => import('pages/order/OrderProduction'));
-const ManufacturingLot = React.lazy(() => import('pages/order/Shipment'));
+const OrderCancelPage = React.lazy(() => import('@/pages/order/Cancel'));
+const OrderPage = React.lazy(() => import('@/pages/order'));
+const OrderProductionPage = React.lazy(() => import('@/pages/order/OrderProduction'));
+const ManufacturingLot = React.lazy(() => import('@/pages/order/Shipment'));
 
 export const OrderConfig = {
     auth: authRoles.user,

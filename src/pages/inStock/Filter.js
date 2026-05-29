@@ -20,11 +20,11 @@
 /**************************************************************************/
 
 import { Row, Col } from 'antd';
-import FormInput from '@flast-erp/core/components/form/FormInput';
-import FormInfiniteStock from '@flast-erp/core/components/form/SelectInfinite/FormInfiniteStock';
-import FormSelectInfiniteBusinessUser from '@flast-erp/core/components/form/SelectInfinite/FormSelectInfiniteBusinessUser';
-import FormSelectInfiniteProduct from '@flast-erp/core/components/form/SelectInfinite/FormSelectInfiniteProduct';
-import FormSelectInfiniteProvider from '@flast-erp/core/components/form/SelectInfinite/FormSelectInfiniteProvider';
+import FormInput from '@/form-flast/FormInput';
+import FormInfiniteStock from '@/form-flast/SelectInfinite/FormInfiniteStock';
+import FormSelectInfiniteBusinessUser from '@/form-flast/SelectInfinite/FormSelectInfiniteBusinessUser';
+import FormSelectInfiniteProduct from '@/form-flast/SelectInfinite/FormSelectInfiniteProduct';
+import FormSelectInfiniteProvider from '@/form-flast/SelectInfinite/FormSelectInfiniteProvider';
 
 const WarehouseFilter = () => (
   <Row gutter={16}>

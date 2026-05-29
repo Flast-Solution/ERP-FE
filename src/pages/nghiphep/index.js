@@ -13,7 +13,7 @@ import {
   NGHI_PHEP_META,
   NGHI_PHEP_STATUS_TEXT,
   NGHI_PHEP_STATUS_WAITING,
-} from 'configs/constant';
+} from '@/configs/constant';
 
 const User = () => {
 

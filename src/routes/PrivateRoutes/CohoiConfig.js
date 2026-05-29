@@ -20,10 +20,10 @@
 /**************************************************************************/
 
 import React from 'react';
-import { authRoles } from 'auth';
+import { authRoles } from '@/auth';
 
-const CohoiPage = React.lazy(() => import('pages/cohoi'));
-const BanHangPage = React.lazy(() => import('pages/banhang'));
+const CohoiPage = React.lazy(() => import('@/pages/cohoi'));
+const BanHangPage = React.lazy(() => import('@/pages/banhang'));
 
 export const CohoiConfig = {
     auth: authRoles.user,

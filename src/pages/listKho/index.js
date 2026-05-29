@@ -30,7 +30,7 @@ import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import { Button, Col, Form, Row } from 'antd';
 import ModaleStyles from 'pages/lead/style';
 import { useForm } from 'antd/es/form/Form';
-import FormInput from '@flast-erp/core/components/form/FormInput';
+import FormInput from '@/form-flast/FormInput';
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 
 const ListWareHouse = () => {

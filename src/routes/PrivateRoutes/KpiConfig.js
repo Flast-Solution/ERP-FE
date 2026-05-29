@@ -1,7 +1,7 @@
 import React from 'react';
-import { authRoles } from 'auth';
+import { authRoles } from '@/auth';
 
-const KPIPage = React.lazy(() => import('pages/kpi'));
+const KPIPage = React.lazy(() => import('@/pages/kpi'));
 export const KpiConfig = {
     auth    : authRoles.user,
     routes  : [

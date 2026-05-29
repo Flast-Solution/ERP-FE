@@ -9,7 +9,7 @@ import { arrayEmpty } from './dataUtils';
 import { 
   PACKAGE_TYPE_UNITS_CONST, BOOKING_STATUS_MAP_KEYS, 
   EXTRA_SERVICE_STATUS, CONTRACT_TYPES, CONTRACT_STATUS
-} from 'configs/localData';
+} from '@/configs/localData';
 import { Tag } from 'antd';
 import CardService from 'services/CardService';
 import { formatDataI18n } from './dataUtils';

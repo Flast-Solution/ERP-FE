@@ -7,7 +7,7 @@ import { dateFormatOnSubmit, f5List } from '@flast-erp/core/utils/dataUtils';
 import NPReview from './NPReview';
 import NPConfirm from './NPConfirm';
 import { Form } from 'antd';
-import { NGHI_PHEP_STATUS_WAITING } from 'configs/constant';
+import { NGHI_PHEP_STATUS_WAITING } from '@/configs/constant';
 import useGetMe from '@flast-erp/core/hooks/useGetMe';
 
 const UserNPForm = ({ closeModal, data }) => {

@@ -20,9 +20,9 @@
 /**************************************************************************/
 
 import React from 'react';
-import { authRoles } from 'auth';
+import { authRoles } from '@/auth';
 
-const MaterialPage = React.lazy(() => import('pages/material'));
+const MaterialPage = React.lazy(() => import('@/pages/material'));
 export const MaterialConfig = {
     auth: authRoles.admin,
     routes: [

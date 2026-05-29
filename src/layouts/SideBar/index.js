@@ -87,7 +87,11 @@ function SideBar() {
       getItem(<Link to="/sale/order">Tổng hợp</Link>, 'list_order', <UnorderedListOutlined />),
       getItem(<Link to="/sale/order-cancel">Đơn hủy</Link>, 'order_cancel', <DeleteOutlined />)
     ]),
-    getItem(<Link to="/sale/drag-drop-order">Quy Trình</Link>, 'quy_trinh_don_hang', <ForkOutlined />),
+    getItem('Qui trình', 'business_flow', <DollarCircleFilled />, [
+      getItem(<Link to="/workflow-designer">Tạo nghiệp vụ</Link>, 'business_create', <UnorderedListOutlined />),
+      getItem(<Link to="/workflow-form">Tạo Form nhập</Link>, 'workflow_form', <UnorderedListOutlined />),
+      getItem(<Link to="/sale/drag-drop-order">Quy trình đơn</Link>, 'business_order', <ForkOutlined />),
+    ]),
     getItem('Kế toán', 'need_solve', <DollarCircleFilled />, [
       getItem(<Link to="/ke-toan/confirm">Duyệt tiền</Link>, 'list_order_update', <UnorderedListOutlined />),
       getItem(<Link to="/ke-toan/cong-no">Công nợ</Link>, 'can_giai_quyet', <BankOutlined />)

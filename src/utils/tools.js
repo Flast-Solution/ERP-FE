@@ -1,4 +1,4 @@
-import { GATEWAY } from 'configs';
+import { GATEWAY } from '@/configs';
 import { pickBy, identity } from 'lodash'
 import { notification } from 'antd';
 import i18next from 'i18next';

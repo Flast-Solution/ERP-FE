@@ -31,7 +31,7 @@ import KanbanCard from './KanbanCard';
 import { SUCCESS_CODE } from 'configs';
 import { isEmpty } from 'lodash';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
-import { HASH_POPUP } from 'configs/constant';
+import { HASH_POPUP } from '@/configs/constant';
 import '@asseinfo/react-kanban/dist/styles.css'
 
 const { Search } = Input;

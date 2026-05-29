@@ -1,7 +1,7 @@
-import { IMAGE_TYPES } from 'configs/localData';
+import { IMAGE_TYPES } from '@/configs/localData';
 import { notification, Upload } from 'antd';
 import i18next from 'i18next';
-import { MAX_FILE_SIZE_MB } from 'configs/constant';
+import { MAX_FILE_SIZE_MB } from '@/configs/constant';
 import axios from 'axios';
 
 const showErrorDownloadFile = (message) => {

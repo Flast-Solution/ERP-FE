@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { HASH_MODAL, HASH_MODAL_CLOSE } from 'configs';
+import { HASH_MODAL, HASH_MODAL_CLOSE } from '@/configs';
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import DrawerCustom from '@flast-erp/core/components/DrawerCustom';

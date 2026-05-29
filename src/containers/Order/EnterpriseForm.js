@@ -22,10 +22,10 @@
 import { useState, useCallback } from "react";
 import { Form, Row, Col, Button, Upload } from "antd";
 import CustomButton from "@flast-erp/core/components/CustomButton";
-import FormAddress from "@flast-erp/core/components/form/FormAddress";
-import FormHidden from "@flast-erp/core/components/form/FormHidden";
-import FormInput from "@flast-erp/core/components/form/FormInput";
-import { GATEWAY, SUCCESS_CODE } from "configs";
+import FormAddress from "@/form-flast/FormAddress";
+import FormHidden from "@/form-flast/FormHidden";
+import FormInput from "@/form-flast/FormInput";
+import { GATEWAY, SUCCESS_CODE } from "@/configs";
 import { useEffectAsync } from "@flast-erp/core/hooks/MyHooks";
 import { arrayNotEmpty } from "@flast-erp/core/utils/dataUtils";
 import RequestUtils from "@flast-erp/core/utils/RequestUtils";

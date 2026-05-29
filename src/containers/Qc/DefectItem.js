@@ -1,15 +1,15 @@
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import axios from 'axios';
 import { Button, Col, Image, Upload } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
-import FormHidden from '@flast-erp/core/components/form/FormHidden';
-import FormInput from '@flast-erp/core/components/form/FormInput';
-import FormSelect from '@flast-erp/core/components/form/FormSelect';
-import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
+import FormHidden from '@/form-flast/FormHidden';
+import FormInput from '@/form-flast/FormInput';
+import FormSelect from '@/form-flast/FormSelect';
+import FormTextArea from '@/form-flast/FormTextArea';
 import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
 import { FormListStyles } from '@/css/global';
-import { GATEWAY } from 'configs';
-import { getStaticImageUrl } from 'utils/tools';
+import { GATEWAY } from '@/configs';
+import { getStaticImageUrl } from '@/utils/tools';
 
 const uploadImage = async (file) => {
   const formData = new FormData();
@@ -124,7 +124,7 @@ const DefectItem = ({
         />
       </Col>
     </FormListStyles>
-  );
+  )
 };
 
 export default DefectItem;

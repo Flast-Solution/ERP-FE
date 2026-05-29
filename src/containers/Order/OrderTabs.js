@@ -22,7 +22,7 @@
 import React, { useState } from 'react';
 import { Tabs } from 'antd';
 import { arrayNotEmpty, f5List } from '@flast-erp/core/utils/dataUtils';
-import OrderService from 'services/OrderService';
+import OrderService from '@/services/OrderService';
 import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
 import OrderPayment from './OrderPayment';
 import { DollarOutlined, FileTextOutlined, BankOutlined } from '@ant-design/icons';

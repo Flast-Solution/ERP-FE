@@ -1,9 +1,9 @@
 import { Row, Col } from 'antd';
-import FormInput from '@flast-erp/core/components/form/FormInput';
-import FormHidden from '@flast-erp/core/components/form/FormHidden';
+import FormInput from '@/form-flast/FormInput';
+import FormHidden from '@/form-flast/FormHidden';
 import BtnSubmit from '@flast-erp/core/components/common/BtnSubmit';
-import FormSelectUser from '@flast-erp/core/components/form/FormSelectUser';
-import FormSelect from '@flast-erp/core/components/form/FormSelect';
+import FormSelectUser from '@/form-flast/FormSelectUser';
+import FormSelect from '@/form-flast/FormSelect';
 
 const EditUserForm = () => {
   return (

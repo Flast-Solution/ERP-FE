@@ -1,13 +1,13 @@
 import React, { useEffect } from 'react';
 import { Row, Col, Form, message } from 'antd';
-import FormSelectInfiniteProduct from '@flast-erp/core/components/form/SelectInfinite/FormSelectInfiniteProduct';
-import FormSelectInfiniteService from '@flast-erp/core/components/form/SelectInfinite/FormSelectInfiniteService';
-import FormSelect from '@flast-erp/core/components/form/FormSelect';
+import FormSelectInfiniteProduct from '@/form-flast/SelectInfinite/FormSelectInfiniteProduct';
+import FormSelectInfiniteService from '@/form-flast/SelectInfinite/FormSelectInfiniteService';
+import FormSelect from '@/form-flast/FormSelect';
 import CustomButton from '@flast-erp/core/components/CustomButton';
-import FormInput from '@flast-erp/core/components/form/FormInput';
-import { CHANNEL_SOURCE } from 'configs/localData';
-import FormHidden from '@flast-erp/core/components/form/FormHidden';
-import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
+import FormInput from '@/form-flast/FormInput';
+import { CHANNEL_SOURCE } from '@/configs/localData';
+import FormHidden from '@/form-flast/FormHidden';
+import FormTextArea from '@/form-flast/FormTextArea';
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 import { f5List } from '@flast-erp/core/utils/dataUtils';
 

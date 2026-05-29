@@ -24,57 +24,57 @@ import React from 'react';
 const dataRoute = [
   {
     path: 'user.edit',
-    Component: React.lazy(() => import('containers/UserAcount')),
+    Component: React.lazy(() => import('@/containers/UserAcount')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'nghiphep.edit',
-    Component: React.lazy(() => import('containers/NghiPhep')),
+    Component: React.lazy(() => import('@/containers/NghiPhep')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'nghiphep.confirm',
-    Component: React.lazy(() => import('containers/NghiPhep/NPConfirm')),
+    Component: React.lazy(() => import('@/containers/NghiPhep/NPConfirm')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'overtime.edit',
-    Component: React.lazy(() => import('containers/Overtime')),
+    Component: React.lazy(() => import('@/containers/Overtime')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'overtime.confirm',
-    Component: React.lazy(() => import('containers/Overtime/OVConfirm')),
+    Component: React.lazy(() => import('@/containers/Overtime/OVConfirm')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'booking.car.edit',
-    Component: React.lazy(() => import('containers/Booking/BookingCar')),
+    Component: React.lazy(() => import('@/containers/Booking/BookingCar')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'booking.car.confirm',
-    Component: React.lazy(() => import('containers/Booking/BookingConfirm')),
+    Component: React.lazy(() => import('@/containers/Booking/BookingConfirm')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'booking.hotel.edit',
-    Component: React.lazy(() => import('containers/Booking/BookingHotel')),
+    Component: React.lazy(() => import('@/containers/Booking/BookingHotel')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'booking.hotel.confirm',
-    Component: React.lazy(() => import('containers/Booking/BookingConfirm')),
+    Component: React.lazy(() => import('@/containers/Booking/BookingConfirm')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'booking.flight.edit',
-    Component: React.lazy(() => import('containers/Booking/BookingFlight')),
+    Component: React.lazy(() => import('@/containers/Booking/BookingFlight')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'booking.flight.confirm',
-    Component: React.lazy(() => import('containers/Booking/BookingConfirm')),
+    Component: React.lazy(() => import('@/containers/Booking/BookingConfirm')),
     modalOptions: { title: '', width: 750 }
   }
 ];

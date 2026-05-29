@@ -21,7 +21,7 @@
 
 import { useTranslation } from 'react-i18next';
 import { Form, Input } from 'antd';
-import FormInput from '@flast-erp/core/components/form/FormInput';
+import FormInput from '@/form-flast/FormInput';
 import useLogin from '@flast-erp/core/hooks/useLogin';
 import CustomButton from '@flast-erp/core/components/CustomButton';
 

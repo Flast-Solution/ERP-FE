@@ -57,10 +57,10 @@ import { KeToanConfig } from './KeToanConfig';
 /* NewFeed - Quy trình */
 import { NewfeedConfig } from './NewFeedConfig';
 import { DragDropConfig } from './DragDropOrderConfig';
-import { AiAgentConfig } from './AiAgentConfig';
 
 /* Web */
 import { WebConfig } from './WebConfig';
+import { WorkflowDesignerConfig } from './WorkflowDesignerConfig';
 
 /* HR - Quản lý hành chính */
 import { HRConfig } from './HRConfig';
@@ -86,11 +86,11 @@ const routeConfigs = [
     NewfeedConfig,
     ShipConfig,
     OrderConfig,
-    AiAgentConfig,
     DragDropConfig,
     WebConfig,
     HRConfig,
-    QcConfig
+    QcConfig,
+    WorkflowDesignerConfig
 ];
 
 const routes = [

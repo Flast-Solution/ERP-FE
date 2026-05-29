@@ -23,7 +23,7 @@ import React from 'react';
 const NhapKho = [
   {
     path: 'stock.add',
-    Component: React.lazy(() => import('containers/WareHouse/ModalNhapKho')),
+    Component: React.lazy(() => import('@/containers/WareHouse/ModalNhapKho')),
     modalOptions: { title: '', width: 750 }
   }
 ];

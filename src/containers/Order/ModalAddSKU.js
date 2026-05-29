@@ -21,16 +21,16 @@
 
 import React, { useState, useCallback } from 'react';
 import { Col, Form, Row } from 'antd';
-import FormSelectInfiniteProduct from '@flast-erp/core/components/form/SelectInfinite/FormSelectInfiniteProduct';
-import FormSelect from '@flast-erp/core/components/form/FormSelect';
-import FormInputNumber from '@flast-erp/core/components/form/FormInputNumber';
+import FormSelectInfiniteProduct from '@/form-flast/SelectInfinite/FormSelectInfiniteProduct';
+import FormSelect from '@/form-flast/FormSelect';
+import FormInputNumber from '@/form-flast/FormInputNumber';
 import BtnSubmit from '@flast-erp/core/components/CustomButton/BtnSubmit';
 import _, { isEmpty } from 'lodash';
 import { arrayNotEmpty } from '@flast-erp/core/utils/dataUtils';
 import InStockTable from 'containers/WareHouse/InStockTable'
-import FormAutoComplete from '@flast-erp/core/components/form/FormAutoComplete';
+import FormAutoComplete from '@/form-flast/FormAutoComplete';
 import OrderService from 'services/OrderService';
-import FormTextArea from '@flast-erp/core/components/form/FormTextArea';
+import FormTextArea from '@/form-flast/FormTextArea';
 import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 import { ShowSkuDetail } from 'containers/Product/SkuView';

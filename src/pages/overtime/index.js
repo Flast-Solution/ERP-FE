@@ -12,7 +12,7 @@ import useGetMe from '@flast-erp/core/hooks/useGetMe';
 import {
   NGHI_PHEP_STATUS_TEXT, 
   NGHI_PHEP_STATUS_WAITING,
-} from 'configs/constant';
+} from '@/configs/constant';
 import { formatDateDayjs } from '@flast-erp/core/utils/textUtils'
 import { OTContent } from './styles';
 

@@ -20,11 +20,11 @@
 /**************************************************************************/
 
 import React from 'react';
-import { authRoles } from 'auth';
+import { authRoles } from '@/auth';
 
-const HomePage = React.lazy(() => import('pages/newFeed'));
-const TaskPage = React.lazy(() => import('pages/task'));
-const TaskCalendar = React.lazy(() => import('pages/task/MyCalendar'));
+const HomePage = React.lazy(() => import('@/pages/newFeed'));
+const TaskPage = React.lazy(() => import('@/pages/task'));
+const TaskCalendar = React.lazy(() => import('@/pages/task/MyCalendar'));
 
 export const CommonConfig = {
     auth: authRoles.user,

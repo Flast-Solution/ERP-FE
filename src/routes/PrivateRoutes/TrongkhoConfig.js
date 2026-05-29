@@ -20,9 +20,9 @@
 /**************************************************************************/
 
 import React from 'react';
-import { authRoles } from 'auth';
+import { authRoles } from '@/auth';
 
-const Instock = React.lazy(() => import('pages/inStock'));
+const Instock = React.lazy(() => import('@/pages/inStock'));
 export const InstockConfig = {
     auth: authRoles.user,
     routes: [
