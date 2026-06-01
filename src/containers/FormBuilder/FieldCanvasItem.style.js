@@ -166,3 +166,34 @@ export const ActionBtn = styled.button`
     color: ${({ $danger }) => ($danger ? '#ff4d4f' : '#262626')};
   }
 `
+
+export const BlockChildrenWrap = styled.div`
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px dashed #d9d9d9;
+  border-radius: 8px;
+  background: #fafafa;
+`
+
+export const BlockDropZone = styled.div`
+  margin-top: 12px;
+  padding: 14px 16px;
+  border: 1px dashed ${({ $isOver }) => ($isOver ? '#1677ff' : '#d9d9d9')};
+  border-radius: 8px;
+  background: ${({ $isOver }) => ($isOver ? '#e6f4ff' : '#fff')};
+  color: ${({ $isOver }) => ($isOver ? '#1677ff' : '#8c8c8c')};
+  text-align: center;
+  font-size: 13px;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+`
+
+export const BlockChildrenHint = styled.div`
+  font-size: 12px;
+  color: #8c8c8c;
+  text-align: center;
+  padding: 48px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+`

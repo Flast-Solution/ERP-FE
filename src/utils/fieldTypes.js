@@ -28,6 +28,16 @@
  */
 
 export const FIELD_TYPES = [
+  // ─── Block ───────────────────────────────────────────────────────────────
+  {
+    type        : 'block',
+    label       : 'Block',
+    icon        : 'AppstoreOutlined',
+    component   : null,
+    defaultConfig: {},
+    configSchema : [],
+  },
+
   // ─── Text ────────────────────────────────────────────────────────────────
   {
     type        : 'text',

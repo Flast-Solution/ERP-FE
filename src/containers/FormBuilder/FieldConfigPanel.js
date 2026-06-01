@@ -336,13 +336,11 @@ const FieldConfigPanel = () => {
   const [form] = Form.useForm()
 
   const selectedId   = useFormBuilderStore(s => s.selectedId)
-  const fields       = useFormBuilderStore(s => s.fields)
+  const field        = useFormBuilderStore(s => s.getSelectedField())
   const updateField  = useFormBuilderStore(s => s.updateField)
   const updateLabel  = useFormBuilderStore(s => s.updateLabel)
   const updateConfig = useFormBuilderStore(s => s.updateConfig)
   const isDuplicate  = useFormBuilderStore(s => s.isDuplicateFieldKey)
-
-  const field = fields.find(f => f._id === selectedId) ?? null
 
   // Sync form values khi field thay đổi (chọn field khác)
   useEffect(() => {
@@ -357,7 +355,15 @@ const FieldConfigPanel = () => {
     } else {
       form.resetFields()
     }
-  }, [field?._id]) // eslint-disable-line
+  }, [
+    form,
+    field?._id,
+    field?.label,
+    field?.fieldKey,
+    field?.isRequired,
+    field?.isSearchable,
+    field?.isIndexed,
+  ])
 
   if (!field) {
     return (

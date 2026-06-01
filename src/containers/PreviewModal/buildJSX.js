@@ -48,9 +48,32 @@ function h(cls, text) {
   return `<span class="tk-${cls}">${esc(text)}</span>`
 }
 
+function toComponentName(name = '') {
+  const words = String(name)
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+
+  const baseName = words
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join('')
+
+  if (!baseName) {
+    return 'FormView'
+  }
+
+  return /^[A-Z]/.test(baseName) ? baseName : `Form${baseName}`
+}
+
 /* ─── InputType → form-flast component name ─────────────────────────────────── */
 
 const COMPONENT_MAP = {
+  block       : 'FormBlockPreview',
   text        : 'FormInput',
   textarea    : 'FormTextArea',
   number      : 'FormInputNumber',
@@ -85,6 +108,12 @@ function buildProps(field) {
   }
 
   switch (inputType) {
+    case 'block':
+      props.length = 0
+      props.push({ key: 'name', value: fieldKey, kind: 'str' })
+      props.push({ key: 'title', value: label, kind: 'str' })
+      break
+
     case 'decimal':
       props.push({ key: 'precision', value: '2', kind: 'expr' })
       if (config.min != null) props.push({ key: 'min', value: String(config.min), kind: 'expr' })
@@ -214,6 +243,31 @@ function fieldToJSXLines(field, colIndent) {
 
   const add = (p, h_) => { plain.push(p); html.push(h_) }
 
+  if (field.inputType === 'block') {
+    add(
+      `${colIndent}<${component}`,
+      `${colIndent}${h('tag', `<${component}`)}`
+    )
+
+    const { plain: pLines, html: hLines } = renderProps(props, propIndent)
+    pLines.forEach((l, i) => add(l, hLines[i]))
+
+    add(`${colIndent}>`, `${colIndent}${h('tag', '>')}`)
+    add(`${colIndent}  <Row gutter={[16, 0]}>`, `${colIndent}  ${h('tag', '<Row')} ${h('attr', 'gutter')}${h('punct', '={[16, 0]}')}${h('tag', '>')}`)
+
+    for (const child of field.children ?? []) {
+      const span = child.colSpan ?? 24
+      add(`${colIndent}    <Col span={${span}}>`, `${colIndent}    ${h('tag', '<Col')} ${h('attr', 'span')}${h('punct', `={${span}}`)}${h('tag', '>')}`)
+      const { plain: childPlain, html: childHtml } = fieldToJSXLines(child, `${colIndent}      `)
+      childPlain.forEach((line, idx) => add(line, childHtml[idx]))
+      add(`${colIndent}    </Col>`, `${colIndent}    ${h('tag', '</Col>')}`)
+    }
+
+    add(`${colIndent}  </Row>`, `${colIndent}  ${h('tag', '</Row>')}`)
+    add(`${colIndent}</${component}>`, `${colIndent}${h('tag', `</${component}>`)}`)
+    return { plain, html }
+  }
+
   if (props.length === 0) {
   /* self-closing 1 dòng */
     add(
@@ -241,7 +295,16 @@ function fieldToJSXLines(field, colIndent) {
 /* ─── Imports ────────────────────────────────────────────────────────────────── */
 
 function buildImports(fields) {
-  const used = new Set(fields.map(f => COMPONENT_MAP[f.inputType]).filter(Boolean))
+  const used = new Set()
+  const collect = (items = []) => {
+    for (const item of items) {
+      if (COMPONENT_MAP[item.inputType]) {
+        used.add(COMPONENT_MAP[item.inputType])
+      }
+      collect(item.children ?? [])
+    }
+  }
+  collect(fields)
   const antd = `import { Form, Row, Col } from 'antd'`
   const formFlast = [...used]
     .sort()
@@ -249,6 +312,22 @@ function buildImports(fields) {
     .join('\n')
 
   return [`import React from 'react'`, antd, formFlast].filter(Boolean).join('\n')
+}
+
+function buildBlockHelper(fields) {
+  const hasBlock = fields.some(field => field.inputType === 'block')
+  if (!hasBlock) return ''
+
+  return [
+    `const FormBlockPreview = ({ title, children }) => {`,
+    `  return (`,
+    `    <div style={{ border: '1px dashed #d9d9d9', background: '#fff', borderRadius: 6, padding: 16 }}>`,
+    `      <div style={{ fontWeight: 600, marginBottom: 4 }}>{title || 'Block'}</div>`,
+    `      {children}`,
+    `    </div>`,
+    `  )`,
+    `}`,
+  ].join('\n')
 }
 
 /* ─── Main export ────────────────────────────────────────────────────────────── */
@@ -259,7 +338,8 @@ function buildImports(fields) {
  */
 export function buildJSX(schema) {
   
-  const { fields = [] } = schema
+  const { meta = {}, fields = [] } = schema
+  const componentName = toComponentName(meta.name)
   const plainLines = []
   const htmlLines  = []
 
@@ -279,8 +359,14 @@ export function buildJSX(schema) {
   })
   add('', '')
 
+  const blockHelper = buildBlockHelper(fields)
+  if (blockHelper) {
+    blockHelper.split('\n').forEach(line => add(line, line))
+    add('', '')
+  }
+
   /* ── Component ── */
-  add('const FormView = () => {', `${h('punct', 'const')} ${h('tag', 'FormView')} ${h('punct', '= () => {')}`)
+  add(`const ${componentName} = () => {`, `${h('punct', 'const')} ${h('tag', componentName)} ${h('punct', '= () => {')}`)
   add("  const [form] = Form.useForm()", `  ${h('punct', 'const')} ${h('punct', '[form]')} ${h('punct', '=')} ${h('tag', 'Form')}${h('punct', '.useForm()')}`)
   add('  return (', `  ${h('punct', 'return (')}`)
   add(`    <Form form={form} layout="vertical" onFinish={values => console.log(values)}>`,
@@ -303,7 +389,7 @@ export function buildJSX(schema) {
   add('  )', `  ${h('punct', ')')}`)
   add('}', `${h('punct', '}')}`)
   add('', '')
-  add('export default FormView', `${h('punct', 'export default')} ${h('tag', 'FormView')}`)
+  add(`export default ${componentName}`, `${h('punct', 'export default')} ${h('tag', componentName)}`)
 
   return {
     plain: plainLines.join('\n'),

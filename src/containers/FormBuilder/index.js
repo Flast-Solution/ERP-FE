@@ -10,7 +10,7 @@
  *   onOpenAI    {function}     — ({ mode, context }) => void — App level mở AIChatbot
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Button, Spin, message, Popconfirm, Dropdown } from 'antd'
 import {
   SaveOutlined,
@@ -29,11 +29,11 @@ import {
   useSensors,
   closestCenter,
 } from '@dnd-kit/core'
-import { arrayMove } from '@dnd-kit/sortable'
 import PreviewModal from '@/containers/PreviewModal'
 import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 import useFormBuilderStore from '@/store/useFormBuilderStore'
 import { FIELD_TYPE_MAP }  from '@/utils/fieldTypes'
+import { buildJSX } from '@/containers/PreviewModal/buildJSX'
 import FieldTypeList       from './FieldTypeList'
 import FieldCanvas, { CANVAS_DROPPABLE_ID } from './FieldCanvas'
 import FieldConfigPanel    from './FieldConfigPanel'
@@ -43,6 +43,7 @@ import {
   ToolbarLeft,
   ToolbarRight,
   ToolbarTitle,
+  ToolbarTitleInput,
   ToolbarDomain,
   BuilderBody,
   DragGhost,
@@ -113,15 +114,29 @@ const FormBuilder = ({
   const [activeDragId, setActiveDragId] = useState(null)
   const [previewOpen,   setPreviewOpen]   = useState(false)
   const [previewMode,   setPreviewMode]   = useState('ui')
+  const [jsxCode,       setJsxCode]       = useState('')
 
   const templateMeta  = useFormBuilderStore(s => s.templateMeta)
   const fields        = useFormBuilderStore(s => s.fields)
   const loadFromApi   = useFormBuilderStore(s => s.loadFromApi)
   const setTemplateMeta = useFormBuilderStore(s => s.setTemplateMeta)
   const addField      = useFormBuilderStore(s => s.addField)
-  const reorderFields = useFormBuilderStore(s => s.reorderFields)
+  const moveField     = useFormBuilderStore(s => s.moveField)
+  const getParentId   = useFormBuilderStore(s => s.getParentId)
+  const getFieldLocation = useFormBuilderStore(s => s.getFieldLocation)
   const toPayload     = useFormBuilderStore(s => s.toPayload)
   const reset         = useFormBuilderStore(s => s.reset)
+
+  const findFieldById = useCallback((items, targetId) => {
+    for (const item of items) {
+      if (item._id === targetId) return item
+      if (Array.isArray(item.children) && item.children.length > 0) {
+        const nested = findFieldById(item.children, targetId)
+        if (nested) return nested
+      }
+    }
+    return null
+  }, [])
 
 
   useEffect(() => {
@@ -158,28 +173,48 @@ const FormBuilder = ({
     /* Case A: kéo từ sidebar */
     if (typeof activeId === 'string' && activeId.startsWith('type:')) {
       const type = activeId.replace('type:', '')
-      if (overId === CANVAS_DROPPABLE_ID || fields.some(f => f._id === overId)) {
-        const atIndex = fields.findIndex(f => f._id === overId)
-        addField(type, atIndex !== -1 ? atIndex : undefined)
+      if (typeof overId === 'string' && overId.startsWith('block-drop:')) {
+        addField(type, undefined, overId.replace('block-drop:', ''))
+        return
+      }
+      if (overId === CANVAS_DROPPABLE_ID) {
+        addField(type)
+        return
+      }
+      if (typeof overId === 'string') {
+        const location = getFieldLocation(overId)
+        const targetParentId = location?.parentId ?? null
+        const atIndex = location?.index
+        addField(type, typeof atIndex === 'number' && atIndex !== -1 ? atIndex : undefined, targetParentId)
       }
       return
     }
 
-    /* Case B: reorder trong canvas */
-    if (activeId !== overId) {
-      const oldIndex = fields.findIndex(f => f._id === activeId)
-      const newIndex = fields.findIndex(f => f._id === overId)
-      if (oldIndex !== -1 && newIndex !== -1) {
-        reorderFields(arrayMove(fields, oldIndex, newIndex).map(f => f._id))
-      }
+    /* Case B: move field hiện có */
+    if (typeof overId === 'string' && overId.startsWith('block-drop:')) {
+      moveField(activeId, null, overId.replace('block-drop:', ''))
+      return
     }
-  }, [fields, addField, reorderFields])
+
+    if (overId === CANVAS_DROPPABLE_ID) {
+      moveField(activeId, null, null)
+      return
+    }
+
+    if (activeId !== overId) {
+      moveField(activeId, overId, getParentId(overId))
+    }
+  }, [addField, moveField, getParentId, getFieldLocation])
 
   const handleDragCancel = useCallback(() => setActiveDragId(null), [])
 
   const activeDragType = activeDragId?.startsWith?.('type:')
     ? activeDragId.replace('type:', '')
     : null
+  const previewSchema = useMemo(() => ({
+    meta: templateMeta,
+    fields,
+  }), [templateMeta, fields])
 
   const handleSave = async () => {
     const emptyKey = fields.find(f => !f.fieldKey)
@@ -202,7 +237,17 @@ const FormBuilder = ({
 
     setSaving(true)
     try {
-      await onSave?.(toPayload())
+      const basePayload = toPayload()
+      const fallbackJsxCode = buildJSX({
+        meta: templateMeta,
+        fields,
+      }).plain
+      const payload = {
+        ...basePayload,
+        jsx_code: jsxCode || fallbackJsxCode,
+      }
+      console.log('[FormBuilder] save payload', payload)
+      await onSave?.(payload)
       message.success('Đã lưu form template.')
     } catch (err) {
       message.error('Lưu thất bại. Vui lòng thử lại.')
@@ -251,9 +296,15 @@ const FormBuilder = ({
           {/* Left — tên form + domain */}
           <ToolbarLeft>
             <EditOutlined style={{ color: '#8c8c8c' }} />
-            <ToolbarTitle>
-              {templateMeta.name || 'Form chưa đặt tên'}
-            </ToolbarTitle>
+            <ToolbarTitleInput
+              value={templateMeta.name}
+              onChange={e => setTemplateMeta({ name: e.target.value })}
+              placeholder="Nhập tên form"
+              aria-label="Tên form"
+            />
+            {!templateMeta.name && (
+              <ToolbarTitle>Form chưa đặt tên</ToolbarTitle>
+            )}
             {templateMeta.domain && (
               <ToolbarDomain>{templateMeta.domain}</ToolbarDomain>
             )}
@@ -323,7 +374,9 @@ const FormBuilder = ({
       <PreviewModal
         open={previewOpen}
         mode={previewMode}
-        schema={{ meta: templateMeta, fields }}
+        schema={previewSchema}
+        initialJsxCode={jsxCode}
+        onJsxCodeChange={setJsxCode}
         onClose={() => setPreviewOpen(false)}
         onSave={() => { 
           setPreviewOpen(false); 
