@@ -1,6 +1,6 @@
+import { useState } from "react";
 import AIChatbot from "@/containers/AIChatbot";
 import FormBuilder from "@/containers/FormBuilder";
-import { useState } from "react";
 
 const BuilderPage = () => {
 
@@ -19,6 +19,9 @@ const BuilderPage = () => {
       <FormBuilder
         onOpenAI={openChatbot}
         onPreview={()=> {}}
+        onContextUpdate={(context) => {
+          setChatbotContext(context)
+        }}
       />
 
       <AIChatbot

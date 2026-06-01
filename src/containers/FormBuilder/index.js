@@ -7,7 +7,8 @@
  *   onSave      {function}     — nhận payload { meta, fields[] }
  *   onCancel    {function}
  *   onPreview   {function}     — (mode: "ui"|"code") => void — App level mở PreviewModal
- *   onOpenAI    {function}     — ({ mode, context }) => void — App level mở AIChatbot
+ *   onOpenAI       {function}  — ({ mode, context }) => void — App level mở AIChatbot
+ *   onContextUpdate {function} — (context) => void — silent update context, không mở panel
  */
 
 import { useState, useEffect, useCallback } from 'react'
@@ -107,6 +108,7 @@ const FormBuilder = ({
   onCancel,
   onPreview,
   onOpenAI,
+  onContextUpdate,
 }) => {
   const [loading,      setLoading]      = useState(false)
   const [saving,       setSaving]       = useState(false)
@@ -150,7 +152,9 @@ const FormBuilder = ({
 
   const handleDragEnd = useCallback(({ active, over }) => {
     setActiveDragId(null)
-    if (!over) return
+    if (!over) {
+      return
+    }
 
     const activeId = active.id
     const overId   = over.id
@@ -217,10 +221,16 @@ const FormBuilder = ({
       mode   : 'form_builder',
       context: {
         meta  : templateMeta,
-        fields : fields,
+        fields,
       },
     })
   }, [templateMeta, fields, onOpenAI])
+
+  /* Khi fields thay đổi → silent update context, không mở panel */
+  useEffect(() => {
+    onContextUpdate?.({ meta: templateMeta, fields })
+    /* eslint-disable-next-line */
+  }, [fields])
 
   const handlePreview = useCallback((mode = 'ui') => {
     setPreviewMode(mode)

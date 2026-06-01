@@ -1,135 +1,278 @@
-/*
+/**
  * chatService.js
  *
- * Giao tiếp với server Qwen-agent qua SSE.
+ * Protocol (theo chat_client.py):
+ *   1. GET  /chat/stream?session_id=xxx  → SSE stream liên tục (1 connection/session)
+ *   2. POST /chat { session_id, message } → trigger AI response cho turn hiện tại
  *
- * API contract:
- *   POST /api/ai-agent/chat
- *   body: {
- *     mode     : string       — "form_builder" | "workflow" | "product" | ...
- *     message  : string       — tin nhắn hiện tại
- *     history  : Message[]    — toàn bộ thread (không gồm message hiện tại)
- *     context? : object       — chỉ gửi khi isFirstMessage = true
- *   }
- *
- *   Response: SSE stream
- *   Mỗi event có thể là:
- *     data: {"type":"chunk",  "text":"..."}          — text chunk
- *     data: {"type":"diff",   "diff":{...}}           — diff card data
- *     data: {"type":"done"}                           — stream kết thúc
- *     data: {"type":"error",  "message":"..."}        — lỗi từ server
+ * SSE events:
+ *   event: llms  data: "text chunk"     — stream text từ LLM
+ *   event: core  data: {...}            — tool call info (hiển thị phụ)
+ *   event: done  data: ""               — kết thúc 1 turn
+ *   event: close data: ""               — server đóng session (idle timeout)
  */
 
-/*
- * sendMessage
- *
- * @param {object}   params
- * @param {string}   params.mode
- * @param {string}   params.message
- * @param {array}    params.history       — Message[] từ store (role + text)
- * @param {object}   [params.context]     — truyền khi isFirstMessage = true
- * @param {boolean}  params.isFirstMessage
- * @param {function} params.onChunk       — (text: string) => void
- * @param {function} params.onDiff        — (diff: object) => void
- * @param {function} params.onDone        — () => void
- * @param {function} params.onError       — (error: Error) => void
- * @returns {AbortController}             — gọi .abort() để cancel stream
- */
-export function sendMessage({
-  mode,
-  message,
-  history,
-  context,
-  isFirstMessage,
-  onChunk,
-  onDiff,
-  onDone,
-  onError,
-}) {
-  const controller = new AbortController()
+const BASE_URL     = 'https://ai.flast.vn'
+const PING_INTERVAL_MS = 60_000
 
-  const body = {
-    mode,
-    message,
-    history: history.map(m => ({ role: m.role, text: m.text })),
-    ...(isFirstMessage && context ? { context } : {}),
-  }
-
-  fetch('/api/ai-agent/chat', {
-    method : 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body   : JSON.stringify(body),
-    signal : controller.signal,
-  })
-    .then(res => {
-      if (!res.ok) {
-        return res.json()
-          .catch(() => ({}))
-          .then(err => { throw new Error(err.message ?? `Server error ${res.status}`) })
-      }
-      return readSSEStream(res.body, { onChunk, onDiff, onDone, onError })
-    })
-    .catch(err => {
-      if (err.name === 'AbortError') return
-      onError?.(err)
-    })
-
-  return controller
+function stripServerPrefix(text = '') {
+  return text.replace(/^\[[A-Z_]+\]\n?/g, '').trim()
 }
 
-/* ── SSE stream reader ───────────────────────────────────────────────────── */
+export class ChatSession {
+  constructor(sessionId) {
+    this.sessionId       = sessionId
+    this._abortCtrl      = new AbortController()
+    this._onChunk        = null
+    this._onCore         = null
+    this._onDone         = null
+    this._onError        = null
+    this._onClose        = null
+    this._onHistoryLoaded = null
+    this._connected      = false
+    this._pingTimer      = null
+    this._connectPromise = null
+  }
 
-async function readSSEStream(readableBody, { onChunk, onDiff, onDone, onError }) {
-  const reader  = readableBody.getReader()
-  const decoder = new TextDecoder()
-  let   buffer  = ''
+  // ─── Public API ────────────────────────────────────────────────────────────
 
-  try {
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
+  connect({ onChunk, onCore, onDone, onError, onClose, onHistoryLoaded }) {
+    this._onChunk         = onChunk
+    this._onCore          = onCore
+    this._onDone          = onDone
+    this._onError         = onError
+    this._onClose         = onClose
+    this._onHistoryLoaded = onHistoryLoaded
 
-      buffer += decoder.decode(value, { stream: true })
+    this._connectPromise = this._openSSE()
+    return this._connectPromise
+  }
 
-      /* SSE events được phân tách bằng \n\n */
-      const parts = buffer.split('\n\n')
-      buffer = parts.pop() ?? ''
+  async send(message) {
+    const res = await fetch(`${BASE_URL}/chat`, {
+      method : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body   : JSON.stringify({
+        session_id: this.sessionId,
+        message,
+      }),
+    })
 
-      for (const part of parts) {
-        const line = part.trim()
-        if (!line.startsWith('data:')) continue
+    if (res.status === 409) {
+      throw new Error('SSE chưa kết nối. Vui lòng thử lại.')
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.message ?? `Server error ${res.status}`)
+    }
+  }
 
-        const raw = line.slice(5).trim()
-        if (raw === '[DONE]') {
-          onDone?.()
-          return
+  async sendSchemaUpdate({ schema, jsxCode }) {
+    try {
+      let content = "Đây là FormView mà bạn cần thay đổi theo yêu cầu: \n";
+      content += JSON.stringify({ fields: schema.fields, jsx_code: jsxCode});
+      content += "\n";
+      content += "Sau khi chỉnh sửa xong, hãy lưu code với config là fields và code là jsx_code đã chỉnh sửa.";
+      content += "\n";
+
+      await fetch(`${BASE_URL}/session/form-context`, {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({
+          session_id: this.sessionId,
+          form_context: content
+        }),
+      })
+    } catch {
+      /* silent — schema update không critical */
+    }
+  }
+
+  destroy() {
+    this._stopPing()
+    this._abortCtrl.abort()
+    this._connected = false
+  }
+
+  get isConnected() {
+    return this._connected
+  }
+
+  // ─── Ping (internal) ───────────────────────────────────────────────────────
+
+  _startPing() {
+    this._stopPing()
+    this._pingTimer = setInterval(() => this._doPing(), PING_INTERVAL_MS)
+  }
+
+  _stopPing() {
+    clearInterval(this._pingTimer)
+    this._pingTimer = null
+  }
+
+  async _doPing() {
+    try {
+      const res = await fetch(
+        `${BASE_URL}/ping?session_id=${this.sessionId}`,
+        { method: 'POST' }
+      )
+      if (res.status === 404) {
+        /* Session đã bị xóa — cleanup */
+        this._stopPing()
+        this._abortCtrl.abort()
+        this._connected = false
+        this._onClose?.()
+      }
+    } catch {
+      /* network lỗi tạm thời — bỏ qua, reconnect sẽ tự xử lý */
+    }
+  }
+
+  // ─── SSE ───────────────────────────────────────────────────────────────────
+
+  async _openSSE() {
+    const url = `${BASE_URL}/chat/stream?session_id=${this.sessionId}`
+
+    try {
+      const res = await fetch(url, {
+        method : 'GET',
+        headers: { 'Accept': 'text/event-stream' },
+        signal : this._abortCtrl.signal,
+      })
+
+      if (!res.ok) {
+        throw new Error(`SSE connect failed: ${res.status}`)
+      }
+
+      this._connected = true
+      this._startPing()
+      this._fetchAndEmitHistory()
+
+      await this._readStream(res.body)
+      if (!this._abortCtrl.signal.aborted) {
+        this._reconnect()
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        return
+      }
+      this._onError?.(err)
+      if (!this._abortCtrl.signal.aborted) {
+        this._reconnect()
+      }
+    }
+  }
+
+  _reconnect(delay = 1500) {
+    if (this._abortCtrl.signal.aborted) {
+      return
+    }
+    this._stopPing()
+    this._connected = false
+    setTimeout(() => {
+      if (!this._abortCtrl.signal.aborted) {
+        this._openSSE()
+      }
+    }, delay)
+  }
+
+  async _readStream(body) {
+    const reader  = body.getReader()
+    const decoder = new TextDecoder()
+    let   buffer  = ''
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) {
+          break
         }
 
-        let event
-        try {
-          event = JSON.parse(raw)
-        } catch {
-          continue
-        }
+        buffer += decoder.decode(value, { stream: true })
+        const parts = buffer.split('\n\n')
+        buffer = parts.pop() ?? ''
 
-        if (event.type === 'chunk') {
-          onChunk?.(event.text ?? '')
-        } else if (event.type === 'diff') {
-          onDiff?.(event.diff)
-        } else if (event.type === 'done') {
-          onDone?.()
-          return
-        } else if (event.type === 'error') {
-          onError?.(new Error(event.message ?? 'Unknown server error'))
-          return
+        for (const part of parts) {
+          this._handleSSEPart(part.trim())
         }
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') this._onError?.(err)
+    } finally {
+      reader.releaseLock()
+      this._connected = false
+    }
+  }
+
+  _handleSSEPart(part) {
+    if (!part) {
+      return
+    }
+
+    let eventName = 'message'
+    let eventData = ''
+
+    for (const line of part.split('\n')) {
+      if (line.startsWith('event:')) {
+        eventName = line.slice(6).trim()
+      } else if (line.startsWith('data:')) {
+        eventData = line.slice(5).trim()
       }
     }
 
-    onDone?.()
-  } catch (err) {
-    if (err.name !== 'AbortError') onError?.(err)
-  } finally {
-    reader.releaseLock()
+    switch (eventName) {
+      case 'llms': {
+        let text = eventData
+        try { text = JSON.parse(eventData) } catch {}
+        this._onChunk?.(String(text))
+        break
+      }
+
+      case 'core': {
+        let payload = eventData
+        try { payload = JSON.parse(eventData) } catch {}
+        this._onCore?.(payload)
+        break
+      }
+
+      case 'done': {
+        this._onDone?.()
+        break
+      }
+
+      case 'close': {
+        /* Server idle-timeout → stop ping, reconnect */
+        this._stopPing()
+        this._connected = false
+        this._onClose?.()
+        if (!this._abortCtrl.signal.aborted) {
+          this._reconnect()
+        }
+        break
+      }
+
+      default:
+        break
+    }
+  }
+
+  // ─── History ───────────────────────────────────────────────────────────────
+
+  async _fetchAndEmitHistory() {
+    if (!this._onHistoryLoaded) {
+      return
+    }
+    try {
+      const res = await fetch(`${BASE_URL}/history?session_id=${this.sessionId}`)
+      if (!res.ok) return
+      const data     = await res.json()
+      const messages = (data.messages ?? []).map(msg => ({
+        ...msg,
+        content: stripServerPrefix(msg.content),
+      }))
+      if (messages.length) this._onHistoryLoaded(messages)
+    } catch {
+      /* history không quan trọng, bỏ qua lỗi */
+    }
   }
 }
