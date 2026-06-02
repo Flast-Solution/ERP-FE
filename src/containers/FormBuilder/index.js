@@ -9,9 +9,10 @@
  *   onPreview   {function}     — (mode: "ui"|"code") => void — App level mở PreviewModal
  *   onOpenAI       {function}  — ({ mode, context }) => void — App level mở AIChatbot
  *   onContextUpdate {function} — (context) => void — silent update context, không mở panel
+ *   incomingTemplate {object}  — template AI trả về { fields, code, meta, nonce }
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Button, Spin, message, Popconfirm, Dropdown } from 'antd'
 import {
   SaveOutlined,
@@ -110,6 +111,7 @@ const FormBuilder = ({
   onPreview,
   onOpenAI,
   onContextUpdate,
+  incomingTemplate,
 }) => {
   const [loading,      setLoading]      = useState(false)
   const [saving,       setSaving]       = useState(false)
@@ -117,10 +119,12 @@ const FormBuilder = ({
   const [previewOpen,   setPreviewOpen]   = useState(false)
   const [previewMode,   setPreviewMode]   = useState('ui')
   const [jsxCode,       setJsxCode]       = useState('')
+  const appliedIncomingRef = useRef(null)
 
   const templateMeta  = useFormBuilderStore(s => s.templateMeta)
   const fields        = useFormBuilderStore(s => s.fields)
   const loadFromApi   = useFormBuilderStore(s => s.loadFromApi)
+  const importGeneratedTemplate = useFormBuilderStore(s => s.importGeneratedTemplate)
   const setTemplateMeta = useFormBuilderStore(s => s.setTemplateMeta)
   const addField      = useFormBuilderStore(s => s.addField)
   const moveField     = useFormBuilderStore(s => s.moveField)
@@ -155,6 +159,25 @@ const FormBuilder = ({
     return () => reset()
     /* eslint-disable-next-line */
   }, [templateId])
+
+  useEffect(() => {
+    if (!incomingTemplate?.nonce || appliedIncomingRef.current === incomingTemplate.nonce) {
+      return
+    }
+
+    appliedIncomingRef.current = incomingTemplate.nonce
+    importGeneratedTemplate({
+      meta  : incomingTemplate.meta,
+      fields: incomingTemplate.fields,
+    })
+    const nextSchema = {
+      meta  : { ...templateMeta, ...(incomingTemplate.meta ?? {}) },
+      fields: incomingTemplate.fields ?? [],
+    }
+    setJsxCode(buildJSX(nextSchema).plain)
+    setPreviewMode('code')
+    setPreviewOpen(true)
+  }, [incomingTemplate, importGeneratedTemplate, templateMeta])
 
 
   const sensors = useSensors(
@@ -278,9 +301,13 @@ const FormBuilder = ({
   }, [fields])
 
   const handlePreview = useCallback((mode = 'ui') => {
+    setJsxCode(buildJSX({
+      meta: templateMeta,
+      fields,
+    }).plain)
     setPreviewMode(mode)
     setPreviewOpen(true)
-  }, [])
+  }, [templateMeta, fields])
 
   if (loading) {
     return (

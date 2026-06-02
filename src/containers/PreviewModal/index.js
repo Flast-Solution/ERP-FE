@@ -90,8 +90,8 @@ const FieldPreview = ({ field }) => {
   const placeholder = config.placeholder ?? ''
   const required    = isRequired
   const opts        = (config.options ?? []).map(o => ({
-    id   : o.value,
-    name : o.label ?? o.value,
+    id   : o.id ?? o.value,
+    name : o.name ?? o.label ?? o.value ?? o.id,
   }))
 
   switch (inputType) {

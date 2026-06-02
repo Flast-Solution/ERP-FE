@@ -19,7 +19,7 @@
  */
 
 import { useEffect, useRef, useCallback, useState } from 'react'
-import { Button, Tooltip } from 'antd'
+import { Button, Tooltip, message as antdMessage } from 'antd'
 import {
   ThunderboltOutlined,
   CloseOutlined,
@@ -36,6 +36,7 @@ import { getMode }        from './modes'
 import { ChatSession }    from './chatService'
 import ChatThread         from './ChatThread'
 import Composer           from './Composer'
+import { parseTemplateSavedMessage } from './templateSavedParser'
 import {
   FABButton,
   FABBadge,
@@ -76,6 +77,7 @@ const AIChatbot = ({
   onClose,
   onApplyDiff,
   onViewDiff,
+  onTemplateSaved,
 }) => {
   const modeConfig = getMode(mode)
 
@@ -93,6 +95,9 @@ const AIChatbot = ({
   const sessionRef        = useRef(null)
   const schemaDebounceRef = useRef(null)
   const contextRef        = useRef(context)
+  const responseBufferRef = useRef('')
+  const onTemplateSavedRef = useRef(onTemplateSaved)
+  const appliedTemplateRef = useRef(new Set())
 
   const messages = threads[mode] ?? []
   const [ sseStatus, setSseStatus ] = useState('idle')
@@ -101,6 +106,34 @@ const AIChatbot = ({
   useEffect(() => {
     contextRef.current = context
   }, [context])
+
+  useEffect(() => {
+    onTemplateSavedRef.current = onTemplateSaved
+  }, [onTemplateSaved])
+
+  const applyTemplateSavedFromText = useCallback((rawText, source) => {
+    const templateSaved = parseTemplateSavedMessage(rawText)
+    console.log(`[AIChatbot] ${source} response`, rawText)
+    console.log(`[AIChatbot] ${source} parsed template_saved`, templateSaved)
+
+    if (!templateSaved) {
+      return null
+    }
+
+    const fingerprint = JSON.stringify({
+      fields: templateSaved.fields?.map(field => field.fieldKey),
+      codeLength: templateSaved.code?.length ?? 0,
+    })
+
+    if (appliedTemplateRef.current.has(fingerprint)) {
+      return templateSaved
+    }
+
+    appliedTemplateRef.current.add(fingerprint)
+    onTemplateSavedRef.current?.(templateSaved)
+    antdMessage.success('Đã nhận template từ AI và cập nhật preview.')
+    return templateSaved
+  }, [])
 
   const connectSession = useCallback((sessionId, currentMode) => {
 
@@ -117,6 +150,7 @@ const AIChatbot = ({
 
     session.connect({
       onChunk: (chunk) => {
+        responseBufferRef.current += chunk
         appendChunk(currentMode, chunk)
       },
       onCore: (payload) => {
@@ -131,7 +165,10 @@ const AIChatbot = ({
         }
       },
       onDone: () => {
+        const rawResponse = responseBufferRef.current
         finishStreaming(currentMode, diff)
+        responseBufferRef.current = ''
+        applyTemplateSavedFromText(rawResponse, 'assistant')
         diff = null
       },
       onError: (err) => {
@@ -156,6 +193,13 @@ const AIChatbot = ({
             text: msg.content,
             ts  : Date.now()
           }))
+        }
+        const latestAssistantTemplate = [...messages]
+          .reverse()
+          .find(msg => msg.role === 'assistant' && parseTemplateSavedMessage(msg.content))
+
+        if (latestAssistantTemplate) {
+          applyTemplateSavedFromText(latestAssistantTemplate.content, 'history')
         }
       },
     }).then(() => {
@@ -198,6 +242,7 @@ const AIChatbot = ({
     }
 
     pushMessage(mode, { role: 'user', text, ts: Date.now() })
+    responseBufferRef.current = ''
     startStreaming(mode)
 
     try {

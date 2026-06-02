@@ -59,25 +59,56 @@ function createField(type) {
   };
 }
 
+function normalizePersistedId(id) {
+  if (id == null || id === '') return null;
+  const numericId = Number(id);
+  return Number.isInteger(numericId) ? numericId : null;
+}
+
+function normalizeFieldKey(field) {
+  return field.fieldKey ?? (typeof field.id === 'string' ? field.id : field.key) ?? '';
+}
+
+function normalizeConfig(config = {}) {
+  return {
+    ...config,
+    options: Array.isArray(config.options)
+      ? config.options.map(option => ({
+        ...option,
+        value: option.value ?? option.id,
+        label: option.label ?? option.name ?? option.value ?? option.id,
+      }))
+      : config.options,
+  };
+}
+
 function mapFieldFromApi(field) {
+  const fieldKey = normalizeFieldKey(field);
   return {
     _id         : nanoid(),
-    id          : field.id,
-    fieldKey    : field.fieldKey,
-    label       : field.label,
+    id          : normalizePersistedId(field.id),
+    fieldKey,
+    label       : field.label ?? fieldKey,
     inputType   : field.inputType,
     isRequired  : field.isRequired  ?? false,
     isSearchable: field.isSearchable ?? false,
     isIndexed   : field.isIndexed   ?? false,
     sortOrder   : field.sortOrder   ?? 0,
     enabled     : field.enabled     ?? true,
-    config      : field.config      ?? {},
+    config      : normalizeConfig(field.config ?? {}),
     refDomain   : field.refDomain   ?? null,
     autoGenerate: field.autoGenerate ?? null,
     colSpan     : field.colSpan     ?? 24,
     fieldRole   : field.fieldRole   ?? null,
     children    : Array.isArray(field.children) ? field.children.map(mapFieldFromApi) : (field.inputType === 'block' ? [] : undefined),
   };
+}
+
+function normalizeFieldList(fields = []) {
+  return (fields ?? [])
+    .filter(field => field?.inputType)
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    .map(mapFieldFromApi);
 }
 
 function walkFields(fields, callback, parentId = null) {
@@ -203,6 +234,21 @@ const useFormBuilderStore = create(
         });
         state.savedFieldKeys = new Set(savedFieldKeys);
 
+        state.selectedId = null;
+      });
+    },
+
+    importGeneratedTemplate({ meta = {}, fields = [] }) {
+      set(state => {
+        state.templateMeta = {
+          ...state.templateMeta,
+          ...meta,
+          id: normalizePersistedId(meta.id ?? state.templateMeta.id),
+        };
+
+        state.fields = normalizeFieldList(fields);
+
+        state.savedFieldKeys = new Set();
         state.selectedId = null;
       });
     },

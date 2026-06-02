@@ -103,6 +103,15 @@ const parseProps = (propsSource = '') => {
   return props
 }
 
+const propToString = (prop, fallback = '') => {
+  if (typeof prop === 'string') return prop
+  if (prop?.type === 'expr') {
+    const translationMatch = prop.value.match(/^t\(['"]([^'"]+)['"]\)$/)
+    return translationMatch?.[1] ?? prop.value
+  }
+  return fallback
+}
+
 const mapComponentToField = (componentName, props, span) => {
   let inputType = COMPONENT_TO_INPUT[componentName] ?? 'text'
   const config = {}
@@ -119,7 +128,7 @@ const mapComponentToField = (componentName, props, span) => {
   }
 
   if (componentName === 'FormSelect') {
-    inputType = props.mode === 'multiple' ? 'multi_select' : 'select'
+    inputType = propToString(props.mode) === 'multiple' ? 'multi_select' : 'select'
     if (props.resourceData?.value) {
       try {
         const items = JSON.parse(props.resourceData.value)
@@ -141,12 +150,12 @@ const mapComponentToField = (componentName, props, span) => {
 
   if (componentName === 'FormSelectAPI') {
     inputType = 'lookup'
-    config.entity = props.entity ?? ''
-    config.labelField = props.labelField ?? 'name'
+    config.entity = propToString(props.entity)
+    config.labelField = propToString(props.labelField, 'name')
   }
 
   if (props.placeholder) {
-    config.placeholder = props.placeholder
+    config.placeholder = propToString(props.placeholder)
   }
 
   if (componentName === 'FormBlockPreview') {
@@ -162,8 +171,8 @@ const mapComponentToField = (componentName, props, span) => {
   return {
     _id: nanoid(),
     id: null,
-    fieldKey: props.name ?? '',
-    label: props.label ?? props.title ?? '',
+    fieldKey: propToString(props.name),
+    label: propToString(props.label ?? props.title),
     inputType,
     isRequired: Boolean(props.required),
     isSearchable: false,
@@ -191,7 +200,12 @@ const extractTopLevelCols = (content = '') => {
     if (tagEndIndex === -1) break
 
     const openTag = content.slice(openIndex, tagEndIndex + 1)
-    const spanMatch = openTag.match(/span=\{(\d+)\}/)
+    const spanMatch =
+      openTag.match(/span=\{(\d+)\}/) ??
+      openTag.match(/md=\{(\d+)\}/) ??
+      openTag.match(/lg=\{(\d+)\}/) ??
+      openTag.match(/sm=\{(\d+)\}/) ??
+      openTag.match(/xs=\{(\d+)\}/)
     const span = Number(spanMatch?.[1] ?? 24)
 
     let depth = 1
@@ -232,7 +246,7 @@ const extractTopLevelCols = (content = '') => {
 }
 
 const extractComponentNode = (block = '') => {
-  const trimmed = block.trim()
+  const trimmed = block.replace(/\{\/\*[\s\S]*?\*\/\}/g, '').trim()
   if (!trimmed.startsWith('<')) return null
 
   const openTagMatch = trimmed.match(/^<([A-Z][A-Za-z0-9]*)\s*([\s\S]*?)(\/?)>/)

@@ -58,8 +58,8 @@ const renderPreview = (field) => {
 
   // options dùng cho select/radio/checkbox
   const options = (config.options ?? []).map(o => ({
-    label: o.label || o.value,
-    value: o.value,
+    label: o.label ?? o.name ?? o.value ?? o.id,
+    value: o.value ?? o.id,
   }))
 
   switch (inputType) {
@@ -142,22 +142,14 @@ const renderPreview = (field) => {
     case 'select':
       return (
         <Form.Item label={formLabel}>
-          <Select disabled placeholder="Chọn..." style={{ width: '100%' }}>
-            {options.map(o => (
-              <Select.Option key={o.value} value={o.value}>{o.label}</Select.Option>
-            ))}
-          </Select>
+          <Select disabled placeholder="Chọn..." style={{ width: '100%' }} options={options} />
         </Form.Item>
       )
 
     case 'multi_select':
       return (
         <Form.Item label={formLabel}>
-          <Select disabled mode="multiple" placeholder="Chọn nhiều..." style={{ width: '100%' }}>
-            {options.map(o => (
-              <Select.Option key={o.value} value={o.value}>{o.label}</Select.Option>
-            ))}
-          </Select>
+          <Select disabled mode="multiple" placeholder="Chọn nhiều..." style={{ width: '100%' }} options={options} />
         </Form.Item>
       )
 

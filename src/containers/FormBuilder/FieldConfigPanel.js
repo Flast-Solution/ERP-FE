@@ -335,7 +335,6 @@ const AdvancedSection = ({ field, onUpdate }) => {
 const FieldConfigPanel = () => {
   const [form] = Form.useForm()
 
-  const selectedId   = useFormBuilderStore(s => s.selectedId)
   const field        = useFormBuilderStore(s => s.getSelectedField())
   const updateField  = useFormBuilderStore(s => s.updateField)
   const updateLabel  = useFormBuilderStore(s => s.updateLabel)
@@ -371,6 +370,7 @@ const FieldConfigPanel = () => {
         <PanelHeader>
           <PanelTitle>Cấu hình field</PanelTitle>
         </PanelHeader>
+        <Form form={form} component={false} />
         <EmptyState>
           <EmptyStateIcon><SettingOutlined /></EmptyStateIcon>
           <EmptyStateText>Chọn một field để cấu hình</EmptyStateText>

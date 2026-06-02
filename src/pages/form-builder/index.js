@@ -9,6 +9,7 @@ const BuilderPage = () => {
   const [chatbotOpen, setChatbotOpen] = useState(false)
   const [chatbotMode, setChatbotMode] = useState('default')
   const [chatbotContext, setChatbotContext] = useState(null)
+  const [incomingTemplate, setIncomingTemplate] = useState(null)
   const templateId = useFormBuilderStore(s => s.templateMeta.id)
   const setTemplateMeta = useFormBuilderStore(s => s.setTemplateMeta)
 
@@ -37,12 +38,28 @@ const BuilderPage = () => {
     return response
   }
 
+  const handleTemplateSaved = ({ fields, code, meta }) => {
+    console.log('[FormBuilderPage] applying AI template', {
+      fieldCount: fields?.length ?? 0,
+      fields,
+      code,
+      meta,
+    })
+    setIncomingTemplate({
+      fields,
+      code,
+      meta,
+      nonce: Date.now(),
+    })
+  }
+
   return (
     <div>
       <FormBuilder
         onOpenAI={openChatbot}
         onPreview={()=> {}}
         onSave={handleSave}
+        incomingTemplate={incomingTemplate}
       />
 
       <AIChatbot
@@ -50,6 +67,7 @@ const BuilderPage = () => {
         mode={chatbotMode}
         context={chatbotContext}
         onClose={() => setChatbotOpen(false)}
+        onTemplateSaved={handleTemplateSaved}
       />
     </div>
   )
