@@ -196,6 +196,12 @@ export const CodePath = styled.span`
   color: #94a3b8;
 `
 
+export const CodeToolbar = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`
+
 /* CodeBlock giữ lại để không break import cũ — alias sang CodeHighlight */
 export const CodeBlock = styled.pre`
   flex: 1;
@@ -223,6 +229,20 @@ export const CodeEditorWrapper = styled.div`
   flex: 1;
   min-height: 0;
   overflow: hidden;
+`
+
+export const CodeEditorFallback = styled.div`
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+`
+
+export const CodeEditorNotice = styled.div`
+  padding: 8px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  color: #fcd34d;
+  font-size: 11px;
+  background: rgba(245, 158, 11, 0.08);
 `
 
 export const CodeTextarea = styled.textarea`

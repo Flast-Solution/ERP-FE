@@ -31,7 +31,26 @@ export const Bubble = styled.div`
   background: ${({ $role }) => $role === 'user' ? '#1677ff' : '#f4f4f5'};
   color:      ${({ $role }) => $role === 'user' ? '#fff'    : '#18181b'};
 
-  b { font-weight: 600; }
+  b, strong { font-weight: 600; }
+
+  /* Markdown styles bên trong bubble assistant */
+  p          { margin: 0 0 6px; &:last-child { margin-bottom: 0; } }
+  h1,h2,h3   { font-size: 13px; font-weight: 700; margin: 8px 0 4px; }
+  ul, ol     { margin: 4px 0 6px; padding-left: 16px; }
+  li         { margin-bottom: 2px; }
+  code       { font-family: 'SFMono-Regular', Consolas, monospace;
+               font-size: 11px; background: rgba(0,0,0,0.08);
+               border-radius: 3px; padding: 1px 4px; }
+  pre        { background: rgba(0,0,0,0.10); border-radius: 6px;
+               padding: 8px 10px; overflow-x: auto; margin: 6px 0;
+               code { background: none; padding: 0; } }
+  a          { color: inherit; text-decoration: underline; opacity: 0.85; }
+  hr         { border: none; border-top: 1px solid rgba(0,0,0,0.1); margin: 8px 0; }
+  blockquote { border-left: 3px solid rgba(0,0,0,0.15); margin: 4px 0;
+               padding-left: 8px; opacity: 0.8; }
+  table      { border-collapse: collapse; font-size: 11px; width: 100%; margin: 6px 0; }
+  th, td     { border: 1px solid rgba(0,0,0,0.12); padding: 4px 8px; }
+  th         { background: rgba(0,0,0,0.06); font-weight: 600; }
 `
 
 export const BubbleMeta = styled.div`

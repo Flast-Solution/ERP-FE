@@ -19,26 +19,33 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 const path = require('path');
-const CracoLessPlugin = require("craco-less");
+const CracoLessPlugin = require('craco-less');
 
 module.exports = {
   webpack: {
     alias: {
-      "@/form-flast/*": path.resolve(__dirname, 'node_modules/@flast-erp/core/components/form/*'),
-      '@/*': path.resolve(__dirname, 'src/*'),
-    }
+      '@/form-flast': path.resolve(__dirname, 'node_modules/@flast-erp/core/components/form'),
+      '@': path.resolve(__dirname, 'src'),
+    },
+    configure: (webpackConfig) => {
+      webpackConfig.resolve.plugins = webpackConfig.resolve.plugins.filter(
+        (plugin) => plugin.constructor.name !== 'ModuleScopePlugin'
+      );
+
+      return webpackConfig;
+    },
   },
   plugins: [
     {
       plugin: CracoLessPlugin,
       options: {
         lessLoaderOptions: {
-          lessOptions: { javascriptEnabled: true }
-        }
-      }
-    }
+          lessOptions: { javascriptEnabled: true },
+        },
+      },
+    },
   ],
   devServer: {
-    port: 3000
-  }
+    port: 3000,
+  },
 };

@@ -7,6 +7,7 @@
 
 import { useEffect, useRef } from 'react'
 import { RobotOutlined } from '@ant-design/icons'
+import ReactMarkdown from 'react-markdown'
 import DiffCard from './DiffCard'
 import {
   ThreadWrapper,
@@ -48,10 +49,12 @@ const ChatThread = ({ messages = [], streaming, onApplyDiff, onViewDiff }) => {
     <ThreadWrapper>
       {messages.map(msg => (
         <BubbleRow key={msg.id} $role={msg.role}>
-          <Bubble
-            $role={msg.role}
-            dangerouslySetInnerHTML={{ __html: msg.text }}
-          />
+          <Bubble $role={msg.role}>
+            {msg.role === 'assistant' || msg.role === 'system'
+              ? <ReactMarkdown>{msg.text ?? ''}</ReactMarkdown>
+              : msg.text
+            }
+          </Bubble>
 
           {/* Diff card — chỉ hiện trong assistant bubble */}
           {msg.role === 'assistant' && msg.diff && (

@@ -1,0 +1,149 @@
+{
+    "meta": {
+        "id": null,
+        "name": "Hồ sơ nhân viên",
+        "domain": "",
+        "description": "",
+        "enabled": true
+    },
+    "fields": [
+        {
+            "id": null,
+            "fieldKey": "thong_tin_chung",
+            "label": "Thông tin chung",
+            "inputType": "block",
+            "isRequired": false,
+            "isSearchable": false,
+            "isIndexed": false,
+            "sortOrder": 0,
+            "enabled": true,
+            "config": {},
+            "refDomain": null,
+            "autoGenerate": null,
+            "colSpan": 12,
+            "fieldRole": null,
+            "children": [
+                {
+                    "id": null,
+                    "fieldKey": "ho_va_ten",
+                    "label": "Họ và Tên",
+                    "inputType": "text",
+                    "isRequired": false,
+                    "isSearchable": false,
+                    "isIndexed": false,
+                    "sortOrder": 0,
+                    "enabled": true,
+                    "config": {},
+                    "refDomain": null,
+                    "autoGenerate": null,
+                    "colSpan": 24,
+                    "fieldRole": null
+                }
+            ]
+        },
+        {
+            "id": null,
+            "fieldKey": "thong_tin_chi_tiet",
+            "label": "Thong tin chi tiết",
+            "inputType": "block",
+            "isRequired": false,
+            "isSearchable": false,
+            "isIndexed": false,
+            "sortOrder": 1,
+            "enabled": true,
+            "config": {},
+            "refDomain": null,
+            "autoGenerate": null,
+            "colSpan": 12,
+            "fieldRole": null,
+            "children": [
+                {
+                    "id": null,
+                    "fieldKey": "dia_chi",
+                    "label": "Địa chỉ",
+                    "inputType": "text",
+                    "isRequired": false,
+                    "isSearchable": false,
+                    "isIndexed": false,
+                    "sortOrder": 0,
+                    "enabled": true,
+                    "config": {},
+                    "refDomain": null,
+                    "autoGenerate": null,
+                    "colSpan": 24,
+                    "fieldRole": null
+                },
+                {
+                    "id": null,
+                    "fieldKey": "que_quan",
+                    "label": "Quê quán",
+                    "inputType": "text",
+                    "isRequired": false,
+                    "isSearchable": false,
+                    "isIndexed": false,
+                    "sortOrder": 1,
+                    "enabled": true,
+                    "config": {},
+                    "refDomain": null,
+                    "autoGenerate": null,
+                    "colSpan": 24,
+                    "fieldRole": null
+                }
+            ]
+        },
+        {
+            "id": null,
+            "fieldKey": "cong_viec",
+            "label": "Công việc",
+            "inputType": "block",
+            "isRequired": false,
+            "isSearchable": false,
+            "isIndexed": false,
+            "sortOrder": 2,
+            "enabled": true,
+            "config": {},
+            "refDomain": null,
+            "autoGenerate": null,
+            "colSpan": 24,
+            "fieldRole": null,
+            "children": [
+                {
+                    "id": null,
+                    "fieldKey": "ten_cong_ty",
+                    "label": "Tên công ty",
+                    "inputType": "text",
+                    "isRequired": false,
+                    "isSearchable": false,
+                    "isIndexed": false,
+                    "sortOrder": 0,
+                    "enabled": true,
+                    "config": {},
+                    "refDomain": null,
+                    "autoGenerate": null,
+                    "colSpan": 12,
+                    "fieldRole": null
+                },
+                {
+                    "id": null,
+                    "fieldKey": "nam_thanh_lap",
+                    "label": "Năm thành lập",
+                    "inputType": "number",
+                    "isRequired": false,
+                    "isSearchable": false,
+                    "isIndexed": false,
+                    "sortOrder": 1,
+                    "enabled": true,
+                    "config": {
+                        "min": 0,
+                        "max": null
+                    },
+                    "refDomain": null,
+                    "autoGenerate": null,
+                    "colSpan": 12,
+                    "fieldRole": null
+                }
+            ]
+        }
+    ],
+    "jsx_code": "import React from 'react'\nimport { Form, Row, Col } from 'antd'\nimport FormBlockPreview from '@/form-flast/FormBlockPreview'\nimport FormInput from '@/form-flast/FormInput'\nimport FormInputNumber from '@/form-flast/FormInputNumber'\n\nconst FormBlockPreview = ({ title, children }) => {\n  return (\n    <div style={{ border: '1px dashed #d9d9d9', background: '#fff', borderRadius: 6, padding: 16 }}>\n      <div style={{ fontWeight: 600, marginBottom: 4 }}>{title || 'Block'}</div>\n      {children}\n    </div>\n  )\n}\n\nconst HoSoNhanVien = () => {\n  const [form] = Form.useForm()\n  return (\n    <Form form={form} layout=\"vertical\" onFinish={values => console.log(values)}>\n      <Row gutter={[16, 0]}>\n        <Col span={12}>\n          <FormBlockPreview\n            name=\"thong_tin_chung\"\n            title=\"Thông tin chung\"\n          >\n            <Row gutter={[16, 0]}>\n              <Col span={24}>\n                <FormInput\n                  name=\"ho_va_ten\"\n                  label=\"Họ và Tên\"\n                />\n              </Col>\n            </Row>\n          </FormBlockPreview>\n        </Col>\n        <Col span={12}>\n          <FormBlockPreview\n            name=\"thong_tin_chi_tiet\"\n            title=\"Thong tin chi tiết\"\n          >\n            <Row gutter={[16, 0]}>\n              <Col span={24}>\n                <FormInput\n                  name=\"dia_chi\"\n                  label=\"Địa chỉ\"\n                />\n              </Col>\n              <Col span={24}>\n                <FormInput\n                  name=\"que_quan\"\n                  label=\"Quê quán\"\n                />\n              </Col>\n            </Row>\n          </FormBlockPreview>\n        </Col>\n        <Col span={24}>\n          <FormBlockPreview\n            name=\"cong_viec\"\n            title=\"Công việc\"\n          >\n            <Row gutter={[16, 0]}>\n              <Col span={12}>\n                <FormInput\n                  name=\"ten_cong_ty\"\n                  label=\"Tên công ty\"\n                />\n              </Col>\n              <Col span={12}>\n                <FormInputNumber\n                  name=\"nam_thanh_lap\"\n                  label=\"Năm thành lập\"\n                  min={0}\n                  style={{ width: '100%' }}\n                />\n              </Col>\n            </Row>\n          </FormBlockPreview>\n        </Col>\n      </Row>\n    </Form>\n  )\n}\n\nexport default HoSoNhanVien"
+}

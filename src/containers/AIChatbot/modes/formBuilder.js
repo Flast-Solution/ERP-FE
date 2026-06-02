@@ -15,16 +15,14 @@ const formBuilder = {
   },
 
   welcome: [
-    'Em đang xem form của bạn trong <b>Form Builder</b>.',
+    'Em đang xem form của bạn trong **Form Builder**.',
     'Mô tả thay đổi bằng lời — em sẽ chỉnh sửa và đưa diff để duyệt.',
   ],
 
   suggestions: [
-    { icon: 'PlusOutlined',     text: 'Thêm field ảnh mẫu sau thử giặt' },
-    { icon: 'EditOutlined',     text: 'Đổi cấp bền màu thành slider 1–5' },
-    { icon: 'SafetyOutlined',   text: 'Validate ảnh ≥ 1024px' },
-    { icon: 'CalendarOutlined', text: 'Thêm field ngày thực hiện' },
-  ],
+    { icon: 'PlusOutlined',     text: 'Tôi cần trợ giúp về Form Builder' },
+    { icon: 'EditOutlined',     text: 'Thêm field mới' }
+  ]
 }
 
 export default formBuilder

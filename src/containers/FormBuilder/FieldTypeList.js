@@ -11,6 +11,7 @@
  */
 
 import {
+  AppstoreOutlined,
   EditOutlined,
   MenuOutlined,
   NumberOutlined,
@@ -42,6 +43,7 @@ import {
 // ─── Icon map (icon string → component) ──────────────────────────────────────
 
 const ICON_MAP = {
+  AppstoreOutlined,
   EditOutlined,
   MenuOutlined,
   NumberOutlined,

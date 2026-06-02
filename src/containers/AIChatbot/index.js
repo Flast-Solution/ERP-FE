@@ -1,40 +1,42 @@
-/*
+/**
  * AIChatbot/index.js
  *
- * Component gốc — mount 1 lần duy nhất ở App level.
- * Gồm: FAB (floating action button) + panel popover.
+ * Session lifecycle:
+ *   - Mỗi mode có 1 sessionId riêng (từ store)
+ *   - Khi mode thay đổi → destroy session cũ → tạo ChatSession mới → connect SSE
+ *   - Khi user clear → newSession(mode) → sessionId thay đổi → useEffect re-connect
+ *   - Component unmount → destroy session
  *
  * Props:
  *   open          {boolean}
  *   mode          {string}   — key trong MODE_CONFIG
  *   context       {object}   — data thô của màn hình hiện tại
- *   unread        {number}   — badge count trên FAB
- *   onOpen        {function} — (mode) => void  — FAB click
- *   onClose       {function} — () => void
- *   onApplyDiff   {function} — (diff) => void  — màn hình cha xử lý
- *   onViewDiff    {function} — (diff) => void  — xem file thay đổi
- *
- * Luồng:
- *   1. Mở panel (open=true, mode=X) → load welcome messages nếu thread rỗng
- *   2. User gửi tin → isFirstMessage? gửi kèm context : chỉ gửi message + history
- *   3. SSE stream → appendStreamChunk → finishStreaming(diff?)
- *   4. User bấm clear → clearThread(mode)
+ *   unread        {number}
+ *   onOpen        {function}
+ *   onClose       {function}
+ *   onApplyDiff   {function} — (diff) => void
+ *   onViewDiff    {function} — (diff) => void
  */
 
-import { useEffect, useRef, useCallback } from 'react'
-import { Button, Tooltip } from 'antd'
+import { useEffect, useRef, useCallback, useState } from 'react'
+import { Button, Tooltip, message as antdMessage } from 'antd'
 import {
   ThunderboltOutlined,
   CloseOutlined,
-  DeleteOutlined,
   PlusOutlined,
+  LoadingOutlined,
+  DisconnectOutlined,
 } from '@ant-design/icons'
+import { buildJSX } from '@/containers/PreviewModal/buildJSX'
+import { arrayEmpty } from '@flast-erp/core/utils/dataUtils';
+
 import * as AntdIcons from '@ant-design/icons'
 import useChatStore       from './useChatStore'
 import { getMode }        from './modes'
-import { sendMessage }    from './chatService'
+import { ChatSession }    from './chatService'
 import ChatThread         from './ChatThread'
 import Composer           from './Composer'
+import { parseTemplateSavedMessage } from './templateSavedParser'
 import {
   FABButton,
   FABBadge,
@@ -50,13 +52,10 @@ import {
   ContextDot,
 } from './index.style'
 
-/* Render icon antd theo tên string */
 const DynamicIcon = ({ name, ...props }) => {
   const Icon = AntdIcons[name]
   return Icon ? <Icon {...props} /> : <ThunderboltOutlined {...props} />
 }
-
-/* ── Welcome messages ────────────────────────────────────────────────────── */
 
 function buildWelcomeMessages(modeConfig) {
   return modeConfig.welcome.map((text, i) => ({
@@ -68,7 +67,6 @@ function buildWelcomeMessages(modeConfig) {
   }))
 }
 
-/* ── AIChatbot ───────────────────────────────────────────────────────────── */
 
 const AIChatbot = ({
   open,
@@ -79,94 +77,227 @@ const AIChatbot = ({
   onClose,
   onApplyDiff,
   onViewDiff,
+  onTemplateSaved,
 }) => {
   const modeConfig = getMode(mode)
 
-  /* Store */
-  const threads         = useChatStore(s => s.threads)
-  const streaming       = useChatStore(s => s.streaming)
-  const pushMessage     = useChatStore(s => s.pushMessage)
-  const clearThread     = useChatStore(s => s.clearThread)
-  const startStreaming  = useChatStore(s => s.startStreaming)
-  const appendChunk     = useChatStore(s => s.appendStreamChunk)
-  const finishStreaming  = useChatStore(s => s.finishStreaming)
-  const abortStreaming   = useChatStore(s => s.abortStreaming)
-  const setActiveMode   = useChatStore(s => s.setActiveMode)
+  const threads           = useChatStore(s => s.threads)
+  const streaming         = useChatStore(s => s.streaming)
+  const pushMessage       = useChatStore(s => s.pushMessage)
+  const newSession        = useChatStore(s => s.newSession)
+  const getSessionId      = useChatStore(s => s.getSessionId)
+  const startStreaming    = useChatStore(s => s.startStreaming)
+  const appendChunk       = useChatStore(s => s.appendStreamChunk)
+  const finishStreaming   = useChatStore(s => s.finishStreaming)
+  const abortStreaming    = useChatStore(s => s.abortStreaming)
+  const setActiveMode     = useChatStore(s => s.setActiveMode)
+
+  const sessionRef        = useRef(null)
+  const schemaDebounceRef = useRef(null)
+  const contextRef        = useRef(context)
+  const responseBufferRef = useRef('')
+  const onTemplateSavedRef = useRef(onTemplateSaved)
+  const appliedTemplateRef = useRef(new Set())
 
   const messages = threads[mode] ?? []
+  const [ sseStatus, setSseStatus ] = useState('idle')
 
-  /* Abort controller ref — cancel stream khi đóng/reset */
-  const abortRef = useRef(null)
+  /* Luôn giữ ref trỏ đến context mới nhất mà không cần re-render */
+  useEffect(() => {
+    contextRef.current = context
+  }, [context])
 
-  /* Khi mode thay đổi → set active mode + load welcome nếu thread rỗng */
+  useEffect(() => {
+    onTemplateSavedRef.current = onTemplateSaved
+  }, [onTemplateSaved])
+
+  const applyTemplateSavedFromText = useCallback((rawText, source) => {
+    const templateSaved = parseTemplateSavedMessage(rawText)
+    console.log(`[AIChatbot] ${source} response`, rawText)
+    console.log(`[AIChatbot] ${source} parsed template_saved`, templateSaved)
+
+    if (!templateSaved) {
+      return null
+    }
+
+    const fingerprint = JSON.stringify({
+      fields: templateSaved.fields?.map(field => field.fieldKey),
+      codeLength: templateSaved.code?.length ?? 0,
+    })
+
+    if (appliedTemplateRef.current.has(fingerprint)) {
+      return templateSaved
+    }
+
+    appliedTemplateRef.current.add(fingerprint)
+    onTemplateSavedRef.current?.(templateSaved)
+    antdMessage.success('Đã nhận template từ AI và cập nhật preview.')
+    return templateSaved
+  }, [])
+
+  const connectSession = useCallback((sessionId, currentMode) => {
+
+    if (sessionRef.current) {
+      sessionRef.current.destroy()
+      sessionRef.current = null
+    }
+
+    setSseStatus('connecting')
+    const session = new ChatSession(sessionId)
+    sessionRef.current = session
+
+    let diff = null
+
+    session.connect({
+      onChunk: (chunk) => {
+        responseBufferRef.current += chunk
+        appendChunk(currentMode, chunk)
+      },
+      onCore: (payload) => {
+        if (payload) {
+          pushMessage(currentMode, {
+            role: 'system',
+            text: typeof payload === 'string'
+              ? payload
+              : JSON.stringify(payload),
+            ts  : Date.now()
+          })
+        }
+      },
+      onDone: () => {
+        const rawResponse = responseBufferRef.current
+        finishStreaming(currentMode, diff)
+        responseBufferRef.current = ''
+        applyTemplateSavedFromText(rawResponse, 'assistant')
+        diff = null
+      },
+      onError: (err) => {
+        setSseStatus('error')
+        abortStreaming(currentMode)
+        pushMessage(currentMode, {
+          role: 'assistant',
+          text: `Lỗi kết nối: ${err.message}`,
+          ts  : Date.now(),
+        })
+      },
+      onClose: () => {
+        setSseStatus('idle')
+      },
+      onHistoryLoaded: (messages) => {
+        /* Chỉ load nếu thread chưa có tin thật (tránh duplicate khi reconnect) */
+        const thread = useChatStore.getState().threads[currentMode] ?? []
+        const hasRealMsg = thread.some(m => !m.id?.startsWith('welcome-'))
+        if (!hasRealMsg) {
+          messages.forEach(msg => pushMessage(currentMode, {
+            role: msg.role,
+            text: msg.content,
+            ts  : Date.now()
+          }))
+        }
+        const latestAssistantTemplate = [...messages]
+          .reverse()
+          .find(msg => msg.role === 'assistant' && parseTemplateSavedMessage(msg.content))
+
+        if (latestAssistantTemplate) {
+          applyTemplateSavedFromText(latestAssistantTemplate.content, 'history')
+        }
+      },
+    }).then(() => {
+      setSseStatus('connected')
+    }).catch(() => setSseStatus('error'))
+    /* eslint-disable-next-line */
+  }, [])
+
+
   useEffect(() => {
     setActiveMode(mode)
+
     if (!threads[mode]?.length) {
       const welcomes = buildWelcomeMessages(modeConfig)
       welcomes.forEach(msg => pushMessage(mode, msg))
     }
-    /* eslint-disable-next-line */
-  }, [mode])
 
-  /* Cleanup khi unmount */
+    const sessionId = getSessionId(mode)
+    connectSession(sessionId, mode)
+
+    return () => {
+      sessionRef.current?.destroy()
+      sessionRef.current = null
+      setSseStatus('idle')
+    }
+    /* sessions[mode] thay đổi khi newSession() được gọi → re-connect */
+    /* eslint-disable-next-line */
+  }, [mode, useChatStore.getState().sessions[mode]])
+
   useEffect(() => {
-    return () => abortRef.current?.abort()
+    return () => {
+      sessionRef.current?.destroy()
+    }
+    /* eslint-disable-next-line */
   }, [])
 
-  /* ── Send message ── */
-  const handleSend = useCallback((text) => {
-    if (streaming) return
+  const handleSend = useCallback(async (text) => {
+    if (streaming || !sessionRef.current) {
+      return
+    }
 
-    /* Push user message */
-    pushMessage(mode, { role: 'user', text })
-
-    /* Xác định isFirstMessage: chỉ welcome messages → đây là message đầu tiên thực */
-    const realMessages = messages.filter(m => !m.id?.startsWith('welcome-'))
-    const isFirstMessage = realMessages.length === 0
-
-    /* Start streaming placeholder */
+    pushMessage(mode, { role: 'user', text, ts: Date.now() })
+    responseBufferRef.current = ''
     startStreaming(mode)
 
-    /* Gọi server */
-    let diff = null
-    abortRef.current = sendMessage({
-      mode,
-      message        : text,
-      history        : messages.filter(m => !m.id?.startsWith('welcome-')),
-      context        : isFirstMessage ? context : undefined,
-      isFirstMessage,
-      onChunk        : (chunk) => appendChunk(mode, chunk),
-      onDiff         : (d)     => { diff = d },
-      onDone         : ()      => finishStreaming(mode, diff),
-      onError        : (err)   => {
-        finishStreaming(mode, null)
-        pushMessage(mode, {
-          role: 'assistant',
-          text: `Lỗi: ${err.message}. Vui lòng thử lại.`,
-        })
-      },
-    })
-  }, [mode, streaming, messages, context]) // eslint-disable-line
+    try {
+      await sessionRef.current.send(text)
+    } catch (err) {
+      abortStreaming(mode)
+      pushMessage(mode, {
+        role: 'assistant',
+        text: `Lỗi: ${err.message}`,
+        ts  : Date.now()
+      })
+    }
+    /* eslint-disable-next-line */
+  }, [mode, streaming])
 
-  /* ── Clear thread ── */
-  const handleClear = () => {
-    abortRef.current?.abort()
+  /* Khi context (fields[]) thay đổi → debounce 2s → gửi schema update lên LLM */
+  useEffect(() => {
+    if (!context || arrayEmpty(context.fields)) {
+      return
+    }
+    clearTimeout(schemaDebounceRef.current)
+    schemaDebounceRef.current = setTimeout(() => {
+      if (!sessionRef.current?.isConnected) {
+        return
+      }
+      const ctx = contextRef.current
+      const { plain } = buildJSX(ctx)
+      sessionRef.current.sendSchemaUpdate({ schema: ctx, jsxCode: plain })
+    }, 4000)
+    return () => clearTimeout(schemaDebounceRef.current)
+    /* eslint-disable-next-line */
+  }, [context])
+
+
+  const handleClear = useCallback(() => {
     abortStreaming(mode)
-    clearThread(mode)
-    /* Re-load welcome */
+    newSession(mode)
     const welcomes = buildWelcomeMessages(modeConfig)
     welcomes.forEach(msg => pushMessage(mode, msg))
-  }
+    /* eslint-disable-next-line */
+  }, [mode, modeConfig])
 
   const contextMeta = modeConfig.getContextMeta?.(context) ?? ''
 
+  const statusBadge = {
+    idle       : null,
+    connecting : <LoadingOutlined spin style={{ fontSize: 10, color: '#fcd34d' }} />,
+    connected  : null,
+    error      : <DisconnectOutlined style={{ fontSize: 10, color: '#fca5a5' }} />,
+  }[sseStatus]
+
   return (
     <>
-      {/* ── FAB ── */}
-      <Tooltip
-        title={open ? 'Đóng AI Agent' : 'Mở AI Agent'}
-        placement="left"
-      >
+      {/* FAB */}
+      <Tooltip title={open ? 'Đóng AI Agent' : 'Mở AI Agent'} placement="left">
         <FABButton onClick={() => open ? onClose?.() : onOpen?.(mode)}>
           {open
             ? <CloseOutlined style={{ fontSize: 16 }} />
@@ -176,16 +307,20 @@ const AIChatbot = ({
         </FABButton>
       </Tooltip>
 
-      {/* ── Panel ── */}
+      {/* Panel */}
       {open && (
         <PanelWrapper>
 
-          {/* Header */}
           <PanelHeader>
             <HeaderBrand>
               <ThunderboltOutlined style={{ fontSize: 14, color: '#18181b' }} />
               <HeaderTitle>AI Agent</HeaderTitle>
-              <HeaderBadge>Trực tuyến</HeaderBadge>
+              <HeaderBadge>
+                {sseStatus === 'connecting' ? 'Đang kết nối...' :
+                 sseStatus === 'error'      ? 'Lỗi kết nối' :
+                 'Trực tuyến'}
+              </HeaderBadge>
+              {statusBadge}
             </HeaderBrand>
 
             <HeaderActions>
@@ -194,15 +329,6 @@ const AIChatbot = ({
                   size="small"
                   type="text"
                   icon={<PlusOutlined />}
-                  onClick={handleClear}
-                  style={{ color: '#71717a' }}
-                />
-              </Tooltip>
-              <Tooltip title="Xóa lịch sử">
-                <Button
-                  size="small"
-                  type="text"
-                  icon={<DeleteOutlined />}
                   onClick={handleClear}
                   style={{ color: '#71717a' }}
                 />
@@ -232,7 +358,6 @@ const AIChatbot = ({
             )}
           </ContextStrip>
 
-          {/* Thread */}
           <ChatThread
             messages={messages}
             streaming={streaming}
@@ -240,13 +365,14 @@ const AIChatbot = ({
             onViewDiff={onViewDiff}
           />
 
-          {/* Composer */}
           <Composer
             suggestions={modeConfig.suggestions}
             onSend={handleSend}
-            disabled={streaming}
+            disabled={streaming || sseStatus === 'connecting'}
             placeholder={
-              mode === 'default'
+              sseStatus === 'connecting'
+                ? 'Đang kết nối...'
+                : mode === 'default'
                 ? 'Hỏi bất cứ điều gì…'
                 : 'Mô tả thay đổi mong muốn…'
             }

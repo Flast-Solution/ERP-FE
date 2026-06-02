@@ -6,7 +6,7 @@
  *   "code" — JSX syntax-highlighted, nút Copy JSX
  */
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { Button, Row, Col, Form } from 'antd'
 import {
   PlayCircleOutlined,
@@ -21,6 +21,7 @@ import {
   DeploymentUnitOutlined,
   LoadingOutlined,
   WarningOutlined,
+  FormOutlined,
 } from '@ant-design/icons'
 import FormInput       from '@/form-flast/FormInput'
 import FormInputNumber from '@/form-flast/FormInputNumber'
@@ -32,6 +33,8 @@ import FormDatePicker  from '@/form-flast/FormDatePicker'
 import FormJoditEditor from '@/form-flast/FormJoditEditor'
 import FormSelectAPI   from '@/form-flast/FormSelectAPI'
 import { buildJSX }    from './buildJSX'
+import MonacoCodeEditor from './MonacoCodeEditor'
+import { parseJsxToSchema } from './parseJSXSchema'
 import {
   Scrim,
   ModalWrapper,
@@ -51,7 +54,10 @@ import {
   CodePane,
   CodeSubHead,
   CodePath,
+  CodeToolbar,
   CodeEditorWrapper,
+  CodeEditorFallback,
+  CodeEditorNotice,
   CodeTextarea,
   BuildStatusBar,
   BuildStatusText,
@@ -60,17 +66,72 @@ import {
   FooterRight,
 } from './index.style'
 
+const toComponentName = (name = '') => {
+  const words = String(name)
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+
+  const baseName = words
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join('')
+
+  return baseName || 'FormView'
+}
+
 
 const FieldPreview = ({ field }) => {
-  const { inputType, fieldKey, label, isRequired, config = {} } = field
+  const { inputType, fieldKey, label, isRequired, config = {}, children = [] } = field
   const placeholder = config.placeholder ?? ''
   const required    = isRequired
   const opts        = (config.options ?? []).map(o => ({
-    id   : o.value,
-    name : o.label ?? o.value,
+    id   : o.id ?? o.value,
+    name : o.name ?? o.label ?? o.value ?? o.id,
   }))
 
   switch (inputType) {
+    case 'block': {
+      return (
+        <div
+          style={{
+            border: '1px dashed #d9d9d9',
+            background: '#fff',
+            borderRadius: 6,
+            padding: 16,
+            marginBottom: 16,
+            minHeight: children.length > 0 ? undefined : 220,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: children.length > 0 ? 'flex-start' : 'center',
+          }}
+        >
+          <div style={{ fontWeight: 600, marginBottom: 4, color: '#1f1f1f' }}>
+            {label || 'Block'}
+          </div>
+          {children.length > 0 ? (
+            <Row gutter={[16, 0]} style={{ marginTop: 12 }}>
+              {children.map(child => (
+                <Col key={child._id ?? child.fieldKey} span={child.colSpan ?? 24}>
+                  <FieldPreview field={child} />
+                </Col>
+              ))}
+            </Row>
+          ) : (
+            <div style={{ textAlign: 'center', color: '#bfbfbf', marginTop: 24 }}>
+              <FormOutlined style={{ fontSize: 44, marginBottom: 12 }} />
+              <div style={{ fontSize: 14, color: '#8c8c8c' }}>Kéo field vào đây để bắt đầu</div>
+              <div style={{ fontSize: 12, marginTop: 8 }}>Chọn loại field từ danh sách bên trái</div>
+            </div>
+          )}
+        </div>
+      )
+    }
+
     case 'text':
       return (
         <FormInput
@@ -255,15 +316,27 @@ const FormUITab = ({ schema, viewport }) => {
   )
 }
 
-const JSXCodeTab = ({ schema, templateId }) => {
+const JSXCodeTab = ({
+  schema,
+  templateId,
+  jsxCode,
+  setJsxCode,
+  isEditable,
+  setIsEditable,
+  isDirty,
+  setIsDirty,
+  generatedCode,
+  fieldKeys,
+  syncError,
+}) => {
 
-  const [jsxCode,     setJsxCode]     = useState(() => buildJSX(schema).plain)
   const [copied,      setCopied]      = useState(false)
   const [buildStatus, setBuildStatus] = useState('idle')
   const [buildMsg,    setBuildMsg]    = useState('')
   const [previewUrl,  setPreviewUrl]  = useState('')
 
   const copyTimerRef = useRef(null)
+  const componentName = toComponentName(schema.meta?.name)
 
   const domain       = schema.meta?.domain ?? 'step'
   const templateSlug = schema.meta?.name
@@ -319,24 +392,64 @@ const JSXCodeTab = ({ schema, templateId }) => {
   return (
     <CodePane>
       <CodeSubHead>
-        <CodePath>{filePath}</CodePath>
-        <Button
-          size="small"
-          icon={copied ? <CheckOutlined /> : <CopyOutlined />}
-          onClick={handleCopy}
-          style={{ ...btnStyle, color: copied ? '#86efac' : '#e2e8f0' }}
-        >
-          {copied ? 'Đã copy' : 'Copy'}
-        </Button>
+        <CodePath>{filePath} · component `{componentName}`</CodePath>
+        <CodeToolbar>
+          <Button
+            size="small"
+            onClick={() => setIsEditable(cur => !cur)}
+            style={{ ...btnStyle, color: isEditable ? '#86efac' : '#e2e8f0' }}
+          >
+            {isEditable ? 'Tắt chỉnh sửa' : 'Bật chỉnh sửa'}
+          </Button>
+          <Button
+            size="small"
+            onClick={() => {
+              setJsxCode(generatedCode)
+              setIsDirty(false)
+            }}
+            disabled={!isDirty}
+            style={btnStyle}
+          >
+            Reset schema
+          </Button>
+          <Button
+            size="small"
+            icon={copied ? <CheckOutlined /> : <CopyOutlined />}
+            onClick={handleCopy}
+            style={{ ...btnStyle, color: copied ? '#86efac' : '#e2e8f0' }}
+          >
+            {copied ? 'Đã copy' : 'Copy'}
+          </Button>
+        </CodeToolbar>
       </CodeSubHead>
 
       <CodeEditorWrapper>
-        <CodeTextarea
+        <MonacoCodeEditor
           value={jsxCode}
-          onChange={e => setJsxCode(e.target.value)}
-          spellCheck={false}
-          autoCorrect="off"
-          autoCapitalize="off"
+          readOnly={!isEditable}
+          fieldKeys={fieldKeys}
+          onChange={nextValue => {
+            setJsxCode(nextValue)
+            setIsDirty(nextValue !== generatedCode)
+          }}
+          fallback={(loadError) => (
+            <CodeEditorFallback>
+              <CodeEditorNotice>
+                Monaco khong tai duoc. Dang fallback ve textarea. {loadError}
+              </CodeEditorNotice>
+              <CodeTextarea
+                value={jsxCode}
+                onChange={e => {
+                  setJsxCode(e.target.value)
+                  setIsDirty(e.target.value !== generatedCode)
+                }}
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="off"
+                readOnly={!isEditable}
+              />
+            </CodeEditorFallback>
+          )}
         />
       </CodeEditorWrapper>
 
@@ -345,7 +458,12 @@ const JSXCodeTab = ({ schema, templateId }) => {
           {buildStatus === 'building' && <LoadingOutlined spin />}
           {buildStatus === 'error'    && <WarningOutlined />}
           {buildStatus === 'done'     && <CheckOutlined />}
-          {buildMsg || (buildStatus === 'idle' ? 'Sửa code rồi bấm Build để xem trước' : '')}
+          {buildMsg || (syncError
+            ? `Code da duoc luu, nhung chua parse nguoc duoc sang Form thuc: ${syncError}`
+            : buildStatus === 'idle'
+              ? 'Sua code roi bam Build de xem truoc'
+              : ''
+          )}
         </BuildStatusText>
 
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -377,16 +495,68 @@ const JSXCodeTab = ({ schema, templateId }) => {
   )
 }
 
-const PreviewModal = ({ open, mode = 'ui', schema, onClose, onSave }) => {
+const PreviewModal = ({
+  open,
+  mode = 'ui',
+  schema,
+  initialJsxCode = '',
+  onJsxCodeChange,
+  onClose,
+  onSave,
+}) => {
 
   const [activeTab, setActiveTab] = useState(mode)
   const [viewport,  setViewport]  = useState('desktop')
+  const generatedCode = useMemo(() => buildJSX(schema).plain, [schema?.meta, schema?.fields])
+  const [jsxCode, setJsxCode] = useState(initialJsxCode || generatedCode)
+  const [isEditable, setIsEditable] = useState(false)
+  const [isDirty, setIsDirty] = useState(false)
+  const [liveSchema, setLiveSchema] = useState(schema)
+  const [syncError, setSyncError] = useState('')
+  const prevGeneratedCodeRef = useRef(generatedCode)
+  const fieldKeys = useMemo(() => (liveSchema?.fields ?? []).map(field => field.fieldKey).filter(Boolean), [liveSchema])
 
-  useState(() => { setActiveTab(mode) }, [mode])
+  useEffect(() => { setActiveTab(mode) }, [mode])
+  useEffect(() => {
+    const prevGeneratedCode = prevGeneratedCodeRef.current
+    const hasCustomCode = Boolean(initialJsxCode) && initialJsxCode !== prevGeneratedCode
+
+    if (!isDirty) {
+      const nextJsxCode = hasCustomCode ? initialJsxCode : generatedCode
+      setJsxCode(current => current === nextJsxCode ? current : nextJsxCode)
+      setLiveSchema(current => current === schema ? current : schema)
+      setSyncError(current => current === '' ? current : '')
+    }
+
+    prevGeneratedCodeRef.current = generatedCode
+  }, [initialJsxCode, generatedCode, schema, isDirty])
+
+  useEffect(() => {
+    if (!isDirty) {
+      setLiveSchema(current => current === schema ? current : schema)
+      setSyncError(current => current === '' ? current : '')
+      return
+    }
+
+    try {
+      const parsed = parseJsxToSchema(jsxCode, schema.meta)
+      setLiveSchema(parsed)
+      setSyncError(current => current === '' ? current : '')
+    } catch (err) {
+      setSyncError(current => current === (err.message || 'Khong parse duoc JSX.')
+        ? current
+        : (err.message || 'Khong parse duoc JSX.'))
+    }
+  }, [jsxCode, schema, isDirty])
+
+  useEffect(() => {
+    onJsxCodeChange?.(jsxCode)
+  }, [jsxCode, onJsxCodeChange])
 
   if (!open) return null
 
-  const { meta = {}, fields = [] } = schema ?? {}
+  const effectiveSchema = liveSchema ?? schema
+  const { meta = {}, fields = [] } = effectiveSchema ?? {}
   const name     = meta.name ?? 'Form'
   const total    = fields.length
   const required = fields.filter(f => f.isRequired).length
@@ -445,10 +615,22 @@ const PreviewModal = ({ open, mode = 'ui', schema, onClose, onSave }) => {
         <PaneWrapper>
           {activeTab === 'ui' ? (
             <FormUIPane>
-              <FormUITab schema={schema} viewport={viewport} />
+              <FormUITab schema={effectiveSchema} viewport={viewport} />
             </FormUIPane>
           ) : (
-            <JSXCodeTab schema={schema} templateId={schema?.meta?.id} />
+            <JSXCodeTab
+              schema={effectiveSchema}
+              templateId={schema?.meta?.id}
+              jsxCode={jsxCode}
+              setJsxCode={setJsxCode}
+              isEditable={isEditable}
+              setIsEditable={setIsEditable}
+              isDirty={isDirty}
+              setIsDirty={setIsDirty}
+              generatedCode={generatedCode}
+              fieldKeys={fieldKeys}
+              syncError={syncError}
+            />
           )}
         </PaneWrapper>
 

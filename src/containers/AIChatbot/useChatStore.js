@@ -19,6 +19,25 @@ import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import { nanoid } from 'nanoid'
 
+const SESSION_STORAGE_KEY = 'flast_chat_sessions'
+
+/** Lưu sessions map vào localStorage */
+function persistSessions(sessions) {
+  try {
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessions))
+  } catch {}
+}
+
+/** Đọc sessions map từ localStorage */
+function loadPersistedSessions() {
+  try {
+    const raw = localStorage.getItem(SESSION_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
 const useChatStore = create(
   immer((set, get) => ({
 
@@ -30,6 +49,13 @@ const useChatStore = create(
 
     /* mode đang active (được set khi mở chatbot) */
     activeMode: 'default',
+
+    /*
+     * sessionId: mỗi mode có 1 session riêng.
+     * sessions: { [mode]: string (uuid) }
+     * Thay đổi sessionId = bắt đầu session mới với server.
+     */
+    sessions: loadPersistedSessions(),
 
     /* đang stream response từ server */
     streaming: false,
@@ -48,10 +74,10 @@ const useChatStore = create(
       set(state => {
         if (!state.threads[mode]) state.threads[mode] = []
         state.threads[mode].push({
-          id  : nanoid(),
-          ts  : Date.now(),
           diff: null,
           ...message,
+          id  : message.id ?? nanoid(),
+          ts  : message.ts ?? Date.now(),
         })
       })
     },
@@ -133,6 +159,29 @@ const useChatStore = create(
           thread[lastIdx].streaming = false
         }
       })
+    },
+
+    /* ── Session management ─────────────────────────────────────────────────── */
+
+    /* Lấy sessionId của mode, tự tạo nếu chưa có */
+    getSessionId(mode) {
+      const existing = get().sessions[mode]
+      if (existing) return existing
+      const id = nanoid()
+      set(state => { state.sessions[mode] = id })
+      persistSessions({ ...get().sessions, [mode]: id })
+      return id
+    },
+
+    /* Tạo session mới — clear thread + thay sessionId mới */
+    newSession(mode) {
+      const id = nanoid()
+      set(state => {
+        state.sessions[mode] = id
+        state.threads[mode]  = []
+      })
+      persistSessions({ ...get().sessions, [mode]: id })
+      return id
     },
 
     /* ── Active mode ─────────────────────────────────────────────────────── */

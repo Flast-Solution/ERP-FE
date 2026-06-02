@@ -16,13 +16,15 @@
  * Delete: nút xóa → removeField(_id) với Popconfirm
  */
 
-import { Form, Input, InputNumber, DatePicker, Select, Radio, Checkbox, Upload, Tooltip } from 'antd'
+import { Form, Input, InputNumber, DatePicker, Select, Radio, Checkbox, Upload, Tooltip, Row, Col } from 'antd'
+import { useDroppable } from '@dnd-kit/core'
 import {
   HolderOutlined,
   DeleteOutlined,
   WarningOutlined,
+  FormOutlined,
 } from '@ant-design/icons'
-import { useSortable } from '@dnd-kit/sortable'
+import { SortableContext, rectSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import useFormBuilderStore from '@/store/useFormBuilderStore'
 import { FIELD_TYPE_MAP } from '@/utils/fieldTypes'
@@ -34,6 +36,9 @@ import {
   RequiredDot,
   ActionGroup,
   ActionBtn,
+  BlockChildrenWrap,
+  BlockDropZone,
+  BlockChildrenHint,
 } from './FieldCanvasItem.style'
 
 // ─── Preview renderer — map inputType → antd component thực ──────────────────
@@ -41,7 +46,7 @@ import {
 // không cần i18n / FormContext / validation. Dùng antd component trực tiếp.
 
 const renderPreview = (field) => {
-  const { inputType, label, isRequired, config = {} } = field
+  const { inputType, label, isRequired, config = {}, children = [] } = field
 
   // Label dùng chung cho Form.Item
   const formLabel = (
@@ -53,11 +58,32 @@ const renderPreview = (field) => {
 
   // options dùng cho select/radio/checkbox
   const options = (config.options ?? []).map(o => ({
-    label: o.label || o.value,
-    value: o.value,
+    label: o.label ?? o.name ?? o.value ?? o.id,
+    value: o.value ?? o.id,
   }))
 
   switch (inputType) {
+    case 'block':
+      return (
+        <div
+          style={{
+            border: '1px solid #d9d9d9',
+            borderLeft: '4px solid #1677ff',
+            background: '#f0f7ff',
+            borderRadius: 6,
+            padding: 12,
+            margin: '8px 0',
+          }}
+        >
+          <div style={{ fontWeight: 600, color: '#1f1f1f', marginBottom: 4 }}>
+            {label || 'Block'}
+          </div>
+          <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 8 }}>
+            {children.length} field trong block
+          </div>
+        </div>
+      )
+
     case 'text':
       return (
         <Form.Item label={formLabel}>
@@ -116,22 +142,14 @@ const renderPreview = (field) => {
     case 'select':
       return (
         <Form.Item label={formLabel}>
-          <Select disabled placeholder="Chọn..." style={{ width: '100%' }}>
-            {options.map(o => (
-              <Select.Option key={o.value} value={o.value}>{o.label}</Select.Option>
-            ))}
-          </Select>
+          <Select disabled placeholder="Chọn..." style={{ width: '100%' }} options={options} />
         </Form.Item>
       )
 
     case 'multi_select':
       return (
         <Form.Item label={formLabel}>
-          <Select disabled mode="multiple" placeholder="Chọn nhiều..." style={{ width: '100%' }}>
-            {options.map(o => (
-              <Select.Option key={o.value} value={o.value}>{o.label}</Select.Option>
-            ))}
-          </Select>
+          <Select disabled mode="multiple" placeholder="Chọn nhiều..." style={{ width: '100%' }} options={options} />
         </Form.Item>
       )
 
@@ -233,6 +251,9 @@ const renderPreview = (field) => {
 const hasWarning = (field) => {
   if (!field.label || !field.fieldKey) return true
   const { inputType, config } = field
+  if (inputType === 'block') {
+    return !field.label
+  }
   if (['select', 'multi_select', 'radio', 'checkbox'].includes(inputType)) {
     return !config?.options?.length
   }
@@ -251,6 +272,13 @@ const FieldCanvasItem = ({ field }) => {
 
   const isSelected = selectedId === field._id
   const warn = hasWarning(field)
+  const childIds = (field.children ?? []).map(child => child._id)
+  const {
+    setNodeRef: setBlockDropRef,
+    isOver: isBlockOver,
+  } = useDroppable({
+    id: `block-drop:${field._id}`,
+  })
 
   // dnd-kit sortable
   const {
@@ -281,7 +309,10 @@ const FieldCanvasItem = ({ field }) => {
       ref={setNodeRef}
       style={style}
       $selected={isSelected}
-      onClick={() => selectField(field._id)}
+      onClick={(e) => {
+        e.stopPropagation()
+        selectField(field._id)
+      }}
     >
       {/* ── Drag handle ── */}
       <DragHandle {...attributes} {...listeners} onClick={e => e.stopPropagation()}>
@@ -291,6 +322,41 @@ const FieldCanvasItem = ({ field }) => {
       {/* ── Preview ── */}
       <PreviewArea>
         {renderPreview(field)}
+
+        {field.inputType === 'block' && (
+          <BlockChildrenWrap
+            onClick={e => e.stopPropagation()}
+          >
+            {(field.children ?? []).length === 0 ? (
+              <BlockChildrenHint>
+                <FormOutlined style={{ fontSize: 28, marginBottom: 10, color: '#bfbfbf' }} />
+                <div>Kéo field vào đây để bắt đầu</div>
+                <div style={{ marginTop: 6, color: '#bfbfbf' }}>Chọn loại field từ danh sách bên trái</div>
+              </BlockChildrenHint>
+            ) : (
+              <SortableContext
+                items={childIds}
+                strategy={rectSortingStrategy}
+              >
+                <Row gutter={[8, 0]}>
+                  {(field.children ?? []).map(child => (
+                    <Col key={child._id} span={child.colSpan ?? 24}>
+                      <FieldCanvasItem field={child} />
+                    </Col>
+                  ))}
+                </Row>
+              </SortableContext>
+            )}
+
+            <BlockDropZone
+              ref={setBlockDropRef}
+              $isOver={isBlockOver}
+              onClick={e => e.stopPropagation()}
+            >
+              {isBlockOver ? 'Thả vào block này' : 'Kéo field vào đây để thêm vào block'}
+            </BlockDropZone>
+          </BlockChildrenWrap>
+        )}
 
         {/* field_key badge */}
         {field.fieldKey && (

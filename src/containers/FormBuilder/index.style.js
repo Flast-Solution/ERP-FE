@@ -49,6 +49,31 @@ export const ToolbarTitle = styled.div`
   max-width: 280px;
 `
 
+export const ToolbarTitleInput = styled.input`
+  height: 32px;
+  min-width: 220px;
+  max-width: 320px;
+  padding: 0 10px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #fff;
+  color: #1a1a1a;
+  font-size: 14px;
+  font-weight: 600;
+  outline: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
+
+  &::placeholder {
+    color: #bfbfbf;
+    font-weight: 500;
+  }
+
+  &:focus {
+    border-color: #1677ff;
+    box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.12);
+  }
+`
+
 export const ToolbarDomain = styled.code`
   font-size: 11px;
   font-family: 'SFMono-Regular', Consolas, monospace;

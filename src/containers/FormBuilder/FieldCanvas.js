@@ -27,7 +27,7 @@ import { Row, Col } from 'antd'
 import { useDroppable } from '@dnd-kit/core'
 import {
   SortableContext,
-  verticalListSortingStrategy,
+  rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import useFormBuilderStore from '@/store/useFormBuilderStore'
 import FieldCanvasItem from './FieldCanvasItem'
@@ -104,7 +104,7 @@ const FieldCanvas = () => {
           <FormCard ref={setNodeRef}>
             <SortableContext
               items={sortableIds}
-              strategy={verticalListSortingStrategy}
+              strategy={rectSortingStrategy}
             >
               <SortableList>
                 <Row gutter={[8, 0]}>
