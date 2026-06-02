@@ -21,9 +21,10 @@
 
 import React, { useEffect, useMemo } from 'react';
 import { useStore } from "@/DataContext";
-import InAppNotify from './InAppNotify';
-import ContainerLayouts from "./ContainerLayout";
-import OrderService from 'services/OrderService';
+import InAppNotify from '@/layouts/InAppNotify';
+import ContainerLayouts from "@/layouts/ContainerLayout";
+import OrderService from '@/services/OrderService';
+import { useFlastRemote } from '@/hooks/useDynamicRemote';
 
 const MainLayout = (props) => {
 
@@ -36,9 +37,12 @@ const MainLayout = (props) => {
     const menoInAppNotify = useMemo(() => {
         return (<InAppNotify />)
     }, []);
-    const Layout = ContainerLayouts[user?.id ? 'PrivateLayout' : 'GuestLayout'];
 
+    const Layout = ContainerLayouts[user?.id ? 'PrivateLayout' : 'GuestLayout'];
+    const MPage = useFlastRemote("component_001")
+    
     return <>
+        {MPage && <MPage />}
         <Layout {...props} />
         {menoInAppNotify}
     </>
