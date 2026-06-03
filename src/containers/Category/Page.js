@@ -18,19 +18,24 @@
 /* Đội ngũ phát triển mong rằng phần mềm được sử dụng đúng mục đích và    */
 /* có trách nghiệm                                                        */
 /**************************************************************************/
+
 import React, { useCallback, useState } from 'react';
 import { Row, Col, message } from 'antd';
-import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
-import FormHidden from '@/form-flast/FormHidden';
-import FormInput from '@/form-flast/FormInput';
-import CustomButton from '@flast-erp/core/components/CustomButton';
-import FormTextArea from '@/form-flast/FormTextArea';
-import RequestUtils, { SUCCESS_CODE } from '@flast-erp/core/utils/RequestUtils';
-import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
-import { f5List } from '@flast-erp/core/utils/dataUtils';
+
+import { 
+  CustomButton,
+  FormHidden,
+  FormTextArea,
+  FormInput,
+  ImageUploader,
+  RestEditModal
+} from '@flast-erp/core/components';
+
+import { useEffectAsync } from '@flast-erp/core/hooks';
+import { RequestUtils, f5List } from '@flast-erp/core/utils';
 import MediaService from '@/services/MediaService';
-import ImageUploader from '@flast-erp/core/components/common/File/ImageUploader';
 import logger from '@/logger';
+import { SUCCESS_CODE } from '@/configs';
 
 const LOGGER_TAG = '[container/category/Page.js]';
 const MEDIA_TYPE = "category.page";

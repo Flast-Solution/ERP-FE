@@ -1,12 +1,15 @@
 import FormStyles from './styles'
 import { Col, Typography } from 'antd';
-import FormDatePicker from '@/form-flast/FormDatePicker';
-import FormInputNumber from '@/form-flast/FormInputNumber';
-import FormSelectUser from '@/form-flast/FormSelectUser';
-import FormInput from '@/form-flast/FormInput';
-import FormSelect from '@/form-flast/FormSelect';
+import { 
+  FormInputNumber,
+  FormDatePicker,
+  FormSelectUser,
+  FormInput,
+  FormSelect
+} from '@flast-erp/core/components';
+
 import { FLIGHT_WAY_TYPE } from '@/configs/localData';
-import UserService from 'services/UserService';
+import UserService from '@/services/UserService';
 
 const FlightListForm = ({ field }) => {
   const { name } = field || { name: 0 };

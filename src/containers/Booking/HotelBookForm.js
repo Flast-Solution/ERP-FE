@@ -1,17 +1,20 @@
 import { Row, Col, Form, Typography } from 'antd';
-import FormHidden from '@/form-flast/FormHidden';
-import CustomButton from '@flast-erp/core/components/CustomButton';
+import { 
+  FormHidden,
+  CustomButton,
+  FormContextCustom,
+  FormTextArea,
+  FormListAddtion,
+  FormAutoComplete,
+  FormRadioGroup,
+  FormInput
+} from '@flast-erp/core/components';
+
 import { HourglassOutlined } from '@ant-design/icons';
-import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
 import { useCallback, useContext } from 'react';
-import FormListAddition from '@/form-flast/FormListAddtion';
 import HotelUserForm from './HotelUserForm';
-import FormTextArea from '@/form-flast/FormTextArea';
-import FormInput from '@/form-flast/FormInput';
-import FormRadioGroup from '@/form-flast/FormRadioGroup';
 import { HOTEL_ROOM_PAY_TYPE } from '@/configs/localData';
-import FormAutoComplete from '@/form-flast/FormAutoComplete';
-import HotelService from 'services/HotelService';
+import HotelService from '@/services/HotelService';
 
 const HotelBookForm = () => {
 
@@ -99,12 +102,12 @@ const HotelBookForm = () => {
                 />
               </Col>
               <Col md={24} xs={24}>
-                <FormListAddition
+                <FormListAddtion
                   name="bookingList"
                   text='Checkin - Checkout'
                 >
                   <HotelUserForm />
-                </FormListAddition>
+                </FormListAddtion>
               </Col>
             </>
           )

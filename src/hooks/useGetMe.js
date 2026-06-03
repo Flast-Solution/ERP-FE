@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  DataContext.js                                                        */
+/*  useGetMe.js                                                 		  */
 /**************************************************************************/
 /*                       Tệp này là một phần của:                         */
 /*                             Open CDP                                   */
@@ -19,59 +19,15 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useReducer, useCallback, useEffect } from 'react'
-import { ACTIONS, CHANGE_STORE } from '@/configs';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
-import routes from '@/routes/PrivateRoutes';
+import { useContext } from 'react';
+import { DataContext } from '@flast-erp/core/components';
 
-const DataContext = React.createContext();
-
-const actions = {
-  [ACTIONS.ADD_USER]: 'user',
-  [ACTIONS.REMOVE_USER]: 'user',
-  [ACTIONS.TOOGLE_COLLAPSE]: 'isCollapse',
-  [ACTIONS.F5_LIST]: 'f5List'
-};
-
-function storeReducer(state, action) {
-  const { data, type } = action;
-  const varible = actions[type];
-  return !varible ? state : {
-    ...state,
-    [varible]: data
-  }
-};
-
-export const DataProvider = ({ children }) => {
-  const [state, dispatch] = useReducer(storeReducer, {
-    routes: routes, isCollapse: false
-  })
-  const value = { ...state, dispatch };
-  const handleEventChange = useCallback(({ type, data }) => {
-    dispatch({ type, data });
-  }, [dispatch]);
-
-  useEffect(() => {
-    /* InAppEvent.emit(CHANGE_STORE, { type: 'user', data: data }); */
-    InAppEvent.addEventListener(CHANGE_STORE, handleEventChange);
-    return () => {
-      InAppEvent.removeListener(CHANGE_STORE, handleEventChange);
+function useGetMe() {
+    const { user, setMyData } = useContext(DataContext)
+    return {
+        user,
+        setMe: (me) => setMyData(pre => ({ ...pre, user: me })),
     };
-  }, [handleEventChange]);
+}
 
-  return (
-    <DataContext.Provider value={value}>
-      {children}
-    </DataContext.Provider>
-  )
-};
-
-export function useStore() {
-  const context = React.useContext(DataContext)
-  if (context === undefined) {
-    throw new Error('useCount must be used within a StoreProvider')
-  }
-  return context
-};
-
-export default DataContext;
+export default useGetMe;

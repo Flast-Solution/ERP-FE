@@ -2,8 +2,8 @@ import React from "react";
 import CarReview from "containers/Email/CarReview";
 import { render } from '@react-email/render';
 import { useEffect, useState } from 'react';
-import { useStore } from "@/DataContext";
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
+import { RequestUtils } from '@flast-erp/core/utils';
+import { useStore } from '@flast-erp/core/components';
 import { SUCCESS_API_CODE } from '@/configs/constant';
 
 const BookingCarPreview = ({

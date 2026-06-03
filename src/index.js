@@ -23,9 +23,12 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import axios from 'axios';
 import App from '@/App';
+import { initCoreConfig } from "@flast-erp/core/configs"
 
-// Global configuration for axios to support cookies (browser context)
 axios.defaults.withCredentials = true;
+initCoreConfig({
+  GATEWAY: process.env.GATEWAY
+});
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<App />);
