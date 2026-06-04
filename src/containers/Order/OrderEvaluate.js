@@ -1,13 +1,17 @@
 import React, { useCallback } from 'react'
 import { Col, Form, Row, Typography } from 'antd'
 import { SwitcherOutlined } from '@ant-design/icons'
-import FormListAddition from '@/form-flast/FormListAddtion';
-import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
-import FormInput from '@/form-flast/FormInput';
-import BtnSubmit from '@flast-erp/core/components/CustomButton/BtnSubmit';
-import RequestUtils, { SUCCESS_CODE } from '@flast-erp/core/utils/RequestUtils';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
+
+import {
+  FormListAddtion,
+  FormInput,
+  RestEditModal,
+  BtnSubmit
+} from "@flast-erp/core/components";
+
+import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import FormEvaluate from './FormEvaluate';
+import { SUCCESS_CODE } from '@/configs';
 
 const OrderEvaluate = ({ data, closeModal }) => {
     const [form] = Form.useForm(); 
@@ -49,12 +53,12 @@ const OrderEvaluate = ({ data, closeModal }) => {
                         <SwitcherOutlined />
                         <span style={{ marginLeft: 20 }}>Danh sách</span>
                     </Typography.Title>
-                    <FormListAddition
+                    <FormListAddtion
                         name="inspectionCheckList"
                         textAddNew="Thêm mới phát sinh"
                     >
                         <FormEvaluate form={form}/>
-                    </FormListAddition>
+                    </FormListAddtion>
                 </Col>
                 <Col md={24} xs={24} style={{ textAlign: 'right', marginTop: 10 }}>
                     <BtnSubmit text='Cập nhât' />

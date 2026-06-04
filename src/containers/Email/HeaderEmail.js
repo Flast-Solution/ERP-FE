@@ -1,5 +1,5 @@
 import React from 'react';
-import { Column, Heading, Img, Row, Section, Text, } from "@react-email/components";
+import { Column, Heading, Img, Row, Text, } from "@react-email/components";
 import { BASE_URL } from "@/configs";
 
 const headTitle = {

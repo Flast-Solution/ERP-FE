@@ -1,14 +1,14 @@
 import React, { useCallback } from 'react'
 import { Col, Row } from 'antd'
 import moment from 'moment';
-import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
-import FormInput from '@/form-flast/FormInput';
-import FormInputNumber from '@/form-flast/FormInputNumber';
-import BtnSubmit from '@flast-erp/core/components/CustomButton/BtnSubmit';
-import RequestUtils, { SUCCESS_CODE } from '@flast-erp/core/utils/RequestUtils';
-import FormDatePicker from '@/form-flast/FormDatePicker';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
-import { f5List } from '@flast-erp/core/utils/dataUtils';
+import {
+    RestEditModal,
+    FormInput,
+    FormInputNumber,
+    BtnSubmit,
+    FormDatePicker
+} from '@flast-erp/core/components';
+import { InAppEvent, RequestUtils, f5List } from '@flast-erp/core/utils';
 
 const Shipment = ({ data, closeModal }) => {
 
@@ -21,12 +21,12 @@ const Shipment = ({ data, closeModal }) => {
             inspectionDate: moment(values.inspectionDate).format('YYYY-MM-DD HH:mm:ss')
         }
         try {
-            const {errorCode} = await RequestUtils.Post('/qms/qc-inspection-batch/save', param);
+            const { errorCode, message } = await RequestUtils.Post('/qms/qc-inspection-batch/save', param);
             if (errorCode) {
                 f5List('erp/order/fetch');
                 closeModal && closeModal();
             }
-            InAppEvent.normalInfo(errorCode === SUCCESS_CODE ? 'Cập nhật thành công !' : 'Cập nhật thất bại !');
+            InAppEvent.normalInfo(message);
         } catch (error) {
             InAppEvent.normalError('Cập nhât thất bại !');
         }

@@ -21,7 +21,7 @@
 
 import React, { Suspense } from 'react';
 import { Layout } from 'antd';
-import Loading from '@flast-erp/core/components/Loading';
+import { Loading } from '@flast-erp/core/components';
 import { useStore } from 'DataContext';
 import { useRoutes } from "react-router-dom";
 

@@ -21,20 +21,26 @@
 
 import React, { useState, useCallback } from 'react';
 import { Col, Form, Row } from 'antd';
-import FormSelectInfiniteProduct from '@/form-flast/SelectInfinite/FormSelectInfiniteProduct';
-import FormSelect from '@/form-flast/FormSelect';
-import FormInputNumber from '@/form-flast/FormInputNumber';
-import BtnSubmit from '@flast-erp/core/components/CustomButton/BtnSubmit';
+
+import {
+  FormSelectInfiniteProduct,
+  FormSelect,
+  FormInputNumber,
+  BtnSubmit,
+  FormAutoComplete,
+  FormTextArea
+} from '@flast-erp/core/components';
+
 import _, { isEmpty } from 'lodash';
-import { arrayNotEmpty } from '@flast-erp/core/utils/dataUtils';
-import InStockTable from 'containers/WareHouse/InStockTable'
-import FormAutoComplete from '@/form-flast/FormAutoComplete';
-import OrderService from 'services/OrderService';
-import FormTextArea from '@/form-flast/FormTextArea';
-import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
-import { ShowSkuDetail } from 'containers/Product/SkuView';
-import { createMSkuDetails } from '@flast-erp/core/utils/skuUtils';
+import InStockTable from '@/containers/WareHouse/InStockTable'
+import OrderService from '@/services/OrderService';
+import { useEffectAsync } from '@flast-erp/core/hooks';
+import { ShowSkuDetail } from '@/containers/Product/SkuView';
+import { 
+  arrayNotEmpty, 
+  RequestUtils, 
+  createMSkuDetails 
+} from '@flast-erp/core/utils';
 
 const AddSKU = ({ onSave, productId }) => {
 
