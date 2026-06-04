@@ -57,7 +57,10 @@ function App() {
 
   return (
     <DataProvider initialRoutes={routes}>
-      <BrowserRouter location={history.location} navigator={history}>
+      <BrowserRouter 
+        location={history.location} 
+        navigator={history}
+      >
         <ThemeRender />
       </BrowserRouter>
     </DataProvider>

@@ -22,13 +22,18 @@
 import React, { useState, useCallback } from 'react';
 import { Button, message, Space } from 'antd';
 import { CopyOutlined, EditFilled } from '@ant-design/icons';
-import RestList from "@flast-erp/core/components/RestLayout/RestList";
-import useGetList from "@flast-erp/core/hooks/useGetList";
+
+import { RestList } from "@flast-erp/core/components";
+import { useGetList } from "@flast-erp/core/hooks";
 import Filter from './Filter';
-import { dateFormatOnSubmit, formatMoney, formatTime } from '@flast-erp/core/utils/dataUtils';
-import OrderService from 'services/OrderService';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
-import { HASH_MODAL } from 'configs';
+import { 
+  dateFormatOnSubmit, 
+  formatMoney, 
+  formatTime,
+  InAppEvent
+} from '@flast-erp/core/utils';
+import OrderService from '@/services/OrderService';
+import { HASH_MODAL } from '@/configs';
 import { renderArrayColor } from './utils';
 import { useNavigate  } from 'react-router-dom';
 

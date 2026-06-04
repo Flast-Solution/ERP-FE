@@ -21,18 +21,25 @@
 
 import { useState, useCallback } from "react";
 import { Form, Row, Col, Button, Upload } from "antd";
-import CustomButton from "@flast-erp/core/components/CustomButton";
-import FormAddress from "@/form-flast/FormAddress";
-import FormHidden from "@/form-flast/FormHidden";
-import FormInput from "@/form-flast/FormInput";
+
+import {
+  CustomButton,
+  FormAddress,
+  FormHidden,
+  FormInput,
+  FileUploadView
+} from "@flast-erp/core/components";
+
 import { GATEWAY, SUCCESS_CODE } from "@/configs";
-import { useEffectAsync } from "@flast-erp/core/hooks/MyHooks";
-import { arrayNotEmpty } from "@flast-erp/core/utils/dataUtils";
-import RequestUtils from "@flast-erp/core/utils/RequestUtils";
+import { useEffectAsync } from "@flast-erp/core/hooks";
+import { 
+  RequestUtils, 
+  arrayNotEmpty,
+  InAppEvent
+} from "@flast-erp/core/utils";
+
 import { UploadOutlined } from '@ant-design/icons';
 import axios from "axios";
-import { InAppEvent } from "@flast-erp/core/utils/FuseUtils";
-import FileUploadView from "@flast-erp/core/components/common/File/FileUploadView";
 
 const EnterpriseForm = ({ customerOrder }) => {
 

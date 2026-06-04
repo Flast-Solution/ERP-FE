@@ -21,7 +21,7 @@
 
 import React from 'react';
 import { Table } from 'antd';
-import { formatMoney, formatTime } from '@flast-erp/core/utils/dataUtils';
+import { formatMoney, formatTime } from '@flast-erp/core/utils';
 
 const DuyetTienPage = ({ data }) => {
 	const CUSTOM_ACTION = [

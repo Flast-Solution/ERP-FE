@@ -1,13 +1,12 @@
 import { render } from '@react-email/render';
 import { useCallback, useEffect, useState } from 'react';
-import NghiPhep from 'containers/Email/NghiPhep';
-import { useStore } from "@/DataContext";
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
+import NghiPhep from '@/containers/Email/NghiPhep';
+
+import { useStore } from '@flast-erp/core/components';
 import { APP_FOLLOW_STATUS_DONE, SUCCESS_API_CODE } from '@/configs/constant';
-import useGetMe from '@flast-erp/core/hooks/useGetMe';
+import useGetMe from '@/hooks/useGetMe';
 import { Button } from 'antd';
-import { f5List } from '@flast-erp/core/utils/dataUtils';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
+import { RequestUtils, f5List, InAppEvent } from '@flast-erp/core/utils';
 
 const NPReview = ({
   record,

@@ -32,7 +32,8 @@ import {
 } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
 import PreviewModal from '@/containers/PreviewModal'
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
+
+import { RequestUtils } from '@flast-erp/core/utils';
 import useFormBuilderStore from '@/store/useFormBuilderStore'
 import { FIELD_TYPE_MAP }  from '@/utils/fieldTypes'
 import FieldTypeList       from './FieldTypeList'

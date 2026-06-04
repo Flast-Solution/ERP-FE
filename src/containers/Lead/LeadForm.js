@@ -21,17 +21,20 @@
 
 import { useState, useEffect, useContext } from 'react';
 import { Row, Col, Tag, List, Button } from 'antd';
-import FormHidden from '@/form-flast/FormHidden';
-import CustomButton from '@flast-erp/core/components/CustomButton';
-import FormInput from '@/form-flast/FormInput';
-import FormSelect from '@/form-flast/FormSelect';
+
+import { 
+  FormSelectInfiniteProduct,
+  FormSelect,
+  CustomButton,
+  FormInput,
+  FormHidden,
+  FormTextArea,
+  FormContextCustom
+} from '@flast-erp/core/components';
+
 import Dragger from 'antd/es/upload/Dragger';
-import FormTextArea from '@/form-flast/FormTextArea';
 import { CHANNEL_SOURCE } from '@/configs/localData';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
-import FormSelectInfiniteProduct from '@/form-flast/SelectInfinite/FormSelectInfiniteProduct';
-import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
-import { arrayEmpty, arrayNotEmpty } from '@flast-erp/core/utils/dataUtils';
+import { RequestUtils, arrayEmpty, arrayNotEmpty } from '@flast-erp/core/utils';
 import { DeleteOutlined } from '@ant-design/icons';
 
 const LeadForm = ({

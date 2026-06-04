@@ -21,17 +21,20 @@
 
 import { useEffect } from "react";
 import { Form, Row, Col, message } from "antd";
-import FormHidden from "@/form-flast/FormHidden";
-import CustomButton from "@flast-erp/core/components/CustomButton";
-import FormListAddition from "@/form-flast/FormListAddtion";
+
+import { 
+  FormHidden,
+  CustomButton,
+  FormSelect,
+  FormListAddtion,
+  FormInputNumber,
+  FormDatePicker,
+  FormSelectInfiniteBusinessUser
+} from '@flast-erp/core/components';
+
 import { FormListStyles } from "@/css/global";
-import FormInputNumber from "@/form-flast/FormInputNumber";
-import FormSelect from "@/form-flast/FormSelect";
-import FormSelectInfiniteBusinessUser from "@/form-flast/SelectInfinite/FormSelectInfiniteBusinessUser";
 import { KPI_TYPE } from "@/configs/localData";
-import FormDatePicker from "@/form-flast/FormDatePicker";
-import { dateFormatOnSubmit } from "@flast-erp/core/utils/dataUtils";
-import RequestUtils from "@flast-erp/core/utils/RequestUtils";
+import { RequestUtils, dateFormatOnSubmit } from "@flast-erp/core/utils";
 
 const KPIForm = ({ onSave, kpi }) => {
 
@@ -71,12 +74,12 @@ const KPIForm = ({ onSave, kpi }) => {
           />
         </Col>
         <Col md={24} xs={24}>
-          <FormListAddition
+          <FormListAddtion
             name="listKpi"
             textAddNew="Thêm mới KPI"
           >
             <KPIFormItem />
-          </FormListAddition>
+          </FormListAddtion>
         </Col>
         <Col md={24} xs={24}>
           <CustomButton

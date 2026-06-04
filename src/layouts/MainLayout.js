@@ -20,7 +20,7 @@
 /**************************************************************************/
 
 import React, { useEffect, useMemo } from 'react';
-import { useStore } from "@/DataContext";
+import { useStore } from '@flast-erp/core/components';
 import InAppNotify from '@/layouts/InAppNotify';
 import ContainerLayouts from "@/layouts/ContainerLayout";
 import OrderService from '@/services/OrderService';

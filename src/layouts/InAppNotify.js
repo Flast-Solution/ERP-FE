@@ -21,8 +21,8 @@
 
 import React, { useEffect } from 'react';
 import { notification } from 'antd';
-import { INAPP_NOTIFICATION_EMITTER } from 'configs';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
+import { INAPP_NOTIFICATION_EMITTER } from '@/configs';
+import { InAppEvent } from '@flast-erp/core/utils';
 
 const InAppNotify = () => {
 

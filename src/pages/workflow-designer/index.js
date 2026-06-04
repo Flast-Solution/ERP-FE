@@ -7,7 +7,7 @@ import {
   LeftSider,
   RightSider,
 } from '@/containers/WorkflowDesigner/styles'
-import useCollapseSidebar from '@flast-erp/core/hooks/useCollapseSidebar';
+import { useCollapseSidebar } from '@flast-erp/core/hooks';
 
 const { Content } = Layout
 const { Text } = Typography
