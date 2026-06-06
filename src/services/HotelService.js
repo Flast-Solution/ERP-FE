@@ -1,6 +1,5 @@
-import { SUCCESS_CODE } from 'configs';
-import { arrayNotEmpty } from '@flast-erp/core/utils/dataUtils';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
+import { SUCCESS_CODE } from '@/configs';
+import { RequestUtils, arrayNotEmpty } from '@flast-erp/core/utils';
 
 const HotelService = {
   allData: [],

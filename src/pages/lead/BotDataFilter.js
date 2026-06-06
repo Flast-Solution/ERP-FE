@@ -2,12 +2,14 @@ import React, { useContext, useState } from 'react';
 import { Row, Col, Button } from 'antd';
 import axios from 'axios';
 import { PlusCircleOutlined } from '@ant-design/icons';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
-import FormInput from '@/form-flast/FormInput';
-import FormCheckbox from '@/form-flast/FormCheckbox';
-import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
-import { GATEWAY, HASH_MODAL } from 'configs';
+import { 
+  FormInput, 
+  FormCheckbox,
+  FormContextCustom
+} from '@flast-erp/core/components';
+
+import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
+import { GATEWAY, HASH_MODAL } from '@/configs';
 
 const BotDataFilter = () => {
 

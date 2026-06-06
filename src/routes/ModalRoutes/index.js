@@ -21,8 +21,8 @@
 
 import { HASH_MODAL, HASH_MODAL_CLOSE } from '@/configs';
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
-import DrawerCustom from '@flast-erp/core/components/DrawerCustom';
+import { InAppEvent } from '@flast-erp/core/utils';
+import { DrawerCustom } from '@flast-erp/core/components';
 
 import ProductRoute from './ProductRoute.js';
 import OrderRoute from './OrderRoute';
@@ -36,7 +36,6 @@ import ActionChamSocDonHangRouter from './ChamSocDonHangRouter.js';
 import CommonRoute from './CommonRoute.js';
 import WebRouter from './WebRouter.js';
 import userRoute from './userRoute.js';
-import QcRoute from './QcRoute';
 
 const notFoundHash = { Component: () => <div /> };
 const modalRoutes = [
@@ -51,8 +50,7 @@ const modalRoutes = [
   ...UserGroupRouter,
   ...Cohoi7DayRouter,
   ...ActionChamSocDonHangRouter,
-  ...userRoute,
-  ...QcRoute
+  ...userRoute
 ]
 
 const getModalRoute = (urlHash) => {

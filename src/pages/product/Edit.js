@@ -1,21 +1,23 @@
 import { useState, useRef, useCallback } from 'react';
 import { Row, Col, message } from 'antd';
-import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
+import { useEffectAsync } from '@flast-erp/core/hooks';
 import { useParams } from 'react-router-dom';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
+import { RequestUtils } from '@flast-erp/core/utils';
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
+import {
+  BreadcrumbCustom,
+  RestEditModal,
+  FormHidden,
+  FormInput,
+  FormTextArea,
+  FormJoditEditor,
+  CustomButton,
+  FormInfiniteCategory,
+  ImageUploader,
+  InfiniteFaq,
+  FormInputNumber
+} from '@flast-erp/core/components';
 import { GATEWAY, SUCCESS_CODE } from '@/configs';
-import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
-import FormHidden from '@/form-flast/FormHidden';
-import FormInput from '@/form-flast/FormInput';
-import FormTextArea from '@/form-flast/FormTextArea';
-import FormJoditEditor from '@/form-flast/FormJoditEditor';
-import CustomButton from '@flast-erp/core/components/CustomButton';
-import FormInfiniteCategory from '@/form-flast/SelectInfinite/FormInfiniteCategory';
-import ImageUploader from '@flast-erp/core/components/common/File/ImageUploader';
-import InfiniteFaq from '@/form-flast/SelectInfinite/InfiniteFaq';
-import FormInputNumber from '@/form-flast/FormInputNumber';
 
 const ProductEdit = () => {
 
@@ -67,7 +69,7 @@ const ProductEdit = () => {
       <Helmet>
         <title>Sửa nội dung sản phẩm</title>
       </Helmet>
-      <CustomBreadcrumb
+      <BreadcrumbCustom
         data={[{ title: 'Trang chủ' }, { title: 'Sản phẩm' }, { title: mContent?.name ?? 'Thêm mới nội dung' }]}
       />
       <RestEditModal

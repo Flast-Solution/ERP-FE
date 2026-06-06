@@ -20,20 +20,18 @@
 /**************************************************************************/
 
 import React, { useCallback, useState } from 'react';
-import RestList from "@flast-erp/core/components/RestLayout/RestList";
-import useGetList from "@flast-erp/core/hooks/useGetList";
+import { useGetList } from "@flast-erp/core/hooks";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
+import { RestList, BreadcrumbCustom, CustomImage } from '@flast-erp/core/components';
 import Filter from './Filter';
 import { Button, Space } from 'antd';
-import { InAppEvent } from "@flast-erp/core/utils/FuseUtils";
+import { InAppEvent } from "@flast-erp/core/utils";
 import { GATEWAY, HASH_MODAL } from 'configs';
-import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils/dataUtils';
-import ProductAttrService from 'services/ProductAttrService';
+import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils';
+import ProductAttrService from '@/services/ProductAttrService';
 import { cloneDeep } from 'lodash';
-import SkuView, { PriceView } from 'containers/Product/SkuView';
+import SkuView, { PriceView } from '@/containers/Product/SkuView';
 import { Link } from 'react-router-dom';
-import CustomImage from '@flast-erp/core/components/common/CustomImage';
 
 const Index = () => {
 
@@ -172,7 +170,7 @@ const Index = () => {
       <Helmet>
         <title>{title}</title>
       </Helmet>
-      <CustomBreadcrumb
+      <BreadcrumbCustom
         data={[{ title: 'Trang chủ' }, { title: title }]}
       />
       <RestList

@@ -1,5 +1,5 @@
-import { GATEWAY } from '@/configs';
-import RequestUtils, { SUCCESS_CODE } from '@flast-erp/core/utils/RequestUtils';
+import { GATEWAY, SUCCESS_CODE } from '@/configs';
+import { RequestUtils } from '@flast-erp/core/utils';
 
 const MediaService = {
   fetchById: async (objectId, objectType, featureImage) => {

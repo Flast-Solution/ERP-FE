@@ -23,12 +23,9 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import axios from 'axios';
 import App from '@/App';
-import { initCoreConfig } from "@flast-erp/core/configs"
 
 axios.defaults.withCredentials = true;
-initCoreConfig({
-  GATEWAY: process.env.GATEWAY
-});
+axios.defaults.baseURL = "http://157.10.199.138:9080/api"
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<App />);

@@ -1,18 +1,17 @@
 import React, { useCallback, useState } from 'react';
-import RestList from "@flast-erp/core/components/RestLayout/RestList";
-import useGetList from "@flast-erp/core/hooks/useGetList";
+import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
+
+import { useGetList } from "@flast-erp/core/hooks";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
 import BotDataFilter from './BotDataFilter';
 import { Avatar, Button, message, Space } from 'antd';
-import { InAppEvent } from "@flast-erp/core/utils/FuseUtils";
+import { RequestUtils, InAppEvent } from "@flast-erp/core/utils";
 import { CHANNEL_SOURCE_MAP_KEYS } from '@/configs/localData';
-import { HASH_MODAL } from 'configs';
-import { arrayEmpty, formatTime } from '@flast-erp/core/utils/dataUtils';
-import OrderService from 'services/OrderService';
-import LeadService from 'services/LeadService';
+import { HASH_MODAL } from '@/configs';
+import { arrayEmpty, formatTime } from '@flast-erp/core/utils';
+import OrderService from '@/services/OrderService';
+import LeadService from '@/services/LeadService';
 import { useNavigate } from 'react-router-dom';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 
 const BotData = () => {
 
@@ -158,7 +157,7 @@ const BotData = () => {
       <Helmet>
         <title>{title}</title>
       </Helmet>
-      <CustomBreadcrumb 
+      <BreadcrumbCustom 
         data={[ { title: 'Trang chủ' }, { title: title} ]} 
       />
       <RestList 

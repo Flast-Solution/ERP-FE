@@ -20,11 +20,13 @@
 /**************************************************************************/
 
 import { Row, Col } from 'antd';
-import FormInput from '@/form-flast/FormInput';
-import FormSelect from '@/form-flast/FormSelect';
-import FormDatePicker from '@/form-flast/FormDatePicker';
+import { 
+  FormInput,
+  FormSelect,
+  FormDatePicker,
+  FormCategoryPost
+} from '@flast-erp/core/components';
 import { ACTIVE_TYPES } from '@/configs/localData';
-import FormCategoryPost from '@/form-flast/SelectInfinite/FormCategoryPost';
 
 const ProductFilter = () => {
   return (

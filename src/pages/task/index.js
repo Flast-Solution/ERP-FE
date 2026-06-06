@@ -32,13 +32,12 @@ import {
   Popconfirm
 } from 'antd';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
+import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
 import Filter from './Filter';
-import useGetList from "@flast-erp/core/hooks/useGetList";
-import RestList from '@flast-erp/core/components/RestLayout/RestList';
-import { arrayEmpty, dateFormatOnSubmit, f5List, formatMoney, formatTime } from '@flast-erp/core/utils/dataUtils';
+import { useGetList } from "@flast-erp/core/hooks";
+import { arrayEmpty, dateFormatOnSubmit, f5List, formatMoney, formatTime } from '@flast-erp/core/utils';
 import { useCallback } from 'react';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
+import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import { HASH_MODAL } from '@/configs';
 import {
   CalendarOutlined, 
@@ -51,7 +50,6 @@ import {
 } from '@ant-design/icons';
 import { DEPARTMENT_MAP_KEYS_VALUE } from '@/configs/localData';
 import UserService from '@/services/UserService';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 import { useNavigate } from 'react-router-dom';
 
 const STATUS_COLORS = {
@@ -344,7 +342,7 @@ const TASK = () => {
       <Helmet>
         <title>{TITLE}</title>
       </Helmet>
-      <CustomBreadcrumb
+      <BreadcrumbCustom
         data={[{ title: 'Trang chủ' }, { title: TITLE }]}
       />
       <RestList

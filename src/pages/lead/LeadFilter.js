@@ -20,9 +20,11 @@
 /**************************************************************************/
 
 import { Row, Col } from 'antd';
-import FormDatePicker from '@/form-flast/FormDatePicker';
-import FormInput from '@/form-flast/FormInput';
-import FormSelect from '@/form-flast/FormSelect';
+import { 
+  FormInput, 
+  FormDatePicker,
+  FormSelect
+} from '@flast-erp/core/components';
 import { CHANNEL_SOURCE, CHANNEL_STATUS } from '@/configs/localData';
 
 const LeadFilter = () => {

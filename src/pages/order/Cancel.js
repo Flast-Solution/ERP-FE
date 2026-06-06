@@ -21,10 +21,10 @@
 
 import React, { useState } from 'react';
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
-import ListOrder from 'containers/Order/List';
-import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
+import { BreadcrumbCustom } from '@flast-erp/core/components';
+import ListOrder from '@/containers/Order/List';
+import { useEffectAsync } from '@flast-erp/core/hooks';
+import { RequestUtils } from '@flast-erp/core/utils';
 
 const OrderCancel = () => {
 
@@ -41,7 +41,7 @@ const OrderCancel = () => {
     <Helmet>
       <title>{title}</title>
     </Helmet>
-    <CustomBreadcrumb
+    <BreadcrumbCustom
       data={[{ title: 'Trang chủ' }, { title: title }]}
     />
     <ListOrder filter={filter} />

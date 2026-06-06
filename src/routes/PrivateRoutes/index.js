@@ -21,7 +21,7 @@
 
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import FuseUtils from '@flast-erp/core/utils/FuseUtils';
+import { FuseUtils } from '@flast-erp/core/utils';
 
 import { LoginConfig } from './AuthConfig';
 import { CommonConfig } from './CommonConfig';

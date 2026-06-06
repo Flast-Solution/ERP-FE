@@ -28,7 +28,7 @@ import { ACTIONS } from '@/configs';
 const log = (value) => console.log('[auth.Auth] ', value);
 const Auth = (props) => {
 
-	const [state, setState] = useState({ waitAuthCheck: true })
+	const [ state, setState ] = useState({ waitAuthCheck: true })
 	const { dispatch } = useStore();
 
 	const logout = useCallback(() => {

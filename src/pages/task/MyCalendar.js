@@ -6,11 +6,10 @@ import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import { message } from 'antd';
 import dayjs from 'dayjs';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
+import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import { HASH_POPUP } from '@/configs/constant';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 import { useParams } from 'react-router-dom';
-import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
+import { useEffectAsync } from '@flast-erp/core/hooks';
 import { EventTime, EventTitle, EventContainer, LayoutWrapper } from './style'
 
 export default function MyCalendar() {

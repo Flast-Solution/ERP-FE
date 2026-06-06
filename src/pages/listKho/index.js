@@ -21,17 +21,19 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
-import RestList from '@flast-erp/core/components/RestLayout/RestList';
+import { 
+  BreadcrumbCustom, 
+  FormInput,
+  RestList
+} from '@flast-erp/core/components';
+
 import LeadFilter from './Filter';
-import useGetList from "@flast-erp/core/hooks/useGetList";
-import { dateFormatOnSubmit, f5List } from '@flast-erp/core/utils/dataUtils';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
+import { useGetList } from "@flast-erp/core/hooks";
+import { dateFormatOnSubmit, f5List } from '@flast-erp/core/utils';
+import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import { Button, Col, Form, Row } from 'antd';
-import ModaleStyles from 'pages/lead/style';
+import ModaleStyles from '@/pages/lead/style';
 import { useForm } from 'antd/es/form/Form';
-import FormInput from '@/form-flast/FormInput';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 
 const ListWareHouse = () => {
 
@@ -113,7 +115,7 @@ const ListWareHouse = () => {
       <Helmet>
         <title>{title}</title>
       </Helmet>
-      <CustomBreadcrumb
+      <BreadcrumbCustom
         data={[{ title: 'Trang chủ' }, { title: title }]}
       />
       <RestList

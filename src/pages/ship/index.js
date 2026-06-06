@@ -22,15 +22,13 @@
 import React, { useCallback, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Button } from 'antd';
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
-import RestList from '@flast-erp/core/components/RestLayout/RestList';
+import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
 import ShipFilter from './Filter';
-import useGetList from "@flast-erp/core/hooks/useGetList";
-import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils/dataUtils';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
-import { ShowSkuDetail } from 'containers/Product/SkuView';
+import { useGetList } from "@flast-erp/core/hooks";
+import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils';
+import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
+import { ShowSkuDetail } from '@/containers/Product/SkuView';
 import { HASH_MODAL } from '@/configs/constant';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 
 const ShipPage = () => {
 
@@ -163,7 +161,7 @@ const ShipPage = () => {
       <Helmet>
         <title>{title}</title>
       </Helmet>
-      <CustomBreadcrumb
+      <BreadcrumbCustom
         data={[{ title: 'Trang chủ' }, { title: title }]}
       />
       <RestList

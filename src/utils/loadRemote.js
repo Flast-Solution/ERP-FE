@@ -109,10 +109,10 @@ const SHARED_DEPS = {
     shareConfig: { singleton: true, requiredVersion: "^10.3.0" },
   },
   "@flast-erp/core": {
-    version: "1.0.11",
+    version: "latest",
     scope: "default",
     lib: () => FlastErpCore,
-    shareConfig: { singleton: true, requiredVersion: "^1.0.11" },
+    shareConfig: { singleton: true, requiredVersion: "latest" },
   },
 }
 
