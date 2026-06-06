@@ -19,22 +19,21 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React from "react";
 import '@/Main.less';
-import { useEffect, Suspense } from 'react';
+import React, { useEffect, Suspense } from 'react';
+import { DataProvider, Loading } from '@flast-erp/core/components';
 import { ThemeProvider } from 'styled-components';
 import theme from '@/theme';
 import i18n from '@/i18n';
 import moment from 'moment';
 import { Auth } from '@/auth';
-import { DataProvider } from '@/DataContext';
 import { BrowserRouter } from 'react-router-dom';
 import history from "@/@history";
 import Authorization from '@/auth/Authorization';
 import MainLayout from '@/layouts/MainLayout';
 import MyPopup from '@/routes/PopupRoute';
-import Loading from '@flast-erp/core/components/Loading';
 import ModalRoutes from '@/routes/ModalRoutes';
+import routes from '@/routes/PrivateRoutes';
 
 const ThemeRender = () => (
   <ThemeProvider theme={theme}>
@@ -57,8 +56,11 @@ function App() {
   }, []);
 
   return (
-    <DataProvider>
-      <BrowserRouter location={history.location} navigator={history}>
+    <DataProvider initialRoutes={routes}>
+      <BrowserRouter 
+        location={history.location} 
+        navigator={history}
+      >
         <ThemeRender />
       </BrowserRouter>
     </DataProvider>

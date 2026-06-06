@@ -20,11 +20,9 @@
 /**************************************************************************/
 
 import React, { useState } from 'react';
-import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
+import { RestEditModal } from '@flast-erp/core/components';
 import Form3Day from './Form3Day';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
-import { f5List } from '@flast-erp/core/utils/dataUtils';
+import { RequestUtils, f5List, InAppEvent } from '@flast-erp/core/utils';
 
 const Lead3DayForm = ({ data }) => {
 

@@ -1,10 +1,12 @@
 import { Row, Col, Form } from 'antd';
-import FormHidden from '@/form-flast/FormHidden';
-import CustomButton from '@flast-erp/core/components/CustomButton';
+import { 
+  FormHidden,
+  FormContextCustom,
+  FormListAddtion,
+  CustomButton 
+} from '@flast-erp/core/components';
 import { HourglassOutlined } from '@ant-design/icons';
-import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
 import { useCallback, useContext } from 'react';
-import FormListAddition from '@/form-flast/FormListAddtion';
 import CarRegisForm from './CarRegisForm';
 
 const CarBookForm = () => {
@@ -27,11 +29,11 @@ const CarBookForm = () => {
           {({ getFieldValue }) => {
             const preview = getFieldValue('preview');
             return preview ? "" : (
-              <FormListAddition
+              <FormListAddtion
                 name="scheduleBusList"
               >
                 <CarRegisForm />
-              </FormListAddition>
+              </FormListAddtion>
             )
           }}
         </Form.Item>

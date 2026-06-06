@@ -28,7 +28,7 @@ import {
   DisconnectOutlined,
 } from '@ant-design/icons'
 import { buildJSX } from '@/containers/PreviewModal/buildJSX'
-import { arrayEmpty } from '@flast-erp/core/utils/dataUtils';
+import { arrayEmpty } from '@flast-erp/core/utils';
 
 import * as AntdIcons from '@ant-design/icons'
 import useChatStore       from './useChatStore'

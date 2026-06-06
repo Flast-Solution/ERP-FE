@@ -1,51 +1,24 @@
-/**************************************************************************/
-/*  craco.config.js                                                        */
-/**************************************************************************/
-/*                       Tệp này là một phần của:                         */
-/*                             Open CDP                                   */
-/*                        https://flast.vn                                */
-/**************************************************************************/
-/* Bản quyền (c) 2025 - này thuộc về các cộng tác viên Flast Solution     */
-/* (xem AUTHORS.md).                                                      */
-/* Bản quyền (c) 2024-2025 Long Huu, Quang Duc, Hung Bui                  */
-/*                                                                        */
-/* Bạn được quyền sử dụng phần mềm này miễn phí cho bất kỳ mục đích nào,  */
-/* bao gồm sao chép, sửa đổi, phân phối, bán lại…                         */
-/*                                                                        */
-/* Chỉ cần giữ nguyên thông tin bản quyền và nội dung giấy phép này trong */
-/* các bản sao.                                                           */
-/*                                                                        */
-/* Đội ngũ phát triển mong rằng phần mềm được sử dụng đúng mục đích và    */
-/* có trách nghiệm                                                        */
-/**************************************************************************/
-const path = require('path');
-const CracoLessPlugin = require('craco-less');
+const path = require("path")
+const CracoLessPlugin = require("craco-less")
 
 module.exports = {
-  webpack: {
-    alias: {
-      '@/form-flast': path.resolve(__dirname, 'node_modules/@flast-erp/core/components/form'),
-      '@': path.resolve(__dirname, 'src'),
-    },
-    configure: (webpackConfig) => {
-      webpackConfig.resolve.plugins = webpackConfig.resolve.plugins.filter(
-        (plugin) => plugin.constructor.name !== 'ModuleScopePlugin'
-      );
-
-      return webpackConfig;
-    },
-  },
   plugins: [
     {
       plugin: CracoLessPlugin,
       options: {
         lessLoaderOptions: {
           lessOptions: { javascriptEnabled: true },
-        },
-      },
-    },
+        }
+      }
+    }
   ],
-  devServer: {
-    port: 3000,
+  webpack: {
+    alias: {
+      "@": path.resolve(__dirname, "src"),
+    }
   },
-};
+
+  devServer: {
+    port: 3000
+  }
+}

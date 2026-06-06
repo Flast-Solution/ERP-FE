@@ -1,17 +1,24 @@
 import { Row, Col, Form, Button, Upload } from 'antd';
-import FormHidden from '@/form-flast/FormHidden';
-import FormTextArea from '@/form-flast/FormTextArea';
-import FormDatePicker from '@/form-flast/FormDatePicker';
-import FormSelect from '@/form-flast/FormSelect';
-import CustomButton from '@flast-erp/core/components/CustomButton';
+
+import { 
+  FormHidden,
+  FormTextArea,
+  FormDatePicker,
+  FormSelect,
+  CustomButton,
+  FormInput,
+  FormContextCustom
+} from '@flast-erp/core/components';
+
 import { UploadOutlined, DeleteTwoTone, HourglassOutlined } from '@ant-design/icons';
 import { NGHI_PHEP_META } from '@/configs/constant';
-import FormInput from '@/form-flast/FormInput';
-import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
 import { useCallback, useContext, useEffect, useState } from 'react';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
-import { arrayNotEmpty, string2Object } from '@flast-erp/core/utils/dataUtils';
-import { getFileName } from '@flast-erp/core/utils/fileUtils';
+import { 
+  RequestUtils, 
+  arrayNotEmpty, 
+  string2Object,
+  getFileName
+} from '@flast-erp/core/utils';
 import { GATEWAY } from '@/configs';
 import { isArray } from 'lodash';
 

@@ -22,14 +22,18 @@
 import React, { useEffect } from "react";
 import { Form, Row, Col, message } from "antd";
 import { isEmpty } from "lodash";
-import FormHidden from "@/form-flast/FormHidden";
-import CustomButton from "@flast-erp/core/components/CustomButton";
-import RequestUtils from "@flast-erp/core/utils/RequestUtils";
-import FormInput from "@/form-flast/FormInput";
-import FormSelect from "@/form-flast/FormSelect";
+
+import {
+  FormHidden,
+  FormInput, 
+  CustomButton,
+  FormSelect,
+  FormInputNumber,
+  FormTextArea
+} from '@flast-erp/core/components';
+
+import { RequestUtils } from "@flast-erp/core/utils";
 import { MATERIAL_UNIT_TYPE } from "@/configs/localData";
-import FormInputNumber from "@/form-flast/FormInputNumber";
-import FormTextArea from "@/form-flast/FormTextArea";
 
 const MaterialForm = ({ onSave, material }) => {
 

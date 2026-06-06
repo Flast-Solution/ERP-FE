@@ -1,6 +1,6 @@
 
 import { useListQCProduct } from '@/hooks/useListQCProduct';
-import FormSelectInfinite from '@/form-flast/SelectInfinite/FormSelectInfinite';
+import { FormSelectInfinite } from '@flast-erp/core/components';
 
 const FormInfiniteQcProduct = props => {
   return (

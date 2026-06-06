@@ -21,16 +21,18 @@
 
 import { useEffect, useCallback, useState } from "react";
 import { Col, Form, Row } from "antd";
-import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
-import FormSelectInfiniteCustomer from "@/form-flast/SelectInfinite/FormSelectInfiniteCustomer";
-import FormInput from "@/form-flast/FormInput";
-import BtnSubmit from '@flast-erp/core/components/CustomButton/BtnSubmit';
-import FormSelect from "@/form-flast/FormSelect";
+
+import { 
+  FormContextCustom,
+  BtnSubmit,
+  FormSelect,
+  FormInput,
+  FormSelectInfiniteCustomer
+} from '@flast-erp/core/components';
+
 import { CHANNEL_SOURCE } from "@/configs/localData";
-import { arrayEmpty } from "@flast-erp/core/utils/dataUtils";
-import RequestUtils from "@flast-erp/core/utils/RequestUtils";
+import { RequestUtils, InAppEvent, arrayEmpty } from "@flast-erp/core/utils";
 import { SUCCESS_CODE } from "@/configs";
-import { InAppEvent } from "@flast-erp/core/utils/FuseUtils";
 
 function mapFields(source, mapping) {
   let result = {};

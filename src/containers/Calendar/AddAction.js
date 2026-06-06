@@ -1,19 +1,26 @@
 import { Form, Col, Row } from 'antd';
-import CustomButton from '@flast-erp/core/components/CustomButton';
-import FormDatePicker from '@/form-flast/FormDatePicker';
-import FormInput from '@/form-flast/FormInput';
-import FormRadioGroup from '@/form-flast/FormRadioGroup';
-import FormSelect from '@/form-flast/FormSelect';
-import FormSelectUser from '@/form-flast/FormSelectUser';
-import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
-import { SUCCESS_CODE } from 'configs';
-import useGetMe from '@flast-erp/core/hooks/useGetMe';
-import { buildCalendarsWithNames } from 'pages/scheduler/utils';
+
+import { 
+  CustomButton,
+  FormDatePicker,
+  FormSelectUser,
+  FormInput,
+  FormSelect,
+  FormRadioGroup,
+  RestEditModal
+} from '@flast-erp/core/components';
+
+import { 
+  dateFormatOnSubmit,
+  InAppEvent,
+  RequestUtils
+} from '@flast-erp/core/utils';
+
+import { SUCCESS_CODE } from '@/configs';
+import useGetMe from '@/hooks/useGetMe';
+import { buildCalendarsWithNames } from '@/pages/scheduler/utils';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { dateFormatOnSubmit } from '@flast-erp/core/utils/dataUtils';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 
 const AddAction = ({ closeModal, data }) => {
 

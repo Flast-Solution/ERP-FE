@@ -20,16 +20,20 @@
 /**************************************************************************/
 
 import { Col, Form, message, Row } from 'antd'
-import FormDatePicker from '@/form-flast/FormDatePicker';
-import FormInputNumber from '@/form-flast/FormInputNumber';
-import FormSelect from '@/form-flast/FormSelect';
-import { formatMoney } from '@flast-erp/core/utils/dataUtils'
+
+import {
+  FormDatePicker,
+  FormInputNumber,
+  FormSelect,
+  FormAutoComplete,
+  BtnSubmit
+} from '@flast-erp/core/components';
+
+import { RequestUtils, formatMoney } from '@flast-erp/core/utils'
 import OrderTextTableOnly from './OrderTextTableOnly';
-import BtnSubmit from '@flast-erp/core/components/CustomButton/BtnSubmit';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
-import { SUCCESS_CODE } from 'configs';
+
+import { SUCCESS_CODE } from '@/configs';
 import { useCallback, useEffect } from 'react';
-import FormAutoComplete from '@/form-flast/FormAutoComplete';
 
 const OptionPrice = [
   { title: 'Tiền mặt', name: 'tienmat' },

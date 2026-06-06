@@ -1,15 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
-import { arrayNotEmpty, dateFormatOnSubmit } from '@flast-erp/core/utils/dataUtils';
+import { RestEditModal } from '@flast-erp/core/components';
+import { arrayNotEmpty, dateFormatOnSubmit, RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import { Form } from 'antd';
 import { APP_FOLLOW_STATUS_WAITING } from '@/configs/constant';
 import { cloneDeep } from 'lodash';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
-import { SUCCESS_CODE } from 'configs';
+import { SUCCESS_CODE } from '@/configs';
 import BookingHotelPreview from './BookingHotelPreview';
 import HotelBookForm from './HotelBookForm';
-import useGetMe from '@flast-erp/core/hooks/useGetMe';
+import useGetMe from '@/hooks/useGetMe';
 
 const BookingHotel = ({ closeModal, data }) => {
 

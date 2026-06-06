@@ -2,9 +2,8 @@ import React from 'react';
 import { Body, Container, Column, Head, Heading, Html, Preview, Row, Section, Text, } from "@react-email/components";
 import { APP_FOLLOW_STATUS_DONE, APP_FOLLOW_STATUS_WAITING } from "@/configs/constant";
 import ESig from "./ESig";
-import { formatDateDayjs } from "@flast-erp/core/utils/textUtils";
 import { HOTEL_ROOM_PAY_TYPE } from "@/configs/localData";
-import { arrayNotEmpty, formatMoney } from "@flast-erp/core/utils/dataUtils";
+import { formatDateDayjs, arrayNotEmpty, formatMoney } from "@flast-erp/core/utils";
 import UserService from "services/UserService";
 
 const nRow = {
