@@ -1,10 +1,12 @@
 import { Row, Col, Form } from 'antd';
-import FormHidden from '@/form-flast/FormHidden';
-import CustomButton from '@flast-erp/core/components/CustomButton';
+import {
+  CustomButton,
+  FormHidden,
+  FormListAddtion,
+  FormContextCustom
+} from "@flast-erp/core/components";
 import { HourglassOutlined } from '@ant-design/icons';
-import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
 import { useCallback, useContext } from 'react';
-import FormListAddition from '@/form-flast/FormListAddtion';
 import RegisForm from './RegisForm';
 
 const OvertimeForm = () => {
@@ -20,9 +22,9 @@ const OvertimeForm = () => {
       <FormHidden name={'id'} />
       <FormHidden name={'preview'} />
       <Col md={24} xs={24}>
-        <FormListAddition name="listRegis">
+        <FormListAddtion name="listRegis">
           <RegisForm />
-        </FormListAddition>
+        </FormListAddtion>
       </Col>
       <Col md={24} xs={24}>
         <div style={{display: 'flex', justifyContent:'end'}}>

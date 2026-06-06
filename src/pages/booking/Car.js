@@ -1,14 +1,20 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import RestList from "@flast-erp/core/components/RestLayout/RestList";
-import useGetList from "@flast-erp/core/hooks/useGetList";
+import { BreadcrumbCustom, RestList } from '@flast-erp/core/components';
+import { useGetList } from "@flast-erp/core/hooks";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
 import Filter from './Filter';
 import { Button, Flex, Typography } from 'antd';
-import { InAppEvent } from "@flast-erp/core/utils/FuseUtils";
+import { InAppEvent } from "@flast-erp/core/utils";
 import { HASH_MODAL } from 'configs';
-import { arrayEmpty, arrayNotEmpty, dateFormatOnSubmit, formatTime, formatMoney } from '@flast-erp/core/utils/dataUtils';
-import useGetMe from '@flast-erp/core/hooks/useGetMe';
+import { 
+  arrayEmpty, 
+  arrayNotEmpty, 
+  dateFormatOnSubmit, 
+  formatTime, 
+  formatMoney,
+  RequestUtils
+} from '@flast-erp/core/utils';
+import useGetMe from '@/hooks/useGetMe';
 import {
   APP_FOLLOW_STATUS_CONFIRM,
   APP_STATUS_TEXT,
@@ -17,10 +23,9 @@ import {
   APP_FOLLOW_STATUS_REJECT
 } from '@/configs/constant';
 import { OTContent } from './styles';
-import UserService from 'services/UserService';
+import UserService from '@/services/UserService';
 import { CAR_WORK_TYPE } from '@/configs/localData';
-import CarService from 'services/CarService';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
+import CarService from '@/services/CarService';
 import { DownloadOutlined } from '@ant-design/icons';
 
 const { Paragraph, Text } = Typography;
@@ -166,7 +171,7 @@ const Car = () => {
       <Helmet>
         <title>{title}</title>
       </Helmet>
-      <CustomBreadcrumb
+      <BreadcrumbCustom
         data={[{ title: 'Home' }, { title: title }]}
       />
       <RestList

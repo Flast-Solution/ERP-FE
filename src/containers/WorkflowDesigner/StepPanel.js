@@ -9,7 +9,7 @@ import {
   useSetStepTypes,
 } from '@/hooks/useWorkflowStore'
 import { HASH_POPUP } from '@/configs/constant'
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils'
+import { InAppEvent } from '@flast-erp/core/utils'
 import {
   PanelContainer,
   SectionTitleRow,

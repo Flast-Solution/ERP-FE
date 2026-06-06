@@ -23,15 +23,17 @@ import {
   WarningOutlined,
   FormOutlined,
 } from '@ant-design/icons'
-import FormInput       from '@/form-flast/FormInput'
-import FormInputNumber from '@/form-flast/FormInputNumber'
-import FormTextArea    from '@/form-flast/FormTextArea'
-import FormSelect      from '@/form-flast/FormSelect'
-import FormRadioGroup  from '@/form-flast/FormRadioGroup'
-import FormCheckbox    from '@/form-flast/FormCheckbox'
-import FormDatePicker  from '@/form-flast/FormDatePicker'
-import FormJoditEditor from '@/form-flast/FormJoditEditor'
-import FormSelectAPI   from '@/form-flast/FormSelectAPI'
+import {
+  FormInput,
+  FormInputNumber,
+  FormTextArea,
+  FormSelect,
+  FormRadioGroup,
+  FormCheckbox,
+  FormDatePicker,
+  FormJoditEditor,
+  FormSelectAPI
+} from "@flast-erp/core/components";
 import { buildJSX }    from './buildJSX'
 import MonacoCodeEditor from './MonacoCodeEditor'
 import { parseJsxToSchema } from './parseJSXSchema'

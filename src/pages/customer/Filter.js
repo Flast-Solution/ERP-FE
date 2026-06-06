@@ -20,8 +20,7 @@
 /**************************************************************************/
 
 import { Row, Col } from 'antd';
-import FormInput from '@/form-flast/FormInput';
-import FormSelectUser from '@/form-flast/FormSelectUser';
+import { FormSelectUser, FormInput } from '@flast-erp/core/components';
 
 const CustomerFilter = ({ taxCode = false }) => (
   <Row gutter={16}>

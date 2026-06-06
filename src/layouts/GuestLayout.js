@@ -21,8 +21,7 @@
 
 import React, { Suspense } from 'react';
 import { Layout } from 'antd';
-import { Loading } from '@flast-erp/core/components';
-import { useStore } from 'DataContext';
+import { Loading, useStore } from '@flast-erp/core/components';
 import { useRoutes } from "react-router-dom";
 
 const GuestLayout = (props) => {

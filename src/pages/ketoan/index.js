@@ -22,15 +22,14 @@
 import React, { useCallback, useState } from 'react';
 import { Button } from 'antd';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
-import RestList from '@flast-erp/core/components/RestLayout/RestList';
+import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
 import Filter from './Filter';
-import useGetList from "@flast-erp/core/hooks/useGetList";
-import { dateFormatOnSubmit } from '@flast-erp/core/utils/dataUtils';
-import { ORDER_COLUMN_ACTION } from 'containers/Order/utils';
+import { useGetList } from "@flast-erp/core/hooks";
+import { dateFormatOnSubmit } from '@flast-erp/core/utils';
+import { ORDER_COLUMN_ACTION } from '@/containers/Order/utils';
 import { HASH_MODAL } from 'configs';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
-import OrderService from 'services/OrderService';
+import { InAppEvent } from '@flast-erp/core/utils';
+import OrderService from '@/services/OrderService';
 
 const CongnoPage = () => {
 
@@ -73,7 +72,7 @@ const CongnoPage = () => {
 			<Helmet>
 				<title>{title}</title>
 			</Helmet>
-			<CustomBreadcrumb
+			<BreadcrumbCustom
 				data={[{ title: 'Trang chủ' }, { title: title }]}
 			/>
 			<RestList

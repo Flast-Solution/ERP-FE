@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import RestList from "@flast-erp/core/components/RestLayout/RestList";
-import useGetList from "@flast-erp/core/hooks/useGetList";
+import { RestList, BreadcrumbCustom } from "@flast-erp/core/components";
+
+import { useGetList } from "@flast-erp/core/hooks";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
 import Filter from './Filter';
 import { Button, Flex, Typography } from 'antd';
-import { InAppEvent } from "@flast-erp/core/utils/FuseUtils";
+import { InAppEvent, RequestUtils } from "@flast-erp/core/utils";
 import { HASH_MODAL } from 'configs';
-import { dateFormatOnSubmit, formatTime, formatMoney, arrayNotEmpty } from '@flast-erp/core/utils/dataUtils';
-import useGetMe from '@flast-erp/core/hooks/useGetMe';
+import { dateFormatOnSubmit, formatTime, formatMoney, arrayNotEmpty } from '@flast-erp/core/utils';
+import useGetMe from '@/hooks/useGetMe';
 import {
   APP_FOLLOW_STATUS_CONFIRM,
   APP_STATUS_TEXT,
@@ -17,10 +17,9 @@ import {
   APP_FOLLOW_STATUS_REJECT
 } from '@/configs/constant';
 import { OTContent } from './styles';
-import { formatDateDayjs } from '@flast-erp/core/utils/textUtils';
-import UserService from 'services/UserService';
-import HotelService from 'services/HotelService';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
+import { formatDateDayjs } from '@flast-erp/core/utils';
+import UserService from '@/services/UserService';
+import HotelService from '@/services/HotelService';
 import { DownloadOutlined } from '@ant-design/icons';
 
 const { Paragraph, Text } = Typography;
@@ -167,7 +166,7 @@ const Hotel = () => {
       <Helmet>
         <title>{title}</title>
       </Helmet>
-      <CustomBreadcrumb
+      <BreadcrumbCustom
         data={[{ title: 'Home' }, { title: title }]}
       />
       <RestList

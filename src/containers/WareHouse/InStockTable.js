@@ -21,8 +21,8 @@
 
 import React, { useState } from 'react';
 import { Table } from 'antd';
-import { arrayNotEmpty } from '@flast-erp/core/utils/dataUtils';
-import { ShowSkuDetail } from 'containers/Product/SkuView'
+import { arrayNotEmpty } from '@flast-erp/core/utils';
+import { ShowSkuDetail } from '@/containers/Product/SkuView'
 
 const InStockTable = ({ data, onChangeSelected }) => {
 

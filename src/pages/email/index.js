@@ -1,10 +1,9 @@
 import React from 'react';
-import RestList from "@flast-erp/core/components/RestLayout/RestList";
-import useGetList from "@flast-erp/core/hooks/useGetList";
+import { RestList, BreadcrumbCustom } from "@flast-erp/core/components";
+import { useGetList } from "@flast-erp/core/hooks";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
-import { InAppEvent } from "@flast-erp/core/utils/FuseUtils";
-import { HASH_MODAL } from 'configs';
+import { InAppEvent } from "@flast-erp/core/utils";
+import { HASH_MODAL } from '@/configs';
 
 const Email = () => {
 
@@ -43,7 +42,7 @@ const Email = () => {
       <Helmet>
         <title>Email - Quản lý hành chính</title>
       </Helmet>
-      <CustomBreadcrumb
+      <BreadcrumbCustom
         data={[
           { title: 'Quản lý hành chính' },
           { title: 'Email' }

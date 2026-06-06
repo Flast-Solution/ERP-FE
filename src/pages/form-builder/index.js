@@ -1,7 +1,7 @@
 import AIChatbot from "@/containers/AIChatbot";
 import FormBuilder from "@/containers/FormBuilder";
 import { useState } from "react";
-import RequestUtils from "@flast-erp/core/utils/RequestUtils";
+import { RequestUtils } from "@flast-erp/core/utils";
 import useFormBuilderStore from "@/store/useFormBuilderStore";
 
 const BuilderPage = () => {

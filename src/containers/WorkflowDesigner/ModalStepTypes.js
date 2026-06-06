@@ -1,10 +1,13 @@
 import React, { useEffect } from 'react'
 import { Col, Form, ColorPicker, Button } from 'antd'
-import FormInput from '@/form-flast/FormInput'
-import FormSelect from '@/form-flast/FormSelect'
-import FormInputNumber from '@/form-flast/FormInputNumber'
-import FormHidden from '@/form-flast/FormHidden'
-import FormListAddition from '@/form-flast/FormListAddtion'
+import { 
+  FormInput, 
+  FormHidden, 
+  FormListAddtion,
+  FormSelect,
+	FormInputNumber
+} from "@flast-erp/core/components";
+
 import { FormListStyles } from '@/css/global'
 
 // ─── Một row trong danh sách ──────────────────────────────────────────────────
@@ -112,13 +115,13 @@ const ModalStepTypes = ({ stepTypes = [], onSave }) => {
 
   return (
     <Form form={form} onFinish={onSubmit}>
-      <FormListAddition
+      <FormListAddtion
         required
         name="lists"
         textAddNew="Thêm loại bước mới"
       >
         <StepTypeRow />
-      </FormListAddition>
+      </FormListAddtion>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
         <Button type="primary" htmlType="submit" style={{ background: '#ff4d4f', borderColor: '#ff4d4f' }}>

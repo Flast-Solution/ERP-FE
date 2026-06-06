@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { Form, Input, Tag, Checkbox, Button, Empty, Spin } from 'antd'
 import { SearchOutlined } from '@ant-design/icons'
-import RequestUtils from '@flast-erp/core/utils/RequestUtils'
 import { useEffect } from 'react'
-import { arrayNotEmpty } from '@flast-erp/core/utils/dataUtils'
+import { RequestUtils, arrayNotEmpty } from '@flast-erp/core/utils'
 import styled from 'styled-components'
 
 const FormItem = styled.div`

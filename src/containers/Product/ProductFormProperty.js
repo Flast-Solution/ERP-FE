@@ -21,10 +21,10 @@
 
 import { useContext, useMemo } from 'react';
 import { Col, Form } from 'antd';
-import FormSelectAPI from '@/form-flast/FormSelectAPI';
+import { FormSelectAPI, FormContextCustom } from "@flast-erp/core/components";
+
 import { FormListStyles } from "@/css/global";
-import ProductAttrService from 'services/ProductAttrService';
-import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
+import ProductAttrService from '@/services/ProductAttrService';
 import _ from "lodash";
 
 const ProductFormProperty = ({ field }) => {

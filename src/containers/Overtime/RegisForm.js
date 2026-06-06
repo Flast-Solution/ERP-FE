@@ -1,9 +1,11 @@
 import FormStyles from './styles'
 import { Col } from 'antd';
-import FormDatePicker from '@/form-flast/FormDatePicker';
+import {
+  FormDatePicker,
+  FormSelect,
+  FormTextArea
+} from "@flast-erp/core/components";
 import { OVERTIME_META } from '@/configs/constant';
-import FormSelect from '@/form-flast/FormSelect';
-import FormTextArea from '@/form-flast/FormTextArea';
 
 const RegisForm = ({ field }) => {
   const { name } = field || { name: 0 };
