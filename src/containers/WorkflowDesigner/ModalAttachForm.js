@@ -85,6 +85,29 @@ const INPUT_TYPE_LABEL = {
   lookup: 'Lookup'
 }
 
+const normalizeTemplateResponse = (res = {}) => {
+  if (Array.isArray(res)) return res
+  if (Array.isArray(res?.embedded)) return res.embedded
+  if (Array.isArray(res?.data?.embedded)) return res.data.embedded
+  if (Array.isArray(res?.data)) return res.data
+  return []
+}
+
+const normalizeTemplate = (item = {}) => {
+  const fields = Array.isArray(item.fields) ? item.fields : []
+  const displayName = (item.description ?? '').trim() || item.name || item.title || `Form #${item.id}`
+
+  return {
+    ...item,
+    id: item.id,
+    name: displayName,
+    formKey: item.name ?? item.formKey ?? item.key ?? '',
+    domain: item.domain ?? '',
+    description: item.description ?? '',
+    fields,
+  }
+}
+
 /**
  * Props inject từ modal system:
  *   attachedForms  — danh sách form đã gắn vào step hiện tại [{ id, name, required, fields }]
@@ -210,8 +233,14 @@ const FormListRenderer = ({ filter, selected, onToggle, onToggleRequired }) => {
 
   useEffect(() => {
     setLoading(true)
-    RequestUtils.GetAsList('/nocode/form-templates', filter)
-      .then(setData)
+    RequestUtils.Get('/workflow/forms/template/filter?isFull=true', filter)
+      .then((res) => {
+        setData(normalizeTemplateResponse(res).map(normalizeTemplate))
+      })
+      .catch((err) => {
+        console.error('[ModalAttachForm] fetch templates', err)
+        setData([])
+      })
       .finally(() => setLoading(false))
   }, [filter])
 

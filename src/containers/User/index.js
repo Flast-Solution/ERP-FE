@@ -1,9 +1,7 @@
 import React, { useCallback } from 'react';
-import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
+import { RestEditModal } from '@flast-erp/core/components';
+import { InAppEvent, RequestUtils, f5List } from '@flast-erp/core/utils';
 import EditUserForm from './EditUserForm';
-import { f5List } from '@flast-erp/core/utils/dataUtils';
 
 const UserForm = ({ closeModal, data }) => {
 

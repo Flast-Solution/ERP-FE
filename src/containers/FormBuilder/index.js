@@ -103,6 +103,11 @@ const PreviewButton = ({ onPreview }) => (
   </PreviewSplitBtn>
 )
 
+const flattenFields = (items = []) => items.flatMap(field => [
+  field,
+  ...flattenFields(Array.isArray(field.children) ? field.children : []),
+])
+
 
 const FormBuilder = ({
   templateId = null,
@@ -175,7 +180,10 @@ const FormBuilder = ({
       meta  : { ...templateMeta, ...(incomingTemplate.meta ?? {}) },
       fields: incomingTemplate.fields ?? [],
     }
-    setJsxCode(buildJSX(nextSchema).plain)
+    const nextJsxCode = typeof incomingTemplate.code === 'string' && incomingTemplate.code.trim()
+      ? incomingTemplate.code
+      : buildJSX(nextSchema).plain
+    setJsxCode(nextJsxCode)
     setPreviewMode('code')
     setPreviewOpen(true)
   }, [incomingTemplate, importGeneratedTemplate, templateMeta])
@@ -244,36 +252,64 @@ const FormBuilder = ({
     fields,
   }), [templateMeta, fields])
 
-  const handleSave = async () => {
-    const emptyKey = fields.find(f => !f.fieldKey)
+  const handleSave = async (previewPayload = null) => {
+    if (previewPayload?.syncError) {
+      message.error(`Code chưa parse ngược được sang form: ${previewPayload.syncError}`)
+      return
+    }
+
+    const saveSchema = previewPayload?.schema
+      ? {
+        meta  : previewPayload.schema.meta ?? templateMeta,
+        fields: previewPayload.schema.fields ?? fields,
+      }
+      : null
+
+    const saveMeta = saveSchema?.meta ?? templateMeta
+    const saveFields = saveSchema?.fields ?? fields
+    const allFields = flattenFields(saveFields)
+
+    const emptyKey = allFields.find(f => !f.fieldKey)
     if (emptyKey) {
       message.error(`Field "${emptyKey.label || '(chưa có nhãn)'}" chưa có mã field.`)
       return
     }
 
-    const keys   = fields.map(f => f.fieldKey)
+    const keys   = allFields.map(f => f.fieldKey)
     const hasDup = keys.length !== new Set(keys).size
     if (hasDup) {
       message.error('Có mã field bị trùng trong form. Vui lòng kiểm tra lại.')
       return
     }
 
-    if (!templateMeta.name) {
+    if (!saveMeta.name) {
       message.error('Vui lòng đặt tên cho form.')
       return
     }
 
     setSaving(true)
     try {
-      const basePayload = toPayload()
+      if (saveSchema) {
+        importGeneratedTemplate(saveSchema)
+      }
+
+      const basePayload = saveSchema
+        ? useFormBuilderStore.getState().toPayload()
+        : toPayload()
       const fallbackJsxCode = buildJSX({
-        meta: templateMeta,
-        fields,
+        meta: saveMeta,
+        fields: saveFields,
       }).plain
+      const saveJsxCode = previewPayload?.jsxCode ?? jsxCode
       const payload = {
         ...basePayload,
-        jsx_code: jsxCode || fallbackJsxCode,
+        jsx_code: saveJsxCode || fallbackJsxCode,
       }
+
+      if (previewPayload?.jsxCode != null) {
+        setJsxCode(previewPayload.jsxCode)
+      }
+
       console.log('[FormBuilder] save payload', payload)
       await onSave?.(payload)
       message.success('Đã lưu form template.')
@@ -302,10 +338,11 @@ const FormBuilder = ({
   }, [fields])
 
   const handlePreview = useCallback((mode = 'ui') => {
-    setJsxCode(buildJSX({
+    const generatedJsxCode = buildJSX({
       meta: templateMeta,
       fields,
-    }).plain)
+    }).plain
+    setJsxCode(current => mode === 'code' && current?.trim() ? current : generatedJsxCode)
     setPreviewMode(mode)
     setPreviewOpen(true)
   }, [templateMeta, fields])

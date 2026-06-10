@@ -1,17 +1,44 @@
 import AIChatbot from "@/containers/AIChatbot";
 import FormBuilder from "@/containers/FormBuilder";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { RequestUtils } from "@flast-erp/core/utils";
 import useFormBuilderStore from "@/store/useFormBuilderStore";
 
 const BuilderPage = () => {
 
+  const location = useLocation()
   const [chatbotOpen, setChatbotOpen] = useState(false)
   const [chatbotMode, setChatbotMode] = useState('default')
   const [chatbotContext, setChatbotContext] = useState(null)
   const [incomingTemplate, setIncomingTemplate] = useState(null)
   const templateId = useFormBuilderStore(s => s.templateMeta.id)
   const setTemplateMeta = useFormBuilderStore(s => s.setTemplateMeta)
+
+  useEffect(() => {
+    const template = location.state?.template
+    if (!template) {
+      return
+    }
+
+    setIncomingTemplate({
+      meta: {
+        id: template.id,
+        name: template.name ?? '',
+        domain: template.domain ?? '',
+        description: template.description ?? '',
+        enabled: template.enabled ?? true,
+      },
+      fields: Array.isArray(template.fields) ? template.fields : [],
+      code: template.jsx_code
+        ?? template.jsxCode
+        ?? template.code
+        ?? template.sourceComponent?.jsx_code
+        ?? template.sourceComponent?.jsxCode
+        ?? '',
+      nonce: Date.now(),
+    })
+  }, [location.state])
 
   const openChatbot = ({ mode, context }) => {
     setChatbotMode(mode)

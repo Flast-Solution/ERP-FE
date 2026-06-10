@@ -74,6 +74,8 @@ const useWorkflowStore = create((set, get) => ({
 
   // ── Process info ────────────────────────────────────────────────────────────
   process: {
+    id: null,
+    processKey: '',
     name: 'New Tạo luồng xử lý nghiệp vụ',
     code: 'new_process_business',
     description: '',
@@ -252,7 +254,7 @@ const useWorkflowStore = create((set, get) => ({
       selectedType: null,
       history: [],
       future: [],
-      process: { name: 'New Process', code: 'new_process', description: '' },
+      process: { id: null, processKey: '', name: 'New Process', code: 'new_process', description: '' },
     }),
 
   // ── Load từ JSON (import) ─────────────────────────────────────────────────────
@@ -260,7 +262,7 @@ const useWorkflowStore = create((set, get) => ({
     set({
       nodes: nodes ?? [],
       edges: edges ?? [],
-      process: processInfo ?? { name: '', code: '', description: '' },
+      process: processInfo ?? { id: null, processKey: '', name: '', code: '', description: '' },
       selectedId: null,
       selectedType: null,
       history: [],

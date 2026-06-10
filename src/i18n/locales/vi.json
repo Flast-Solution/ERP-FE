@@ -65,6 +65,8 @@
     "customers.startTime": "StartTime",
     "customers.endTime": "endTime",
     "customers.generalInfo": "Thông tin khách hàng",
+    "user.accountType": "Loại tài khoản",
+    "user.accountType.validateMsg.required": "Vui lòng chọn loại tài khoản.",
     "input.field.validateMsg.cantGreater": "Can't greater {{name}}",
     "input.field.validateMsg.cantSmaller0": "Can't smaller 0",
     "input.paidAmount.validateMsg.mustGreater0": "Value must greater 0 .!",

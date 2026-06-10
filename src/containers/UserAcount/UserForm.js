@@ -85,8 +85,11 @@ const UserForm = ({ listProFile }) => {
 			</Col>
 			<Col md={12} xs={24}>
 				<FormSelect 
-					label="Quyền thao tác" 
+					required
+					label="user.accountType"
 					name="userProfiles"
+					messageRequire="user.accountType.validateMsg.required"
+					formItemProps={{ required: true }}
 					resourceData={listProFile}
 					titleProp='type'
 					valueProp='id'

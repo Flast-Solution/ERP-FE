@@ -122,7 +122,8 @@ const OptionsEditor = ({ options = [], onChange }) => {
 // ─── Constraint section — dynamic theo inputType ──────────────────────────────
 
 const ConstraintSection = ({ field, onConfigChange }) => {
-  const { inputType, config = {} } = field
+  const { inputType, config: rawConfig } = field
+  const config = rawConfig ?? {}
 
   // number / decimal → min + max
   if (inputType === 'number' || inputType === 'decimal') {
@@ -157,15 +158,33 @@ const ConstraintSection = ({ field, onConfigChange }) => {
     )
   }
 
-  // select / multi_select / radio / checkbox → options editor
-  if (['select', 'multi_select', 'radio', 'checkbox'].includes(inputType)) {
+  // select / multi_select / radio / checkbox / autocomplete → options editor
+  if (['select', 'multi_select', 'radio', 'checkbox', 'autocomplete'].includes(inputType)) {
     return (
       <Section>
-        <SectionTitle>Tùy chọn</SectionTitle>
+        <SectionTitle>{inputType === 'autocomplete' ? 'Gợi ý' : 'Tùy chọn'}</SectionTitle>
         <OptionsEditor
           options={config.options ?? []}
           onChange={opts => onConfigChange({ options: opts })}
         />
+        {inputType === 'autocomplete' && (
+          <>
+            <Form.Item label="Value prop" style={{ marginBottom: 10, marginTop: 12 }}>
+              <Input
+                placeholder="value"
+                value={config.valueProp ?? 'value'}
+                onChange={e => onConfigChange({ valueProp: e.target.value })}
+              />
+            </Form.Item>
+            <Form.Item label="Title prop" style={{ marginBottom: 12 }}>
+              <Input
+                placeholder="label"
+                value={config.titleProp ?? 'label'}
+                onChange={e => onConfigChange({ titleProp: e.target.value })}
+              />
+            </Form.Item>
+          </>
+        )}
         <SectionDivider />
       </Section>
     )
@@ -204,11 +223,23 @@ const ConstraintSection = ({ field, onConfigChange }) => {
     )
   }
 
-  // lookup → entity + labelField
-  if (inputType === 'lookup') {
+  // lookup / select_api → entity + labelField
+  if (inputType === 'lookup' || inputType === 'select_api') {
     return (
       <Section>
-        <SectionTitle>Cấu hình Lookup</SectionTitle>
+        <SectionTitle>{inputType === 'select_api' ? 'Cấu hình FormSelectAPI' : 'Cấu hình Lookup'}</SectionTitle>
+        {inputType === 'select_api' && (
+          <Form.Item
+            label="API path"
+            style={{ marginBottom: 10 }}
+          >
+            <Input
+              placeholder="/customer/list"
+              value={config.api ?? ''}
+              onChange={e => onConfigChange({ api: e.target.value })}
+            />
+          </Form.Item>
+        )}
         <Form.Item
           label="Entity"
           style={{ marginBottom: 10 }}
@@ -229,6 +260,24 @@ const ConstraintSection = ({ field, onConfigChange }) => {
             onChange={e => onConfigChange({ labelField: e.target.value })}
           />
         </Form.Item>
+        {inputType === 'select_api' && (
+          <>
+            <Form.Item label="Value prop" style={{ marginBottom: 10 }}>
+              <Input
+                placeholder="id"
+                value={config.valueProp ?? 'id'}
+                onChange={e => onConfigChange({ valueProp: e.target.value })}
+              />
+            </Form.Item>
+            <Form.Item label="Title prop" style={{ marginBottom: 12 }}>
+              <Input
+                placeholder="name"
+                value={config.titleProp ?? 'name'}
+                onChange={e => onConfigChange({ titleProp: e.target.value })}
+              />
+            </Form.Item>
+          </>
+        )}
         <SectionDivider />
       </Section>
     )
@@ -240,7 +289,7 @@ const ConstraintSection = ({ field, onConfigChange }) => {
 // ─── Advanced section (collapse) ─────────────────────────────────────────────
 
 const AdvancedSection = ({ field, onUpdate }) => {
-  const isLookup = field.inputType === 'lookup'
+  const isLookup = ['lookup', 'select_api'].includes(field.inputType)
 
   const items = [
     {
@@ -354,15 +403,7 @@ const FieldConfigPanel = () => {
     } else {
       form.resetFields()
     }
-  }, [
-    form,
-    field?._id,
-    field?.label,
-    field?.fieldKey,
-    field?.isRequired,
-    field?.isSearchable,
-    field?.isIndexed,
-  ])
+  }, [form, field])
 
   if (!field) {
     return (
@@ -442,7 +483,7 @@ const FieldConfigPanel = () => {
             )}
 
             {/* Placeholder — chỉ hiện với type có text input */}
-            {['text','textarea','number','decimal','date','datetime','select','multi_select','lookup'].includes(field.inputType) && (
+            {['text','textarea','number','decimal','date','datetime','select','multi_select','lookup','select_api','autocomplete'].includes(field.inputType) && (
               <Form.Item label="Placeholder" style={{ marginBottom: 12 }}>
                 <Input
                   placeholder="Nhập gợi ý cho người dùng..."

@@ -1,13 +1,19 @@
-import React, { useEffect } from 'react'
-import { Layout, Input, Typography } from 'antd'
+import React, { useCallback, useEffect, useState } from 'react'
+import { Layout, Input, Typography, Button, Modal, message } from 'antd'
+import { SaveOutlined } from '@ant-design/icons'
 import { FlowCanvas, StepPanel, DetailPanel } from '@/containers/WorkflowDesigner'
-import { useProcess, useSetProcess } from '@/hooks/useWorkflowStore'
+import { useEdges, useNodes, useProcess, useSetProcess } from '@/hooks/useWorkflowStore'
 import {
   DesignerLayout,
   LeftSider,
   RightSider,
 } from '@/containers/WorkflowDesigner/styles'
 import { useCollapseSidebar } from '@flast-erp/core/hooks';
+import { RequestUtils } from '@flast-erp/core/utils'
+import { SUCCESS_CODE } from '@/configs'
+import { flowToJson } from '@/utils/workflowSerializer'
+import { validateFlow } from '@/utils/workflowValidators'
+import { createUuidV7 } from '@/utils/uuid'
 
 const { Content } = Layout
 const { Text } = Typography
@@ -15,13 +21,72 @@ const { Text } = Typography
 const WorkflowDesignerPage = () => {
 
   const process = useProcess()
+  const nodes = useNodes()
+  const edges = useEdges()
   const setProcess = useSetProcess()
   const { toggleCollapse } = useCollapseSidebar();
+  const [submitting, setSubmitting] = useState(false)
   
   useEffect(() => {
     toggleCollapse();
     /* eslint-disable-next-line */
   }, []);
+
+  const submitFlow = useCallback(async () => {
+    setSubmitting(true)
+    try {
+      const isNewProcess = !process.id && !process.processKey
+      const processForSave = isNewProcess
+        ? { ...process, processKey: createUuidV7() }
+        : process
+      const payload = flowToJson({ nodes, edges, process: processForSave })
+      const response = await RequestUtils.Post('/workflow/process/create', payload)
+      const isSuccess = response?.success || response?.errorCode === SUCCESS_CODE
+
+      if (!isSuccess) {
+        message.error(response?.message || 'Không thể lưu flow')
+        return
+      }
+
+      if (isNewProcess) {
+        setProcess({ processKey: processForSave.processKey })
+      }
+
+      message.success(response?.message || 'Đã lưu flow lên server')
+    } catch (error) {
+      message.error('Không thể lưu flow')
+    } finally {
+      setSubmitting(false)
+    }
+  }, [nodes, edges, process, setProcess])
+
+  const handleSubmitFlow = useCallback(() => {
+    const { valid, errors, warnings } = validateFlow(nodes, edges)
+
+    if (!valid) {
+      errors.forEach((error) => message.warning(error))
+      return
+    }
+
+    if (warnings.length > 0) {
+      Modal.confirm({
+        title: 'Flow có cảnh báo',
+        content: (
+          <div>
+            {warnings.map((warning) => (
+              <div key={warning} style={{ marginBottom: 6 }}>{warning}</div>
+            ))}
+          </div>
+        ),
+        okText: 'Vẫn lưu',
+        cancelText: 'Kiểm tra lại',
+        onOk: submitFlow,
+      })
+      return
+    }
+
+    submitFlow()
+  }, [nodes, edges, submitFlow])
 
   return (
     <DesignerLayout>
@@ -61,6 +126,15 @@ const WorkflowDesignerPage = () => {
           <Text style={{ fontSize: 11, color: '#bfbfbf', fontFamily: 'monospace' }}>
             [{process.code}]
           </Text>
+          <Button
+            type="primary"
+            icon={<SaveOutlined />}
+            loading={submitting}
+            onClick={handleSubmitFlow}
+            style={{ marginLeft: 'auto' }}
+          >
+            Lưu flow
+          </Button>
         </div>
 
         {/* Canvas */}
