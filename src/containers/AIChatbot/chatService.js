@@ -26,6 +26,7 @@ export class ChatSession {
     this._onChunk        = null
     this._onCore         = null
     this._onDone         = null
+    this._onBuild        = null
     this._onError        = null
     this._onClose        = null
     this._onHistoryLoaded = null
@@ -36,10 +37,11 @@ export class ChatSession {
 
   // ─── Public API ────────────────────────────────────────────────────────────
 
-  connect({ onChunk, onCore, onDone, onError, onClose, onHistoryLoaded }) {
+  connect({ onChunk, onCore, onDone, onBuild, onError, onClose, onHistoryLoaded }) {
     this._onChunk         = onChunk
     this._onCore          = onCore
     this._onDone          = onDone
+    this._onBuild         = onBuild
     this._onError         = onError
     this._onClose         = onClose
     this._onHistoryLoaded = onHistoryLoaded
@@ -237,6 +239,13 @@ export class ChatSession {
 
       case 'done': {
         this._onDone?.()
+        break
+      }
+
+      case 'build': {
+        let payload = eventData
+        try { payload = JSON.parse(eventData) } catch {}
+        this._onBuild?.(payload)
         break
       }
 

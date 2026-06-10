@@ -113,14 +113,71 @@ const collectJsonCandidates = (text = '') => {
 
 const unique = (items) => Array.from(new Set(items.filter(Boolean)))
 
+const COMPONENT_TYPE_TO_INPUT = {
+  FormInput: 'text',
+  FormTextArea: 'textarea',
+  FormInputNumber: 'number',
+  FormDatePicker: 'date',
+  FormSelect: 'select',
+  FormRadioGroup: 'radio',
+  FormCheckbox: 'checkbox',
+  FormJoditEditor: 'richtext',
+  FormSelectAPI: 'select_api',
+  FormAutoComplete: 'autocomplete',
+}
+
+const normalizeInputType = (type) => COMPONENT_TYPE_TO_INPUT[type] ?? type
+
+const normalizeField = (field, index = 0) => {
+  if (!field || typeof field !== 'object') return null
+
+  const fieldKey = field.fieldKey ?? field.name ?? field.key ?? (typeof field.id === 'string' ? field.id : '')
+  const inputType = normalizeInputType(field.inputType ?? field.type)
+
+  if (!fieldKey || !inputType) return null
+
+  return {
+    ...field,
+    id: typeof field.id === 'number' ? field.id : null,
+    fieldKey,
+    label: field.label ?? fieldKey,
+    inputType,
+    isRequired: field.isRequired ?? field.required ?? false,
+    isSearchable: field.isSearchable ?? false,
+    isIndexed: field.isIndexed ?? false,
+    sortOrder: field.sortOrder ?? index,
+    enabled: field.enabled ?? true,
+    config: field.config ?? {},
+    colSpan: field.colSpan ?? 24,
+    refDomain: field.refDomain ?? null,
+    autoGenerate: field.autoGenerate ?? null,
+    fieldRole: field.fieldRole ?? null,
+    children: Array.isArray(field.children)
+      ? field.children.map(normalizeField).filter(Boolean)
+      : undefined,
+  }
+}
+
+const normalizeFieldArray = (items) => Array.isArray(items)
+  ? items.map(normalizeField).filter(Boolean)
+  : null
+
 const isFieldLike = (item) => Boolean(
   item &&
   typeof item === 'object' &&
-  (item.fieldKey || item.label || item.inputType) &&
-  item.inputType
+  (item.fieldKey || item.name || item.label || item.inputType || item.type) &&
+  (item.inputType || item.type)
 )
 
 const isFieldArray = (items) => Array.isArray(items) && items.some(isFieldLike)
+
+const extractFieldsFromConfig = (config) => {
+  if (Array.isArray(config)) return normalizeFieldArray(config)
+  if (config && typeof config === 'object' && Array.isArray(config.fields)) {
+    return normalizeFieldArray(config.fields)
+  }
+  return null
+}
 
 const findFieldArrayInText = (text = '') => {
   let cursor = 0
@@ -165,17 +222,15 @@ const collectTextVariants = (text = '') => {
 }
 
 const safeParseConfig = (value) => {
-  if (Array.isArray(value)) return value
+  if (Array.isArray(value) || (value && typeof value === 'object')) return value
   if (typeof value !== 'string') return null
 
   try {
-    const parsed = JSON.parse(value)
-    return Array.isArray(parsed) ? parsed : null
+    return JSON.parse(value)
   } catch (_) {
     try {
       const unescaped = value.replace(/\\"/g, '"').replace(/\\n/g, '\n')
-      const parsed = JSON.parse(unescaped)
-      return Array.isArray(parsed) ? parsed : null
+      return JSON.parse(unescaped)
     } catch (__) {
       return null
     }
@@ -185,7 +240,8 @@ const safeParseConfig = (value) => {
 const normalizePayload = (payload) => {
   const data = payload?.data ?? payload ?? {}
   const code = data.code ?? data.jsx_code ?? data.jsxCode ?? payload?.code ?? payload?.jsx_code ?? ''
-  let fields = safeParseConfig(data.config ?? data.fields ?? payload?.config ?? payload?.fields)
+  const parsedConfig = safeParseConfig(data.config ?? data.fields ?? payload?.config ?? payload?.fields)
+  let fields = extractFieldsFromConfig(parsedConfig)
   fields = isFieldArray(fields) ? fields : null
 
   if (!fields && typeof code === 'string' && code.trim()) {
@@ -200,7 +256,10 @@ const normalizePayload = (payload) => {
     event : payload?.event ?? 'template_saved',
     fields,
     code  : typeof code === 'string' ? code : '',
-    meta  : data.meta ?? payload?.meta ?? {},
+    meta  : data.meta ?? payload?.meta ?? {
+      name: parsedConfig?.title,
+      description: parsedConfig?.description,
+    },
   }
 }
 
@@ -223,11 +282,15 @@ const extractLooseTemplate = (text = '') => {
   const configKeyIndex = text.indexOf('"config"')
   const configArrayStart = configKeyIndex === -1 ? -1 : text.indexOf('[', configKeyIndex)
   const configSource = configArrayStart === -1 ? '' : readBalancedArray(text, configArrayStart)
-  const fields = isFieldArray(safeParseConfig(configSource))
-    ? safeParseConfig(configSource)
+  const parsedConfig = safeParseConfig(configSource)
+  const fields = isFieldArray(extractFieldsFromConfig(parsedConfig))
+    ? extractFieldsFromConfig(parsedConfig)
     : findFieldArrayInText(text)
 
-  const codeKeyIndex = text.indexOf('"code"')
+  const codeKeyIndex = ['"code"', '"jsx_code"', '"jsxCode"']
+    .map(key => text.indexOf(key))
+    .filter(index => index !== -1)
+    .sort((left, right) => left - right)[0] ?? -1
   let code = ''
   if (codeKeyIndex !== -1) {
     const codeValueStart = text.indexOf('"', text.indexOf(':', codeKeyIndex) + 1)

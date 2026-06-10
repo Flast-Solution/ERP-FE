@@ -6,12 +6,14 @@ import { DEFAULT_STEP, DEFAULT_TRANSITION } from '@/store/workflowConstants'
  *
  * {
  *   process: { name, code, description },
- *   steps: [{ id, code, label, type, description, position, actions }],
+ *   steps: [{ id, code, label, type, description, position, forms, actions }],
  *   transitions: [{ id, from_step, to_step, label, require_note, guards, actions }]
  * }
  */
 export const flowToJson = ({ nodes, edges, process }) => ({
   process: {
+    ...(process.id != null && process.id !== '' ? { id: process.id } : {}),
+    processKey: process.processKey ?? '',
     name: process.name ?? '',
     code: process.code ?? '',
     description: process.description ?? '',
@@ -23,18 +25,10 @@ export const flowToJson = ({ nodes, edges, process }) => ({
     type: node.data.type,
     description: node.data.description ?? '',
     position: node.position,
+    forms: serializeFormIds(node.data.forms ?? []),
     actions: (node.data.actions ?? []).map(serializeAction),
   })),
-  transitions: edges.map((edge) => ({
-    id: edge.id,
-    from_step: edge.source,
-    to_step: edge.target,
-    label: edge.data?.label ?? '',
-    require_note: edge.data?.require_note ?? false,
-    allowed_roles: edge.data?.allowed_roles ?? [],
-    guards: (edge.data?.guards ?? []).map(serializeGuard),
-    actions: (edge.data?.actions ?? []).map(serializeAction),
-  })),
+  transitions: edges.map(serializeTransition),
 })
 
 /**
@@ -50,6 +44,8 @@ export const jsonToFlow = (raw) => {
   }
 
   const process = {
+    id: raw.process?.id ?? null,
+    processKey: raw.process?.processKey ?? raw.process?.process_key ?? raw.process?.key ?? '',
     name: raw.process?.name ?? 'Untitled',
     code: raw.process?.code ?? 'untitled',
     description: raw.process?.description ?? '',
@@ -65,17 +61,19 @@ export const jsonToFlow = (raw) => {
       label: step.label ?? step.code ?? '',
       type: step.type ?? 'process',
       description: step.description ?? '',
+      forms: step.forms ?? [],
       actions: (step.actions ?? []).map(deserializeAction),
     },
   }))
 
   const edges = (raw.transitions ?? []).map((t) => ({
-    id: t.id ?? `edge_${t.from_step}_${t.to_step}`,
+    id: t.id != null ? String(t.id) : `edge_${t.from_step}_${t.to_step}`,
     source: t.from_step,
     target: t.to_step,
     type: 'transitionEdge',
     data: {
       ...DEFAULT_TRANSITION,
+      id: t.id ?? null,
       label: t.label ?? '',
       require_note: t.require_note ?? false,
       allowed_roles: t.allowed_roles ?? [],
@@ -88,6 +86,50 @@ export const jsonToFlow = (raw) => {
 }
 
 // ─── Guard serializers ────────────────────────────────────────────────────────
+
+const isTemporaryTransitionId = (id) => {
+  const value = String(id ?? '')
+  return !value
+    || value.startsWith('id_')
+    || value.startsWith('e_')
+    || value.startsWith('edge_')
+}
+
+const getPersistedTransitionId = (edge = {}) => {
+  const persistedId = edge.data?.id ?? edge.data?.transitionId ?? edge.data?.persistedId
+  if (persistedId != null && persistedId !== '') {
+    return persistedId
+  }
+
+  return isTemporaryTransitionId(edge.id) ? null : edge.id
+}
+
+const serializeFormIds = (forms = []) => forms
+  .map(form => {
+    if (form == null || form === '') return null
+    if (typeof form !== 'object') return form
+    return form.id ?? form.templateId ?? form.formId ?? null
+  })
+  .filter(id => id != null && id !== '')
+
+const serializeTransition = (edge) => {
+  const transition = {
+    from_step: edge.source,
+    to_step: edge.target,
+    label: edge.data?.label ?? '',
+    require_note: edge.data?.require_note ?? false,
+    allowed_roles: edge.data?.allowed_roles ?? [],
+    guards: (edge.data?.guards ?? []).map(serializeGuard),
+    actions: (edge.data?.actions ?? []).map(serializeAction),
+  }
+
+  const persistedId = getPersistedTransitionId(edge)
+  if (persistedId != null && persistedId !== '') {
+    transition.id = persistedId
+  }
+
+  return transition
+}
 
 const serializeGuard = (guard) => ({
   type: guard.type,

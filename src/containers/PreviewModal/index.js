@@ -32,11 +32,14 @@ import {
   FormCheckbox,
   FormDatePicker,
   FormJoditEditor,
-  FormSelectAPI
+  FormSelectAPI,
+  FormAutoComplete,
 } from "@flast-erp/core/components";
 import { buildJSX }    from './buildJSX'
 import MonacoCodeEditor from './MonacoCodeEditor'
 import { parseJsxToSchema } from './parseJSXSchema'
+import useChatStore from '@/containers/AIChatbot/useChatStore'
+import { createUuidV7 } from '@/utils/uuid'
 import {
   Scrim,
   ModalWrapper,
@@ -86,9 +89,32 @@ const toComponentName = (name = '') => {
   return baseName || 'FormView'
 }
 
+const normalizeBuildJsxCode = (code = '') => String(code)
+  .replace(/from\s+['"](?:@\/)?components\/form\/([^'"]+)['"]/g, "from '@/form-flast/$1'")
+  .replace(/from\s+['"](?:@\/)?form-flast\/([^'"]+)['"]/g, "from '@/form-flast/$1'")
+
+/** Chuẩn hóa JSX trước khi gửi POST /build (server không có alias @/form-flast). */
+const prepareJsxForRemoteBuild = (code = '') => {
+  let jsx = String(code)
+
+  jsx = jsx.replace(
+    /from\s+['"]@\/form-flast\/([^'"]+)['"]/g,
+    "from '@flast-erp/core/components/form/$1'",
+  )
+
+  // FormBlockPreview được sinh inline trong buildJSX, không có trong package
+  jsx = jsx.replace(
+    /^import\s+FormBlockPreview\s+from\s+['"][^'"]+['"]\s*\n?/gm,
+    '',
+  )
+
+  return jsx
+}
+
 
 const FieldPreview = ({ field }) => {
-  const { inputType, fieldKey, label, isRequired, config = {}, children = [] } = field
+  const { inputType, fieldKey, label, isRequired, config: rawConfig, children = [] } = field
+  const config = rawConfig ?? {}
   const placeholder = config.placeholder ?? ''
   const required    = isRequired
   const opts        = (config.options ?? []).map(o => ({
@@ -279,6 +305,34 @@ const FieldPreview = ({ field }) => {
         />
       )
 
+    case 'select_api':
+      return (
+        <FormSelectAPI
+          name={fieldKey}
+          label={label}
+          required={required}
+          placeholder={placeholder || 'Tìm kiếm...'}
+          api={config.api ?? undefined}
+          entity={config.entity ?? ''}
+          labelField={config.labelField ?? config.titleProp ?? 'name'}
+          valueProp={config.valueProp ?? 'id'}
+          titleProp={config.titleProp ?? config.labelField ?? 'name'}
+        />
+      )
+
+    case 'autocomplete':
+      return (
+        <FormAutoComplete
+          name={fieldKey}
+          label={label}
+          required={required}
+          placeholder={placeholder || 'Nhập để tìm...'}
+          resourceData={config.options ?? []}
+          valueProp={config.valueProp ?? 'value'}
+          titleProp={config.titleProp ?? 'label'}
+        />
+      )
+
     default:
       return (
         <FormInput
@@ -321,6 +375,8 @@ const FormUITab = ({ schema, viewport }) => {
 const JSXCodeTab = ({
   schema,
   templateId,
+  sessionId,
+  componentId,
   jsxCode,
   setJsxCode,
   isEditable,
@@ -335,9 +391,12 @@ const JSXCodeTab = ({
   const [copied,      setCopied]      = useState(false)
   const [buildStatus, setBuildStatus] = useState('idle')
   const [buildMsg,    setBuildMsg]    = useState('')
+  const [buildLogs,   setBuildLogs]   = useState([])
   const [previewUrl,  setPreviewUrl]  = useState('')
 
   const copyTimerRef = useRef(null)
+  const componentIdRef = useRef(null)
+  const buildingComponentIdRef = useRef(null)
   const componentName = toComponentName(schema.meta?.name)
 
   const domain       = schema.meta?.domain ?? 'step'
@@ -353,35 +412,114 @@ const JSXCodeTab = ({
     copyTimerRef.current = setTimeout(() => setCopied(false), 1400)
   }, [jsxCode])
 
-  const buildPreview = async (params) => {
-    return { previewUrl: ""}
+  useEffect(() => {
+    const handleBuildEvent = (event) => {
+      const payload = event.detail ?? {}
+      const payloadComponentId = payload.component_id ?? payload.componentId
+
+      if (!payloadComponentId || payloadComponentId !== buildingComponentIdRef.current) {
+        return
+      }
+
+      const log = payload.log ?? payload.message ?? ''
+      const previewUrl = payload.previewUrl ?? payload.preview_url ?? payload.url ?? ''
+      const status = payload.status ?? ''
+
+      if (log) {
+        setBuildLogs(current => [...current, log])
+        setBuildMsg(log)
+        setBuildStatus('done')
+      }
+
+      if (previewUrl) {
+        setPreviewUrl(previewUrl)
+      }
+
+      if (status === 'done' || status === 'success' || previewUrl || log) {
+        setBuildStatus('done')
+        setBuildMsg(log || 'Build thành công')
+      } else if (status === 'error' || status === 'failed') {
+        setBuildStatus('error')
+        setBuildMsg(log || 'Build thất bại')
+      } else {
+        setBuildStatus('building')
+      }
+    }
+
+    window.addEventListener('flast-ai-build', handleBuildEvent)
+    return () => window.removeEventListener('flast-ai-build', handleBuildEvent)
+  }, [])
+
+  const buildPreview = async ({ sessionId, componentId, jsxCode }) => {
+    const response = await fetch('https://ai.flast.vn/build', {
+      method : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body   : JSON.stringify({
+        session_id  : sessionId,
+        component_id: componentId,
+        jsx_code    : jsxCode,
+      }),
+    })
+
+    const data = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      throw new Error(data?.message ?? data?.error ?? `Build preview failed: ${response.status}`)
+    }
+
+    return {
+      ...data,
+      previewUrl: data?.previewUrl ?? data?.preview_url ?? data?.url ?? '',
+    }
   }
 
   const handleBuild = useCallback(async () => {
-    if (!templateId) {
+    if (!componentIdRef.current) {
+      componentIdRef.current = createUuidV7()
+    }
+
+    const previewComponentId = componentId ?? templateId ?? componentIdRef.current
+
+    const buildJsxCode = prepareJsxForRemoteBuild(normalizeBuildJsxCode(jsxCode))
+
+    const payload = {
+      session_id: sessionId,
+      component_id: previewComponentId,
+      jsx_code: buildJsxCode,
+    }
+
+    console.log('[PreviewModal] build preview payload', payload)
+    buildingComponentIdRef.current = previewComponentId
+
+    if (!sessionId) {
       setBuildStatus('error')
-      setBuildMsg('Cần lưu form trước khi build preview.')
+      setBuildMsg('Thiếu session_id để build preview.')
       return
     }
+
     setBuildStatus('building')
-    setBuildMsg('Đang build...')
+    setBuildLogs([])
+    setPreviewUrl('')
+    setBuildMsg('Đang gửi yêu cầu build...')
     try {
-      const { previewUrl: url } = await buildPreview(
-        templateId,
-        jsxCode,
-        ({ status, progress }) => {
-          setBuildStatus(status)
-          setBuildMsg(progress ?? '')
-        }
-      )
+      const { previewUrl: url } = await buildPreview({
+        sessionId,
+        componentId: previewComponentId,
+        jsxCode: buildJsxCode,
+      })
       setPreviewUrl(url)
-      setBuildStatus('done')
-      setBuildMsg('Build thành công')
+      if (url) {
+        setBuildStatus('done')
+        setBuildMsg('Build thành công')
+      } else {
+        setBuildStatus('building')
+        setBuildMsg('Đã gửi yêu cầu build. Đang chờ log...')
+      }
     } catch (err) {
       setBuildStatus('error')
       setBuildMsg(err.message)
     }
-  }, [templateId, jsxCode])
+  }, [sessionId, componentId, templateId, jsxCode])
 
   const btnStyle = {
     background: 'rgba(255,255,255,0.10)',
@@ -466,6 +604,10 @@ const JSXCodeTab = ({
               ? 'Sua code roi bam Build de xem truoc'
               : ''
           )}
+          {buildLogs.length > 0 && buildStatus === 'building'
+            ? ` (${buildLogs.length} log)`
+            : ''
+          }
         </BuildStatusText>
 
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -509,13 +651,15 @@ const PreviewModal = ({
 
   const [activeTab, setActiveTab] = useState(mode)
   const [viewport,  setViewport]  = useState('desktop')
-  const generatedCode = useMemo(() => buildJSX(schema).plain, [schema?.meta, schema?.fields])
+  const generatedCode = useMemo(() => buildJSX(schema).plain, [schema])
   const [jsxCode, setJsxCode] = useState(initialJsxCode || generatedCode)
   const [isEditable, setIsEditable] = useState(false)
   const [isDirty, setIsDirty] = useState(false)
   const [liveSchema, setLiveSchema] = useState(schema)
   const [syncError, setSyncError] = useState('')
   const prevGeneratedCodeRef = useRef(generatedCode)
+  const getSessionId = useChatStore(s => s.getSessionId)
+  const formBuilderSessionId = useMemo(() => getSessionId('form_builder'), [getSessionId])
   const fieldKeys = useMemo(() => (liveSchema?.fields ?? []).map(field => field.fieldKey).filter(Boolean), [liveSchema])
 
   useEffect(() => { setActiveTab(mode) }, [mode])
@@ -623,6 +767,8 @@ const PreviewModal = ({
             <JSXCodeTab
               schema={effectiveSchema}
               templateId={schema?.meta?.id}
+              sessionId={formBuilderSessionId}
+              componentId={effectiveSchema?.meta?.id}
               jsxCode={jsxCode}
               setJsxCode={setJsxCode}
               isEditable={isEditable}
@@ -647,7 +793,16 @@ const PreviewModal = ({
           </FooterLeft>
           <FooterRight>
             <Button onClick={onClose}>Đóng</Button>
-            <Button type="primary" icon={<SaveOutlined />} onClick={onSave}>
+            <Button
+              type="primary"
+              icon={<SaveOutlined />}
+              onClick={() => onSave?.({
+                schema: effectiveSchema,
+                jsxCode,
+                syncError,
+                isDirty,
+              })}
+            >
               Lưu form
             </Button>
           </FooterRight>

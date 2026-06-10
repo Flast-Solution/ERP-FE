@@ -118,6 +118,53 @@ export const FIELD_TYPES = [
     ],
   },
 
+  // ─── Select API ───────────────────────────────────────────────────────────
+  {
+    type        : 'select_api',
+    label       : 'FormSelectAPI',
+    icon        : 'SearchOutlined',
+    component   : 'FormSelectAPI',
+    defaultConfig: {
+      api       : '',
+      entity    : '',
+      labelField: 'name',
+      valueProp : 'id',
+      titleProp : 'name',
+    },
+    configSchema : [
+      { key: 'api',        label: 'API path', widget: 'input',
+        props: { placeholder: '/customer/list' } },
+      { key: 'entity',     label: 'Entity', widget: 'input',
+        props: { placeholder: 'customer, order...' } },
+      { key: 'labelField', label: 'Hiển thị field', widget: 'input',
+        props: { placeholder: 'name' } },
+      { key: 'valueProp',  label: 'Value prop', widget: 'input',
+        props: { placeholder: 'id' } },
+      { key: 'titleProp',  label: 'Title prop', widget: 'input',
+        props: { placeholder: 'name' } },
+    ],
+  },
+
+  // ─── Auto complete ────────────────────────────────────────────────────────
+  {
+    type        : 'autocomplete',
+    label       : 'FormAutoComplete',
+    icon        : 'EditOutlined',
+    component   : 'FormAutoComplete',
+    defaultConfig: {
+      options  : [],
+      valueProp: 'value',
+      titleProp: 'label',
+    },
+    configSchema : [
+      { key: 'options',   label: 'Gợi ý', widget: 'options_editor' },
+      { key: 'valueProp', label: 'Value prop', widget: 'input',
+        props: { placeholder: 'value' } },
+      { key: 'titleProp', label: 'Title prop', widget: 'input',
+        props: { placeholder: 'label' } },
+    ],
+  },
+
   // ─── Multi-select ────────────────────────────────────────────────────────
   {
     type        : 'multi_select',

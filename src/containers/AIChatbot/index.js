@@ -113,8 +113,6 @@ const AIChatbot = ({
 
   const applyTemplateSavedFromText = useCallback((rawText, source) => {
     const templateSaved = parseTemplateSavedMessage(rawText)
-    console.log(`[AIChatbot] ${source} response`, rawText)
-    console.log(`[AIChatbot] ${source} parsed template_saved`, templateSaved)
 
     if (!templateSaved) {
       return null
@@ -122,7 +120,7 @@ const AIChatbot = ({
 
     const fingerprint = JSON.stringify({
       fields: templateSaved.fields?.map(field => field.fieldKey),
-      codeLength: templateSaved.code?.length ?? 0,
+      code: templateSaved.code ?? '',
     })
 
     if (appliedTemplateRef.current.has(fingerprint)) {
@@ -170,6 +168,12 @@ const AIChatbot = ({
         responseBufferRef.current = ''
         applyTemplateSavedFromText(rawResponse, 'assistant')
         diff = null
+      },
+      onBuild: (payload) => {
+        console.log('[AIChatbot] build event', payload)
+        window.dispatchEvent(new CustomEvent('flast-ai-build', {
+          detail: payload,
+        }))
       },
       onError: (err) => {
         setSseStatus('error')

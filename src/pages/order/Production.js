@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Button, message, Tabs } from 'antd';
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
+import { BreadcrumbCustom as CustomBreadcrumb } from '@flast-erp/core/components';
 import ListOrder from 'containers/Order/List';
-import { InAppEvent } from "@flast-erp/core/utils/FuseUtils";
+import { InAppEvent } from "@flast-erp/core/utils";
 import { HASH_MODAL } from 'configs';
 
 const OrderProductionPage = () => {
@@ -67,4 +67,3 @@ const OrderProductionPage = () => {
 };
 
 export default OrderProductionPage;
-

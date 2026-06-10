@@ -88,12 +88,15 @@ const COMPONENT_MAP = {
   image       : 'FormInput',
   richtext    : 'FormJoditEditor',
   lookup      : 'FormSelectAPI',
+  select_api  : 'FormSelectAPI',
+  autocomplete: 'FormAutoComplete',
 }
 
 /* ─── Sinh props string cho từng type ───────────────────────────────────────── */
 
 function buildProps(field) {
-  const { inputType, fieldKey, label, isRequired, config = {} } = field
+  const { inputType, fieldKey, label, isRequired, config: rawConfig } = field
+  const config = rawConfig ?? {}
   const props = []   /* [{ key, value, kind }] — kind: 'str'|'expr'|'bare' */
 
   props.push({ key: 'name',  value: fieldKey, kind: 'str' })
@@ -162,6 +165,23 @@ function buildProps(field) {
       if (config.entity)     props.push({ key: 'entity',     value: config.entity,               kind: 'str' })
       if (config.labelField) props.push({ key: 'labelField', value: config.labelField ?? 'name', kind: 'str' })
       props.push({ key: 'style', value: '{{ width: \'100%\' }}', kind: 'raw' })
+      break
+
+    case 'select_api':
+      if (config.api)        props.push({ key: 'api',        value: config.api,                               kind: 'str' })
+      if (config.entity)     props.push({ key: 'entity',     value: config.entity,                            kind: 'str' })
+      if (config.labelField) props.push({ key: 'labelField', value: config.labelField ?? 'name',              kind: 'str' })
+      props.push({ key: 'valueProp', value: config.valueProp ?? 'id', kind: 'str' })
+      props.push({ key: 'titleProp', value: config.titleProp ?? config.labelField ?? 'name', kind: 'str' })
+      props.push({ key: 'style', value: '{{ width: \'100%\' }}', kind: 'raw' })
+      break
+
+    case 'autocomplete':
+      if (config.options?.length) {
+        props.push({ key: 'resourceData', value: config.options, kind: 'json' })
+      }
+      props.push({ key: 'valueProp', value: config.valueProp ?? 'value', kind: 'str' })
+      props.push({ key: 'titleProp', value: config.titleProp ?? 'label', kind: 'str' })
       break
 
     default:
@@ -305,6 +325,7 @@ function buildImports(fields) {
     }
   }
   collect(fields)
+  used.delete('FormBlockPreview')
   const antd = `import { Form, Row, Col } from 'antd'`
   const formFlast = [...used]
     .sort()

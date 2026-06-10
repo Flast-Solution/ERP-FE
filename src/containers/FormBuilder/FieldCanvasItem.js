@@ -46,7 +46,8 @@ import {
 // không cần i18n / FormContext / validation. Dùng antd component trực tiếp.
 
 const renderPreview = (field) => {
-  const { inputType, label, isRequired, config = {}, children = [] } = field
+  const { inputType, label, isRequired, config: rawConfig, children = [] } = field
+  const config = rawConfig ?? {}
 
   // Label dùng chung cho Form.Item
   const formLabel = (
@@ -237,6 +238,31 @@ const renderPreview = (field) => {
         </Form.Item>
       )
 
+    case 'select_api':
+      return (
+        <Form.Item label={formLabel}>
+          <Select
+            disabled
+            placeholder={config.api || config.entity ? `API: ${config.api || config.entity}` : 'FormSelectAPI...'}
+            style={{ width: '100%' }}
+            suffixIcon={null}
+          />
+        </Form.Item>
+      )
+
+    case 'autocomplete':
+      return (
+        <Form.Item label={formLabel}>
+          <Select
+            disabled
+            showSearch
+            placeholder="AutoComplete..."
+            style={{ width: '100%' }}
+            options={options}
+          />
+        </Form.Item>
+      )
+
     default:
       return (
         <Form.Item label={formLabel}>
@@ -259,6 +285,12 @@ const hasWarning = (field) => {
   }
   if (inputType === 'lookup') {
     return !config?.entity
+  }
+  if (inputType === 'select_api') {
+    return !(config?.api || config?.entity)
+  }
+  if (inputType === 'autocomplete') {
+    return !config?.options?.length
   }
   return false
 }
