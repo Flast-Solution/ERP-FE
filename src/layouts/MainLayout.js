@@ -39,7 +39,7 @@ const MainLayout = (props) => {
     }, []);
 
     const Layout = ContainerLayouts[user?.id ? 'PrivateLayout' : 'GuestLayout'];
-    const MPage = useFlastRemote("component_001")
+    const MPage = useFlastRemote("component_001", "MPage", "environment-form")
     
     return <>
         {MPage && <MPage />}

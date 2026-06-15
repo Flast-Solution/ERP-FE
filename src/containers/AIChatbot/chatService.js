@@ -3,7 +3,7 @@
  *
  * Protocol (theo chat_client.py):
  *   1. GET  /chat/stream?session_id=xxx  → SSE stream liên tục (1 connection/session)
- *   2. POST /chat { session_id, message } → trigger AI response cho turn hiện tại
+ *   2. POST /chat { session_id, message, use_orchestrator } → trigger AI response cho turn hiện tại
  *
  * SSE events:
  *   event: llms  data: "text chunk"     — stream text từ LLM
@@ -17,6 +17,61 @@ const PING_INTERVAL_MS = 60_000
 
 function stripServerPrefix(text = '') {
   return text.replace(/^\[[A-Z_]+\]\n?/g, '').trim()
+}
+
+function parseEventData(eventData) {
+  try {
+    return JSON.parse(eventData)
+  } catch {
+    return eventData
+  }
+}
+
+function extractChunkText(payload) {
+  if (payload === null || payload === undefined) {
+    return ''
+  }
+
+  if (typeof payload === 'string') {
+    return payload
+  }
+
+  if (typeof payload !== 'object') {
+    return String(payload)
+  }
+
+  const candidates = [
+    payload.body,
+    payload.content,
+    payload.text,
+    payload.message,
+    payload.delta,
+    payload.answer,
+    payload.response,
+    payload.output,
+  ]
+
+  for (const candidate of candidates) {
+    const text = extractChunkText(candidate)
+    if (text) {
+      return text
+    }
+  }
+
+  const nestedText = extractChunkText(payload.data)
+  if (nestedText) {
+    return nestedText
+  }
+
+  if (payload.event || payload.config || payload.code || payload.jsx_code || payload.data) {
+    return JSON.stringify(payload)
+  }
+
+  return ''
+}
+
+function stripAnswerPrefix(text = '') {
+  return text.replace(/^\s*\[ANSWER\]\s*/i, '')
 }
 
 export class ChatSession {
@@ -33,6 +88,9 @@ export class ChatSession {
     this._connected      = false
     this._pingTimer      = null
     this._connectPromise = null
+    this._llmsBuffer     = ''
+    this._answerStarted  = false
+    this._hasThinkMarker = false
   }
 
   // ─── Public API ────────────────────────────────────────────────────────────
@@ -51,12 +109,14 @@ export class ChatSession {
   }
 
   async send(message) {
+    this._resetAnswerStream()
     const res = await fetch(`${BASE_URL}/chat`, {
       method : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body   : JSON.stringify({
         session_id: this.sessionId,
         message,
+        use_orchestrator: true,
       }),
     })
 
@@ -67,6 +127,49 @@ export class ChatSession {
       const err = await res.json().catch(() => ({}))
       throw new Error(err.message ?? `Server error ${res.status}`)
     }
+  }
+
+  _resetAnswerStream() {
+    this._llmsBuffer     = ''
+    this._answerStarted  = false
+    this._hasThinkMarker = false
+  }
+
+  _extractDisplayChunk(text = '') {
+    if (!text) {
+      return ''
+    }
+
+    if (this._answerStarted) {
+      return stripAnswerPrefix(text)
+    }
+
+    this._llmsBuffer += text
+
+    if (this._llmsBuffer.includes('[THINK]')) {
+      this._hasThinkMarker = true
+    }
+
+    const answerIndex = this._llmsBuffer.indexOf('[ANSWER]')
+    if (answerIndex !== -1) {
+      this._answerStarted = true
+      const displayText = this._llmsBuffer.slice(answerIndex + '[ANSWER]'.length)
+      this._llmsBuffer = ''
+      return displayText.replace(/^\s+/, '')
+    }
+
+    if (this._hasThinkMarker) {
+      return ''
+    }
+
+    if (this._llmsBuffer.length > 64) {
+      this._answerStarted = true
+      const displayText = this._llmsBuffer
+      this._llmsBuffer = ''
+      return displayText
+    }
+
+    return ''
   }
 
   async sendSchemaUpdate({ schema, jsxCode }) {
@@ -212,27 +315,37 @@ export class ChatSession {
     }
 
     let eventName = 'message'
-    let eventData = ''
+    const dataLines = []
 
     for (const line of part.split('\n')) {
       if (line.startsWith('event:')) {
         eventName = line.slice(6).trim()
       } else if (line.startsWith('data:')) {
-        eventData = line.slice(5).trim()
+        dataLines.push(line.slice(5).trim())
       }
     }
 
+    const eventData = dataLines.join('\n')
+    const payload = parseEventData(eventData)
+
+    // console.log('[ChatSession] SSE event response', {
+    //   eventName,
+    //   raw: eventData,
+    //   payload,
+    // })
+
     switch (eventName) {
       case 'llms': {
-        let text = eventData
-        try { text = JSON.parse(eventData) } catch {}
-        this._onChunk?.(String(text))
+        const text = this._extractDisplayChunk(extractChunkText(payload))
+        if (text) {
+          this._onChunk?.(text)
+        } else {
+          // console.log('[ChatSession] ignored non-display llms payload', payload)
+        }
         break
       }
 
       case 'core': {
-        let payload = eventData
-        try { payload = JSON.parse(eventData) } catch {}
         this._onCore?.(payload)
         break
       }
@@ -243,9 +356,15 @@ export class ChatSession {
       }
 
       case 'build': {
-        let payload = eventData
-        try { payload = JSON.parse(eventData) } catch {}
         this._onBuild?.(payload)
+        break
+      }
+
+      case 'message': {
+        const text = extractChunkText(payload)
+        if (text) {
+          this._onChunk?.(text)
+        }
         break
       }
 

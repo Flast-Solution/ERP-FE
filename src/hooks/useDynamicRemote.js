@@ -4,17 +4,17 @@ import logger  from "@/logger"
 
 const REMOTE_BASE = "https://micro-frontend.flast.vn"
 
-export function useFlastRemote(componentId, exposedModule = "MPage") {
+export function useFlastRemote(componentId, exposedModule = "MPage", remoteEntryComponentId = componentId) {
   const [ Component, setComponent ] = useState(null)
   const initialized = useRef(false)
 
   useEffect(() => {
     if (initialized.current) return
     initialized.current = true
-    loadRemote(componentId, exposedModule, REMOTE_BASE)
+    loadRemote(componentId, exposedModule, REMOTE_BASE, remoteEntryComponentId)
       .then((mod) => setComponent(() => mod.default ?? mod))
       .catch((err) => logger.error(`[useFlastRemote] ${componentId}/${exposedModule}`, err))
-  }, [componentId, exposedModule])
+  }, [componentId, exposedModule, remoteEntryComponentId])
 
   return Component
 };
