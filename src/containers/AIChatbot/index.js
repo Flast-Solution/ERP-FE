@@ -164,13 +164,14 @@ const AIChatbot = ({
       },
       onDone: () => {
         const rawResponse = responseBufferRef.current
+        // console.log('[AIChatbot] assistant raw response', rawResponse)
         finishStreaming(currentMode, diff)
         responseBufferRef.current = ''
         applyTemplateSavedFromText(rawResponse, 'assistant')
         diff = null
       },
       onBuild: (payload) => {
-        console.log('[AIChatbot] build event', payload)
+        // console.log('[AIChatbot] build event', payload)
         window.dispatchEvent(new CustomEvent('flast-ai-build', {
           detail: payload,
         }))
