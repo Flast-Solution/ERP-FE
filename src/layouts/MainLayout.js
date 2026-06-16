@@ -24,7 +24,7 @@ import { useStore } from '@flast-erp/core/components';
 import InAppNotify from '@/layouts/InAppNotify';
 import ContainerLayouts from "@/layouts/ContainerLayout";
 import OrderService from '@/services/OrderService';
-import { useFlastRemote } from '@/hooks/useDynamicRemote';
+/* import { useFlastRemote } from '@/hooks/useDynamicRemote'; */
 
 const MainLayout = (props) => {
 
@@ -39,10 +39,10 @@ const MainLayout = (props) => {
     }, []);
 
     const Layout = ContainerLayouts[user?.id ? 'PrivateLayout' : 'GuestLayout'];
-    const MPage = useFlastRemote("component_001", "MPage", "environment-form")
+    /* const MPage = useFlastRemote("component_001", "MPage", "environment-form") */
     
     return <>
-        {MPage && <MPage />}
+        { /*MPage && <MPage /> */}
         <Layout {...props} />
         {menoInAppNotify}
     </>
