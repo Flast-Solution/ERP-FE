@@ -174,10 +174,10 @@ export class ChatSession {
 
   async sendSchemaUpdate({ schema, jsxCode }) {
     try {
-      let content = "Đây là FormView mà bạn cần thay đổi theo yêu cầu: \n";
+      let content = "Đây là FormTemplate mà bạn cần thay đổi theo yêu cầu: \n";
       content += JSON.stringify({ fields: schema.fields, jsx_code: jsxCode});
       content += "\n";
-      content += "Sau khi chỉnh sửa xong, hãy lưu code với config là fields và code là jsx_code đã chỉnh sửa.";
+      content += "Sau khi chỉnh sửa xong, hãy lưu schema và jsx_code đã chỉnh sửa.";
       content += "\n";
 
       await fetch(`${BASE_URL}/session/form-context`, {
