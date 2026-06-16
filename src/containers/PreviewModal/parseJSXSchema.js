@@ -10,7 +10,8 @@ const COMPONENT_TO_INPUT = {
   FormRadioGroup: 'radio',
   FormCheckbox: 'checkbox',
   FormJoditEditor: 'richtext',
-  FormSelectAPI: 'lookup',
+  FormSelectAPI: 'select_api',
+  FormAutoComplete: 'autocomplete',
 }
 
 const readBalanced = (input, startIndex, openChar, closeChar) => {
@@ -149,9 +150,27 @@ const mapComponentToField = (componentName, props, span) => {
   }
 
   if (componentName === 'FormSelectAPI') {
-    inputType = 'lookup'
+    inputType = 'select_api'
+    config.api = propToString(props.api)
     config.entity = propToString(props.entity)
     config.labelField = propToString(props.labelField, 'name')
+    config.valueProp = propToString(props.valueProp, 'id')
+    config.titleProp = propToString(props.titleProp, config.labelField || 'name')
+  }
+
+  if (componentName === 'FormAutoComplete') {
+    inputType = 'autocomplete'
+    config.valueProp = propToString(props.valueProp, 'value')
+    config.titleProp = propToString(props.titleProp, 'label')
+    if (props.resourceData?.value) {
+      try {
+        const items = JSON.parse(props.resourceData.value)
+        config.options = items.map(item => ({
+          value: item.id ?? item.value,
+          label: item.name ?? item.label ?? item.value,
+        }))
+      } catch (_) {}
+    }
   }
 
   if (props.placeholder) {
@@ -286,12 +305,16 @@ const parseFieldNodes = (content = '') => {
   const fields = []
   const cols = extractTopLevelCols(content)
 
-  for (const col of cols) {
-    const node = extractComponentNode(col.content)
+  const fieldBlocks = cols.length > 0
+    ? cols.map(col => ({ span: col.span, content: col.content }))
+    : extractDirectFieldBlocks(content).map(block => ({ span: 24, content: block }))
+
+  for (const fieldBlock of fieldBlocks) {
+    const node = extractComponentNode(fieldBlock.content)
     if (!node) continue
 
     const props = parseProps(node.propsSource)
-    const field = mapComponentToField(node.componentName, props, col.span)
+    const field = mapComponentToField(node.componentName, props, fieldBlock.span)
 
     if (node.componentName === 'FormBlockPreview') {
       field.children = parseFieldNodes(node.childrenSource)
@@ -301,6 +324,41 @@ const parseFieldNodes = (content = '') => {
   }
 
   return fields
+}
+
+const extractDirectFieldBlocks = (content = '') => {
+  const blocks = []
+  const componentNames = Object.keys(COMPONENT_TO_INPUT).join('|')
+  const tagPattern = new RegExp(`<(${componentNames})\\b`, 'g')
+  let match
+
+  while ((match = tagPattern.exec(content))) {
+    const startIndex = match.index
+    const tagEndIndex = content.indexOf('>', startIndex)
+    if (tagEndIndex === -1) break
+
+    const openTag = content.slice(startIndex, tagEndIndex + 1)
+
+    if (/\/>\s*$/.test(openTag)) {
+      blocks.push(openTag)
+      tagPattern.lastIndex = tagEndIndex + 1
+      continue
+    }
+
+    const componentName = match[1]
+    const closeTag = `</${componentName}>`
+    const closeIndex = content.indexOf(closeTag, tagEndIndex + 1)
+
+    if (closeIndex === -1) {
+      tagPattern.lastIndex = tagEndIndex + 1
+      continue
+    }
+
+    blocks.push(content.slice(startIndex, closeIndex + closeTag.length))
+    tagPattern.lastIndex = closeIndex + closeTag.length
+  }
+
+  return blocks
 }
 
 export const parseJsxToSchema = (jsxCode, meta = {}) => {

@@ -1,0 +1,168 @@
+.form-list-page {
+  min-height: 100%;
+  padding: 32px 40px;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.form-list-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 22px;
+}
+
+.form-list-title.ant-typography {
+  margin: 0 0 4px;
+  font-size: 28px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.form-list-subtitle {
+  display: block;
+  color: #475569;
+  font-size: 14px;
+}
+
+.form-list-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.form-list-segmented.ant-segmented {
+  background: #ffffff;
+  border: 1px solid #dbe3ef;
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.form-list-segmented .ant-segmented-item {
+  min-height: 32px;
+  padding: 0 8px;
+  color: #334155;
+}
+
+.form-list-segmented .ant-segmented-item-selected {
+  color: #0f172a;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.form-list-search {
+  width: 450px;
+  height: 38px;
+  border-color: #dbe3ef;
+}
+
+.form-list-table.ant-table-wrapper {
+  background: #ffffff;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.form-list-table .ant-table {
+  color: #0f172a;
+}
+
+.form-list-table .ant-table-thead > tr > th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 500;
+  border-bottom: 1px solid #dbe3ef;
+}
+
+.form-list-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid #e6edf5;
+  font-size: 14px;
+}
+
+.form-list-table .ant-empty {
+  margin: 56px 0;
+}
+
+.form-list-code.ant-tag {
+  margin: 0;
+  border-color: #dbe3ef;
+  background: #f8fafc;
+  color: #334155;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  border-radius: 5px;
+}
+
+.form-list-status.ant-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  border-color: #bbf7d0;
+  background: #dcfce7;
+  color: #166534;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+.form-list-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #16a34a;
+}
+
+.form-list-status--draft.ant-tag {
+  border-color: #fde68a;
+  background: #fef9c3;
+  color: #92400e;
+}
+
+.form-list-status--draft .form-list-status-dot {
+  background: #ca8a04;
+}
+
+.form-list-status--unassigned.ant-tag {
+  border-color: #e2e8f0;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.form-list-status--unassigned .form-list-status-dot {
+  background: #94a3b8;
+}
+
+.form-entry-grid {
+  display: grid;
+  grid-template-columns: repeat(24, minmax(0, 1fr));
+  column-gap: 16px;
+}
+
+.form-entry-field {
+  min-width: 0;
+}
+
+.form-entry-block {
+  min-width: 0;
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.form-entry-block-title {
+  margin-bottom: 12px;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.form-entry-empty {
+  padding: 48px 0;
+  color: #64748b;
+  text-align: center;
+}

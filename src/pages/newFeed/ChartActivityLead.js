@@ -21,7 +21,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Column } from '@ant-design/plots';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
+import { RequestUtils } from '@flast-erp/core/utils';
 
 const ChartActivityLead = ({ activityLead }) => {
   const [listSale, setListSale] = useState([]);

@@ -143,17 +143,18 @@ function ensureRemoteRegistered(componentId, entry) {
 }
 
 /**
- * @param {string} componentId   - ID của remote
+ * @param {string} componentId   - ID/name của remote container
  * @param {string} exposedModule - Tên module
  * @param {string} remoteBaseUrl - Base URL
+ * @param {string} remoteEntryComponentId - ID/path chứa remoteEntry.js nếu khác remote container name
  *Ư
  * @example
  * const mod = await loadRemote("component_001", "MPage", "https://remote.aa.vn")
  * const MPage = mod.default
  */
-export async function loadRemote(componentId, exposedModule, remoteBaseUrl) {
+export async function loadRemote(componentId, exposedModule, remoteBaseUrl, remoteEntryComponentId = componentId) {
 
-  const entry = `${remoteBaseUrl}/${componentId}/remoteEntry.js`
+  const entry = `${remoteBaseUrl}/${remoteEntryComponentId}/remoteEntry.js`
   ensureRemoteRegistered(componentId, entry)
 
   const mod = await mfLoadRemote(`${componentId}/${exposedModule}`)
