@@ -252,14 +252,12 @@ const AIChatbot = ({
       },
       onDone: () => {
         const rawResponse = responseBufferRef.current
-        // console.log('[AIChatbot] assistant raw response', rawResponse)
         finishStreaming(currentMode, diff)
         responseBufferRef.current = ''
         applyTemplateSavedFromText(rawResponse, 'assistant')
         diff = null
       },
       onBuild: (payload) => {
-        // console.log('[AIChatbot] build event', payload)
         window.dispatchEvent(new CustomEvent('flast-ai-build', {
           detail: payload,
         }))
@@ -363,8 +361,14 @@ const AIChatbot = ({
       }
       const ctx = contextRef.current
       const { plain } = buildJSX(ctx)
-      sessionRef.current.sendSchemaUpdate({ schema: ctx, jsxCode: plain })
-    }, 4000)
+      sessionRef.current.sendSchemaUpdate({
+        templateId: context.templateId,
+        schema: ctx, 
+        jsxCode: plain, 
+        type: "FORM", 
+        title: "FormTemplate có SCHEMA như sau:" 
+      })
+    }, 2000)
     return () => clearTimeout(schemaDebounceRef.current)
     /* eslint-disable-next-line */
   }, [context])

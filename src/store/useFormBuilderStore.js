@@ -233,7 +233,6 @@ const useFormBuilderStore = create(
           }
         });
         state.savedFieldKeys = new Set(savedFieldKeys);
-
         state.selectedId = null;
       });
     },

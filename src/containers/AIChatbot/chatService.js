@@ -21,53 +21,11 @@ function stripServerPrefix(text = '') {
 
 function parseEventData(eventData) {
   try {
-    return JSON.parse(eventData)
+    const raw = JSON.parse(eventData)
+    return raw?.body ?? ''
   } catch {
     return eventData
   }
-}
-
-function extractChunkText(payload) {
-  if (payload === null || payload === undefined) {
-    return ''
-  }
-
-  if (typeof payload === 'string') {
-    return payload
-  }
-
-  if (typeof payload !== 'object') {
-    return String(payload)
-  }
-
-  const candidates = [
-    payload.body,
-    payload.content,
-    payload.text,
-    payload.message,
-    payload.delta,
-    payload.answer,
-    payload.response,
-    payload.output,
-  ]
-
-  for (const candidate of candidates) {
-    const text = extractChunkText(candidate)
-    if (text) {
-      return text
-    }
-  }
-
-  const nestedText = extractChunkText(payload.data)
-  if (nestedText) {
-    return nestedText
-  }
-
-  if (payload.event || payload.config || payload.code || payload.jsx_code || payload.data) {
-    return JSON.stringify(payload)
-  }
-
-  return ''
 }
 
 function stripAnswerPrefix(text = '') {
@@ -145,7 +103,6 @@ export class ChatSession {
     }
 
     this._llmsBuffer += text
-
     if (this._llmsBuffer.includes('[THINK]')) {
       this._hasThinkMarker = true
     }
@@ -172,12 +129,20 @@ export class ChatSession {
     return ''
   }
 
-  async sendSchemaUpdate({ schema, jsxCode }) {
+  async sendSchemaUpdate({
+    schema, 
+    jsxCode,
+    type, 
+    title,
+    templateId = null
+  }) {
     try {
       let content = ""
-      content += "================= Tôi cần chỉnh, sửa FORM =================="
+      content += `================= Tôi cần chỉnh, sửa ${type} ==================`
       content += "\n";
-      content += "FormTemplate có SCHEMA như sau:";
+      content += templateId != null ? `Dự án có ID = ${templateId}` : "Đây là dự án mới chưa có ID";
+      content += "\n";
+      content += title;
       content += "\n";
       content += JSON.stringify(schema.fields, null, 2);
       content += "\n";
@@ -334,20 +299,13 @@ export class ChatSession {
 
     const eventData = dataLines.join('\n')
     const payload = parseEventData(eventData)
-
-    // console.log('[ChatSession] SSE event response', {
-    //   eventName,
-    //   raw: eventData,
-    //   payload,
-    // })
+    /* console.log('[ChatSession] SSE event response', eventData) */
 
     switch (eventName) {
       case 'llms': {
-        const text = this._extractDisplayChunk(extractChunkText(payload))
+        const text = this._extractDisplayChunk(payload)
         if (text) {
           this._onChunk?.(text)
-        } else {
-          // console.log('[ChatSession] ignored non-display llms payload', payload)
         }
         break
       }
@@ -364,14 +322,6 @@ export class ChatSession {
 
       case 'build': {
         this._onBuild?.(payload)
-        break
-      }
-
-      case 'message': {
-        const text = extractChunkText(payload)
-        if (text) {
-          this._onChunk?.(text)
-        }
         break
       }
 

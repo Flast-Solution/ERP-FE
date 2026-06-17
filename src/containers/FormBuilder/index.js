@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { Button, Spin, message, Popconfirm, Dropdown } from 'antd'
+import { Button, message, Popconfirm, Dropdown } from 'antd'
 import {
   SaveOutlined,
   CloseOutlined,
@@ -33,7 +33,6 @@ import {
 } from '@dnd-kit/core'
 import PreviewModal from '@/containers/PreviewModal'
 
-import { RequestUtils } from '@flast-erp/core/utils';
 import useFormBuilderStore from '@/store/useFormBuilderStore'
 import { FIELD_TYPE_MAP }  from '@/utils/fieldTypes'
 import { buildJSX } from '@/containers/PreviewModal/buildJSX'
@@ -114,12 +113,11 @@ const FormBuilder = ({
   domain     = '',
   onSave,
   onCancel,
-  onPreview,
   onOpenAI,
   onContextUpdate,
   incomingTemplate,
 }) => {
-  const [loading,      setLoading]      = useState(false)
+
   const [saving,       setSaving]       = useState(false)
   const [activeDragId, setActiveDragId] = useState(null)
   const [previewOpen,   setPreviewOpen]   = useState(false)
@@ -129,7 +127,6 @@ const FormBuilder = ({
 
   const templateMeta  = useFormBuilderStore(s => s.templateMeta)
   const fields        = useFormBuilderStore(s => s.fields)
-  const loadFromApi   = useFormBuilderStore(s => s.loadFromApi)
   const importGeneratedTemplate = useFormBuilderStore(s => s.importGeneratedTemplate)
   const setTemplateMeta = useFormBuilderStore(s => s.setTemplateMeta)
   const addField      = useFormBuilderStore(s => s.addField)
@@ -137,7 +134,6 @@ const FormBuilder = ({
   const getParentId   = useFormBuilderStore(s => s.getParentId)
   const getFieldLocation = useFormBuilderStore(s => s.getFieldLocation)
   const toPayload     = useFormBuilderStore(s => s.toPayload)
-  const reset         = useFormBuilderStore(s => s.reset)
 
   const findFieldById = useCallback((items, targetId) => {
     for (const item of items) {
@@ -150,21 +146,6 @@ const FormBuilder = ({
     return null
   }, [])
 
-
-  useEffect(() => {
-    reset()
-    if (templateId) {
-      setLoading(true)
-      RequestUtils.Get('/form-templates', { templateId })
-      .then(res => loadFromApi(res.data))
-      .finally(() => setLoading(false))
-      setLoading(false)
-    } else if (domain) {
-      setTemplateMeta({ domain })
-    }
-    return () => reset()
-    /* eslint-disable-next-line */
-  }, [templateId])
 
   useEffect(() => {
     if (!incomingTemplate?.nonce || appliedIncomingRef.current === incomingTemplate.nonce) {
@@ -327,7 +308,8 @@ const FormBuilder = ({
       context: {
         meta  : templateMeta,
         fields,
-      },
+        templateId: templateMeta?.id
+      }
     })
   }, [templateMeta, fields, onOpenAI])
 
@@ -346,14 +328,6 @@ const FormBuilder = ({
     setPreviewMode(mode)
     setPreviewOpen(true)
   }, [templateMeta, fields])
-
-  if (loading) {
-    return (
-      <BuilderLayout style={{ alignItems: 'center', justifyContent: 'center' }}>
-        <Spin size="large" />
-      </BuilderLayout>
-    )
-  }
 
   return (
     <DndContext
