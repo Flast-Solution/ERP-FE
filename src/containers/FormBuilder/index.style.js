@@ -5,7 +5,8 @@ import styled from 'styled-components'
 export const BuilderLayout = styled.div`
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 170px);
+  height: 100%;
+  min-width: 0;
   overflow: hidden;
   background: #f5f5f5;
 `
@@ -22,6 +23,7 @@ export const Toolbar = styled.div`
   border-bottom: 1px solid #f0f0f0;
   flex-shrink: 0;
   gap: 12px;
+  min-width: 0;
 `
 
 export const ToolbarLeft = styled.div`
@@ -37,6 +39,7 @@ export const ToolbarRight = styled.div`
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+  max-width: 100%;
 `
 
 export const ToolbarTitle = styled.div`
@@ -177,6 +180,7 @@ export const AIAgentBtn = styled.button`
 export const BuilderBody = styled.div`
   display: flex;
   flex: 1;
+  min-width: 0;
   overflow: hidden;
 `
 

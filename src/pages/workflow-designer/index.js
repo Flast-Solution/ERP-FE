@@ -1,36 +1,344 @@
-import React, { useCallback, useEffect, useState } from 'react'
-import { Layout, Input, Typography, Button, Modal, message } from 'antd'
-import { SaveOutlined } from '@ant-design/icons'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { Layout, Input, Typography, Button, Modal, message, Table, Space, Tag } from 'antd'
+import {
+  ArrowLeftOutlined,
+  EditOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SaveOutlined,
+  SearchOutlined,
+} from '@ant-design/icons'
+import { useSearchParams } from 'react-router-dom'
+import styled from 'styled-components'
 import { FlowCanvas, StepPanel, DetailPanel } from '@/containers/WorkflowDesigner'
-import { useEdges, useNodes, useProcess, useSetProcess } from '@/hooks/useWorkflowStore'
+import {
+  useEdges,
+  useLoadFlow,
+  useNodes,
+  useProcess,
+  useResetFlow,
+  useSetProcess,
+} from '@/hooks/useWorkflowStore'
 import {
   DesignerLayout,
   LeftSider,
   RightSider,
 } from '@/containers/WorkflowDesigner/styles'
-import { useCollapseSidebar } from '@flast-erp/core/hooks';
+import { useCollapseSidebar } from '@flast-erp/core/hooks'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { SUCCESS_CODE } from '@/configs'
-import { flowToJson } from '@/utils/workflowSerializer'
+import { flowToJson, jsonToFlow } from '@/utils/workflowSerializer'
 import { validateFlow } from '@/utils/workflowValidators'
 import { createUuidV7 } from '@/utils/uuid'
 
 const { Content } = Layout
-const { Text } = Typography
+const { Title, Text } = Typography
+const PAGE_SIZE = 10
+const LIST_API = '/workflow/process/filter'
 
-const WorkflowDesignerPage = () => {
+const ListPage = styled.div`
+  height: calc(100vh - 170px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: hidden;
+  background: #f5f5f5;
+`
 
+const ListHeader = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 0;
+  flex-shrink: 0;
+`
+
+const ListTitle = styled(Title)`
+  && {
+    margin: 0;
+    font-size: 22px;
+  }
+`
+
+const ListSubtitle = styled(Text)`
+  display: block;
+  margin-top: 4px;
+  color: #71717a;
+`
+
+const ListToolbar = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 20px;
+  flex-shrink: 0;
+`
+
+const ListSearch = styled(Input)`
+  max-width: 360px;
+`
+
+const TableWrap = styled.div`
+  flex: 1;
+  min-height: 0;
+  padding: 0 20px 20px;
+
+  .ant-table-wrapper,
+  .ant-spin-nested-loading,
+  .ant-spin-container {
+    height: 100%;
+  }
+`
+
+const DesignerTopBar = styled.div`
+  padding: 8px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+`
+
+const getResponseItems = (response) => {
+  const data = response?.data ?? response
+  const candidates = [
+    data?.items,
+    data?.rows,
+    data?.content,
+    data?.records,
+    data?.data,
+    data?.embedded,
+    data,
+  ]
+
+  return candidates.find(Array.isArray) ?? []
+}
+
+const getResponseTotal = (response, fallback) => {
+  const data = response?.data ?? response
+  return data?.total
+    ?? data?.totalElements
+    ?? data?.total_count
+    ?? data?.count
+    ?? response?.total
+    ?? fallback
+}
+
+const normalizeWorkflowRow = (item, index) => {
+  const process = item?.process ?? item
+  return {
+    id: process?.id ?? item?.id ?? item?.processId ?? item?.process_id ?? item?.processKey ?? item?.process_key ?? index,
+    processKey: process?.processKey ?? process?.process_key ?? item?.processKey ?? item?.process_key ?? '',
+    name: process?.name ?? item?.name ?? item?.processName ?? 'Chưa đặt tên',
+    code: process?.code ?? item?.code ?? '',
+    description: process?.description ?? item?.description ?? '',
+    stepCount: item?.stepCount ?? item?.steps_count ?? item?.steps?.length ?? 0,
+    transitionCount: item?.transitionCount ?? item?.transitions_count ?? item?.transitions?.length ?? 0,
+    updatedAt: item?.updatedAt ?? item?.updated_at ?? item?.modifiedAt ?? item?.modified_at ?? '',
+    source: item,
+  }
+}
+
+const ensureWorkflowPayload = (raw) => {
+  const payload = raw?.data ?? raw
+  if (payload?.process || payload?.steps || payload?.transitions) {
+    return payload
+  }
+  if (payload?.item) {
+    return payload.item
+  }
+  if (payload?.record) {
+    return payload.record
+  }
+  return raw
+}
+
+const fetchWorkflowDetail = async (record) => {
+  if (record?.source?.process || record?.source?.steps || record?.source?.transitions) {
+    return record.source
+  }
+
+  const response = await RequestUtils.Get(`/workflow/process/find-id/${record.id}`, {})
+  const payload = ensureWorkflowPayload(response)
+  if (payload?.process || payload?.steps || payload?.transitions) {
+    return payload
+  }
+
+  throw new Error('Không tải được dữ liệu workflow.')
+}
+
+const WorkflowDesignerList = ({ onCreate, onEdit }) => {
+  const [rows, setRows] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [keyword, setKeyword] = useState('')
+  const [searchText, setSearchText] = useState('')
+
+  const fetchRows = useCallback(async () => {
+    setLoading(true)
+    try {
+      const filter = {
+        offset: (page - 1) * PAGE_SIZE,
+        limit: PAGE_SIZE,
+      }
+      if (searchText) {
+        filter.name = searchText
+      }
+
+      const query = new URLSearchParams()
+      Object.entries(filter).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          query.set(key, String(value))
+        }
+      })
+
+      const response = await RequestUtils.Get(`${LIST_API}?${query.toString()}`, {})
+      const items = getResponseItems(response)
+      const nextRows = items.map(normalizeWorkflowRow)
+      setRows(nextRows)
+      setTotal(getResponseTotal(response, nextRows.length))
+    } catch (error) {
+      message.error('Không tải được danh sách nghiệp vụ.')
+      setRows([])
+      setTotal(0)
+    } finally {
+      setLoading(false)
+    }
+  }, [page, searchText])
+
+  useEffect(() => {
+    fetchRows()
+  }, [fetchRows])
+
+  const handleEdit = useCallback(async (record) => {
+    setEditingId(record.id)
+    try {
+      const detail = await fetchWorkflowDetail(record)
+      onEdit(detail)
+    } catch (error) {
+      message.error(error?.message || 'Không tải được workflow để chỉnh sửa.')
+    } finally {
+      setEditingId(null)
+    }
+  }, [onEdit])
+
+  const columns = useMemo(() => [
+    {
+      title: 'Tên nghiệp vụ',
+      dataIndex: 'name',
+      width: 240,
+    },
+    {
+      title: 'Mã',
+      dataIndex: 'code',
+      width: 180,
+      render: value => value ? <Tag>{value}</Tag> : null,
+    },
+    {
+      title: 'Process key',
+      dataIndex: 'processKey',
+      width: 240,
+      render: value => value ? <Tag color="blue">{value}</Tag> : null,
+    },
+    {
+      title: 'Số bước',
+      dataIndex: 'stepCount',
+      width: 90,
+      align: 'center',
+    },
+    {
+      title: 'Chuyển trạng thái',
+      dataIndex: 'transitionCount',
+      width: 140,
+      align: 'center',
+    },
+    {
+      title: 'Cập nhật',
+      dataIndex: 'updatedAt',
+      width: 170,
+    },
+    {
+      title: '',
+      key: 'actions',
+      width: 110,
+      align: 'right',
+      render: (_, record) => (
+        <Button
+          icon={<EditOutlined />}
+          loading={editingId === record.id}
+          onClick={() => handleEdit(record)}
+        >
+          Chỉnh sửa
+        </Button>
+      ),
+    },
+  ], [editingId, handleEdit])
+
+  return (
+    <ListPage>
+      <ListHeader>
+        <div>
+          <ListTitle level={2}>Workflow nghiệp vụ</ListTitle>
+          <ListSubtitle>Danh sách các luồng xử lý nghiệp vụ đã tạo.</ListSubtitle>
+        </div>
+
+        <Button type="primary" icon={<PlusOutlined />} onClick={onCreate}>
+          Thêm mới
+        </Button>
+      </ListHeader>
+
+      <ListToolbar>
+        <ListSearch
+          value={keyword}
+          onChange={event => setKeyword(event.target.value)}
+          onPressEnter={() => {
+            setSearchText(keyword.trim())
+            setPage(1)
+          }}
+          prefix={<SearchOutlined />}
+          placeholder="Tìm theo tên nghiệp vụ..."
+          allowClear
+          onClear={() => {
+            setKeyword('')
+            setSearchText('')
+            setPage(1)
+          }}
+        />
+        <Button icon={<ReloadOutlined />} onClick={fetchRows}>
+          Tải lại
+        </Button>
+      </ListToolbar>
+
+      <TableWrap>
+        <Table
+          rowKey="id"
+          columns={columns}
+          dataSource={rows}
+          loading={loading}
+          pagination={{
+            current: page,
+            pageSize: PAGE_SIZE,
+            total,
+            showSizeChanger: false,
+            onChange: setPage,
+          }}
+          scroll={{ x: 1180, y: 'calc(100vh - 360px)' }}
+        />
+      </TableWrap>
+    </ListPage>
+  )
+}
+
+const WorkflowDesignerEditor = ({ onBack }) => {
   const process = useProcess()
   const nodes = useNodes()
   const edges = useEdges()
   const setProcess = useSetProcess()
-  const { toggleCollapse } = useCollapseSidebar();
   const [submitting, setSubmitting] = useState(false)
-  
-  useEffect(() => {
-    toggleCollapse();
-    /* eslint-disable-next-line */
-  }, []);
 
   const submitFlow = useCallback(async () => {
     setSubmitting(true)
@@ -90,27 +398,15 @@ const WorkflowDesignerPage = () => {
 
   return (
     <DesignerLayout>
-
-      {/* ── Sidebar trái: palette + step list ── */}
       <LeftSider width={240} theme="light">
         <StepPanel />
       </LeftSider>
 
-      {/* ── Canvas chính ── */}
       <Content style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-
-        {/* Process name bar */}
-        <div
-          style={{
-            padding: '8px 16px',
-            borderBottom: '1px solid #f0f0f0',
-            background: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            flexShrink: 0,
-          }}
-        >
+        <DesignerTopBar>
+          <Button icon={<ArrowLeftOutlined />} onClick={onBack}>
+            Quay lại danh sách
+          </Button>
           <Input
             value={process.name}
             onChange={(e) => setProcess({ name: e.target.value })}
@@ -126,29 +422,72 @@ const WorkflowDesignerPage = () => {
           <Text style={{ fontSize: 11, color: '#bfbfbf', fontFamily: 'monospace' }}>
             [{process.code}]
           </Text>
-          <Button
-            type="primary"
-            icon={<SaveOutlined />}
-            loading={submitting}
-            onClick={handleSubmitFlow}
-            style={{ marginLeft: 'auto' }}
-          >
-            Lưu flow
-          </Button>
-        </div>
+          <Space style={{ marginLeft: 'auto' }}>
+            <Button
+              type="primary"
+              icon={<SaveOutlined />}
+              loading={submitting}
+              onClick={handleSubmitFlow}
+            >
+              Lưu flow
+            </Button>
+          </Space>
+        </DesignerTopBar>
 
-        {/* Canvas */}
         <div style={{ flex: 1, overflow: 'hidden' }}>
           <FlowCanvas />
         </div>
       </Content>
 
-      {/* ── Sidebar phải: detail form ── */}
       <RightSider width={340} theme="light">
         <DetailPanel />
       </RightSider>
-
     </DesignerLayout>
+  )
+}
+
+const WorkflowDesignerPage = () => {
+  const { toggleCollapse } = useCollapseSidebar()
+  const resetFlow = useResetFlow()
+  const loadFlow = useLoadFlow()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [listVersion, setListVersion] = useState(0)
+  const view = searchParams.get('mode') === 'designer' ? 'designer' : 'list'
+
+  useEffect(() => {
+    toggleCollapse()
+    /* eslint-disable-next-line */
+  }, [])
+
+  const handleCreate = useCallback(() => {
+    resetFlow()
+    setSearchParams({ mode: 'designer', action: 'create' })
+  }, [resetFlow, setSearchParams])
+
+  const handleEdit = useCallback((detail) => {
+    try {
+      loadFlow(jsonToFlow(ensureWorkflowPayload(detail)))
+      setSearchParams({ mode: 'designer', action: 'edit' })
+    } catch (error) {
+      message.error(error?.message || 'Dữ liệu workflow không hợp lệ.')
+    }
+  }, [loadFlow, setSearchParams])
+
+  const handleBack = useCallback(() => {
+    setListVersion(version => version + 1)
+    setSearchParams({})
+  }, [setSearchParams])
+
+  if (view === 'designer') {
+    return <WorkflowDesignerEditor onBack={handleBack} />
+  }
+
+  return (
+    <WorkflowDesignerList
+      key={listVersion}
+      onCreate={handleCreate}
+      onEdit={handleEdit}
+    />
   )
 }
 
