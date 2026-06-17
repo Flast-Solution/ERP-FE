@@ -4,6 +4,7 @@ import styled from 'styled-components'
 
 export const CanvasWrapper = styled.div`
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   height: 100%;

@@ -4,6 +4,24 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { RequestUtils } from "@flast-erp/core/utils";
 import useFormBuilderStore from "@/store/useFormBuilderStore";
+import styled from "styled-components";
+
+const BuilderPageShell = styled.div`
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  height: calc(100vh - 170px);
+  min-width: 0;
+  overflow: hidden;
+  background: #f5f5f5;
+`
+
+const BuilderPane = styled.div`
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+`
 
 const BuilderPage = () => {
 
@@ -81,22 +99,25 @@ const BuilderPage = () => {
   }
 
   return (
-    <div>
-      <FormBuilder
-        onOpenAI={openChatbot}
-        onPreview={()=> {}}
-        onSave={handleSave}
-        incomingTemplate={incomingTemplate}
-      />
+    <BuilderPageShell>
+      <BuilderPane>
+        <FormBuilder
+          onOpenAI={openChatbot}
+          onPreview={()=> {}}
+          onSave={handleSave}
+          incomingTemplate={incomingTemplate}
+        />
+      </BuilderPane>
 
       <AIChatbot
         open={chatbotOpen}
+        embedded
         mode={chatbotMode}
         context={chatbotContext}
         onClose={() => setChatbotOpen(false)}
         onTemplateSaved={handleTemplateSaved}
       />
-    </div>
+    </BuilderPageShell>
   )
 }
 

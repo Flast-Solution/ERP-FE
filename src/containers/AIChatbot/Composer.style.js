@@ -43,6 +43,64 @@ export const InputRow = styled.div`
   padding: 8px 12px 10px;
 `
 
+export const ComposerActions = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+`
+
+export const AttachmentsRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px 0;
+`
+
+export const AttachmentPill = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid #dbeafe;
+  border-radius: 6px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 11px;
+`
+
+export const AttachmentName = styled.span`
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
+export const AttachmentRemove = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+
+  &:hover {
+    background: rgba(29, 78, 216, 0.12);
+    color: #1d4ed8;
+  }
+`
+
+export const HiddenFileInput = styled.input`
+  display: none;
+`
+
 export const FootHint = styled.div`
   font-size: 10px;
   color: #a1a1aa;
