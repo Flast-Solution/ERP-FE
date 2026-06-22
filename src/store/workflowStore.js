@@ -96,17 +96,25 @@ const useWorkflowStore = create((set, get) => ({
 
   addNode: (position, stepType) => {
     const id = generateId()
-    const newNode = {
-      id,
-      type: 'stepNode',
-      position,
-      data: {
-        ...DEFAULT_STEP,
-        type: stepType ?? 'process',
-        code: `step_${id.slice(-5)}`,
-      },
-    }
     set((state) => {
+      /* Nếu drop start mà đã có start → fallback process
+       * Nếu drop end mà đã có end → fallback process 
+      */
+      const resolvedType =
+        (stepType === 'start' && state.nodes.some((n) => n.data.type === 'start')) ? 'process'
+        : (stepType === 'end' && state.nodes.some((n) => n.data.type === 'end')) ? 'process'
+        : (stepType ?? 'process')
+ 
+      const newNode = {
+        id,
+        type: 'stepNode',
+        position,
+        data: {
+          ...DEFAULT_STEP,
+          type: resolvedType,
+          code: `step_${id.slice(-5)}`,
+        },
+      }
       const next = [...state.nodes, newNode]
       return {
         nodes: next,
@@ -130,6 +138,24 @@ const useWorkflowStore = create((set, get) => ({
 
   deleteNode: (nodeId) => {
     set((state) => {
+      const target = state.nodes.find((n) => n.id === nodeId)
+      if (!target) {
+        return {}
+      }
+
+      const targetType = target.data?.type
+      /* Chặn xoá start duy nhất */
+      if (targetType === 'start') {
+        const startCount = state.nodes.filter((n) => n.data?.type === 'start').length
+        if (startCount <= 1) return {}
+      }
+
+      /* Chặn xoá end duy nhất */
+      if (targetType === 'end') {
+        const endCount = state.nodes.filter((n) => n.data?.type === 'end').length
+        if (endCount <= 1) return {}
+      }
+ 
       const nextNodes = state.nodes.filter((n) => n.id !== nodeId)
       const nextEdges = state.edges.filter(
         (e) => e.source !== nodeId && e.target !== nodeId
