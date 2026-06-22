@@ -107,9 +107,17 @@ const StepPanel = () => {
 
       {/* Palette pills — scroll khi > 250px */}
       <PaletteWrapper>
-        {stepTypes.map((stepType) => (
-          <TypeItem key={stepType.key} stepType={stepType} />
-        ))}
+        {stepTypes.length === 0 ? (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description="Chưa có loại bước"
+            style={{ margin: '12px 0' }}
+          />
+        ) : (
+          stepTypes.map((stepType) => (
+            <TypeItem key={stepType.key} stepType={stepType} />
+          ))
+        )}
       </PaletteWrapper>
 
       <PaletteDivider />

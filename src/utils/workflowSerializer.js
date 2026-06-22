@@ -1,5 +1,8 @@
 import { DEFAULT_STEP, DEFAULT_TRANSITION } from '@/store/workflowConstants'
 
+const normalizeStepType = (type) =>
+  type == null || type === '' ? '' : String(type).toLowerCase()
+
 /**
  * flowToJson({ nodes, edges, process })
  * → Flast NoCode API payload
@@ -22,7 +25,7 @@ export const flowToJson = ({ nodes, edges, process }) => ({
     id: node.data?.persistedId ?? node.data?.id ?? node.id,
     code: node.data.code,
     label: node.data.label,
-    type: node.data.type,
+    type: normalizeStepType(node.data.type),
     description: node.data.description ?? '',
     position: node.position,
     forms: serializeFormIds(node.data.forms ?? []),
@@ -67,7 +70,7 @@ export const jsonToFlow = (raw) => {
         processId: step.processId ?? step.process_id ?? null,
         code: stepCode,
         label,
-        type: step.type ?? 'process',
+        type: normalizeStepType(step.type ?? 'process'),
         description: step.description ?? '',
         forms: normalizeStepForms(step),
         actions: (step.actions ?? []).map(deserializeAction),
@@ -206,7 +209,7 @@ const serializeGuard = (guard) => ({
 })
 
 const deserializeGuard = (guard) => ({
-  type: guard.type ?? 'form_field',
+  type: guard.type ?? 'field_value',
   config: guard.config ?? {},
 })
 

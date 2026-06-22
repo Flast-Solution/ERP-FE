@@ -62,7 +62,7 @@ const TransitionForm = ({ edge }) => {
   }
 
   const handleAddGuard = () => {
-    const newGuard = { type: 'form_field', config: {} }
+    const newGuard = { type: 'field_value', config: {} }
     const nextGuards = [...guards, newGuard]
     setGuards(nextGuards)
     setActiveGuard({ index: guards.length, isNew: true })
@@ -217,6 +217,8 @@ const TransitionForm = ({ edge }) => {
                 guardIndex={activeGuard.index}
                 initialValue={guards[activeGuard.index]}
                 nodeForms={sourceForms}
+                nodes={nodes}
+                sourceStepCode={fromNode?.data?.code || fromNode?.id || edge.source}
                 onConfirm={handleConfirmGuard}
                 onCancel={handleCancelGuard}
               />

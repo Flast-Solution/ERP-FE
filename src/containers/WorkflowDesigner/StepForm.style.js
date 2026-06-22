@@ -94,11 +94,19 @@ export const ActionItem = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 6px;
   padding: 9px 12px;
   border-radius: 8px;
   border: 1px solid #e4e4e4;
   background: #fff;
   margin-bottom: 6px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+
+  &:hover {
+    background: #f5faff;
+    border-color: #91caff;
+  }
 `
 
 export const ActionItemLabel = styled.div`

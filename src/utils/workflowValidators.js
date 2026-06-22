@@ -8,6 +8,9 @@
 
 // ─── validateBeforeExport ─────────────────────────────────────────────────────
 // Gọi trong useWorkflowExport trước khi serialize
+const getNodeType = (node) =>
+  node?.data?.type == null ? '' : String(node.data.type).toLowerCase()
+
 export const validateBeforeExport = (nodes, edges) => {
   const errors = []
 
@@ -18,7 +21,7 @@ export const validateBeforeExport = (nodes, edges) => {
   }
 
   // 2. Phải có đúng 1 start node
-  const startNodes = nodes.filter((n) => n.data?.type === 'start')
+  const startNodes = nodes.filter((n) => getNodeType(n) === 'start')
   if (startNodes.length === 0) {
     errors.push('Thiếu step kiểu "start"')
   } else if (startNodes.length > 1) {
@@ -26,7 +29,7 @@ export const validateBeforeExport = (nodes, edges) => {
   }
 
   // 3. Phải có ít nhất 1 end node
-  const endNodes = nodes.filter((n) => n.data?.type === 'end')
+  const endNodes = nodes.filter((n) => getNodeType(n) === 'end')
   if (endNodes.length === 0) {
     errors.push('Thiếu step kiểu "end"')
   }
@@ -83,7 +86,7 @@ export const validateFlow = (nodes, edges) => {
   const warnings = []
 
   // Warning: start node có edge đi vào
-  const startNode = nodes.find((n) => n.data?.type === 'start')
+  const startNode = nodes.find((n) => getNodeType(n) === 'start')
   if (startNode) {
     const hasIncoming = edges.some((e) => e.target === startNode.id)
     if (hasIncoming) {
@@ -92,7 +95,7 @@ export const validateFlow = (nodes, edges) => {
   }
 
   // Warning: end node có edge đi ra
-  const endNodes = nodes.filter((n) => n.data?.type === 'end')
+  const endNodes = nodes.filter((n) => getNodeType(n) === 'end')
   endNodes.forEach((n) => {
     const hasOutgoing = edges.some((e) => e.source === n.id)
     if (hasOutgoing) {

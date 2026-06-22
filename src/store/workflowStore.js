@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { addEdge, applyNodeChanges, applyEdgeChanges } from 'reactflow'
-import { DEFAULT_STEP, DEFAULT_TRANSITION, STEP_TYPES } from './workflowConstants'
+import { DEFAULT_STEP, DEFAULT_TRANSITION } from './workflowConstants'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const generateId = () => `id_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
@@ -13,71 +13,30 @@ const snapshot = (nodes, edges) => ({
 const MAX_HISTORY = 50
 
 // ─── Initial state ────────────────────────────────────────────────────────────
-const initialNodes = [
-  {
-    id: 'step_new',
-    type: 'stepNode',
-    position: { x: 80, y: 200 },
-    data: { label: 'New', code: 'new', type: 'start', description: 'Khởi tạo', actions: [] },
-  },
-  {
-    id: 'step_confirmed',
-    type: 'stepNode',
-    position: { x: 320, y: 200 },
-    data: { label: 'Confirmed', code: 'confirmed', type: 'process', description: 'Đã xác nhận', actions: [] },
-  },
-  {
-    id: 'step_done',
-    type: 'stepNode',
-    position: { x: 560, y: 200 },
-    data: { label: 'Done', code: 'done', type: 'end', description: 'Hoàn thành', actions: [] },
-  },
-]
-
-const initialEdges = [
-  {
-    id: 'e_new_confirmed',
-    source: 'step_new',
-    target: 'step_confirmed',
-    type: 'transitionEdge',
-    data: { label: 'Confirm', require_note: false, guards: [], actions: [] },
-  },
-  {
-    id: 'e_confirmed_done',
-    source: 'step_confirmed',
-    target: 'step_done',
-    type: 'transitionEdge',
-    data: { label: 'Complete', require_note: false, guards: [], actions: [] },
-  },
-]
-
-// Default stepTypes từ constants — Backend sẽ ghi đè qua setStepTypes()
-const initialStepTypes = Object.entries(STEP_TYPES).map(([key, config]) => ({
-  key,
-  ...config,
-}))
+const initialNodes = []
+const initialEdges = []
+const initialStepTypes = []
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 const useWorkflowStore = create((set, get) => ({
 
   // ── Step types (palette "Thêm bước") ─────────────────────────────────────────
-  // Mặc định lấy từ STEP_TYPES constant, Backend có thể ghi đè qua setStepTypes()
-  // Mỗi item: { key, label, color, bgColor, borderColor }
+  // Mỗi item lấy từ API process-type-find: { key, label, color, bgColor, borderColor }
   stepTypes: initialStepTypes,
 
   // Gọi khi API trả về danh sách loại bước
   // Ví dụ: store.getState().setStepTypes(apiResponse)
   setStepTypes: (types) => set({ stepTypes: types }),
 
-  // Reset về default constants
+  // Reset về danh sách rỗng, không fallback hardcode.
   resetStepTypes: () => set({ stepTypes: initialStepTypes }),
 
   // ── Process info ────────────────────────────────────────────────────────────
   process: {
     id: null,
     processKey: '',
-    name: 'New Tạo luồng xử lý nghiệp vụ',
-    code: 'new_process_business',
+    name: '',
+    code: '',
     description: '',
   },
 
@@ -104,13 +63,16 @@ const useWorkflowStore = create((set, get) => ({
         (stepType === 'start' && state.nodes.some((n) => n.data.type === 'start')) ? 'process'
         : (stepType === 'end' && state.nodes.some((n) => n.data.type === 'end')) ? 'process'
         : (stepType ?? 'process')
- 
+
+      const stepTypeConfig = get().stepTypes.find((type) => type.key === resolvedType)
+
       const newNode = {
         id,
         type: 'stepNode',
         position,
         data: {
           ...DEFAULT_STEP,
+          label: stepTypeConfig?.label ?? DEFAULT_STEP.label,
           type: resolvedType,
           code: `step_${id.slice(-5)}`,
         },
@@ -280,7 +242,7 @@ const useWorkflowStore = create((set, get) => ({
       selectedType: null,
       history: [],
       future: [],
-      process: { id: null, processKey: '', name: 'New Process', code: 'new_process', description: '' },
+      process: { id: null, processKey: '', name: '', code: '', description: '' },
     }),
 
   // ── Load từ JSON (import) ─────────────────────────────────────────────────────

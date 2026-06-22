@@ -23,10 +23,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { GlobalOutlined, LogoutOutlined, ProfileOutlined, UserOutlined } from '@ant-design/icons';
-import { Avatar, Dropdown, Menu } from 'antd';
+import { Avatar, Dropdown } from 'antd';
 import useGetMe from '@/hooks/useGetMe';
 import moment from 'moment';
-import { MenuStyles } from './styles';
 
 const LANGUAGE = [
   { value: 'en', text: 'EN' },
@@ -62,9 +61,10 @@ function UserInfo() {
     window.location.href = '/login';
   };
 
-  const userDropdown = (
-    <MenuStyles>
-      <Menu.Item key="profile">
+  const userDropdownItems = [
+    {
+      key: 'profile',
+      label: (
         <div className="div-menu-item">
           <Link to="/profile" className="link-menu-item">
             <div className="profile-menu-item">
@@ -73,8 +73,11 @@ function UserInfo() {
             </div>
           </Link>
         </div>
-      </Menu.Item>
-      <Menu.Item key="language">
+      ),
+    },
+    {
+      key: 'language',
+      label: (
         <div className="div-menu-item">
           <GlobalOutlined className="icon-menu-item" />
           {LANGUAGE.map(item => (
@@ -88,19 +91,23 @@ function UserInfo() {
             </div>
           ))}
         </div>
-      </Menu.Item>
-      <Menu.Item onClick={handleLogout} key="logout">
+      ),
+    },
+    {
+      key: 'logout',
+      onClick: handleLogout,
+      label: (
         <div className="div-menu-item">
           <LogoutOutlined className="icon-menu-item" />
           {t('header.logout')}
         </div>
-      </Menu.Item>
-    </MenuStyles>
-  );
+      ),
+    },
+  ];
 
   return (
     <div>
-      <Dropdown overlay={userDropdown} trigger={['click']}>
+      <Dropdown menu={{ items: userDropdownItems }} trigger={['click']}>
         <div className="div-user-info">
           <span className="userInfo">
             <strong>{profile?.fullName ?? 'Flast Solution'}</strong>
