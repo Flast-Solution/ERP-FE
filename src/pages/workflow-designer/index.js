@@ -17,6 +17,7 @@ import {
   useNodes,
   useProcess,
   useResetFlow,
+  useSetStepTypes,
   useSetProcess,
 } from '@/hooks/useWorkflowStore'
 import {
@@ -35,6 +36,7 @@ const { Content } = Layout
 const { Title, Text } = Typography
 const PAGE_SIZE = 10
 const LIST_API = '/workflow/process/filter'
+const PROCESS_TYPE_FIND_API = '/workflow/process/process-type-find'
 
 const ListPage = styled.div`
   height: calc(100vh - 170px);
@@ -100,6 +102,45 @@ const DesignerTopBar = styled.div`
   gap: 12px;
   flex-shrink: 0;
 `
+
+const hexToAlpha = (hex, alpha) => {
+  if (!hex || !hex.startsWith('#')) return hex || '#1677ff'
+  const clean = hex.replace('#', '')
+  const r = parseInt(clean.slice(0, 2), 16)
+  const g = parseInt(clean.slice(2, 4), 16)
+  const b = parseInt(clean.slice(4, 6), 16)
+  return `rgba(${r},${g},${b},${alpha})`
+}
+
+const getResponseDataArray = (response) => {
+  const data = response?.data ?? response
+  const candidates = [
+    data?.items,
+    data?.rows,
+    data?.content,
+    data?.records,
+    data?.data,
+    data?.embedded,
+    data,
+  ]
+  return candidates.find(Array.isArray) ?? []
+}
+
+const normalizeProcessType = (item, index) => {
+  const color = item?.colorCode ?? item?.color_code ?? item?.color ?? '#1677ff'
+  const id = item?.id ?? item?.key ?? `process_type_${index + 1}`
+  const key = item?.code ?? item?.processTypeCode ?? item?.process_type_code ?? item?.type ?? item?.key ?? id
+  return {
+    id,
+    key: String(key).toLowerCase(),
+    label: item?.name ?? item?.label ?? `Loại bước ${index + 1}`,
+    color,
+    bgColor: hexToAlpha(color, 0.12),
+    borderColor: hexToAlpha(color, 0.4),
+    order: item?.orderProcessType ?? item?.order_process_type ?? item?.order ?? index + 1,
+    status: item?.status ?? 1,
+  }
+}
 
 const getResponseItems = (response) => {
   const data = response?.data ?? response
@@ -340,14 +381,23 @@ const WorkflowDesignerEditor = ({ onBack }) => {
   const setProcess = useSetProcess()
   const [submitting, setSubmitting] = useState(false)
 
+  const buildSavePayload = useCallback(() => {
+    const isNewProcess = !process.id && !process.processKey
+    const processForSave = isNewProcess
+      ? { ...process, processKey: createUuidV7() }
+      : process
+
+    return {
+      isNewProcess,
+      processForSave,
+      payload: flowToJson({ nodes, edges, process: processForSave }),
+    }
+  }, [nodes, edges, process])
+
   const submitFlow = useCallback(async () => {
     setSubmitting(true)
     try {
-      const isNewProcess = !process.id && !process.processKey
-      const processForSave = isNewProcess
-        ? { ...process, processKey: createUuidV7() }
-        : process
-      const payload = flowToJson({ nodes, edges, process: processForSave })
+      const { isNewProcess, processForSave, payload } = buildSavePayload()
       const response = await RequestUtils.Post('/workflow/process/create', payload)
       const isSuccess = response?.success || response?.errorCode === SUCCESS_CODE
 
@@ -366,9 +416,22 @@ const WorkflowDesignerEditor = ({ onBack }) => {
     } finally {
       setSubmitting(false)
     }
-  }, [nodes, edges, process, setProcess])
+  }, [buildSavePayload, setProcess])
 
   const handleSubmitFlow = useCallback(() => {
+    const { payload } = buildSavePayload()
+    console.log('[WorkflowDesigner] save body before validation', payload)
+    console.log('[WorkflowDesigner] body step type check', {
+      steps: payload.steps.map((step) => ({
+        id: step.id,
+        code: step.code,
+        label: step.label,
+        type: step.type,
+      })),
+      startSteps: payload.steps.filter((step) => step.type === 'start'),
+      endSteps: payload.steps.filter((step) => step.type === 'end'),
+    })
+
     const { valid, errors, warnings } = validateFlow(nodes, edges)
 
     if (!valid) {
@@ -394,7 +457,7 @@ const WorkflowDesignerEditor = ({ onBack }) => {
     }
 
     submitFlow()
-  }, [nodes, edges, submitFlow])
+  }, [buildSavePayload, nodes, edges, submitFlow])
 
   return (
     <DesignerLayout>
@@ -450,6 +513,7 @@ const WorkflowDesignerPage = () => {
   const { toggleCollapse } = useCollapseSidebar()
   const resetFlow = useResetFlow()
   const loadFlow = useLoadFlow()
+  const setStepTypes = useSetStepTypes()
   const [searchParams, setSearchParams] = useSearchParams()
   const [listVersion, setListVersion] = useState(0)
   const view = searchParams.get('mode') === 'designer' ? 'designer' : 'list'
@@ -458,6 +522,26 @@ const WorkflowDesignerPage = () => {
     toggleCollapse()
     /* eslint-disable-next-line */
   }, [])
+
+  const fetchProcessTypes = useCallback(async () => {
+    try {
+      const response = await RequestUtils.Get(PROCESS_TYPE_FIND_API, {})
+      const processTypes = getResponseDataArray(response)
+        .map(normalizeProcessType)
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+
+      setStepTypes(processTypes)
+    } catch (error) {
+      setStepTypes([])
+      message.warning('Không tải được cấu hình loại bước.')
+    }
+  }, [setStepTypes])
+
+  useEffect(() => {
+    if (view === 'designer') {
+      fetchProcessTypes()
+    }
+  }, [fetchProcessTypes, view])
 
   const handleCreate = useCallback(() => {
     resetFlow()

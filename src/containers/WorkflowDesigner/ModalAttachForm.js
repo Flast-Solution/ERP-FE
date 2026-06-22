@@ -156,7 +156,9 @@ const ModalAttachForm = ({ attachedForms = [], onSave }) => {
   }
 
   const handleSave = () => {
-    onSave(Array.from(selected.values()))
+    const selectedForms = Array.from(selected.values())
+    console.log('[WorkflowDesigner][ModalAttachForm] selected forms', selectedForms)
+    onSave(selectedForms)
   }
 
   return (

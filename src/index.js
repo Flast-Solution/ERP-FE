@@ -23,9 +23,18 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import axios from 'axios';
 import App from '@/App';
+import { GATEWAY } from '@/configs';
+
+// RequestUtils (@flast-erp/core) builds url as baseURL + path, then calls axios.get(url).
+// With a relative baseURL like '/api', axios combines baseURL again → /api/api/...
+// Absolute baseURL avoids the second merge (same as the old http://host:9080/api setup).
+const resolveApiBaseUrl = (gateway) => {
+  if (/^https?:\/\//i.test(gateway)) return gateway;
+  return `${window.location.origin}${gateway}`;
+};
 
 axios.defaults.withCredentials = true;
-axios.defaults.baseURL = "http://157.10.199.138:9080/api"
+axios.defaults.baseURL = resolveApiBaseUrl(GATEWAY);
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<App />);

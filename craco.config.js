@@ -18,6 +18,15 @@ module.exports = {
   },
 
   devServer: {
-    port: 3000
+    port: 3000,
+    proxy: {
+      '/api': {
+        target: 'http://157.10.199.138:9080',
+        changeOrigin: true,
+        secure: false,
+        cookieDomainRewrite: 'localhost',
+        cookiePathRewrite: '/',
+      }
+    }
   }
 }

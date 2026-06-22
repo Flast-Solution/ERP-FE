@@ -15,9 +15,9 @@ import {
   useOnEdgesChange,
   useOnConnect,
   useSelectedId,
+  useStepTypes,
 } from '@/hooks/useWorkflowStore'
 import useFlowHandlers from '@/hooks/useFlowHandlers'
-import { STEP_TYPES } from '@/store/workflowConstants'
 
 import StepNode from './StepNode'
 import EdgeLabel from './EdgeLabel'
@@ -40,6 +40,7 @@ const FlowCanvasInner = () => {
   const onEdgesChange = useOnEdgesChange()
   const onConnect = useOnConnect()
   const selectedId = useSelectedId()
+  const stepTypes = useStepTypes()
 
   const handlers = useFlowHandlers()
 
@@ -83,7 +84,7 @@ const FlowCanvasInner = () => {
         <Background color="#e8e8e8" gap={20} size={1} />
         <Controls showInteractive={false} />
         <MiniMap
-          nodeColor={(n) => STEP_TYPES[n.data?.type]?.color ?? '#8c8c8c'}
+          nodeColor={(n) => stepTypes.find((type) => type.key === n.data?.type)?.color ?? '#8c8c8c'}
           maskColor="rgba(245,245,245,0.7)"
           style={{
             border: '1px solid #f0f0f0',

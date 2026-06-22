@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { Col, Form, ColorPicker, Button } from 'antd'
+import { Col, Form, ColorPicker, Button, message } from 'antd'
 import { 
   FormInput, 
   FormHidden, 
@@ -7,6 +7,7 @@ import {
   FormSelect,
 	FormInputNumber
 } from "@flast-erp/core/components";
+import { RequestUtils } from '@flast-erp/core/utils'
 
 import { FormListStyles } from '@/css/global'
 
@@ -19,7 +20,7 @@ const StepTypeRow = ({ field }) => {
     <FormListStyles gutter={12}>
       {/* id ẩn */}
       <Col span={0}>
-        <FormHidden name={[name, 'key']} />
+        <FormHidden name={[name, 'id']} />
       </Col>
 
       {/* Tên loại bước */}
@@ -37,8 +38,8 @@ const StepTypeRow = ({ field }) => {
           required
           placeholder="Trạng thái"
           resourceData={[
-            { id: 'active', name: 'Kích hoạt' },
-            { id: 'inactive', name: 'Ngưng' },
+            { id: 1, name: 'Kích hoạt' },
+            { id: 0, name: 'Ngưng' },
           ]}
           name={[name, 'status']}
         />
@@ -82,33 +83,74 @@ const ModalStepTypes = ({ stepTypes = [], onSave }) => {
     // Map stepTypes store sang format form: thêm field status mặc định active
     form.setFieldsValue({
       lists: stepTypes.map((t) => ({
-        key: t.key,
+        id: t.id,
         label: t.label,
         color: t.color,
         order: t.order ?? 1,
-        status: t.status ?? 'active',
+        status: t.status ?? 1,
       })),
     })
   }, [form, stepTypes])
 
-  const onSubmit = ({ lists }) => {
+  const isChangedItem = (item) => {
+    if (item.id == null || item.id === '') {
+      return true
+    }
+
+    const existing = stepTypes.find((t) => t.id === item.id || t.key === String(item.id))
+    if (!existing) {
+      return true
+    }
+
+    return String(existing.label ?? '') !== String(item.label ?? '')
+      || String(existing.color ?? '') !== String(item.color ?? '')
+      || Number(existing.order ?? 1) !== Number(item.order ?? 1)
+      || Number(existing.status ?? 1) !== Number(item.status ?? 1)
+  }
+
+  const onSubmit = async ({ lists }) => {
     // Convert ngược lại về format store: giữ bgColor/borderColor cũ nếu có
     // Backend sau này sẽ trả về đầy đủ — hiện tại tự derive từ color
     const updated = lists.map((item, idx) => {
-      const existing = stepTypes.find((t) => t.key === item.key)
+      const existing = stepTypes.find((t) => t.id === item.id || t.key === String(item.id))
       const hexColor = item.color?.startsWith?.('#') ? item.color : item.color
 
       // Derive bgColor = color + opacity 15%, borderColor = color + opacity 40%
       return {
-        key: item.key ?? `step_type_${idx}`,
+        id: item.id,
+        key: String(item.id ?? `step_type_${idx}`),
         label: item.label,
         color: hexColor,
         bgColor: existing?.bgColor ?? hexToAlpha(hexColor, 0.12),
         borderColor: existing?.borderColor ?? hexToAlpha(hexColor, 0.4),
         order: item.order ?? idx + 1,
-        status: item.status ?? 'active',
+        status: item.status ?? 1,
       }
     })
+
+    const changedItems = updated.filter(isChangedItem)
+
+    if (changedItems.length === 0) {
+      message.info('Không có thay đổi để lưu.')
+      onSave(updated)
+      return
+    }
+
+    const payload = updated.map((item) => ({
+        id: item.id,
+        name: item.label,
+        status: item.status,
+        orderProcessType: item.order,
+        colorCode: item.color,
+    }))
+
+    try {
+      await RequestUtils.Post('/workflow/process/save-process-type', payload)
+      message.success('Đã lưu cấu hình loại bước.')
+    } catch (error) {
+      message.error('Không lưu được cấu hình loại bước.')
+      return
+    }
 
     onSave(updated)
   }
