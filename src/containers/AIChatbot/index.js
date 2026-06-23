@@ -126,6 +126,8 @@ const AIChatbot = ({
     )
   })
   const [ resizing, setResizing ] = useState(false)
+  const [ humanInput, setHumanInput ] = useState(null)
+
   const resizeStateRef = useRef(null)
   const panelWidthRef = useRef(panelWidth)
 
@@ -239,6 +241,7 @@ const AIChatbot = ({
         responseBufferRef.current += chunk
         appendChunk(currentMode, chunk)
       },
+      onHumanInput: (payload) => setHumanInput(payload),
       onCore: (payload) => {
         if (payload) {
           pushMessage(currentMode, {
@@ -251,6 +254,7 @@ const AIChatbot = ({
         }
       },
       onDone: () => {
+        setHumanInput(null)
         const rawResponse = responseBufferRef.current
         finishStreaming(currentMode, diff)
         responseBufferRef.current = ''
@@ -487,6 +491,11 @@ const AIChatbot = ({
                 ? 'Hỏi bất cứ điều gì…'
                 : 'Mô tả thay đổi mong muốn…'
             }
+            humanInput={humanInput}
+            onHumanInputReply={(requestId, answer) => {
+              session.sendHumanInput(requestId, answer)
+              setHumanInput(null)
+            }}
           />
 
         </PanelWrapper>

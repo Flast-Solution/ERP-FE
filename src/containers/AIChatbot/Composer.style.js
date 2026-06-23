@@ -107,3 +107,28 @@ export const FootHint = styled.div`
   padding: 0 12px 8px;
   text-align: center;
 `
+
+export const HumanInputBanner = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: #fffbe6;
+  border: 1px solid #ffe58f;
+  border-radius: 8px;
+  margin-bottom: 8px;
+`
+ 
+export const HumanInputLabel = styled.div`
+  font-size: 11px;
+  font-weight: 600;
+  color: #d48806;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+`
+ 
+export const HumanInputQuestion = styled.div`
+  font-size: 13px;
+  color: #262626;
+  line-height: 1.5;
+`

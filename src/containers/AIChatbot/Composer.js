@@ -27,6 +27,9 @@ import {
   AttachmentName,
   AttachmentRemove,
   HiddenFileInput,
+  HumanInputBanner,
+  HumanInputLabel,
+  HumanInputQuestion,
 } from './Composer.style'
 
 const { TextArea } = Input
@@ -54,15 +57,34 @@ const DynamicIcon = ({ name }) => {
   return Icon ? <Icon style={{ fontSize: 10 }} /> : null
 }
 
-const Composer = ({ suggestions = [], onSend, disabled, placeholder }) => {
+const Composer = ({ 
+  suggestions = [], 
+  onSend, 
+  onHumanInputReply, 
+  disabled, 
+  placeholder, 
+  humanInput = null 
+}) => {
+
   const [text, setText] = useState('')
   const [attachments, setAttachments] = useState([])
   const fileInputRef = useRef(null)
 
+  /* humanInput: { request_id, question } | null
+     Khi có humanInput → composer chuyển sang chế độ reply:
+     - Hiển thị question
+     - Send gọi onHumanInputReply(request_id, answer) thay vì onSend */
+  const isHumanInputMode = Boolean(humanInput)
+
   const handleSend = () => {
     const trimmed = text.trim()
     if (!trimmed || disabled) return
-    onSend(trimmed)
+
+    if (isHumanInputMode) {
+      onHumanInputReply?.(humanInput.request_id, trimmed)
+    } else {
+      onSend(trimmed)
+    }
     setText('')
     setAttachments([])
   }
@@ -121,16 +143,24 @@ const Composer = ({ suggestions = [], onSend, disabled, placeholder }) => {
 
   return (
     <ComposerWrapper>
-      {/* Suggestion chips */}
-      {suggestions.length > 0 && (
-        <ChipsRow>
-          {suggestions.map((chip, i) => (
-            <Chip key={i} onClick={() => handleChip(chip.text)} disabled={disabled}>
-              <DynamicIcon name={chip.icon} />
-              {chip.text}
-            </Chip>
-          ))}
-        </ChipsRow>
+      {/* Human input mode — hiển thị question từ server thay vì suggestion chips */}
+      {isHumanInputMode ? (
+        <HumanInputBanner>
+          <HumanInputLabel>Yêu cầu xác nhận</HumanInputLabel>
+          <HumanInputQuestion>{humanInput.question}</HumanInputQuestion>
+        </HumanInputBanner>
+      ) : (
+        /* Suggestion chips — chỉ hiện khi không ở human input mode */
+        suggestions.length > 0 && (
+          <ChipsRow>
+            {suggestions.map((chip, i) => (
+              <Chip key={i} onClick={() => handleChip(chip.text)} disabled={disabled}>
+                <DynamicIcon name={chip.icon} />
+                {chip.text}
+              </Chip>
+            ))}
+          </ChipsRow>
+        )
       )}
 
       {attachments.length > 0 && (
@@ -162,7 +192,7 @@ const Composer = ({ suggestions = [], onSend, disabled, placeholder }) => {
           value={text}
           onChange={e => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder ?? 'Mô tả thay đổi mong muốn…'}
+          placeholder={isHumanInputMode ? 'Nhập câu trả lời…' : (placeholder ?? 'Mô tả thay đổi mong muốn…')}
           autoSize={{ minRows: 3, maxRows: 9 }}
           disabled={disabled}
           style={{ flex: 1, fontSize: 12.5, borderRadius: 8, minHeight: 96 }}

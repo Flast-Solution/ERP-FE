@@ -36,13 +36,14 @@ export class ChatSession {
   constructor(sessionId) {
     this.sessionId       = sessionId
     this._abortCtrl      = new AbortController()
-    this._onChunk        = null
-    this._onCore         = null
-    this._onDone         = null
-    this._onBuild        = null
-    this._onError        = null
-    this._onClose        = null
+    this._onChunk         = null
+    this._onCore          = null
+    this._onDone          = null
+    this._onBuild         = null
+    this._onError         = null
+    this._onClose         = null
     this._onHistoryLoaded = null
+    this._onHumanInput    = null
     this._connected      = false
     this._pingTimer      = null
     this._connectPromise = null
@@ -53,7 +54,7 @@ export class ChatSession {
 
   // ─── Public API ────────────────────────────────────────────────────────────
 
-  connect({ onChunk, onCore, onDone, onBuild, onError, onClose, onHistoryLoaded }) {
+  connect({ onChunk, onCore, onDone, onBuild, onError, onClose, onHistoryLoaded, onHumanInput }) {
     this._onChunk         = onChunk
     this._onCore          = onCore
     this._onDone          = onDone
@@ -61,6 +62,7 @@ export class ChatSession {
     this._onError         = onError
     this._onClose         = onClose
     this._onHistoryLoaded = onHistoryLoaded
+    this._onHumanInput    = onHumanInput
 
     this._connectPromise = this._openSSE()
     return this._connectPromise
@@ -85,6 +87,23 @@ export class ChatSession {
       const err = await res.json().catch(() => ({}))
       throw new Error(err.message ?? `Server error ${res.status}`)
     }
+  }
+
+  async sendHumanInput(requestId, answer) {
+    const res = await fetch(`${BASE_URL}/workflow/input`, {
+      method : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body   : JSON.stringify({
+        session_id: this.sessionId,
+        request_id: requestId,
+        answer,
+      }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.message ?? `Server error ${res.status}`)
+    }
+    /* Không gọi _resetAnswerStream() vì message sau sẽ tiếp tục chảy qua SSE bình thường */
   }
 
   _resetAnswerStream() {
@@ -325,6 +344,12 @@ export class ChatSession {
         break
       }
 
+      case 'human_input_required': {
+        /* AI yêu cầu user trả lời — payload: { request_id, question }  */
+        this._onHumanInput?.(payload)
+        break
+      }
+
       case 'close': {
         /* Server idle-timeout → stop ping, reconnect */
         this._stopPing()
@@ -348,10 +373,10 @@ export class ChatSession {
       return
     }
     try {
-      const res = await fetch(`${BASE_URL}/history?session_id=${this.sessionId}`)
-      if (!res.ok) return
-      const data     = await res.json()
-      const messages = (data.messages ?? []).map(msg => ({
+      const request = await fetch(`${BASE_URL}/history?session_id=${this.sessionId}`)
+      if (!request.ok) return
+      const res     = await request.json()
+      const messages = (res?.data ?? []).map(msg => ({
         ...msg,
         content: stripServerPrefix(msg.content),
       }))
