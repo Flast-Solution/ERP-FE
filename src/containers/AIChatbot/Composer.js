@@ -76,9 +76,13 @@ const Composer = ({
      - Send gọi onHumanInputReply(request_id, answer) thay vì onSend */
   const isHumanInputMode = Boolean(humanInput)
 
+  /* Trong human input mode, luôn cho phép nhập dù prop disabled=true
+     vì AI đang chờ input của user, không phải đang xử lý */
+  const isDisabled = isHumanInputMode ? false : disabled
+
   const handleSend = () => {
     const trimmed = text.trim()
-    if (!trimmed || disabled) return
+    if (!trimmed || isDisabled) return
 
     if (isHumanInputMode) {
       onHumanInputReply?.(humanInput.request_id, trimmed)
@@ -90,7 +94,7 @@ const Composer = ({
   }
 
   const handleChip = (chipText) => {
-    if (disabled) return
+    if (isDisabled) return
     onSend(chipText)
   }
 
@@ -102,7 +106,7 @@ const Composer = ({
   }
 
   const handlePickFiles = () => {
-    if (disabled) return
+    if (isDisabled) return
     fileInputRef.current?.click()
   }
 
@@ -154,7 +158,7 @@ const Composer = ({
         suggestions.length > 0 && (
           <ChipsRow>
             {suggestions.map((chip, i) => (
-              <Chip key={i} onClick={() => handleChip(chip.text)} disabled={disabled}>
+              <Chip key={i} onClick={() => handleChip(chip.text)} disabled={isDisabled}>
                 <DynamicIcon name={chip.icon} />
                 {chip.text}
               </Chip>
@@ -194,14 +198,14 @@ const Composer = ({
           onKeyDown={handleKeyDown}
           placeholder={isHumanInputMode ? 'Nhập câu trả lời…' : (placeholder ?? 'Mô tả thay đổi mong muốn…')}
           autoSize={{ minRows: 3, maxRows: 9 }}
-          disabled={disabled}
+          disabled={isDisabled}
           style={{ flex: 1, fontSize: 12.5, borderRadius: 8, minHeight: 96 }}
         />
         <ComposerActions>
           <Button
             icon={<PaperClipOutlined />}
             onClick={handlePickFiles}
-            disabled={disabled || attachments.length >= MAX_ATTACHMENTS}
+            disabled={isDisabled || attachments.length >= MAX_ATTACHMENTS}
             style={{ flexShrink: 0 }}
             title="Đính kèm ảnh, Excel, Word"
           />
@@ -209,7 +213,7 @@ const Composer = ({
             type="primary"
             icon={<SendOutlined />}
             onClick={handleSend}
-            loading={disabled}
+            loading={disabled && !isHumanInputMode}
             disabled={!text.trim()}
             style={{ flexShrink: 0 }}
           />

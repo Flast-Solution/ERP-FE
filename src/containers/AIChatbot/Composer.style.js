@@ -112,13 +112,14 @@ export const HumanInputBanner = styled.div`
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 10px 12px;
+  margin: 10px 12px;
+  padding: 8px;
   background: #fffbe6;
   border: 1px solid #ffe58f;
   border-radius: 8px;
   margin-bottom: 8px;
 `
- 
+
 export const HumanInputLabel = styled.div`
   font-size: 11px;
   font-weight: 600;
@@ -126,7 +127,7 @@ export const HumanInputLabel = styled.div`
   text-transform: uppercase;
   letter-spacing: 0.05em;
 `
- 
+
 export const HumanInputQuestion = styled.div`
   font-size: 13px;
   color: #262626;
