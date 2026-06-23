@@ -17,6 +17,7 @@ import {
   useNodes,
   useProcess,
   useResetFlow,
+  useStepTypes,
   useSetStepTypes,
   useSetProcess,
 } from '@/hooks/useWorkflowStore'
@@ -29,7 +30,7 @@ import { useCollapseSidebar } from '@flast-erp/core/hooks'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { SUCCESS_CODE } from '@/configs'
 import { flowToJson, jsonToFlow } from '@/utils/workflowSerializer'
-import { validateFlow } from '@/utils/workflowValidators'
+import { normalizeWorkflowStepType, validateFlow } from '@/utils/workflowValidators'
 import { createUuidV7 } from '@/utils/uuid'
 
 const { Content } = Layout
@@ -129,11 +130,20 @@ const getResponseDataArray = (response) => {
 const normalizeProcessType = (item, index) => {
   const color = item?.colorCode ?? item?.color_code ?? item?.color ?? '#1677ff'
   const id = item?.id ?? item?.key ?? `process_type_${index + 1}`
-  const key = item?.code ?? item?.processTypeCode ?? item?.process_type_code ?? item?.type ?? item?.key ?? id
+  const rawKey = item?.code ?? item?.processTypeCode ?? item?.process_type_code ?? item?.type ?? item?.key ?? id
+  const label = item?.name ?? item?.label ?? `Loại bước ${index + 1}`
+  const semanticKey = normalizeWorkflowStepType(rawKey, [], {
+    data: {
+      label,
+      name: label,
+      typeLabel: label,
+    },
+  })
   return {
     id,
-    key: String(key).toLowerCase(),
-    label: item?.name ?? item?.label ?? `Loại bước ${index + 1}`,
+    key: semanticKey || String(rawKey).toLowerCase(),
+    rawKey: String(rawKey),
+    label,
     color,
     bgColor: hexToAlpha(color, 0.12),
     borderColor: hexToAlpha(color, 0.4),
@@ -378,6 +388,7 @@ const WorkflowDesignerEditor = ({ onBack }) => {
   const process = useProcess()
   const nodes = useNodes()
   const edges = useEdges()
+  const stepTypes = useStepTypes()
   const setProcess = useSetProcess()
   const [submitting, setSubmitting] = useState(false)
 
@@ -390,9 +401,9 @@ const WorkflowDesignerEditor = ({ onBack }) => {
     return {
       isNewProcess,
       processForSave,
-      payload: flowToJson({ nodes, edges, process: processForSave }),
+      payload: flowToJson({ nodes, edges, process: processForSave, stepTypes }),
     }
-  }, [nodes, edges, process])
+  }, [nodes, edges, process, stepTypes])
 
   const submitFlow = useCallback(async () => {
     setSubmitting(true)
@@ -424,15 +435,37 @@ const WorkflowDesignerEditor = ({ onBack }) => {
     console.log('[WorkflowDesigner] body step type check', {
       steps: payload.steps.map((step) => ({
         id: step.id,
-        code: step.code,
+        code: step.stepCode,
         label: step.label,
         type: step.type,
       })),
-      startSteps: payload.steps.filter((step) => step.type === 'start'),
-      endSteps: payload.steps.filter((step) => step.type === 'end'),
+      startSteps: payload.steps.filter((step) => String(step.type).toLowerCase() === 'start'),
+      endSteps: payload.steps.filter((step) => String(step.type).toLowerCase() === 'end'),
+    })
+    console.log('[WorkflowDesigner] nodes before validation', {
+      nodes: nodes.map((node) => ({
+        id: node.id,
+        persistedId: node.data?.persistedId,
+        code: node.data?.code,
+        stepCode: node.data?.stepCode,
+        label: node.data?.label,
+        name: node.data?.name,
+        type: node.data?.type,
+        normalizedType: normalizeWorkflowStepType(node.data?.type, stepTypes, node),
+        dataKeys: Object.keys(node.data ?? {}),
+      })),
+      stepTypes: stepTypes.map((stepType) => ({
+        id: stepType.id,
+        key: stepType.key,
+        label: stepType.label,
+        normalizedType: normalizeWorkflowStepType(stepType.key ?? stepType.id, stepTypes),
+      })),
+      startNodes: nodes.filter((node) => normalizeWorkflowStepType(node.data?.type, stepTypes, node) === 'start'),
+      endNodes: nodes.filter((node) => normalizeWorkflowStepType(node.data?.type, stepTypes, node) === 'end'),
     })
 
-    const { valid, errors, warnings } = validateFlow(nodes, edges)
+    const { valid, errors, warnings } = validateFlow(nodes, edges, stepTypes)
+    console.log('[WorkflowDesigner] validation result', { valid, errors, warnings })
 
     if (!valid) {
       errors.forEach((error) => message.warning(error))
@@ -457,7 +490,7 @@ const WorkflowDesignerEditor = ({ onBack }) => {
     }
 
     submitFlow()
-  }, [buildSavePayload, nodes, edges, submitFlow])
+  }, [buildSavePayload, nodes, edges, stepTypes, submitFlow])
 
   return (
     <DesignerLayout>

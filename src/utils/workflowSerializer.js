@@ -1,38 +1,52 @@
 import { DEFAULT_STEP, DEFAULT_TRANSITION } from '@/store/workflowConstants'
+import { normalizeWorkflowStepType } from './workflowValidators'
 
-const normalizeStepType = (type) =>
-  type == null || type === '' ? '' : String(type).toLowerCase()
+const normalizeTrigger = (trigger) =>
+  trigger == null || trigger === '' ? 'on_enter' : String(trigger).toLowerCase()
+
+const normalizeStepType = (type, stepTypes = [], node = {}) =>
+  normalizeWorkflowStepType(type, stepTypes, node)
+
+const toApiStepType = (type, stepTypes = [], node = {}) =>
+  normalizeStepType(type, stepTypes, node).toUpperCase()
+
+const normalizeRolesToArray = (roles) => {
+  if (Array.isArray(roles)) return roles
+  if (typeof roles === 'string') {
+    return roles.split(',').map((role) => role.trim()).filter(Boolean)
+  }
+  return []
+}
+
+const serializeAllowedRoles = (roles) => {
+  if (Array.isArray(roles)) return roles.filter(Boolean).join(',')
+  return roles ?? ''
+}
 
 /**
  * flowToJson({ nodes, edges, process })
  * → Flast NoCode API payload
  *
  * {
- *   process: { name, code, description },
- *   steps: [{ id, code, label, type, description, position, forms, actions }],
- *   transitions: [{ id, from_step, to_step, label, require_note, guards, actions }]
+ *   process: { processKey, name, description },
+ *   steps: [{ stepCode, name, label, type, description, position, forms, actions }],
+ *   transitions: [{ fromStepCode, toStepCode, allowedRoles, requireNote, guards }]
  * }
  */
-export const flowToJson = ({ nodes, edges, process }) => ({
-  process: {
-    ...(process.id != null && process.id !== '' ? { id: process.id } : {}),
-    processKey: process.processKey ?? '',
-    name: process.name ?? '',
-    code: process.code ?? '',
-    description: process.description ?? '',
-  },
-  steps: nodes.map((node) => ({
-    id: node.data?.persistedId ?? node.data?.id ?? node.id,
-    code: node.data.code,
-    label: node.data.label,
-    type: normalizeStepType(node.data.type),
-    description: node.data.description ?? '',
-    position: node.position,
-    forms: serializeFormIds(node.data.forms ?? []),
-    actions: (node.data.actions ?? []).map(serializeAction),
-  })),
-  transitions: edges.map(serializeTransition),
-})
+export const flowToJson = ({ nodes, edges, process, stepTypes = [] }) => {
+  const stepCodeByNodeId = nodes.reduce((map, node) => {
+    map.set(node.id, node.data?.code ?? node.id)
+    return map
+  }, new Map())
+
+  return {
+    process: serializeProcess(process),
+    steps: nodes.map((node, index) => serializeStep(node, index, stepTypes)),
+    transitions: edges.map((edge, index) =>
+      serializeTransition(edge, index, stepCodeByNodeId)
+    ),
+  }
+}
 
 /**
  * jsonToFlow(raw)
@@ -46,13 +60,7 @@ export const jsonToFlow = (raw) => {
     throw new Error('Dữ liệu không hợp lệ')
   }
 
-  const process = {
-    id: raw.process?.id ?? null,
-    processKey: raw.process?.processKey ?? raw.process?.process_key ?? raw.process?.key ?? '',
-    name: raw.process?.name ?? 'Untitled',
-    code: raw.process?.code ?? raw.process?.processKey ?? raw.process?.process_key ?? 'untitled',
-    description: raw.process?.description ?? '',
-  }
+  const process = normalizeProcess(raw.process)
 
   const nodes = (raw.steps ?? []).map((step) => {
     const stepCode = step.code ?? step.stepCode ?? step.step_code ?? ''
@@ -69,9 +77,12 @@ export const jsonToFlow = (raw) => {
         persistedId: step.id ?? null,
         processId: step.processId ?? step.process_id ?? null,
         code: stepCode,
+        name: step.name ?? label,
         label,
         type: normalizeStepType(step.type ?? 'process'),
         description: step.description ?? '',
+        sortOrder: step.sortOrder ?? step.sort_order ?? null,
+        enabled: step.enabled ?? true,
         forms: normalizeStepForms(step),
         actions: (step.actions ?? []).map(deserializeAction),
       },
@@ -92,7 +103,11 @@ export const jsonToFlow = (raw) => {
         id: t.id ?? null,
         label: t.label ?? t.name ?? '',
         require_note: t.require_note ?? t.requireNote ?? false,
-        allowed_roles: t.allowed_roles ?? t.allowedRoles ?? [],
+        allowed_roles: normalizeRolesToArray(t.allowed_roles ?? t.allowedRoles ?? []),
+        conditions: t.conditions ?? [],
+        autoEvaluate: t.autoEvaluate ?? t.auto_evaluate ?? false,
+        priority: t.priority ?? 0,
+        enabled: t.enabled ?? true,
         guards: (t.guards ?? []).map(deserializeGuard),
         actions: (t.actions ?? []).map(deserializeAction),
       },
@@ -142,6 +157,15 @@ const getTransitionStepRef = (transition = {}, direction) => {
   return value != null ? String(value) : ''
 }
 
+const normalizeProcess = (process = {}) => ({
+  ...process,
+  id: process?.id ?? null,
+  processKey: process?.processKey ?? process?.process_key ?? process?.key ?? process?.code ?? '',
+  name: process?.name ?? 'Untitled',
+  code: process?.code ?? process?.processKey ?? process?.process_key ?? 'untitled',
+  description: process?.description ?? '',
+})
+
 /*
   Keep legacy shape in comments for quick mental mapping:
   {
@@ -184,15 +208,65 @@ const serializeFormIds = (forms = []) => forms
   })
   .filter(id => id != null && id !== '')
 
-const serializeTransition = (edge) => {
+const serializeProcess = (process = {}) => {
+  const payload = {
+    ...(process.id != null && process.id !== '' ? { id: process.id } : {}),
+    processKey: process.processKey ?? process.code ?? '',
+    name: process.name ?? '',
+    description: process.description ?? '',
+    enabled: process.enabled ?? true,
+    status: process.status ?? 1,
+  }
+
+  const optionalFields = {
+    entityTable: process.entityTable ?? process.entity_table,
+    bizId: process.bizId ?? process.biz_id,
+    createdBy: process.createdBy ?? process.created_by,
+    updatedBy: process.updatedBy ?? process.updated_by,
+  }
+
+  Object.entries(optionalFields).forEach(([field, value]) => {
+    if (value != null && value !== '') {
+      payload[field] = value
+    }
+  })
+
+  return payload
+}
+
+const serializeStep = (node, index, stepTypes = []) => {
+  const persistedId = node.data?.persistedId ?? node.data?.id
+  const step = {
+    ...(persistedId != null && persistedId !== '' ? { id: persistedId } : {}),
+    stepCode: node.data?.code ?? node.id,
+    name: node.data?.name ?? node.data?.label ?? node.data?.code ?? node.id,
+    label: node.data?.label ?? node.data?.name ?? node.data?.code ?? node.id,
+    type: toApiStepType(node.data?.type, stepTypes, node),
+    description: node.data?.description ?? '',
+    position: node.position,
+    sortOrder: node.data?.sortOrder ?? index,
+    enabled: node.data?.enabled ?? true,
+    forms: serializeFormIds(node.data?.forms ?? []),
+    actions: (node.data?.actions ?? []).map(serializeAction),
+  }
+
+  return step
+}
+
+const serializeTransition = (edge, index, stepCodeByNodeId = new Map()) => {
+  const fromStepCode = stepCodeByNodeId.get(edge.source) ?? edge.source
+  const toStepCode = stepCodeByNodeId.get(edge.target) ?? edge.target
+
   const transition = {
-    from_step: edge.source,
-    to_step: edge.target,
-    label: edge.data?.label ?? '',
-    require_note: edge.data?.require_note ?? false,
-    allowed_roles: edge.data?.allowed_roles ?? [],
+    fromStepCode,
+    toStepCode,
+    allowedRoles: serializeAllowedRoles(edge.data?.allowed_roles ?? edge.data?.allowedRoles ?? []),
+    requireNote: edge.data?.require_note ?? edge.data?.requireNote ?? false,
+    conditions: edge.data?.conditions ?? [],
+    autoEvaluate: edge.data?.autoEvaluate ?? edge.data?.auto_evaluate ?? false,
+    priority: edge.data?.priority ?? index,
+    enabled: edge.data?.enabled ?? true,
     guards: (edge.data?.guards ?? []).map(serializeGuard),
-    actions: (edge.data?.actions ?? []).map(serializeAction),
   }
 
   const persistedId = getPersistedTransitionId(edge)
@@ -203,26 +277,69 @@ const serializeTransition = (edge) => {
   return transition
 }
 
-const serializeGuard = (guard) => ({
-  type: guard.type,
+const serializeGuard = (guard, index) => ({
+  guardType: guard.type ?? guard.guardType ?? 'field_value',
   config: guard.config ?? {},
+  errorMessage: guard.errorMessage ?? guard.error_message ?? guard.config?.message ?? '',
+  sortOrder: guard.sortOrder ?? guard.sort_order ?? index + 1,
+  enabled: guard.enabled ?? true,
 })
 
 const deserializeGuard = (guard) => ({
-  type: guard.type ?? 'field_value',
+  type: guard.type ?? guard.guardType ?? guard.guard_type ?? 'field_value',
   config: guard.config ?? {},
+  errorMessage: guard.errorMessage ?? guard.error_message ?? '',
+  sortOrder: guard.sortOrder ?? guard.sort_order ?? null,
+  enabled: guard.enabled ?? true,
 })
 
 // ─── Action serializers ───────────────────────────────────────────────────────
 
-const serializeAction = (action) => ({
-  type: action.type,
-  trigger: action.trigger ?? 'on_enter',
-  config: action.config ?? {},
-})
+const toApiActionType = (type) => {
+  if (type === 'notification') return 'send_notification'
+  if (type === 'task') return 'create_task'
+  return type
+}
+
+const fromApiActionType = (type) => {
+  if (type === 'send_notification') return 'notification'
+  if (type === 'create_task') return 'task'
+  return type
+}
+
+const sanitizeActionConfig = (config = {}) => {
+  const {
+    async: _async,
+    display_name: _displayName,
+    ...rest
+  } = config
+
+  return rest
+}
+
+const serializeAction = (action, index) => {
+  const trigger = normalizeTrigger(action.trigger)
+  const actionType = toApiActionType(action.type ?? action.actionType ?? action.action_type ?? 'send_notification')
+  const config = sanitizeActionConfig(action.config ?? {})
+  const isAsync = action.isAsync ?? action.is_async ?? action.config?.async ?? true
+  const sortOrder = action.sortOrder ?? action.sort_order ?? index + 1
+  const enabled = action.enabled ?? true
+
+  return {
+    trigger,
+    actionType,
+    config,
+    isAsync,
+    sortOrder,
+    enabled,
+  }
+}
 
 const deserializeAction = (action) => ({
-  type: action.type ?? 'notification',
-  trigger: action.trigger ?? 'on_enter',
+  type: fromApiActionType(action.type ?? action.actionType ?? action.action_type ?? 'notification'),
+  trigger: normalizeTrigger(action.trigger),
   config: action.config ?? {},
+  isAsync: action.isAsync ?? action.is_async ?? true,
+  sortOrder: action.sortOrder ?? action.sort_order ?? null,
+  enabled: action.enabled ?? true,
 })

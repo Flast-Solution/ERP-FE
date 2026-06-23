@@ -595,6 +595,7 @@ const GuardDrawer = ({
           form={localForm}
           layout="vertical"
           size="small"
+          component={false}
           preserve={false}
           initialValues={{
             type: normalizeGuardType(initialValue?.type),
