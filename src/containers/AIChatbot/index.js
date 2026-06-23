@@ -493,7 +493,7 @@ const AIChatbot = ({
             }
             humanInput={humanInput}
             onHumanInputReply={(requestId, answer) => {
-              session.sendHumanInput(requestId, answer)
+              sessionRef?.current?.sendHumanInput(requestId, answer)
               setHumanInput(null)
             }}
           />
