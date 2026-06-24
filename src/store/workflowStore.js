@@ -1,6 +1,12 @@
 import { create } from 'zustand'
 import { addEdge, applyNodeChanges, applyEdgeChanges } from 'reactflow'
 import { DEFAULT_STEP, DEFAULT_TRANSITION } from './workflowConstants'
+import {
+  getNodeSemanticType,
+  getStepSemanticType,
+  resolveFallbackProcessTypeKey,
+  resolveStepTypeConfig,
+} from '@/utils/workflowValidators'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const generateId = () => `id_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
@@ -53,18 +59,24 @@ const useWorkflowStore = create((set, get) => ({
     }))
   },
 
-  addNode: (position, stepType) => {
+  addNode: (position, stepTypeKey) => {
     const id = generateId()
     set((state) => {
+      const stepTypes = get().stepTypes
+      const droppedSemantic = getStepSemanticType(stepTypeKey, stepTypes)
+      const fallbackProcessKey = resolveFallbackProcessTypeKey(stepTypes)
+
       /* Nếu drop start mà đã có start → fallback process
        * Nếu drop end mà đã có end → fallback process 
       */
       const resolvedType =
-        (stepType === 'start' && state.nodes.some((n) => n.data.type === 'start')) ? 'process'
-        : (stepType === 'end' && state.nodes.some((n) => n.data.type === 'end')) ? 'process'
-        : (stepType ?? 'process')
+        (droppedSemantic === 'start' && state.nodes.some((n) => getNodeSemanticType(n, stepTypes) === 'start'))
+          ? fallbackProcessKey
+        : (droppedSemantic === 'end' && state.nodes.some((n) => getNodeSemanticType(n, stepTypes) === 'end'))
+          ? fallbackProcessKey
+        : (stepTypeKey ?? fallbackProcessKey)
 
-      const stepTypeConfig = get().stepTypes.find((type) => type.key === resolvedType)
+      const stepTypeConfig = resolveStepTypeConfig(stepTypes, resolvedType)
 
       const newNode = {
         id,
@@ -105,16 +117,18 @@ const useWorkflowStore = create((set, get) => ({
         return {}
       }
 
-      const targetType = target.data?.type
+      const stepTypes = get().stepTypes
+      const targetSemantic = getNodeSemanticType(target, stepTypes)
+
       /* Chặn xoá start duy nhất */
-      if (targetType === 'start') {
-        const startCount = state.nodes.filter((n) => n.data?.type === 'start').length
+      if (targetSemantic === 'start') {
+        const startCount = state.nodes.filter((n) => getNodeSemanticType(n, stepTypes) === 'start').length
         if (startCount <= 1) return {}
       }
 
       /* Chặn xoá end duy nhất */
-      if (targetType === 'end') {
-        const endCount = state.nodes.filter((n) => n.data?.type === 'end').length
+      if (targetSemantic === 'end') {
+        const endCount = state.nodes.filter((n) => getNodeSemanticType(n, stepTypes) === 'end').length
         if (endCount <= 1) return {}
       }
  

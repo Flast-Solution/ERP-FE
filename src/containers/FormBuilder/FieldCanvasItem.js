@@ -23,6 +23,7 @@ import {
   DeleteOutlined,
   WarningOutlined,
   FormOutlined,
+  LockOutlined,
 } from '@ant-design/icons'
 import { SortableContext, rectSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -40,6 +41,12 @@ import {
   BlockDropZone,
   BlockChildrenHint,
 } from './FieldCanvasItem.style'
+
+const getFieldProvenance = (field) => field?._provenance ?? field?.config?.__provenance ?? null
+
+const isAiGeneratedField = (field) => (
+  (getFieldProvenance(field)?.createdBySource ?? getFieldProvenance(field)?.source) === 'ai'
+)
 
 // ─── Preview renderer — map inputType → antd component thực ──────────────────
 // Không import Form* từ form-flast vì trong canvas chỉ cần preview tĩnh,
@@ -303,6 +310,7 @@ const FieldCanvasItem = ({ field }) => {
   const removeField = useFormBuilderStore(s => s.removeField)
 
   const isSelected = selectedId === field._id
+  const locked = isAiGeneratedField(field)
   const warn = hasWarning(field)
   const childIds = (field.children ?? []).map(child => child._id)
   const {
@@ -310,6 +318,7 @@ const FieldCanvasItem = ({ field }) => {
     isOver: isBlockOver,
   } = useDroppable({
     id: `block-drop:${field._id}`,
+    disabled: locked,
   })
 
   // dnd-kit sortable
@@ -320,7 +329,7 @@ const FieldCanvasItem = ({ field }) => {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: field._id })
+  } = useSortable({ id: field._id, disabled: locked })
 
   const style = {
     transform : CSS.Transform.toString(transform),
@@ -347,8 +356,13 @@ const FieldCanvasItem = ({ field }) => {
       }}
     >
       {/* ── Drag handle ── */}
-      <DragHandle {...attributes} {...listeners} onClick={e => e.stopPropagation()}>
-        <HolderOutlined />
+      <DragHandle
+        {...(locked ? {} : attributes)}
+        {...(locked ? {} : listeners)}
+        $locked={locked}
+        onClick={e => e.stopPropagation()}
+      >
+        {locked ? <LockOutlined /> : <HolderOutlined />}
       </DragHandle>
 
       {/* ── Preview ── */}
@@ -380,13 +394,15 @@ const FieldCanvasItem = ({ field }) => {
               </SortableContext>
             )}
 
-            <BlockDropZone
-              ref={setBlockDropRef}
-              $isOver={isBlockOver}
-              onClick={e => e.stopPropagation()}
-            >
-              {isBlockOver ? 'Thả vào block này' : 'Kéo field vào đây để thêm vào block'}
-            </BlockDropZone>
+            {!locked && (
+              <BlockDropZone
+                ref={setBlockDropRef}
+                $isOver={isBlockOver}
+                onClick={e => e.stopPropagation()}
+              >
+                {isBlockOver ? 'Thả vào block này' : 'Kéo field vào đây để thêm vào block'}
+              </BlockDropZone>
+            )}
           </BlockChildrenWrap>
         )}
 
@@ -409,17 +425,19 @@ const FieldCanvasItem = ({ field }) => {
           </Tooltip>
         )}
 
-        <Tooltip
-          title={`Xóa field${fieldTypeMeta ? ` (${fieldTypeMeta.label})` : ''}`}
-          placement="left"
-        >
-          <ActionBtn
-            $danger
-            onClick={handleDelete}
+        {!locked && (
+          <Tooltip
+            title={`Xóa field${fieldTypeMeta ? ` (${fieldTypeMeta.label})` : ''}`}
+            placement="left"
           >
-            <DeleteOutlined />
-          </ActionBtn>
-        </Tooltip>
+            <ActionBtn
+              $danger
+              onClick={handleDelete}
+            >
+              <DeleteOutlined />
+            </ActionBtn>
+          </Tooltip>
+        )}
       </ActionGroup>
     </ItemWrapper>
   )

@@ -158,6 +158,8 @@ const StepForm = ({ node }) => {
       title: '',
       data: {
         attachedForms: node.data.forms ?? [],
+        stepCode: node.data?.code,
+        stepLabel: node.data?.label,
         onSave: (selectedForms) => {
           console.log('[WorkflowDesigner][StepForm] attach forms to step', {
             stepId: node.id,
@@ -219,7 +221,7 @@ const StepForm = ({ node }) => {
                   <TypePillGroup>
                     {stepTypes.map((t) => (
                       <TypePillBtn
-                        key={t.key}
+                        key={String(t.id ?? t.key)}
                         type="button"
                         $active={currentType === t.key}
                         onClick={() => handleTypeSelect(t.key)}
@@ -268,7 +270,7 @@ const StepForm = ({ node }) => {
                   <EmptyState>Chưa có form nào được gắn.</EmptyState>
                 ) : (
                   (node.data.forms ?? []).map((f, i) => (
-                    <FormCard key={f.id ?? i}>
+                    <FormCard key={`${node.id}-form-${i}`}>
                       <FormCardInfo>
                         <FormCardName>{f.name}</FormCardName>
                         <FormCardMeta>

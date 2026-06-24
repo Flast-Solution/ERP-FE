@@ -144,3 +144,47 @@ export const FieldHelp = styled.div`
   color: #8c8c8c;
   line-height: 1.45;
 `
+
+export const TransitionChips = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+`
+
+export const SegmentedControl = styled.div`
+  display: flex;
+  width: 100%;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fafafa;
+`
+
+export const SegmentedButton = styled.button`
+  flex: 1;
+  border: 0;
+  background: ${({ $active }) => ($active ? '#fff' : 'transparent')};
+  color: ${({ $active }) => ($active ? '#1677ff' : '#595959')};
+  box-shadow: ${({ $active }) => ($active ? 'inset 0 0 0 1px #91caff' : 'none')};
+  font-size: 12px;
+  font-weight: ${({ $active }) => ($active ? 600 : 500)};
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+
+  &:not(:last-child) {
+    border-right: 1px solid #f0f0f0;
+  }
+
+  &:hover {
+    color: #1677ff;
+  }
+`
+
+export const MessageSection = styled.div`
+  border-top: 1px solid #f0f0f0;
+  padding-top: 14px;
+  margin-top: 14px;
+`

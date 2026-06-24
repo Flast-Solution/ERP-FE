@@ -5,13 +5,12 @@
  *   plain  — text thuần cho clipboard
  *   html   — string có <span class="tk-*"> cho syntax highlight
  *
- * Output dùng @/form-flast components + antd Row/Col theo colSpan.
+ * Output dùng @flast-erp/core/components + antd Row/Col theo colSpan.
  *
  * Ví dụ output:
  *   import React from 'react'
+ *   import { FormInput, FormRadioGroup } from '@flast-erp/core/components'
  *   import { Form, Row, Col } from 'antd'
- *   import FormInput from '@/form-flast/FormInput'
- *   import FormRadioGroup from '@/form-flast/FormRadioGroup'
  *
  *   const FormView = () => {
  *     const [form] = Form.useForm()
@@ -70,7 +69,7 @@ function toComponentName(name = '') {
   return /^[A-Z]/.test(baseName) ? baseName : `Form${baseName}`
 }
 
-/* ─── InputType → form-flast component name ─────────────────────────────────── */
+/* ─── InputType → @flast-erp/core component name ────────────────────────────── */
 
 const COMPONENT_MAP = {
   block       : 'FormBlockPreview',
@@ -250,6 +249,25 @@ function syntaxHighlightJson(obj) {
     .replace(/: (true|false)/g, (_, v) => `: ${h('boolean', v)}`)
 }
 
+function getProvenance(field) {
+  return field?._provenance ?? field?.config?.__provenance ?? null
+}
+
+function getProvenanceComment(field) {
+  const provenance = getProvenance(field)
+  if (!provenance) return ''
+
+  const createdBy = provenance.createdBySource ?? provenance.source
+  const updatedBy = provenance.updatedBySource
+  const action = provenance.updatedAction ?? provenance.sourceAction
+
+  if (updatedBy && updatedBy !== createdBy) {
+    return `source: ${createdBy}; updated: ${updatedBy}${action ? `:${action}` : ''}`
+  }
+
+  return `source: ${createdBy}${action ? `; action: ${action}` : ''}`
+}
+
 /* ─── Field → JSX block (plain + html lines) ────────────────────────────────── */
 
 function fieldToJSXLines(field, colIndent) {
@@ -262,6 +280,12 @@ function fieldToJSXLines(field, colIndent) {
   const html  = []
 
   const add = (p, h_) => { plain.push(p); html.push(h_) }
+  const provenanceComment = getProvenanceComment(field)
+
+  if (provenanceComment) {
+    const comment = `{/* ${provenanceComment} */}`
+    add(`${colIndent}${comment}`, `${colIndent}${h('comment', comment)}`)
+  }
 
   if (field.inputType === 'block') {
     add(
@@ -326,13 +350,15 @@ function buildImports(fields) {
   }
   collect(fields)
   used.delete('FormBlockPreview')
-  const antd = `import { Form, Row, Col } from 'antd'`
-  const formFlast = [...used]
-    .sort()
-    .map(c => `import ${c} from '@/form-flast/${c}'`)
-    .join('\n')
 
-  return [`import React from 'react'`, antd, formFlast].filter(Boolean).join('\n')
+  const lines = [`import React from 'react'`]
+  const coreComponents = [...used].sort()
+  if (coreComponents.length > 0) {
+    lines.push(`import { ${coreComponents.join(', ')} } from '@flast-erp/core/components'`)
+  }
+  lines.push(`import { Form, Row, Col } from 'antd'`)
+
+  return lines.join('\n')
 }
 
 function buildBlockHelper(fields) {
@@ -368,12 +394,23 @@ export function buildJSX(schema) {
 
   /* ── Imports ── */
   const importsPlain = buildImports(fields)
-  const importsHtml  = importsPlain
-    .replace(/import React from 'react'/g, `${h('comment', "import React from 'react'")}`)
-    .replace(/import \{ (.*?) \} from 'antd'/g,
-      (_, names) => `${h('punct', 'import')} ${h('punct', '{')} ${h('tag', names)} ${h('punct', '}')} ${h('punct', 'from')} ${h('string', "'antd'")}`)
-    .replace(/import (\w+) from '(@\/form-flast\/\w+)'/g,
-      (_, name, path) => `${h('punct', 'import')} ${h('tag', name)} ${h('punct', 'from')} ${h('string', `'${path}'`)}`)
+  const highlightNamedImport = (source, pkg) => source
+    .replace(/import React from 'react'/g, `${h('punct', 'import')} ${h('tag', 'React')} ${h('punct', 'from')} ${h('string', "'react'")}`)
+    .replace(
+      new RegExp(`import \\{ (.*?) \\} from '${pkg.replace(/\//g, '\\/')}'`, 'g'),
+      (_, names) => {
+        const highlighted = names
+          .split(',')
+          .map(part => h('tag', part.trim()))
+          .join(`${h('punct', ', ')}`)
+        return `${h('punct', 'import')} ${h('punct', '{')} ${highlighted} ${h('punct', '}')} ${h('punct', 'from')} ${h('string', `'${pkg}'`)}`
+      },
+    )
+
+  const importsHtml = highlightNamedImport(
+    highlightNamedImport(importsPlain, '@flast-erp/core/components'),
+    'antd',
+  )
 
   importsPlain.split('\n').forEach((line, i) => {
     add(line, importsHtml.split('\n')[i] ?? line)

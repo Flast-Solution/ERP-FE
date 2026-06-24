@@ -133,8 +133,13 @@ export const AddFieldBtn = styled.button`
   transition: border-color 0.15s, color 0.15s, background 0.15s;
 
   &:hover {
-    border-color: #1677ff;
-    color: #1677ff;
-    background: #f0f7ff;
+    border-color: ${({ disabled }) => (disabled ? '#d9d9d9' : '#1677ff')};
+    color: ${({ disabled }) => (disabled ? '#8c8c8c' : '#1677ff')};
+    background: ${({ disabled }) => (disabled ? 'none' : '#f0f7ff')};
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
   }
 `

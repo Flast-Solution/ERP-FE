@@ -50,14 +50,29 @@ import {
 
 export const CANVAS_DROPPABLE_ID = 'canvas'
 
+const flattenFields = (items = []) => items.flatMap(field => [
+  field,
+  ...flattenFields(Array.isArray(field.children) ? field.children : []),
+])
+
+const getFieldProvenance = (field) => field?._provenance ?? field?.config?.__provenance ?? null
+
+const isAiGeneratedField = (field) => (
+  (getFieldProvenance(field)?.createdBySource ?? getFieldProvenance(field)?.source) === 'ai'
+)
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 const FieldCanvas = () => {
   const fields       = useFormBuilderStore(s => s.fields)
   const templateMeta = useFormBuilderStore(s => s.templateMeta)
+  const lockedByAi   = flattenFields(fields).some(isAiGeneratedField)
 
   // Canvas là droppable — nhận drag từ FieldTypeList
-  const { setNodeRef, isOver } = useDroppable({ id: CANVAS_DROPPABLE_ID })
+  const { setNodeRef, isOver } = useDroppable({
+    id: CANVAS_DROPPABLE_ID,
+    disabled: lockedByAi,
+  })
 
   // ids cho SortableContext — dùng _id (FE internal)
   const sortableIds = fields.map(f => f._id)
@@ -91,10 +106,10 @@ const FieldCanvas = () => {
               <FormOutlined />
             </EmptyDropIcon>
             <EmptyDropText $isOver={isOver}>
-              {isOver ? 'Thả để thêm field' : 'Kéo field vào đây để bắt đầu'}
+              {lockedByAi ? 'Form do AI sinh đang khóa kéo thả' : isOver ? 'Thả để thêm field' : 'Kéo field vào đây để bắt đầu'}
             </EmptyDropText>
             <EmptyDropHint>
-              Chọn loại field từ danh sách bên trái
+              {lockedByAi ? 'Chỉ xem cấu trúc hoặc chỉnh trong code preview' : 'Chọn loại field từ danh sách bên trái'}
             </EmptyDropHint>
           </EmptyDropZone>
 
@@ -120,10 +135,11 @@ const FieldCanvas = () => {
             {/* Add field button */}
             <AddFieldBtn
               onClick={e => e.preventDefault()}
+              disabled={lockedByAi}
               title="Kéo field từ bên trái hoặc bấm để thêm"
             >
               <PlusOutlined />
-              Kéo field vào đây hoặc bấm để thêm
+              {lockedByAi ? 'Form AI đang khóa kéo thả' : 'Kéo field vào đây hoặc bấm để thêm'}
             </AddFieldBtn>
           </FormCard>
 

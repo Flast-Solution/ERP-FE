@@ -31,8 +31,8 @@ export const DragHandle = styled.div`
   flex-shrink: 0;
   color: #bfbfbf;
   font-size: 14px;
-  cursor: grab;
-  opacity: 0;
+  cursor: ${({ $locked }) => ($locked ? 'default' : 'grab')};
+  opacity: ${({ $locked }) => ($locked ? 1 : 0)};
   transition: opacity 0.12s;
 
   ${ItemWrapper}:hover & {
@@ -40,7 +40,7 @@ export const DragHandle = styled.div`
   }
 
   &:active {
-    cursor: grabbing;
+    cursor: ${({ $locked }) => ($locked ? 'default' : 'grabbing')};
   }
 `
 

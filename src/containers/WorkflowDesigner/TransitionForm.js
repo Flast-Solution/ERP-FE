@@ -219,6 +219,7 @@ const TransitionForm = ({ edge }) => {
                 nodeForms={sourceForms}
                 nodes={nodes}
                 sourceStepCode={fromNode?.data?.code || fromNode?.id || edge.source}
+                targetStepCode={toNode?.data?.code || toNode?.id || edge.target}
                 onConfirm={handleConfirmGuard}
                 onCancel={handleCancelGuard}
               />

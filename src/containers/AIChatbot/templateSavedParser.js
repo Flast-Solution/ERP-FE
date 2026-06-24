@@ -204,7 +204,9 @@ const findFieldArrayInText = (text = '') => {
 }
 
 const collectTextVariants = (text = '') => {
-  const trimmed = String(text ?? '').trim()
+  const trimmed = String(text ?? '')
+    .replace(/\[ANSWER\]\s*/g, '')
+    .trim()
   const variants = [trimmed]
 
   try {
@@ -219,6 +221,36 @@ const collectTextVariants = (text = '') => {
   }
 
   return unique(variants)
+}
+
+const isLikelyJsxCode = (source = '') => {
+  const code = source.trim()
+
+  if (!code) return false
+  if (!/<[A-Z][A-Za-z0-9]*[\s/>]/.test(code)) return false
+
+  return (
+    /from\s+['"](?:react|antd|@flast-erp\/core|@\/form-flast)/.test(code) ||
+    /export\s+default\s+[A-Za-z_][A-Za-z0-9_]*/.test(code) ||
+    /\b(?:FormInput|FormSelect|RestEditModal|Row|Col)\b/.test(code)
+  )
+}
+
+const collectJsxCodeCandidates = (text = '') => {
+  const candidates = []
+  const fenceMatches = String(text ?? '').matchAll(/```([a-zA-Z0-9_-]*)?\s*([\s\S]*?)```/g)
+
+  for (const match of fenceMatches) {
+    const language = (match[1] ?? '').toLowerCase()
+    const code = (match[2] ?? '').trim()
+    const isCodeLanguage = !language || ['jsx', 'tsx', 'js', 'javascript', 'typescript', 'react'].includes(language)
+
+    if (isCodeLanguage && isLikelyJsxCode(code)) {
+      candidates.push(code)
+    }
+  }
+
+  return candidates
 }
 
 const safeParseConfig = (value) => {
@@ -264,14 +296,51 @@ const normalizePayload = (payload) => {
 }
 
 const extractCodeBlock = (text = '') => {
-  const start = text.indexOf('import React')
+  const source = String(text ?? '')
+  const starts = [
+    source.indexOf('import React'),
+    source.search(/import\s+\{[\s\S]*?\}\s+from\s+['"]@flast-erp\/core/),
+    source.search(/import\s+\{[\s\S]*?\}\s+from\s+['"]antd['"]/),
+    source.search(/const\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*\(/),
+  ].filter(index => index >= 0)
+
+  const start = starts.length ? Math.min(...starts) : -1
   if (start === -1) return ''
 
-  const rest = text.slice(start)
+  const rest = source.slice(start)
   const exportMatch = rest.match(/export\s+default\s+[A-Za-z_][A-Za-z0-9_]*/)
-  if (!exportMatch?.index && exportMatch?.index !== 0) return rest
+  if (!exportMatch?.index && exportMatch?.index !== 0) {
+    return isLikelyJsxCode(rest) ? rest : ''
+  }
 
   return rest.slice(0, exportMatch.index + exportMatch[0].length)
+}
+
+const extractComponentName = (code = '') => {
+  const explicitExport = code.match(/export\s+default\s+([A-Za-z_][A-Za-z0-9_]*)/)
+  if (explicitExport?.[1]) return explicitExport[1]
+
+  const componentDeclaration = code.match(/const\s+([A-Z][A-Za-z0-9_]*)\s*=/)
+  if (componentDeclaration?.[1]) return componentDeclaration[1]
+
+  return undefined
+}
+
+const parseJsxTemplate = (code = '') => {
+  if (!isLikelyJsxCode(code)) return null
+
+  const schema = parseJsxToSchema(code, {
+    name: extractComponentName(code),
+  })
+
+  if (!isFieldArray(schema.fields)) return null
+
+  return {
+    event : 'template_saved',
+    fields: schema.fields,
+    code,
+    meta  : schema.meta ?? {},
+  }
 }
 
 const extractLooseTemplate = (text = '') => {
@@ -360,17 +429,21 @@ export function parseTemplateSavedMessage(text = '') {
     }
   }
 
+  const jsxCandidates = unique(textVariants.flatMap(collectJsxCodeCandidates))
+  for (const code of jsxCandidates) {
+    try {
+      const jsxTemplate = parseJsxTemplate(code)
+      if (jsxTemplate) return jsxTemplate
+    } catch (_) {}
+  }
+
   for (const variant of textVariants) {
     const code = extractCodeBlock(variant)
     if (!code) continue
 
     try {
-      return {
-        event : 'template_saved',
-        fields: parseJsxToSchema(code).fields,
-        code,
-        meta  : {},
-      }
+      const jsxTemplate = parseJsxTemplate(code)
+      if (jsxTemplate) return jsxTemplate
     } catch (_) {}
   }
 

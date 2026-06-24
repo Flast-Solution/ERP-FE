@@ -89,24 +89,61 @@ const toComponentName = (name = '') => {
   return baseName || 'FormView'
 }
 
-const normalizeBuildJsxCode = (code = '') => String(code)
-  .replace(/from\s+['"](?:@\/)?components\/form\/([^'"]+)['"]/g, "from '@/form-flast/$1'")
-  .replace(/from\s+['"](?:@\/)?form-flast\/([^'"]+)['"]/g, "from '@/form-flast/$1'")
+const LEGACY_FORM_IMPORT_RE = /import\s+(\w+)\s+from\s+['"](?:@\/)?(?:form-flast|components\/form)\/(\w+)['"]\s*;?\s*\n?/g
+const DEEP_CORE_FORM_IMPORT_RE = /import\s+(\w+)\s+from\s+['"]@flast-erp\/core\/components\/form\/(\w+)['"]\s*;?\s*\n?/g
+const CORE_COMPONENTS_BARREL_RE = /import\s+\{([^}]+)\}\s+from\s+['"]@flast-erp\/core\/components['"]\s*;?\s*\n?/g
 
-/** Chuẩn hóa JSX trước khi gửi POST /build (server không có alias @/form-flast). */
-const prepareJsxForRemoteBuild = (code = '') => {
+const collectNamedImports = (set, importList = '') => {
+  importList.split(',').forEach(part => {
+    const name = part.trim().split(/\s+as\s+/i).pop()?.trim()
+    if (name) set.add(name)
+  })
+}
+
+const insertAfterFirstImport = (code, line) => {
+  const match = code.match(/^import\s+[^;]+;?\s*\n/)
+  if (!match) return `${line}${code}`
+  const index = match.index + match[0].length
+  return `${code.slice(0, index)}${line}${code.slice(index)}`
+}
+
+/** Chuẩn hóa import form component về barrel @flast-erp/core/components. */
+const normalizeBuildJsxCode = (code = '') => {
   let jsx = String(code)
+  const components = new Set()
 
-  jsx = jsx.replace(
-    /from\s+['"]@\/form-flast\/([^'"]+)['"]/g,
-    "from '@flast-erp/core/components/form/$1'",
-  )
+  jsx = jsx.replace(CORE_COMPONENTS_BARREL_RE, (_, names) => {
+    collectNamedImports(components, names)
+    return ''
+  })
+  jsx = jsx.replace(LEGACY_FORM_IMPORT_RE, (_, name) => {
+    components.add(name)
+    return ''
+  })
+  jsx = jsx.replace(DEEP_CORE_FORM_IMPORT_RE, (_, name) => {
+    components.add(name)
+    return ''
+  })
+
+  if (components.size > 0) {
+    const barrel = `import { ${[...components].sort().join(', ')} } from '@flast-erp/core/components'\n`
+    jsx = insertAfterFirstImport(jsx, barrel)
+  }
+
+  return jsx
+}
+
+/** Chuẩn hóa JSX trước khi gửi POST /build. */
+const prepareJsxForRemoteBuild = (code = '') => {
+  let jsx = normalizeBuildJsxCode(code)
 
   // FormBlockPreview được sinh inline trong buildJSX, không có trong package
-  jsx = jsx.replace(
-    /^import\s+FormBlockPreview\s+from\s+['"][^'"]+['"]\s*\n?/gm,
-    '',
-  )
+  jsx = jsx.replace(/^import\s+FormBlockPreview\s+from\s+['"][^'"]+['"]\s*;?\s*\n?/gm, '')
+  jsx = jsx.replace(/^import\s+\{\s*FormBlockPreview\s*,?\s*([^}]*)\}\s+from\s+['"][^'"]+['"]\s*;?\s*\n?/gm, (_, rest) => {
+    const names = rest.split(',').map(s => s.trim()).filter(Boolean)
+    if (!names.length) return ''
+    return `import { ${names.join(', ')} } from '@flast-erp/core/components'\n`
+  })
 
   return jsx
 }
@@ -480,7 +517,7 @@ const JSXCodeTab = ({
 
     const previewComponentId = componentId ?? templateId ?? componentIdRef.current
 
-    const buildJsxCode = prepareJsxForRemoteBuild(normalizeBuildJsxCode(jsxCode))
+    const buildJsxCode = prepareJsxForRemoteBuild(jsxCode)
 
     const payload = {
       session_id: sessionId,
