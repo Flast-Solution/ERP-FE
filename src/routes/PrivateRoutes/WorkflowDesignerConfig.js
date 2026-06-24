@@ -10,6 +10,8 @@ export const WorkflowDesignerConfig = {
   routes  : [
     { path     : '/workflow-designer', element: <ContentPage /> },
     { path     : '/workflow-forms', element: <FormListPage /> },
+    { path     : '/workflow-form/:id', element: <FormBuilderPage /> },
+    { path     : '/workflow-form/*', element: <FormBuilderPage /> },
     { path     : '/workflow-form', element: <FormBuilderPage /> }
   ]
 };

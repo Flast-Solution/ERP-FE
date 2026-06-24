@@ -107,6 +107,11 @@ const flattenFields = (items = []) => items.flatMap(field => [
   ...flattenFields(Array.isArray(field.children) ? field.children : []),
 ])
 
+const getFieldProvenance = (field) => field?._provenance ?? field?.config?.__provenance ?? null
+
+const isAiGeneratedField = (field) => (
+  (getFieldProvenance(field)?.createdBySource ?? getFieldProvenance(field)?.source) === 'ai'
+)
 
 const FormBuilder = ({
   templateId = null,
@@ -156,6 +161,10 @@ const FormBuilder = ({
     importGeneratedTemplate({
       meta  : incomingTemplate.meta,
       fields: incomingTemplate.fields,
+      provenance: {
+        source: 'ai',
+        action: 'created',
+      },
     })
     const nextSchema = {
       meta  : { ...templateMeta, ...(incomingTemplate.meta ?? {}) },
@@ -165,8 +174,10 @@ const FormBuilder = ({
       ? incomingTemplate.code
       : buildJSX(nextSchema).plain
     setJsxCode(nextJsxCode)
-    setPreviewMode('code')
-    setPreviewOpen(true)
+    if (incomingTemplate.openPreview === true) {
+      setPreviewMode('code')
+      setPreviewOpen(true)
+    }
   }, [incomingTemplate, importGeneratedTemplate, templateMeta])
 
 
@@ -186,12 +197,25 @@ const FormBuilder = ({
 
     const activeId = active.id
     const overId   = over.id
+    const activeField = typeof activeId === 'string' ? findFieldById(fields, activeId) : null
+    const overField = typeof overId === 'string' ? findFieldById(fields, overId) : null
+    const hasAiFields = flattenFields(fields).some(isAiGeneratedField)
+
+    if (isAiGeneratedField(activeField) || isAiGeneratedField(overField)) {
+      return
+    }
 
     /* Case A: kéo từ sidebar */
     if (typeof activeId === 'string' && activeId.startsWith('type:')) {
+      if (hasAiFields) {
+        return
+      }
       const type = activeId.replace('type:', '')
       if (typeof overId === 'string' && overId.startsWith('block-drop:')) {
-        addField(type, undefined, overId.replace('block-drop:', ''))
+        const parentId = overId.replace('block-drop:', '')
+        if (!isAiGeneratedField(findFieldById(fields, parentId))) {
+          addField(type, undefined, parentId)
+        }
         return
       }
       if (overId === CANVAS_DROPPABLE_ID) {
@@ -209,7 +233,10 @@ const FormBuilder = ({
 
     /* Case B: move field hiện có */
     if (typeof overId === 'string' && overId.startsWith('block-drop:')) {
-      moveField(activeId, null, overId.replace('block-drop:', ''))
+      const parentId = overId.replace('block-drop:', '')
+      if (!isAiGeneratedField(findFieldById(fields, parentId))) {
+        moveField(activeId, null, parentId)
+      }
       return
     }
 
@@ -221,7 +248,7 @@ const FormBuilder = ({
     if (activeId !== overId) {
       moveField(activeId, overId, getParentId(overId))
     }
-  }, [addField, moveField, getParentId, getFieldLocation])
+  }, [addField, moveField, getParentId, getFieldLocation, fields, findFieldById])
 
   const handleDragCancel = useCallback(() => setActiveDragId(null), [])
 
@@ -271,7 +298,13 @@ const FormBuilder = ({
     setSaving(true)
     try {
       if (saveSchema) {
-        importGeneratedTemplate(saveSchema)
+        importGeneratedTemplate({
+          ...saveSchema,
+          provenance: {
+            source: 'user',
+            action: 'edited',
+          },
+        })
       }
 
       const basePayload = saveSchema

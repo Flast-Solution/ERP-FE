@@ -14,6 +14,30 @@
 
 const BASE_URL     = 'https://ai.flast.vn'
 const PING_INTERVAL_MS = 60_000
+const SSE_DEBUG = process.env.NODE_ENV !== 'production'
+
+function logSSE(...args) {
+  if (!SSE_DEBUG) {
+    return
+  }
+  console.log('[ChatSession][SSE]', ...args)
+}
+
+function hasPayloadData(payload) {
+  if (payload == null || payload === '') {
+    return false
+  }
+  if (typeof payload === 'string') {
+    return payload.trim().length > 0
+  }
+  if (Array.isArray(payload)) {
+    return payload.length > 0
+  }
+  if (typeof payload === 'object') {
+    return Object.keys(payload).length > 0
+  }
+  return true
+}
 
 function stripServerPrefix(text = '') {
   return text.replace(/^\[[A-Z_]+\]\n?/g, '').trim()
@@ -242,6 +266,7 @@ export class ChatSession {
 
       this._connected = true
       this._startPing()
+      logSSE('connected', { sessionId: this.sessionId, url })
       this._fetchAndEmitHistory()
 
       await this._readStream(res.body)
@@ -318,11 +343,18 @@ export class ChatSession {
 
     const eventData = dataLines.join('\n')
     const payload = parseEventData(eventData)
-    /* console.log('[ChatSession] SSE event response', eventData) */
+    const shouldLog = hasPayloadData(payload) || eventData.trim().length > 0
 
     switch (eventName) {
       case 'llms': {
         const text = this._extractDisplayChunk(payload)
+        if (shouldLog) {
+          logSSE('llms', {
+            sessionId: this.sessionId,
+            rawPayload: payload,
+            displayChunk: text,
+          })
+        }
         if (text) {
           this._onChunk?.(text)
         }
@@ -330,28 +362,41 @@ export class ChatSession {
       }
 
       case 'core': {
+        if (shouldLog) {
+          logSSE('core', payload)
+        }
         this._onCore?.(payload)
         break
       }
 
       case 'done': {
+        if (shouldLog) {
+          logSSE('done', { sessionId: this.sessionId, payload })
+        }
         this._onDone?.()
         break
       }
 
       case 'build': {
+        if (shouldLog) {
+          logSSE('build', payload)
+        }
         this._onBuild?.(payload)
         break
       }
 
       case 'human_input_required': {
-        /* AI yêu cầu user trả lời — payload: { request_id, question }  */
+        if (shouldLog) {
+          logSSE('human_input_required', payload)
+        }
         this._onHumanInput?.(payload)
         break
       }
 
       case 'close': {
-        /* Server idle-timeout → stop ping, reconnect */
+        if (shouldLog) {
+          logSSE('close', { sessionId: this.sessionId, payload })
+        }
         this._stopPing()
         this._connected = false
         this._onClose?.()
@@ -362,6 +407,9 @@ export class ChatSession {
       }
 
       default:
+        if (shouldLog) {
+          logSSE('unhandled', { event: eventName, eventData, payload })
+        }
         break
     }
   }

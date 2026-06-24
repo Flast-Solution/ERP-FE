@@ -115,7 +115,10 @@ const StepPanel = () => {
           />
         ) : (
           stepTypes.map((stepType) => (
-            <TypeItem key={stepType.key} stepType={stepType} />
+            <TypeItem
+              key={String(stepType.id ?? stepType.key)}
+              stepType={stepType}
+            />
           ))
         )}
       </PaletteWrapper>

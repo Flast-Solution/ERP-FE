@@ -53,7 +53,7 @@ const DetailPanel = () => {
         </PanelTitle>
       </PanelHeader>
 
-      <PanelBody $padding={selectedItem ? '14px' : '0'}>
+      <PanelBody $padding="0">
         {renderContent()}
       </PanelBody>
     </>

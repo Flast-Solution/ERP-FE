@@ -39,6 +39,8 @@ export const normalizeWorkflowStepType = (type, stepTypes = [], node = {}) => {
     const candidates = [
       stepType?.key,
       stepType?.id,
+      stepType?.rawKey,
+      stepType?.semanticType,
       stepType?.code,
       stepType?.type,
       stepType?.processTypeCode,
@@ -48,8 +50,14 @@ export const normalizeWorkflowStepType = (type, stepTypes = [], node = {}) => {
     return candidates.some((candidate) => String(candidate ?? '') === raw)
   })
 
+  if (matchedStepType?.semanticType && canonical.includes(matchedStepType.semanticType)) {
+    return matchedStepType.semanticType
+  }
+
   if (matchedStepType) {
     const semantic = classifyStepTypeText([
+      matchedStepType.semanticType,
+      matchedStepType.rawKey,
       matchedStepType.key,
       matchedStepType.code,
       matchedStepType.type,
@@ -73,8 +81,33 @@ export const normalizeWorkflowStepType = (type, stepTypes = [], node = {}) => {
   return canonical.includes(fallback) ? fallback : lower
 }
 
+const CANONICAL_STEP_TYPES = ['start', 'end', 'approval', 'revision', 'condition', 'process']
+
+export const resolveStepTypeConfig = (stepTypes = [], typeKey) =>
+  stepTypes.find((stepType) =>
+    String(stepType?.key ?? '') === String(typeKey ?? '')
+    || String(stepType?.id ?? '') === String(typeKey ?? '')
+    || String(stepType?.rawKey ?? '') === String(typeKey ?? '')
+  )
+
+export const getStepSemanticType = (typeKey, stepTypes = [], node = {}) => {
+  const config = resolveStepTypeConfig(stepTypes, typeKey)
+  if (config?.semanticType && CANONICAL_STEP_TYPES.includes(config.semanticType)) {
+    return config.semanticType
+  }
+  return normalizeWorkflowStepType(typeKey, stepTypes, node)
+}
+
+export const getNodeSemanticType = (node, stepTypes = []) =>
+  getStepSemanticType(node?.data?.type, stepTypes, node)
+
+export const resolveFallbackProcessTypeKey = (stepTypes = []) => {
+  const processType = stepTypes.find((stepType) => stepType.semanticType === 'process')
+  return processType?.key ?? 'process'
+}
+
 const getNodeType = (node, stepTypes = []) =>
-  normalizeWorkflowStepType(node?.data?.type, stepTypes, node)
+  getNodeSemanticType(node, stepTypes)
 
 export const validateBeforeExport = (nodes, edges, stepTypes = []) => {
   const errors = []

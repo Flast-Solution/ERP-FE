@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Button, Form, Input, InputNumber, Select } from 'antd'
-import { CloseOutlined } from '@ant-design/icons'
+import { ArrowRightOutlined, CloseOutlined } from '@ant-design/icons'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { GUARD_TYPES } from '@/store/workflowConstants'
 import { PanelBody, SectionLabel } from './styles'
@@ -21,7 +21,11 @@ import {
   GuardTypeGrid,
   GuardTypeHead,
   GuardTypeName,
+  MessageSection,
   SectionTitle,
+  SegmentedButton,
+  SegmentedControl,
+  TransitionChips,
 } from './guardDrawer.styles'
 
 const { TextArea } = Input
@@ -281,51 +285,68 @@ const FieldValueConfig = ({
   </ConditionBuilder>
 )
 
-const StepFormFieldConfig = ({ form, stepOptions, formOptions }) => (
-  <>
-    <Form.Item
-      name={['config', 'step_code']}
-      label="Bước"
-      rules={[{ required: true, message: 'Chọn bước' }]}
-    >
-      <Select
-        showSearch
-        placeholder="Chọn bước"
-        options={stepOptions}
-        optionFilterProp="label"
-        allowClear
-        onChange={() => {
-          form.setFieldValue(['config', 'form_key'], undefined)
-        }}
-      />
-    </Form.Item>
+const StepFormFieldConfig = ({ form, stepOptions, formOptions }) => {
+  const requirement = Form.useWatch(['config', 'requirement'], form) ?? 'filled'
 
-    <Form.Item name={['config', 'form_key']} label="Form">
-      <Select
-        showSearch
-        placeholder="Tự động theo form của bước hoặc chọn form"
-        options={formOptions}
-        optionFilterProp="label"
-        allowClear
-        disabled={formOptions.length === 0}
-      />
-    </Form.Item>
+  return (
+    <>
+      <Form.Item
+        name={['config', 'step_code']}
+        label="Bước"
+        rules={[{ required: true, message: 'Chọn bước' }]}
+      >
+        <Select
+          showSearch
+          placeholder="Chọn bước"
+          options={stepOptions}
+          optionFilterProp="label"
+          allowClear
+          onChange={() => {
+            form.setFieldValue(['config', 'form_key'], undefined)
+          }}
+        />
+      </Form.Item>
 
-    <Form.Item
-      name={['config', 'requirement']}
-      label="Yêu cầu"
-      rules={[{ required: true, message: 'Chọn yêu cầu' }]}
-    >
-      <Select
-        options={[
-          { value: 'filled', label: 'Đã điền đầy đủ' },
-          { value: 'not_filled', label: 'Chưa điền' },
-        ]}
-      />
-    </Form.Item>
-    <FieldHelp>Guard kiểm tra trạng thái form đã gắn vào bước được chọn.</FieldHelp>
-  </>
-)
+      <Form.Item name={['config', 'form_key']} label="Form">
+        <Select
+          showSearch
+          placeholder="Tự động theo form của bước hoặc chọn form"
+          options={formOptions}
+          optionFilterProp="label"
+          allowClear
+          disabled={formOptions.length === 0}
+        />
+      </Form.Item>
+
+      <Form.Item name={['config', 'requirement']} hidden>
+        <Input />
+      </Form.Item>
+
+      <div>
+        <div style={{ marginBottom: 8, fontSize: 12, fontWeight: 600, color: '#262626' }}>
+          Yêu cầu <span style={{ color: '#ff4d4f' }}>*</span>
+        </div>
+        <SegmentedControl>
+          <SegmentedButton
+            type="button"
+            $active={requirement === 'filled'}
+            onClick={() => form.setFieldValue(['config', 'requirement'], 'filled')}
+          >
+            Đã điền đầy đủ
+          </SegmentedButton>
+          <SegmentedButton
+            type="button"
+            $active={requirement === 'not_filled'}
+            onClick={() => form.setFieldValue(['config', 'requirement'], 'not_filled')}
+          >
+            Chưa điền
+          </SegmentedButton>
+        </SegmentedControl>
+      </div>
+      <FieldHelp>Guard kiểm tra trạng thái form đã gắn vào bước được chọn.</FieldHelp>
+    </>
+  )
+}
 
 const SubTableConfig = ({ guardType }) => (
   <>
@@ -487,6 +508,7 @@ const GuardDrawer = ({
   nodeForms = [],
   nodes = [],
   sourceStepCode,
+  targetStepCode,
   onConfirm,
   onCancel,
 }) => {
@@ -533,6 +555,8 @@ const GuardDrawer = ({
     setGuardType(nextType)
     localForm.setFieldsValue({
       type: nextType,
+      errorMessage: initialValue?.errorMessage ?? initialValue?.config?.message ?? '',
+      sortOrder: initialValue?.sortOrder ?? guardIndex + 1,
       config: {
         from_step: initialValue?.config?.from_step,
         operator: nextType === 'field_value' ? 'eq' : undefined,
@@ -541,7 +565,7 @@ const GuardDrawer = ({
         ...initialValue?.config,
       },
     })
-  }, [initialValue, localForm, sourceStepCode])
+  }, [guardIndex, initialValue, localForm, sourceStepCode])
 
   const handleTypeChange = (nextType) => {
     setGuardType(nextType)
@@ -577,6 +601,15 @@ const GuardDrawer = ({
               ? 'Cấu hình guard'
               : 'Thêm guard cho transition'}
           </DrawerTitle>
+          {(sourceStepCode || targetStepCode) && (
+            <TransitionChips>
+              {sourceStepCode && <CodeChip>{sourceStepCode}</CodeChip>}
+              {sourceStepCode && targetStepCode && (
+                <ArrowRightOutlined style={{ fontSize: 11, color: '#8c8c8c' }} />
+              )}
+              {targetStepCode && <CodeChip>{targetStepCode}</CodeChip>}
+            </TransitionChips>
+          )}
           {guardConfig?.description && (
             <DrawerSubtitle>{guardConfig.description}</DrawerSubtitle>
           )}
@@ -599,6 +632,8 @@ const GuardDrawer = ({
           preserve={false}
           initialValues={{
             type: normalizeGuardType(initialValue?.type),
+            errorMessage: initialValue?.errorMessage ?? initialValue?.config?.message ?? '',
+            sortOrder: initialValue?.sortOrder ?? guardIndex + 1,
             config: {
               from_step: initialValue?.config?.from_step,
               operator: normalizeGuardType(initialValue?.type) === 'field_value' ? 'eq' : undefined,
@@ -631,6 +666,27 @@ const GuardDrawer = ({
               />
             </ConfigSection>
           )}
+
+          <MessageSection>
+            <SectionTitle>Thông báo & ưu tiên</SectionTitle>
+            <Form.Item
+              name="errorMessage"
+              label="Thông báo lỗi cho người dùng"
+            >
+              <TextArea rows={2} placeholder="Hiển thị khi guard chặn chuyển bước…" />
+            </Form.Item>
+            <FieldHelp>
+              Hỗ trợ <CodeChip>{'{{values.fieldKey}}'}</CodeChip> và <CodeChip>{'{{step.title}}'}</CodeChip>.
+            </FieldHelp>
+            <Form.Item
+              name="sortOrder"
+              label="Thứ tự ưu tiên"
+              style={{ marginBottom: 0, marginTop: 12 }}
+            >
+              <InputNumber style={{ width: 120 }} min={1} />
+            </Form.Item>
+            <FieldHelp>Guard có thứ tự nhỏ hơn sẽ chạy trước.</FieldHelp>
+          </MessageSection>
         </Form>
       </PanelBody>
 

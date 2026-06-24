@@ -9,6 +9,7 @@ import {
   useDeleteEdge,
 } from '@/hooks/useWorkflowStore'
 import useWorkflowStore from '@/store/workflowStore'
+import { getNodeSemanticType, getStepSemanticType } from '@/utils/workflowValidators'
 
 /*
  * Tập hợp tất cả event handler cho ReactFlow canvas.
@@ -42,21 +43,24 @@ const useFlowHandlers = () => {
   const onDrop = useCallback(
     (event) => {
       event.preventDefault()
-      const stepType = event.dataTransfer.getData('application/workflow-step-type')
-      if (!stepType) {
+      const stepTypeKey = event.dataTransfer.getData('application/workflow-step-type')
+      if (!stepTypeKey) {
         return
       }
 
       const nodes = getNodes()
+      const stepTypes = useWorkflowStore.getState().stepTypes
+      const droppedSemantic = getStepSemanticType(stepTypeKey, stepTypes)
+
       /* Cảnh báo nếu drop start/end đã tồn tại — node vẫn được tạo với type fallback process */
-      if (stepType === 'start' && nodes.some((n) => n.data.type === 'start')) {
+      if (droppedSemantic === 'start' && nodes.some((n) => getNodeSemanticType(n, stepTypes) === 'start')) {
         message.warning('Đã có bước Start, bước mới sẽ được tạo là Process')
-      } else if (stepType === 'end' && nodes.some((n) => n.data.type === 'end')) {
+      } else if (droppedSemantic === 'end' && nodes.some((n) => getNodeSemanticType(n, stepTypes) === 'end')) {
         message.warning('Đã có bước End, bước mới sẽ được tạo là Process')
       }
 
       const position = screenToFlowPosition({ x: event.clientX, y: event.clientY })
-      addNode(position, stepType)
+      addNode(position, stepTypeKey)
     },
     [screenToFlowPosition, addNode]
   )

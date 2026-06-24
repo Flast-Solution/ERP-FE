@@ -162,8 +162,13 @@ export const OptionRemoveBtn = styled.button`
   transition: color 0.1s, background 0.1s;
 
   &:hover {
-    color: #ff4d4f;
-    background: #fff1f0;
+    color: ${({ disabled }) => (disabled ? '#bfbfbf' : '#ff4d4f')};
+    background: ${({ disabled }) => (disabled ? 'none' : '#fff1f0')};
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
   }
 `
 
@@ -180,7 +185,12 @@ export const AddOptionBtn = styled.button`
   transition: color 0.1s;
 
   &:hover {
-    color: #0958d9;
+    color: ${({ disabled }) => (disabled ? '#1677ff' : '#0958d9')};
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
   }
 `
 
@@ -229,7 +239,12 @@ export const ColSpanPreset = styled.button`
   transition: all 0.15s;
 
   &:hover {
-    border-color: #1677ff;
-    color: #1677ff;
+    border-color: ${({ disabled, $active }) => (disabled ? ($active ? '#1677ff' : '#d9d9d9') : '#1677ff')};
+    color: ${({ disabled, $active }) => (disabled ? ($active ? '#1677ff' : '#595959') : '#1677ff')};
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
   }
 `

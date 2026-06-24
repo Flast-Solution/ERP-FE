@@ -39,7 +39,8 @@ export const FieldTypeItem = styled.div`
   align-items: center;
   gap: 10px;
   padding: 9px 12px 9px 16px;
-  cursor: grab;
+  cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'grab')};
+  opacity: ${({ $disabled }) => ($disabled ? 0.45 : 1)};
   user-select: none;
   border-bottom: 1px dashed #e8e8e8;
   transition: background 0.12s;
@@ -49,12 +50,12 @@ export const FieldTypeItem = styled.div`
   }
 
   &:hover {
-    background: #f5f5f5;
+    background: ${({ $disabled }) => ($disabled ? 'transparent' : '#f5f5f5')};
   }
 
   &:active {
-    cursor: grabbing;
-    background: #e6f4ff;
+    cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'grabbing')};
+    background: ${({ $disabled }) => ($disabled ? 'transparent' : '#e6f4ff')};
   }
 `
 

@@ -29,6 +29,7 @@ import {
 } from '@ant-design/icons'
 import { useDraggable } from '@dnd-kit/core'
 import { FIELD_TYPES } from '@/utils/fieldTypes'
+import useFormBuilderStore from '@/store/useFormBuilderStore'
 import {
   SidebarWrapper,
   SidebarHeader,
@@ -62,12 +63,13 @@ const ICON_MAP = {
 
 // ─── Single draggable item ────────────────────────────────────────────────────
 
-const DraggableFieldType = ({ fieldType }) => {
+const DraggableFieldType = ({ fieldType, disabled = false }) => {
   const dragId = `type:${fieldType.type}`
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id  : dragId,
     data: { type: fieldType.type },   // payload truyền sang FieldCanvas
+    disabled,
   })
 
   const IconComponent = ICON_MAP[fieldType.icon]
@@ -76,8 +78,9 @@ const DraggableFieldType = ({ fieldType }) => {
     <FieldTypeItem
       ref={setNodeRef}
       style={{ opacity: isDragging ? 0.4 : 1 }}
-      {...listeners}
-      {...attributes}
+      $disabled={disabled}
+      {...(disabled ? {} : listeners)}
+      {...(disabled ? {} : attributes)}
     >
       <FieldTypeIcon>
         {IconComponent && <IconComponent />}
@@ -95,6 +98,8 @@ const DraggableFieldType = ({ fieldType }) => {
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 const FieldTypeList = () => {
+  const lockedByAi = useFormBuilderStore(s => s.hasAiGeneratedField())
+
   return (
     <SidebarWrapper>
       <SidebarHeader>
@@ -103,7 +108,7 @@ const FieldTypeList = () => {
 
       <SidebarBody>
         {FIELD_TYPES.map(fieldType => (
-          <DraggableFieldType key={fieldType.type} fieldType={fieldType} />
+          <DraggableFieldType key={fieldType.type} fieldType={fieldType} disabled={lockedByAi} />
         ))}
       </SidebarBody>
     </SidebarWrapper>

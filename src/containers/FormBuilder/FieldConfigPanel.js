@@ -6,9 +6,10 @@
  *
  * Sections:
  *   1. Field       — Nhãn, Mã field (field_key), Kiểu input (readonly badge)
- *   2. Toggles     — Bắt buộc, Cho phép tìm kiếm, Index (Solr)
- *   3. Ràng buộc   — dynamic theo inputType (min/max, options editor, accept, entity...)
- *   4. Advanced    — refDomain, autoGenerate, fieldRole (collapsed mặc định)
+ *   2. Toggles     — Bắt buộc, Cho phép tìm kiếm, Index (Solr), Làm tên cột
+ *   3. Tùy chọn    — options editor (select/radio/checkbox...), ngay dưới toggles
+ *   4. Ràng buộc   — dynamic theo inputType (min/max, accept, entity...)
+ *   5. Advanced    — refDomain, autoGenerate, fieldRole (collapsed mặc định)
  *
  * Không dùng Form* từ form-flast vì panel không có FormContextCustom.
  * Dùng antd Form controlled trực tiếp, sync 2 chiều với store.
@@ -64,8 +65,9 @@ import {
 
 // ─── Options Editor (cho select / multi_select / radio / checkbox) ────────────
 
-const OptionsEditor = ({ options = [], onChange }) => {
+const OptionsEditor = ({ options = [], onChange, disabled = false }) => {
   const handleLabelChange = (index, value) => {
+    if (disabled) return
     const next = options.map((o, i) =>
       i === index ? { ...o, label: value } : o
     )
@@ -73,6 +75,7 @@ const OptionsEditor = ({ options = [], onChange }) => {
   }
 
   const handleValueChange = (index, value) => {
+    if (disabled) return
     const next = options.map((o, i) =>
       i === index ? { ...o, value } : o
     )
@@ -80,10 +83,12 @@ const OptionsEditor = ({ options = [], onChange }) => {
   }
 
   const handleRemove = (index) => {
+    if (disabled) return
     onChange(options.filter((_, i) => i !== index))
   }
 
   const handleAdd = () => {
+    if (disabled) return
     onChange([...options, { value: nanoid(6), label: '' }])
   }
 
@@ -95,27 +100,124 @@ const OptionsEditor = ({ options = [], onChange }) => {
             <Input
               placeholder="Nhãn"
               value={opt.label}
+              disabled={disabled}
               onChange={e => handleLabelChange(index, e.target.value)}
               style={{ flex: 2 }}
             />
             <Input
               placeholder="Value"
               value={opt.value}
+              disabled={disabled}
               onChange={e => handleValueChange(index, e.target.value)}
               style={{ flex: 1 }}
             />
-            <OptionRemoveBtn onClick={() => handleRemove(index)}>
+            <OptionRemoveBtn disabled={disabled} onClick={() => handleRemove(index)}>
               <CloseCircleOutlined />
             </OptionRemoveBtn>
           </OptionRow>
         ))}
       </OptionsList>
 
-      <AddOptionBtn onClick={handleAdd}>
+      <AddOptionBtn disabled={disabled} onClick={handleAdd}>
         <PlusOutlined />
         Thêm tùy chọn
       </AddOptionBtn>
     </>
+  )
+}
+
+const getFieldProvenance = (field) => field?._provenance ?? field?.config?.__provenance ?? null
+
+const getSourceLabel = (source) => ({
+  ai: 'AI',
+  user: 'User',
+  api: 'API',
+  imported: 'Import',
+}[source] ?? source ?? 'Unknown')
+
+const getSourceColor = (source) => ({
+  ai: '#1677ff',
+  user: '#16a34a',
+  api: '#64748b',
+  imported: '#9333ea',
+}[source] ?? '#64748b')
+
+const SourceBadge = ({ field }) => {
+  const provenance = getFieldProvenance(field)
+  if (!provenance) return null
+
+  const createdBy = provenance.createdBySource ?? provenance.source
+  const updatedBy = provenance.updatedBySource
+  const changedByOtherSource = updatedBy && updatedBy !== createdBy
+  const color = getSourceColor(changedByOtherSource ? updatedBy : createdBy)
+
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        marginLeft: 8,
+        padding: '2px 8px',
+        borderRadius: 999,
+        background: `${color}14`,
+        color,
+        fontSize: 11,
+        fontWeight: 600,
+        lineHeight: '16px',
+      }}
+      title={changedByOtherSource
+        ? `Tạo bởi ${getSourceLabel(createdBy)}, sửa bởi ${getSourceLabel(updatedBy)}`
+        : `Tạo bởi ${getSourceLabel(createdBy)}`}
+    >
+      {changedByOtherSource
+        ? `${getSourceLabel(createdBy)} → ${getSourceLabel(updatedBy)}`
+        : getSourceLabel(createdBy)}
+    </span>
+  )
+}
+
+// ─── Options section (select / multi_select / radio / checkbox / autocomplete) ─
+
+const OptionsSection = ({ field, onConfigChange, disabled = false }) => {
+  const { inputType, config: rawConfig } = field
+  const config = rawConfig ?? {}
+
+  if (!['select', 'multi_select', 'radio', 'checkbox', 'autocomplete'].includes(inputType)) {
+    return null
+  }
+
+  return (
+  <>
+    <SectionTitle style={{ marginTop: 12, marginBottom: 8 }}>
+      {inputType === 'autocomplete' ? 'Gợi ý' : 'Tùy chọn'}
+    </SectionTitle>
+    <OptionsEditor
+      options={config.options ?? []}
+      onChange={opts => onConfigChange({ options: opts })}
+      disabled={disabled}
+    />
+    {inputType === 'autocomplete' && (
+      <>
+        <Form.Item label="Value prop" style={{ marginBottom: 10, marginTop: 12 }}>
+          <Input
+            placeholder="value"
+            value={config.valueProp ?? 'value'}
+            disabled={disabled}
+            onChange={e => onConfigChange({ valueProp: e.target.value })}
+          />
+        </Form.Item>
+        <Form.Item label="Title prop" style={{ marginBottom: 0 }}>
+          <Input
+            placeholder="label"
+            value={config.titleProp ?? 'label'}
+            disabled={disabled}
+            onChange={e => onConfigChange({ titleProp: e.target.value })}
+          />
+        </Form.Item>
+      </>
+    )}
+  </>
   )
 }
 
@@ -153,38 +255,6 @@ const ConstraintSection = ({ field, onConfigChange }) => {
             />
           </div>
         </MinMaxRow>
-        <SectionDivider />
-      </Section>
-    )
-  }
-
-  // select / multi_select / radio / checkbox / autocomplete → options editor
-  if (['select', 'multi_select', 'radio', 'checkbox', 'autocomplete'].includes(inputType)) {
-    return (
-      <Section>
-        <SectionTitle>{inputType === 'autocomplete' ? 'Gợi ý' : 'Tùy chọn'}</SectionTitle>
-        <OptionsEditor
-          options={config.options ?? []}
-          onChange={opts => onConfigChange({ options: opts })}
-        />
-        {inputType === 'autocomplete' && (
-          <>
-            <Form.Item label="Value prop" style={{ marginBottom: 10, marginTop: 12 }}>
-              <Input
-                placeholder="value"
-                value={config.valueProp ?? 'value'}
-                onChange={e => onConfigChange({ valueProp: e.target.value })}
-              />
-            </Form.Item>
-            <Form.Item label="Title prop" style={{ marginBottom: 12 }}>
-              <Input
-                placeholder="label"
-                value={config.titleProp ?? 'label'}
-                onChange={e => onConfigChange({ titleProp: e.target.value })}
-              />
-            </Form.Item>
-          </>
-        )}
         <SectionDivider />
       </Section>
     )
@@ -399,6 +469,7 @@ const FieldConfigPanel = () => {
         isRequired : field.isRequired,
         isSearchable: field.isSearchable,
         isIndexed  : field.isIndexed,
+        enabled    : field.enabled,
       })
     } else {
       form.resetFields()
@@ -424,8 +495,10 @@ const FieldConfigPanel = () => {
   const isExisting     = field.id != null   // đã save lên BE
   const isDuplicateKey = isDuplicate(field.fieldKey, field._id)
   const isInvalidKey   = field.fieldKey && !isValidFieldKey(field.fieldKey)
+  const isAiLocked     = (getFieldProvenance(field)?.createdBySource ?? getFieldProvenance(field)?.source) === 'ai'
 
   const handleConfigChange = (patch) => {
+    if (isAiLocked) return
     updateConfig(field._id, patch)
   }
 
@@ -439,18 +512,23 @@ const FieldConfigPanel = () => {
         <Form
           form={form}
           layout="vertical"
+          disabled={isAiLocked}
           style={{ padding: 0 }}
         >
 
           {/* ── Section: Field ── */}
           <Section>
-            <SectionTitle>Field</SectionTitle>
+            <SectionTitle>
+              Field
+              <SourceBadge field={field} />
+            </SectionTitle>
 
             {/* Nhãn */}
             <Form.Item label="Nhãn" name="label" style={{ marginBottom: 10 }}>
               <Input
                 placeholder="Nhãn hiển thị"
                 value={field.label}
+                disabled={isAiLocked}
                 onChange={e => updateLabel(field._id, e.target.value)}
               />
             </Form.Item>
@@ -460,6 +538,7 @@ const FieldConfigPanel = () => {
               <Input
                 placeholder="field_key"
                 value={field.fieldKey}
+                disabled={isAiLocked}
                 style={{ fontFamily: 'monospace' }}
                 onChange={e => {
                   const val = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '')
@@ -470,7 +549,9 @@ const FieldConfigPanel = () => {
             </Form.Item>
 
             {/* Hint / warning cho field_key */}
-            {isExisting ? (
+            {isAiLocked ? (
+              <FieldKeyWarning>Field do AI sinh đang khóa chỉnh sửa/kéo thả.</FieldKeyWarning>
+            ) : isExisting ? (
               <FieldKeyWarning>
                 ⚠ Field đã lưu — thay đổi mã field có thể gây lỗi dữ liệu.
               </FieldKeyWarning>
@@ -488,6 +569,7 @@ const FieldConfigPanel = () => {
                 <Input
                   placeholder="Nhập gợi ý cho người dùng..."
                   value={field.config?.placeholder ?? ''}
+                  disabled={isAiLocked}
                   onChange={e => updateConfig(field._id, { placeholder: e.target.value })}
                 />
               </Form.Item>
@@ -513,6 +595,7 @@ const FieldConfigPanel = () => {
                   max={24}
                   step={1}
                   value={field.colSpan ?? 24}
+                  disabled={isAiLocked}
                   onChange={val => updateField(field._id, { colSpan: val })}
                   style={{ flex: 1 }}
                   tooltip={{ formatter: val => `${val}/24` }}
@@ -524,7 +607,10 @@ const FieldConfigPanel = () => {
                   <ColSpanPreset
                     key={n}
                     $active={(field.colSpan ?? 24) === n}
-                    onClick={() => updateField(field._id, { colSpan: n })}
+                    disabled={isAiLocked}
+                    onClick={() => {
+                      if (!isAiLocked) updateField(field._id, { colSpan: n })
+                    }}
                   >
                     {n === 24 ? 'Full' : `${n}`}
                   </ColSpanPreset>
@@ -540,6 +626,7 @@ const FieldConfigPanel = () => {
               <ToggleLabel>Bắt buộc</ToggleLabel>
               <Switch
                 checked={field.isRequired}
+                disabled={isAiLocked}
                 onChange={val => {
                   updateField(field._id, { isRequired: val })
                   form.setFieldValue('isRequired', val)
@@ -551,6 +638,7 @@ const FieldConfigPanel = () => {
               <ToggleLabel>Cho phép tìm kiếm</ToggleLabel>
               <Switch
                 checked={field.isSearchable}
+                disabled={isAiLocked}
                 onChange={val => {
                   updateField(field._id, { isSearchable: val })
                   form.setFieldValue('isSearchable', val)
@@ -567,12 +655,38 @@ const FieldConfigPanel = () => {
               </ToggleLabel>
               <Switch
                 checked={field.isIndexed}
+                disabled={isAiLocked}
                 onChange={val => {
                   updateField(field._id, { isIndexed: val })
                   form.setFieldValue('isIndexed', val)
                 }}
               />
             </ToggleRow>
+
+            {field.inputType !== 'block' && (
+            <ToggleRow>
+              <ToggleLabel>
+                Làm tên cột&nbsp;
+                <Tooltip title="Hiển thị field này làm cột trong bảng danh sách dữ liệu.">
+                  <InfoCircleOutlined style={{ color: '#bfbfbf', fontSize: 11 }} />
+                </Tooltip>
+              </ToggleLabel>
+              <Switch
+                checked={field.enabled !== false}
+                disabled={isAiLocked}
+                onChange={val => {
+                  updateField(field._id, { enabled: val })
+                  form.setFieldValue('enabled', val)
+                }}
+              />
+            </ToggleRow>
+            )}
+
+            <OptionsSection
+              field={field}
+              onConfigChange={handleConfigChange}
+              disabled={isAiLocked}
+            />
           </Section>
           <SectionDivider />
 
@@ -585,7 +699,9 @@ const FieldConfigPanel = () => {
           {/* ── Section: Advanced (collapse) ── */}
           <AdvancedSection
             field={field}
-            onUpdate={patch => updateField(field._id, patch)}
+            onUpdate={patch => {
+              if (!isAiLocked) updateField(field._id, patch)
+            }}
           />
 
         </Form>
