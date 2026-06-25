@@ -487,14 +487,17 @@ const JSXCodeTab = ({
     return () => window.removeEventListener('flast-ai-build', handleBuildEvent)
   }, [])
 
-  const buildPreview = async ({ sessionId, componentId, jsxCode }) => {
+  const buildPreview = async ({ sessionId, componentId, entryFilename, jsxCode }) => {
     const response = await fetch('https://ai.flast.vn/build', {
       method : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body   : JSON.stringify({
         session_id  : sessionId,
         component_id: componentId,
-        jsx_code    : jsxCode,
+        files       : {
+          [entryFilename]: jsxCode,
+        },
+        entry_filename: entryFilename,
       }),
     })
 
@@ -518,11 +521,15 @@ const JSXCodeTab = ({
     const previewComponentId = componentId ?? templateId ?? componentIdRef.current
 
     const buildJsxCode = prepareJsxForRemoteBuild(jsxCode)
+    const entryFilename = `${toComponentName(schema?.meta?.name)}.jsx`
 
     const payload = {
       session_id: sessionId,
       component_id: previewComponentId,
-      jsx_code: buildJsxCode,
+      files: {
+        [entryFilename]: buildJsxCode,
+      },
+      entry_filename: entryFilename,
     }
 
     console.log('[PreviewModal] build preview payload', payload)
@@ -542,6 +549,7 @@ const JSXCodeTab = ({
       const { previewUrl: url } = await buildPreview({
         sessionId,
         componentId: previewComponentId,
+        entryFilename,
         jsxCode: buildJsxCode,
       })
       setPreviewUrl(url)
@@ -556,7 +564,7 @@ const JSXCodeTab = ({
       setBuildStatus('error')
       setBuildMsg(err.message)
     }
-  }, [sessionId, componentId, templateId, jsxCode])
+  }, [sessionId, componentId, templateId, jsxCode, schema])
 
   const btnStyle = {
     background: 'rgba(255,255,255,0.10)',
