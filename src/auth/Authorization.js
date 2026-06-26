@@ -25,6 +25,9 @@ import { useStore } from '@flast-erp/core/components';
 import { useLocation, useNavigate, matchPath } from "react-router-dom";
 
 const LOGIN_PATH = '/login';
+const PUBLIC_AUTHENTICATED_PREFIXES = [
+    '/sale/order/progress'
+];
 /* const log = (key, value) => console.log('[auth.Authorization] ' + key + ' ', value); */
 const Authorization = (props) => {
 
@@ -38,7 +41,10 @@ const Authorization = (props) => {
     useEffect(() => {
         /* const matched = routes.find(r => r.path === pathname); */
         const matched = routes.find(r => r.path && matchPath({ path: r.path, end: true }, pathname));
-        const granted = matched ? FuseUtils.hasPermission(matched.auth, (user?.id || '') !== '') : false;
+        const isAuthenticatedPublicPath = PUBLIC_AUTHENTICATED_PREFIXES.some(path => pathname.startsWith(path));
+        const granted = matched
+            ? FuseUtils.hasPermission(matched.auth, (user?.id || '') !== '')
+            : Boolean(user?.id && isAuthenticatedPublicPath);
         setAccessGranted(granted);
         /* eslint-disable-next-line */
     }, [pathname, user]);

@@ -15,7 +15,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Button, message, Popconfirm, Dropdown } from 'antd'
 import {
-  SaveOutlined,
   CloseOutlined,
   EditOutlined,
   ThunderboltOutlined,
@@ -107,6 +106,11 @@ const flattenFields = (items = []) => items.flatMap(field => [
   ...flattenFields(Array.isArray(field.children) ? field.children : []),
 ])
 
+const isHiddenField = (field) => {
+  const type = String(field?.inputType ?? field?.type ?? field?.component ?? '').toLowerCase()
+  return type === 'hidden' || type === 'formhidden'
+}
+
 const getFieldProvenance = (field) => field?._provenance ?? field?.config?.__provenance ?? null
 
 const isAiGeneratedField = (field) => (
@@ -123,7 +127,7 @@ const FormBuilder = ({
   incomingTemplate,
 }) => {
 
-  const [saving,       setSaving]       = useState(false)
+  const [,             setSaving]       = useState(false)
   const [activeDragId, setActiveDragId] = useState(null)
   const [previewOpen,   setPreviewOpen]   = useState(false)
   const [previewMode,   setPreviewMode]   = useState('ui')
@@ -275,7 +279,7 @@ const FormBuilder = ({
 
     const saveMeta = saveSchema?.meta ?? templateMeta
     const saveFields = saveSchema?.fields ?? fields
-    const allFields = flattenFields(saveFields)
+    const allFields = flattenFields(saveFields).filter(field => !isHiddenField(field))
 
     const emptyKey = allFields.find(f => !f.fieldKey)
     if (emptyKey) {
@@ -315,9 +319,25 @@ const FormBuilder = ({
         fields: saveFields,
       }).plain
       const saveJsxCode = previewPayload?.jsxCode ?? jsxCode
+      const buildMeta = previewPayload?.build?.url
+        ? {
+          microFrontendUrl: previewPayload.build.url,
+          micro_frontend_url: previewPayload.build.url,
+          remoteEntryUrl: previewPayload.build.url,
+          remote_entry_url: previewPayload.build.url,
+          componentId: previewPayload.build.componentId,
+          component_id: previewPayload.build.componentId,
+          remoteEntry: previewPayload.build.url,
+        }
+        : {}
       const payload = {
         ...basePayload,
+        meta: {
+          ...basePayload.meta,
+          ...buildMeta,
+        },
         jsx_code: saveJsxCode || fallbackJsxCode,
+        ...buildMeta,
       }
 
       if (previewPayload?.jsxCode != null) {
@@ -425,16 +445,6 @@ const FormBuilder = ({
               </Button>
             </Popconfirm>
 
-            {/* Lưu */}
-            <Button
-              type="primary"
-              icon={<SaveOutlined />}
-              loading={saving}
-              onClick={handleSave}
-            >
-              {templateId ? 'Cập nhật' : 'Lưu form'}
-            </Button>
-
           </ToolbarRight>
         </Toolbar>
 
@@ -460,9 +470,9 @@ const FormBuilder = ({
         initialJsxCode={jsxCode}
         onJsxCodeChange={setJsxCode}
         onClose={() => setPreviewOpen(false)}
-        onSave={() => { 
+        onSave={(payload) => {
           setPreviewOpen(false); 
-          handleSave();
+          handleSave(payload);
         }}
       />
     </DndContext>

@@ -22,7 +22,6 @@
 import { Button, Card, Col, Divider, Progress, Row, Select, Space, Typography } from 'antd';
 import ChartActivityRevenue from './ChartActivityRevenue'
 import ChartSale from './ChartSale';
-import { Option } from 'antd/es/mentions';
 import Title from 'antd/es/typography/Title';
 import MiniLineChart from './MiniChart';
 import {
@@ -167,9 +166,11 @@ const NewFeed = () => {
           }
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-            <Select defaultValue="Số tiền công nợ" style={{ width: 180 }}>
-              <Option value="Số tiền công nợ">Số tiền công nợ</Option>
-            </Select>
+            <Select
+              defaultValue="Số tiền công nợ"
+              style={{ width: 180 }}
+              options={[{ label: 'Số tiền công nợ', value: 'Số tiền công nợ' }]}
+            />
             <Button>Cài đặt mục tiêu</Button>
           </div>
 
