@@ -73,6 +73,7 @@ function toComponentName(name = '') {
 
 const COMPONENT_MAP = {
   block       : 'FormBlockPreview',
+  hidden      : 'FormHidden',
   text        : 'FormInput',
   textarea    : 'FormTextArea',
   number      : 'FormInputNumber',
@@ -110,6 +111,11 @@ function buildProps(field) {
   }
 
   switch (inputType) {
+    case 'hidden':
+      props.length = 0
+      props.push({ key: 'name', value: fieldKey, kind: 'str' })
+      break
+
     case 'block':
       props.length = 0
       props.push({ key: 'name', value: fieldKey, kind: 'str' })

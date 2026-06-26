@@ -20,8 +20,8 @@
 /**************************************************************************/
 
 import React, { useState, useCallback } from 'react';
-import { Button, message, Space } from 'antd';
-import { CopyOutlined, EditFilled } from '@ant-design/icons';
+import { Button, Dropdown, Input, message, Modal, Space, Table, Tag, Tooltip } from 'antd';
+import { ApartmentOutlined, CopyOutlined, EditFilled, EyeOutlined } from '@ant-design/icons';
 
 import { RestList } from "@flast-erp/core/components";
 import { useGetList } from "@flast-erp/core/hooks";
@@ -30,12 +30,30 @@ import {
   dateFormatOnSubmit, 
   formatMoney, 
   formatTime,
-  InAppEvent
+  InAppEvent,
+  RequestUtils
 } from '@flast-erp/core/utils';
 import OrderService from '@/services/OrderService';
 import { HASH_MODAL } from '@/configs';
 import { renderArrayColor } from './utils';
 import { useNavigate  } from 'react-router-dom';
+
+const WORKFLOW_FILTER_API = '/workflow/process/filter?limit=50&offset=0'
+const ORDER_WORKFLOW_ATTACH_API = '/workflow/process/assign-order'
+
+const resolveWorkflowList = (response) => {
+  const payload = response?.data ?? response
+  const candidates = [
+    payload?.embedded,
+    payload?.data?.embedded,
+    payload?.data?.content,
+    payload?.content,
+    payload?.items,
+    payload,
+  ]
+
+  return candidates.find(Array.isArray) ?? []
+}
 
 const copyToClipboard = (text, setCopiedIndex, index) => {
   navigator.clipboard.writeText(text).then(() => {
@@ -49,11 +67,81 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
 
   const navigate = useNavigate();
   const [ copiedIndex, setCopiedIndex ] = useState(null);
+  const [ workflowModalOpen, setWorkflowModalOpen ] = useState(false)
+  const [ workflowLoading, setWorkflowLoading ] = useState(false)
+  const [ workflowAttaching, setWorkflowAttaching ] = useState(false)
+  const [ workflows, setWorkflows ] = useState([])
+  const [ workflowKeyword, setWorkflowKeyword ] = useState('')
+  const [ selectedOrder, setSelectedOrder ] = useState(null)
+  const [ selectedWorkflowId, setSelectedWorkflowId ] = useState(null)
+
   const onClickViewDetail = (customerOrder) => InAppEvent.emit(HASH_MODAL, {
     hash: "#order.tabs",
     title: "Thông tin đơn hàng " + customerOrder.code,
     data: { customerOrder }
   });
+
+  const fetchWorkflows = useCallback(async () => {
+    setWorkflowLoading(true)
+    try {
+      const response = await RequestUtils.Get(WORKFLOW_FILTER_API, {})
+      setWorkflows(resolveWorkflowList(response))
+    } catch (error) {
+      message.error('Không tải được danh sách workflow.')
+    } finally {
+      setWorkflowLoading(false)
+    }
+  }, [])
+
+  const openWorkflowModal = useCallback((order) => {
+    setSelectedOrder(order)
+    setSelectedWorkflowId(order?.workflowProcessId ?? order?.processId ?? null)
+    setWorkflowKeyword('')
+    setWorkflowModalOpen(true)
+    fetchWorkflows()
+  }, [fetchWorkflows])
+
+  const closeWorkflowModal = useCallback(() => {
+    setWorkflowModalOpen(false)
+    setSelectedOrder(null)
+    setSelectedWorkflowId(null)
+    setWorkflowKeyword('')
+  }, [])
+
+  const handleAttachWorkflow = useCallback(async () => {
+    if (!selectedOrder?.id || !selectedWorkflowId) {
+      message.warning('Vui lòng chọn workflow.')
+      return
+    }
+
+    setWorkflowAttaching(true)
+    try {
+      await RequestUtils.Post(ORDER_WORKFLOW_ATTACH_API, {
+        orderId: selectedOrder.id,
+        processId: selectedWorkflowId,
+      })
+      message.success('Đã gắn workflow vào đơn hàng.')
+      closeWorkflowModal()
+    } catch (error) {
+      message.error('Gắn workflow thất bại. Vui lòng thử lại.')
+    } finally {
+      setWorkflowAttaching(false)
+    }
+  }, [closeWorkflowModal, selectedOrder, selectedWorkflowId])
+
+  const normalizedWorkflowKeyword = workflowKeyword.trim().toLowerCase()
+  const filteredWorkflows = normalizedWorkflowKeyword
+    ? workflows.filter(item => [
+      item?.name,
+      item?.processKey,
+      item?.process_key,
+      item?.code,
+    ].some(value => String(value ?? '').toLowerCase().includes(normalizedWorkflowKeyword)))
+    : workflows
+
+  const actionWidth = (
+    filter.type === 'cohoi' ? 260 : 220
+  ) + ((extraActions?.length ?? 0) * 44)
 
   const columns = [
     {
@@ -180,8 +268,8 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
       title: 'Action',
       key: 'action',
       fixed: 'right',
-      width: filter.type === 'cohoi' ? 200 : 160,
-      render: (record) => (
+      width: actionWidth,
+      render: (_, record) => (
         <Space gap={8}>
           <Button
             type="primary"
@@ -198,6 +286,43 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
               Báo giá
             </Button>
           )}
+          <Dropdown
+            trigger={['click']}
+            menu={{
+              items: [
+                {
+                  key: 'attach',
+                  icon: <ApartmentOutlined />,
+                  label: 'Gắn workflow',
+                },
+                {
+                  key: 'progress',
+                  icon: <EyeOutlined />,
+                  label: 'Xem tiến trình',
+                },
+              ],
+              onClick: ({ key, domEvent }) => {
+                domEvent?.stopPropagation()
+                if (key === 'attach') {
+                  openWorkflowModal(record)
+                  return
+                }
+                if (key === 'progress') {
+                  navigate(`/sale/order/progress/${record.id}`, {
+                    state: { order: record },
+                  })
+                }
+              },
+            }}
+          >
+            <Tooltip title="Workflow">
+              <Button
+                size="small"
+                icon={<ApartmentOutlined />}
+                onClick={(event) => event.stopPropagation()}
+              />
+            </Tooltip>
+          </Dropdown>
           { record.type === 'cohoi' &&
             <Button
               size="small"
@@ -232,19 +357,87 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
   }, []);
 
   return (
-    <RestList
-      rowKey="id"
-      bordered
-      xScroll={1800}
-      onData={onData}
-      initialFilter={{ limit: 10, page: 1, ...filter }}
-      filter={<Filter />}
-      hasCreate={false}
-      beforeSubmitFilter={beforeSubmitFilter}
-      useGetAllQuery={useGetList}
-      apiPath={'erp/order/fetch'}
-      columns={columns}
-    />
+    <>
+      <RestList
+        rowKey="id"
+        bordered
+        xScroll={1800}
+        onData={onData}
+        initialFilter={{ limit: 10, page: 1, ...filter }}
+        filter={<Filter />}
+        hasCreate={false}
+        beforeSubmitFilter={beforeSubmitFilter}
+        useGetAllQuery={useGetList}
+        apiPath={'erp/order/fetch'}
+        columns={columns}
+      />
+
+      <Modal
+        title={`Gắn workflow${selectedOrder?.code ? ` cho đơn ${selectedOrder.code}` : ''}`}
+        open={workflowModalOpen}
+        onCancel={closeWorkflowModal}
+        onOk={handleAttachWorkflow}
+        okText="Gắn workflow"
+        cancelText="Đóng"
+        confirmLoading={workflowAttaching}
+        okButtonProps={{ disabled: !selectedWorkflowId }}
+        width={760}
+        destroyOnHidden
+      >
+        <Input.Search
+          allowClear
+          placeholder="Tìm workflow theo tên hoặc mã..."
+          value={workflowKeyword}
+          onChange={event => setWorkflowKeyword(event.target.value)}
+          style={{ marginBottom: 12 }}
+        />
+        <Table
+          rowKey="id"
+          size="small"
+          loading={workflowLoading}
+          dataSource={filteredWorkflows}
+          pagination={{ pageSize: 8, showSizeChanger: false }}
+          rowSelection={{
+            type: 'radio',
+            selectedRowKeys: selectedWorkflowId ? [selectedWorkflowId] : [],
+            onChange: ([key]) => setSelectedWorkflowId(key),
+          }}
+          onRow={(record) => ({
+            onClick: () => setSelectedWorkflowId(record.id),
+            style: { cursor: 'pointer' },
+          })}
+          columns={[
+            {
+              title: 'Tên workflow',
+              dataIndex: 'name',
+              key: 'name',
+              ellipsis: true,
+              render: (name) => name || '(Chưa đặt tên)',
+            },
+            {
+              title: 'Mã',
+              dataIndex: 'processKey',
+              key: 'processKey',
+              width: 220,
+              ellipsis: true,
+              render: (value) => value || '-',
+            },
+            {
+              title: 'Trạng thái',
+              dataIndex: 'enabled',
+              key: 'enabled',
+              width: 120,
+              render: (enabled) => (
+                <Tag color={enabled === false ? 'default' : 'green'}>
+                  {enabled === false ? 'Tắt' : 'Kích hoạt'}
+                </Tag>
+              ),
+            },
+          ]}
+        />
+      </Modal>
+
+    </>
   )
 };
 

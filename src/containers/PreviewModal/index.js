@@ -7,7 +7,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
-import { Button, Row, Col, Form } from 'antd'
+import { Button, Row, Col, Form, message } from 'antd'
 import {
   PlayCircleOutlined,
   FileTextOutlined,
@@ -34,12 +34,12 @@ import {
   FormJoditEditor,
   FormSelectAPI,
   FormAutoComplete,
+  FormHidden,
 } from "@flast-erp/core/components";
 import { buildJSX }    from './buildJSX'
 import MonacoCodeEditor from './MonacoCodeEditor'
 import { parseJsxToSchema } from './parseJSXSchema'
 import useChatStore from '@/containers/AIChatbot/useChatStore'
-import { createUuidV7 } from '@/utils/uuid'
 import {
   Scrim,
   ModalWrapper,
@@ -89,9 +89,24 @@ const toComponentName = (name = '') => {
   return baseName || 'FormView'
 }
 
+const toComponentSlug = (name = '') => {
+  const slug = String(name || 'form-view')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+  if (!slug) return 'form-view'
+  return /^[a-z]/.test(slug) ? slug : `form-${slug}`
+}
+
 const LEGACY_FORM_IMPORT_RE = /import\s+(\w+)\s+from\s+['"](?:@\/)?(?:form-flast|components\/form)\/(\w+)['"]\s*;?\s*\n?/g
 const DEEP_CORE_FORM_IMPORT_RE = /import\s+(\w+)\s+from\s+['"]@flast-erp\/core\/components\/form\/(\w+)['"]\s*;?\s*\n?/g
 const CORE_COMPONENTS_BARREL_RE = /import\s+\{([^}]+)\}\s+from\s+['"]@flast-erp\/core\/components['"]\s*;?\s*\n?/g
+const BUILD_WAIT_TIMEOUT_MS = 5 * 60 * 1000
 
 const collectNamedImports = (set, importList = '') => {
   importList.split(',').forEach(part => {
@@ -148,6 +163,52 @@ const prepareJsxForRemoteBuild = (code = '') => {
   return jsx
 }
 
+const getBuildPreviewUrl = (data = {}) => (
+  data?.previewUrl ??
+  data?.preview_url ??
+  data?.url ??
+  data?.data?.url ??
+  data?.data?.previewUrl ??
+  data?.data?.preview_url ??
+  ''
+)
+
+const getBuildComponentId = (data = {}, fallback = '') => (
+  data?.component_id ??
+  data?.componentId ??
+  data?.data?.component_id ??
+  data?.data?.componentId ??
+  fallback
+)
+
+const buildMicroFrontend = async ({ sessionId, componentId, entryFilename, jsxCode }) => {
+  const response = await fetch('https://ai.flast.vn/build', {
+    method : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body   : JSON.stringify({
+      session_id  : sessionId,
+      component_id: componentId,
+      files       : {
+        [entryFilename]: jsxCode,
+      },
+      entry_filename: entryFilename,
+    }),
+  })
+
+  const data = await response.json().catch(() => ({}))
+
+  if (!response.ok || data?.success === false) {
+    const detail = data?.data?.detail ?? data?.detail
+    throw new Error(detail ?? data?.message ?? data?.error ?? `Build preview failed: ${response.status}`)
+  }
+
+  return {
+    ...data,
+    componentId: getBuildComponentId(data, componentId),
+    previewUrl: getBuildPreviewUrl(data),
+  }
+}
+
 
 const FieldPreview = ({ field }) => {
   const { inputType, fieldKey, label, isRequired, config: rawConfig, children = [] } = field
@@ -160,6 +221,9 @@ const FieldPreview = ({ field }) => {
   }))
 
   switch (inputType) {
+    case 'hidden':
+      return <FormHidden name={fieldKey} />
+
     case 'block': {
       return (
         <div
@@ -432,8 +496,8 @@ const JSXCodeTab = ({
   const [previewUrl,  setPreviewUrl]  = useState('')
 
   const copyTimerRef = useRef(null)
-  const componentIdRef = useRef(null)
   const buildingComponentIdRef = useRef(null)
+  const buildTimeoutRef = useRef(null)
   const componentName = toComponentName(schema.meta?.name)
 
   const domain       = schema.meta?.domain ?? 'step'
@@ -450,6 +514,11 @@ const JSXCodeTab = ({
   }, [jsxCode])
 
   useEffect(() => {
+    const clearBuildTimeout = () => {
+      clearTimeout(buildTimeoutRef.current)
+      buildTimeoutRef.current = null
+    }
+
     const handleBuildEvent = (event) => {
       const payload = event.detail ?? {}
       const payloadComponentId = payload.component_id ?? payload.componentId
@@ -459,70 +528,58 @@ const JSXCodeTab = ({
       }
 
       const log = payload.log ?? payload.message ?? ''
-      const previewUrl = payload.previewUrl ?? payload.preview_url ?? payload.url ?? ''
+      const previewUrl = getBuildPreviewUrl(payload)
       const status = payload.status ?? ''
+      const isSuccess = status === 'done' || status === 'success'
+      const isFailure = status === 'error' || status === 'failed'
 
       if (log) {
         setBuildLogs(current => [...current, log])
         setBuildMsg(log)
-        setBuildStatus('done')
       }
 
       if (previewUrl) {
         setPreviewUrl(previewUrl)
       }
 
-      if (status === 'done' || status === 'success' || previewUrl || log) {
+      if (isSuccess || previewUrl) {
+        clearBuildTimeout()
         setBuildStatus('done')
         setBuildMsg(log || 'Build thành công')
-      } else if (status === 'error' || status === 'failed') {
+      } else if (isFailure) {
+        clearBuildTimeout()
         setBuildStatus('error')
         setBuildMsg(log || 'Build thất bại')
       } else {
         setBuildStatus('building')
+        setBuildMsg(log || 'Đang build preview...')
       }
     }
 
     window.addEventListener('flast-ai-build', handleBuildEvent)
-    return () => window.removeEventListener('flast-ai-build', handleBuildEvent)
+    return () => {
+      clearBuildTimeout()
+      window.removeEventListener('flast-ai-build', handleBuildEvent)
+    }
   }, [])
 
-  const buildPreview = async ({ sessionId, componentId, jsxCode }) => {
-    const response = await fetch('https://ai.flast.vn/build', {
-      method : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body   : JSON.stringify({
-        session_id  : sessionId,
-        component_id: componentId,
-        jsx_code    : jsxCode,
-      }),
-    })
-
-    const data = await response.json().catch(() => ({}))
-
-    if (!response.ok) {
-      throw new Error(data?.message ?? data?.error ?? `Build preview failed: ${response.status}`)
-    }
-
-    return {
-      ...data,
-      previewUrl: data?.previewUrl ?? data?.preview_url ?? data?.url ?? '',
-    }
+  const buildPreview = async ({ sessionId, componentId, entryFilename, jsxCode }) => {
+    return buildMicroFrontend({ sessionId, componentId, entryFilename, jsxCode })
   }
 
   const handleBuild = useCallback(async () => {
-    if (!componentIdRef.current) {
-      componentIdRef.current = createUuidV7()
-    }
-
-    const previewComponentId = componentId ?? templateId ?? componentIdRef.current
+    const previewComponentId = toComponentSlug(schema?.meta?.name)
 
     const buildJsxCode = prepareJsxForRemoteBuild(jsxCode)
+    const entryFilename = `${toComponentName(schema?.meta?.name)}.jsx`
 
     const payload = {
       session_id: sessionId,
       component_id: previewComponentId,
-      jsx_code: buildJsxCode,
+      files: {
+        [entryFilename]: buildJsxCode,
+      },
+      entry_filename: entryFilename,
     }
 
     console.log('[PreviewModal] build preview payload', payload)
@@ -538,25 +595,41 @@ const JSXCodeTab = ({
     setBuildLogs([])
     setPreviewUrl('')
     setBuildMsg('Đang gửi yêu cầu build...')
+    clearTimeout(buildTimeoutRef.current)
+    buildTimeoutRef.current = setTimeout(() => {
+      if (buildingComponentIdRef.current !== previewComponentId) {
+        return
+      }
+      setBuildStatus('error')
+      setBuildMsg('Build quá lâu chưa có kết quả. Vui lòng thử lại hoặc kiểm tra log server.')
+      buildingComponentIdRef.current = null
+    }, BUILD_WAIT_TIMEOUT_MS)
     try {
-      const { previewUrl: url } = await buildPreview({
+      const response = await buildPreview({
         sessionId,
         componentId: previewComponentId,
+        entryFilename,
         jsxCode: buildJsxCode,
       })
+      const url = response.previewUrl
+      const status = response.status ?? ''
       setPreviewUrl(url)
-      if (url) {
+      if (url || status === 'done' || status === 'success') {
+        clearTimeout(buildTimeoutRef.current)
+        buildTimeoutRef.current = null
         setBuildStatus('done')
         setBuildMsg('Build thành công')
       } else {
         setBuildStatus('building')
-        setBuildMsg('Đã gửi yêu cầu build. Đang chờ log...')
+        setBuildMsg(response.message ?? 'Đã gửi yêu cầu build. Đang chờ server trả preview...')
       }
     } catch (err) {
+      clearTimeout(buildTimeoutRef.current)
+      buildTimeoutRef.current = null
       setBuildStatus('error')
       setBuildMsg(err.message)
     }
-  }, [sessionId, componentId, templateId, jsxCode])
+  }, [sessionId, jsxCode, schema])
 
   const btnStyle = {
     background: 'rgba(255,255,255,0.10)',
@@ -694,10 +767,62 @@ const PreviewModal = ({
   const [isDirty, setIsDirty] = useState(false)
   const [liveSchema, setLiveSchema] = useState(schema)
   const [syncError, setSyncError] = useState('')
+  const [savingAfterBuild, setSavingAfterBuild] = useState(false)
   const prevGeneratedCodeRef = useRef(generatedCode)
+  const lastParsedKeyRef = useRef('')
+  const lastNotifiedJsxRef = useRef(initialJsxCode || generatedCode)
   const getSessionId = useChatStore(s => s.getSessionId)
   const formBuilderSessionId = useMemo(() => getSessionId('form_builder'), [getSessionId])
   const fieldKeys = useMemo(() => (liveSchema?.fields ?? []).map(field => field.fieldKey).filter(Boolean), [liveSchema])
+
+  const handleSaveAfterBuild = async () => {
+    const effectiveSchema = liveSchema ?? schema
+
+    if (syncError) {
+      message.error(syncError)
+      return
+    }
+
+    if (!formBuilderSessionId) {
+      message.error('Thiếu session_id để build preview.')
+      return
+    }
+
+    const buildJsxCode = prepareJsxForRemoteBuild(jsxCode)
+    const buildComponentId = toComponentSlug(effectiveSchema?.meta?.name)
+    const entryFilename = `${toComponentName(effectiveSchema?.meta?.name)}.jsx`
+
+    setSavingAfterBuild(true)
+    try {
+      const buildResult = await buildMicroFrontend({
+        sessionId: formBuilderSessionId,
+        componentId: buildComponentId,
+        entryFilename,
+        jsxCode: buildJsxCode,
+      })
+
+      if (!buildResult.previewUrl) {
+        message.error('Build thành công nhưng server chưa trả URL micro-frontend.')
+        return
+      }
+
+      onSave?.({
+        schema: effectiveSchema,
+        jsxCode,
+        syncError: '',
+        isDirty,
+        build: {
+          componentId: buildResult.componentId ?? buildComponentId,
+          url: buildResult.previewUrl,
+          entryFilename,
+        },
+      })
+    } catch (error) {
+      message.error(error.message)
+    } finally {
+      setSavingAfterBuild(false)
+    }
+  }
 
   useEffect(() => { setActiveTab(mode) }, [mode])
   useEffect(() => {
@@ -722,6 +847,11 @@ const PreviewModal = ({
     }
 
     try {
+      const parseKey = `${jsxCode}::${JSON.stringify(schema?.meta ?? {})}`
+      if (lastParsedKeyRef.current === parseKey) {
+        return
+      }
+      lastParsedKeyRef.current = parseKey
       const parsed = parseJsxToSchema(jsxCode, schema.meta)
       setLiveSchema(parsed)
       setSyncError(current => current === '' ? current : '')
@@ -733,6 +863,10 @@ const PreviewModal = ({
   }, [jsxCode, schema, isDirty])
 
   useEffect(() => {
+    if (lastNotifiedJsxRef.current === jsxCode) {
+      return
+    }
+    lastNotifiedJsxRef.current = jsxCode
     onJsxCodeChange?.(jsxCode)
   }, [jsxCode, onJsxCodeChange])
 
@@ -833,14 +967,11 @@ const PreviewModal = ({
             <Button
               type="primary"
               icon={<SaveOutlined />}
-              onClick={() => onSave?.({
-                schema: effectiveSchema,
-                jsxCode,
-                syncError,
-                isDirty,
-              })}
+              loading={savingAfterBuild}
+              disabled={savingAfterBuild}
+              onClick={handleSaveAfterBuild}
             >
-              Lưu form
+              {savingAfterBuild ? 'Đang build...' : 'Lưu form'}
             </Button>
           </FooterRight>
         </ModalFooter>

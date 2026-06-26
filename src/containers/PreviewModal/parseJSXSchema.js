@@ -2,6 +2,7 @@ import { nanoid } from 'nanoid'
 
 const COMPONENT_TO_INPUT = {
   FormBlockPreview: 'block',
+  FormHidden: 'hidden',
   FormInput: 'text',
   FormTextArea: 'textarea',
   FormInputNumber: 'number',
@@ -179,6 +180,10 @@ const mapComponentToField = (componentName, props, span) => {
 
   if (componentName === 'FormBlockPreview') {
     inputType = 'block'
+  }
+
+  if (componentName === 'FormHidden') {
+    inputType = 'hidden'
   }
 
   if (componentName === 'FormInput') {

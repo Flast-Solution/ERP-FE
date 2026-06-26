@@ -114,6 +114,7 @@ const collectJsonCandidates = (text = '') => {
 const unique = (items) => Array.from(new Set(items.filter(Boolean)))
 
 const COMPONENT_TYPE_TO_INPUT = {
+  FormHidden: 'hidden',
   FormInput: 'text',
   FormTextArea: 'textarea',
   FormInputNumber: 'number',

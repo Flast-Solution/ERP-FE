@@ -136,7 +136,12 @@ function ensureRemoteRegistered(componentId, entry) {
   }
 
   registerRemotes(
-    [{ name: componentId, entry }]
+    [{
+      name: componentId,
+      entry,
+      type: "global",
+      entryGlobalName: componentId
+    }]
   )
 
   registeredRemotes.add(componentId)

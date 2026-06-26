@@ -25,11 +25,14 @@ import { authRoles } from '@/auth';
 const OrderCancelPage = React.lazy(() => import('@/pages/order/Cancel'));
 const OrderPage = React.lazy(() => import('@/pages/order'));
 const OrderProductionPage = React.lazy(() => import('@/pages/order/OrderProduction'));
+const OrderProgressPage = React.lazy(() => import('@/pages/order/Progress'));
 const ManufacturingLot = React.lazy(() => import('@/pages/order/Shipment'));
 
 export const OrderConfig = {
     auth: authRoles.user,
     routes: [
+        { path: '/sale/order/progress/:orderId', element: <OrderProgressPage /> },
+        { path: '/sale/order/progress', element: <OrderProgressPage /> },
         { path: '/sale/order', element: <OrderPage /> },
         { path: '/sale/order-cancel', element: <OrderCancelPage /> },
         { path: '/sale/order-production', element: <OrderProductionPage /> },

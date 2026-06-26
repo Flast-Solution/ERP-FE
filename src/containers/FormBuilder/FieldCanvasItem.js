@@ -71,6 +71,9 @@ const renderPreview = (field) => {
   }))
 
   switch (inputType) {
+    case 'hidden':
+      return null
+
     case 'block':
       return (
         <div
@@ -282,6 +285,7 @@ const renderPreview = (field) => {
 // ─── Validation warning — field chưa đủ config ───────────────────────────────
 
 const hasWarning = (field) => {
+  if (String(field.inputType).toLowerCase() === 'hidden') return false
   if (!field.label || !field.fieldKey) return true
   const { inputType, config } = field
   if (inputType === 'block') {

@@ -22,14 +22,13 @@
 import { Select } from 'antd';
 import i18next from 'i18next';
 
-const { Option } = Select;
 function ServiceSelect({ serviceId, setServiceId }) {
 
   const SEARCH_TYPE = [
-    { name: 'Cơ hội', 'link': '/sale/co-hoi' },
-    { name: 'Đơn hàng', 'link': '/sale/order' },
-    { name: 'Sản phẩm', 'link': '/sale/co-hoi' },
-    { name: 'Khách hàng', 'link': '/product' },
+    { label: 'Cơ hội', value: '0' },
+    { label: 'Đơn hàng', value: '1' },
+    { label: 'Sản phẩm', value: '2' },
+    { label: 'Khách hàng', value: '3' },
   ];
 
   const onChangeLocation = (e) => {
@@ -43,13 +42,8 @@ function ServiceSelect({ serviceId, setServiceId }) {
       className="border-none w-160 h-40"
       onChange={onChangeLocation}
       placeholder={i18next.t('services.all')}
-    >
-      {SEARCH_TYPE?.map((item, idx) => (
-        <Option key={String(idx)} value={item?.id}>
-          {item?.name}
-        </Option>
-      ))}
-    </Select>
+      options={SEARCH_TYPE}
+    />
   );
 }
 
