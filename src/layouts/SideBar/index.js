@@ -125,7 +125,8 @@ function SideBar() {
       getItem(<Link to="/category/tin-tuc">D.Mục tin tức</Link>, 'cate-tin-tuc', <span> - </span>),
       getItem(<Link to="/post">Trang tin tức</Link>, 'post', <span> - </span>),
       getItem(<Link to="/faq">Faq</Link>, 'faq', <span> - </span>),
-      getItem(<Link to="/tag">Quản lý Tag</Link>, 'tag', <span> - </span>)
+      getItem(<Link to="/tag">Quản lý Tag</Link>, 'tag', <span> - </span>),
+      getItem(<Link to="/landing/edit">Quản lý trang</Link>, 'page', <span> - </span>)
     ]),
     getItem('Tài khoản', 'tai_khoan', <UserOutlined />, [
       getItem(<Link to="/user/group">Team</Link>, 'user_group', <TeamOutlined />),

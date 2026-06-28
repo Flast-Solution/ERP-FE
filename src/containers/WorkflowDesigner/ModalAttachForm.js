@@ -396,6 +396,7 @@ const ModalAttachForm = ({
   stepCode,
   stepLabel,
 }) => {
+  
   const navigate = useNavigate()
   const [view, setView] = useState('list')
   const [templates, setTemplates] = useState([])
@@ -404,7 +405,6 @@ const ModalAttachForm = ({
   const [selectedId, setSelectedId] = useState(null)
   const [creating, setCreating] = useState(false)
   const [createForm] = Form.useForm()
-  const watchFormKey = Form.useWatch('formKey', createForm)
   const [starterId, setStarterId] = useState('blank')
   const [required, setRequired] = useState(true)
 
@@ -541,8 +541,6 @@ const ModalAttachForm = ({
 
   if (view === 'create') {
     const starter = STARTERS.find(item => item.id === starterId) ?? STARTERS[0]
-    const formKey = watchFormKey || 'form_key'
-
     return (
       <Shell>
         <Header>
