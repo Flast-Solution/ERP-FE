@@ -413,7 +413,7 @@ const FieldPreview = ({ field }) => {
           label={label}
           required={required}
           placeholder={placeholder || 'Tìm kiếm...'}
-          api={config.api ?? undefined}
+          apiPath={config.api ?? undefined}
           entity={config.entity ?? ''}
           labelField={config.labelField ?? config.titleProp ?? 'name'}
           valueProp={config.valueProp ?? 'id'}

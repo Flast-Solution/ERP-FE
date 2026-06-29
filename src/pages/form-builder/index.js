@@ -7,7 +7,7 @@ import { RequestUtils } from "@flast-erp/core/utils";
 import useFormBuilderStore from "@/store/useFormBuilderStore";
 import styled from "styled-components";
 
-const FORM_TEMPLATE_FILTER_API = '/workflow/forms/template/filter'
+const FORM_TEMPLATE_DETAIL_API = '/workflow/forms/template/find-id'
 
 const BuilderPageShell = styled.div`
   position: relative;
@@ -62,6 +62,23 @@ const BuilderPage = () => {
 
   const resolveTemplateFromResponse = (response, targetId) => {
     const payload = response?.data ?? response
+    const detailCandidates = [
+      payload?.data,
+      payload?.template,
+      payload?.data?.template,
+      payload,
+    ]
+
+    const detail = detailCandidates.find(item => (
+      item
+      && !Array.isArray(item)
+      && String(item?.id ?? '') === String(targetId ?? '')
+    ))
+
+    if (detail) {
+      return detail
+    }
+
     const embedded = Array.isArray(payload?.embedded)
       ? payload.embedded
       : Array.isArray(payload?.data?.embedded)
@@ -109,13 +126,7 @@ const BuilderPage = () => {
 
     const fetchTemplate = async () => {
       try {
-        const query = new URLSearchParams({
-          limit: '10',
-          offset: '0',
-          page: '1',
-          id: String(routeTemplateId),
-        })
-        const response = await RequestUtils.Get(`${FORM_TEMPLATE_FILTER_API}?${query.toString()}`, {})
+        const response = await RequestUtils.Get(FORM_TEMPLATE_DETAIL_API, { id: routeTemplateId })
         const template = resolveTemplateFromResponse(response, routeTemplateId)
 
         if (!template) {

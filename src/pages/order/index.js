@@ -28,6 +28,7 @@ const OrderPage = () => {
   const [ title ] = useState("Danh sách đơn hàng");
   const urlParams = new URLSearchParams(window.location.search);
   const filter = { type: "order", ...urlParams }
+
   return <>
     <Helmet>
       <title>{title}</title>
