@@ -168,16 +168,17 @@ function buildProps(field) {
 
     case 'lookup':
       if (config.entity)     props.push({ key: 'entity',     value: config.entity,               kind: 'str' })
-      if (config.labelField) props.push({ key: 'labelField', value: config.labelField ?? 'name', kind: 'str' })
+      if (config.labelField) props.push({ key: 'titleProp',  value: config.labelField ?? 'name', kind: 'str' })
+      if (config.labelField) props.push({ key: 'searchKey',  value: config.labelField ?? 'name', kind: 'str' })
       props.push({ key: 'style', value: '{{ width: \'100%\' }}', kind: 'raw' })
       break
 
     case 'select_api':
       if (config.api)        props.push({ key: 'apiPath',    value: config.api,                               kind: 'str' })
       if (config.entity)     props.push({ key: 'entity',     value: config.entity,                            kind: 'str' })
-      if (config.labelField) props.push({ key: 'labelField', value: config.labelField ?? 'name',              kind: 'str' })
       props.push({ key: 'valueProp', value: config.valueProp ?? 'id', kind: 'str' })
       props.push({ key: 'titleProp', value: config.titleProp ?? config.labelField ?? 'name', kind: 'str' })
+      props.push({ key: 'searchKey', value: config.labelField ?? config.titleProp ?? 'name', kind: 'str' })
       props.push({ key: 'style', value: '{{ width: \'100%\' }}', kind: 'raw' })
       break
 

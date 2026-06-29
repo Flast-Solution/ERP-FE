@@ -165,9 +165,9 @@ const FormBuilder = ({
     importGeneratedTemplate({
       meta  : incomingTemplate.meta,
       fields: incomingTemplate.fields,
-      provenance: {
-        source: 'ai',
-        action: 'created',
+      provenance: incomingTemplate.provenance ?? {
+        source: 'api',
+        action: 'loaded',
       },
     })
     const nextSchema = {

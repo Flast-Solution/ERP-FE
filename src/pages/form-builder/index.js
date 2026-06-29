@@ -55,6 +55,10 @@ const BuilderPage = () => {
         ?? template.sourceComponent?.jsx_code
         ?? template.sourceComponent?.jsxCode
         ?? '',
+      provenance: {
+        source: 'api',
+        action: 'loaded',
+      },
       openPreview,
       nonce: Date.now(),
     })
@@ -187,6 +191,10 @@ const BuilderPage = () => {
       fields,
       code,
       meta,
+      provenance: {
+        source: 'ai',
+        action: 'created',
+      },
       openPreview: true,
       nonce: Date.now(),
     })

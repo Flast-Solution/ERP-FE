@@ -402,7 +402,8 @@ const FieldPreview = ({ field }) => {
           required={required}
           placeholder={placeholder || 'Tìm kiếm...'}
           entity={config.entity ?? ''}
-          labelField={config.labelField ?? 'name'}
+          titleProp={config.labelField ?? 'name'}
+          searchKey={config.labelField ?? 'name'}
         />
       )
 
@@ -415,9 +416,9 @@ const FieldPreview = ({ field }) => {
           placeholder={placeholder || 'Tìm kiếm...'}
           apiPath={config.api ?? undefined}
           entity={config.entity ?? ''}
-          labelField={config.labelField ?? config.titleProp ?? 'name'}
           valueProp={config.valueProp ?? 'id'}
           titleProp={config.titleProp ?? config.labelField ?? 'name'}
+          searchKey={config.labelField ?? config.titleProp ?? 'name'}
         />
       )
 
@@ -771,6 +772,7 @@ const PreviewModal = ({
   const prevGeneratedCodeRef = useRef(generatedCode)
   const lastParsedKeyRef = useRef('')
   const lastNotifiedJsxRef = useRef(initialJsxCode || generatedCode)
+  const lastSchemaKeyRef = useRef(JSON.stringify(schema ?? {}))
   const getSessionId = useChatStore(s => s.getSessionId)
   const formBuilderSessionId = useMemo(() => getSessionId('form_builder'), [getSessionId])
   const fieldKeys = useMemo(() => (liveSchema?.fields ?? []).map(field => field.fieldKey).filter(Boolean), [liveSchema])
@@ -826,22 +828,33 @@ const PreviewModal = ({
 
   useEffect(() => { setActiveTab(mode) }, [mode])
   useEffect(() => {
+    if (!open) {
+      return
+    }
+
     const prevGeneratedCode = prevGeneratedCodeRef.current
     const hasCustomCode = Boolean(initialJsxCode) && initialJsxCode !== prevGeneratedCode
+    const nextSchemaKey = JSON.stringify(schema ?? {})
 
     if (!isDirty) {
       const nextJsxCode = hasCustomCode ? initialJsxCode : generatedCode
       setJsxCode(current => current === nextJsxCode ? current : nextJsxCode)
-      setLiveSchema(current => current === schema ? current : schema)
+      if (lastSchemaKeyRef.current !== nextSchemaKey) {
+        lastSchemaKeyRef.current = nextSchemaKey
+        setLiveSchema(schema)
+      }
       setSyncError(current => current === '' ? current : '')
     }
 
     prevGeneratedCodeRef.current = generatedCode
-  }, [initialJsxCode, generatedCode, schema, isDirty])
+  }, [open, initialJsxCode, generatedCode, schema, isDirty])
 
   useEffect(() => {
+    if (!open) {
+      return
+    }
+
     if (!isDirty) {
-      setLiveSchema(current => current === schema ? current : schema)
       setSyncError(current => current === '' ? current : '')
       return
     }
@@ -860,15 +873,18 @@ const PreviewModal = ({
         ? current
         : (err.message || 'Khong parse duoc JSX.'))
     }
-  }, [jsxCode, schema, isDirty])
+  }, [open, jsxCode, schema, isDirty])
 
   useEffect(() => {
+    if (!open || jsxCode === initialJsxCode) {
+      return
+    }
     if (lastNotifiedJsxRef.current === jsxCode) {
       return
     }
     lastNotifiedJsxRef.current = jsxCode
     onJsxCodeChange?.(jsxCode)
-  }, [jsxCode, onJsxCodeChange])
+  }, [open, initialJsxCode, jsxCode, onJsxCodeChange])
 
   if (!open) return null
 

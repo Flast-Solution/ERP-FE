@@ -154,7 +154,7 @@ const mapComponentToField = (componentName, props, span) => {
     inputType = 'select_api'
     config.api = propToString(props.apiPath ?? props.api)
     config.entity = propToString(props.entity)
-    config.labelField = propToString(props.labelField, 'name')
+    config.labelField = propToString(props.labelField ?? props.searchKey ?? props.titleProp, 'name')
     config.valueProp = propToString(props.valueProp, 'id')
     config.titleProp = propToString(props.titleProp, config.labelField || 'name')
   }
