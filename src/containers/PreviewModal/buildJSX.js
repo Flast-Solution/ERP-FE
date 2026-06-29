@@ -173,7 +173,7 @@ function buildProps(field) {
       break
 
     case 'select_api':
-      if (config.api)        props.push({ key: 'api',        value: config.api,                               kind: 'str' })
+      if (config.api)        props.push({ key: 'apiPath',    value: config.api,                               kind: 'str' })
       if (config.entity)     props.push({ key: 'entity',     value: config.entity,                            kind: 'str' })
       if (config.labelField) props.push({ key: 'labelField', value: config.labelField ?? 'name',              kind: 'str' })
       props.push({ key: 'valueProp', value: config.valueProp ?? 'id', kind: 'str' })

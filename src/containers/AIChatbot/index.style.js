@@ -61,13 +61,13 @@ export const FABBadge = styled.span`
 
 export const PanelWrapper = styled.div`
   position: ${({ $embedded }) => $embedded ? 'absolute' : 'fixed'};
-  top: ${({ $embedded }) => $embedded ? '0' : '64px'};
+  top: ${({ $embedded }) => $embedded ? '52px' : '64px'};
   right: 0;
   z-index: 1000;
   width: ${({ $width }) => $width}px;
   min-width: 360px;
   max-width: 100vw;
-  height: ${({ $embedded }) => $embedded ? '100%' : 'calc(100vh - 64px)'};
+  height: ${({ $embedded }) => $embedded ? 'calc(100% - 52px)' : 'calc(100vh - 64px)'};
   background: #fff;
   border-left: 1px solid #e4e4e7;
   box-shadow: -8px 0 28px rgba(15, 23, 42, 0.12);

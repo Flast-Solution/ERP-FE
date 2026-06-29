@@ -152,7 +152,7 @@ const mapComponentToField = (componentName, props, span) => {
 
   if (componentName === 'FormSelectAPI') {
     inputType = 'select_api'
-    config.api = propToString(props.api)
+    config.api = propToString(props.apiPath ?? props.api)
     config.entity = propToString(props.entity)
     config.labelField = propToString(props.labelField, 'name')
     config.valueProp = propToString(props.valueProp, 'id')

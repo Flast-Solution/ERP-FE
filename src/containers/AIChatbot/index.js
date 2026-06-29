@@ -305,6 +305,13 @@ const AIChatbot = ({
 
 
   useEffect(() => {
+    if (!open) {
+      sessionRef.current?.destroy()
+      sessionRef.current = null
+      setSseStatus('idle')
+      return undefined
+    }
+
     setActiveMode(mode)
 
     if (!threads[mode]?.length) {
@@ -322,7 +329,7 @@ const AIChatbot = ({
     }
     /* sessions[mode] thay đổi khi newSession() được gọi → re-connect */
     /* eslint-disable-next-line */
-  }, [mode, useChatStore.getState().sessions[mode]])
+  }, [open, mode, useChatStore.getState().sessions[mode]])
 
   useEffect(() => {
     return () => {
@@ -355,7 +362,7 @@ const AIChatbot = ({
 
   /* Khi context (fields[]) thay đổi → debounce 2s → gửi schema update lên LLM */
   useEffect(() => {
-    if (!context || arrayEmpty(context.fields)) {
+    if (!open || !context || arrayEmpty(context.fields)) {
       return
     }
     clearTimeout(schemaDebounceRef.current)
@@ -375,7 +382,7 @@ const AIChatbot = ({
     }, 2000)
     return () => clearTimeout(schemaDebounceRef.current)
     /* eslint-disable-next-line */
-  }, [context])
+  }, [open, context])
 
 
   const handleClear = useCallback(() => {
