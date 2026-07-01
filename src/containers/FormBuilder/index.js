@@ -323,12 +323,8 @@ const FormBuilder = ({
       const buildMeta = previewPayload?.build?.url
         ? {
           microFrontendUrl: previewPayload.build.url,
-          micro_frontend_url: previewPayload.build.url,
-          remoteEntryUrl: previewPayload.build.url,
-          remote_entry_url: previewPayload.build.url,
           componentId: previewPayload.build.componentId,
           component_id: previewPayload.build.componentId,
-          remoteEntry: previewPayload.build.url,
         }
         : {}
       const payload = {

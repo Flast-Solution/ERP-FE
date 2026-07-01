@@ -19,11 +19,21 @@ export const CanvasHeader = styled.div`
   flex-shrink: 0;
 `
 
-export const CanvasTitle = styled.div`
+export const CanvasTitle = styled.input`
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
   font-size: 16px;
   font-weight: 600;
   color: #1a1a1a;
   line-height: 1.4;
+
+  &::placeholder {
+    color: #8c8c8c;
+  }
 `
 
 export const CanvasSubtitle = styled.div`
