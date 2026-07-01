@@ -145,7 +145,7 @@ const normalizeField = (field, index = 0) => {
     inputType,
     isRequired: field.isRequired ?? field.required ?? false,
     isSearchable: field.isSearchable ?? false,
-    isIndexed: field.isIndexed ?? false,
+    isIndexed: field.isIndexed ?? true,
     sortOrder: field.sortOrder ?? index,
     enabled: field.enabled ?? true,
     config: field.config ?? {},

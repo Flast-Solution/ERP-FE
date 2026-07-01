@@ -98,7 +98,7 @@ function createField(type) {
     inputType   : type,
     isRequired  : false,
     isSearchable: false,
-    isIndexed   : false,
+    isIndexed   : true,
     sortOrder   : 0,              // tính lại khi save
     enabled     : true,
     colSpan     : 24,
@@ -153,16 +153,18 @@ function mapFieldFromApi(field, provenance = { source: 'api', action: 'loaded' }
     )
     : createProvenance(provenance.source ?? 'api', provenance.action ?? 'loaded', previousField);
   const config = normalizeConfig(field.config ?? {});
+  const persistedId = normalizePersistedId(field.id);
+  const isNewGeneratedField = persistedId == null && provenance.source !== 'api';
 
   return {
     _id         : nanoid(),
-    id          : normalizePersistedId(field.id),
+    id          : persistedId,
     fieldKey,
     label       : field.label ?? fieldKey,
     inputType   : field.inputType,
     isRequired  : field.isRequired  ?? false,
     isSearchable: field.isSearchable ?? false,
-    isIndexed   : field.isIndexed   ?? false,
+    isIndexed   : field.isIndexed   ?? previousField?.isIndexed ?? isNewGeneratedField,
     sortOrder   : field.sortOrder   ?? 0,
     enabled     : field.enabled     ?? true,
     config      : {
