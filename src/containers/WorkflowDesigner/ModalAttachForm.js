@@ -374,7 +374,7 @@ const makeField = (field, index) => ({
   inputType: field.inputType,
   isRequired: field.isRequired ?? false,
   isSearchable: false,
-  isIndexed: false,
+  isIndexed: true,
   sortOrder: index,
   enabled: true,
   config: field.config ?? {},
