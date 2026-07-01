@@ -35,6 +35,7 @@ const useFlowHandlers = () => {
   const deleteNode = useDeleteNode()
   const deleteEdge = useDeleteEdge()
   const getNodes = () => useWorkflowStore.getState().nodes
+  const getEdges = () => useWorkflowStore.getState().edges
 
   /* Ref giữ selectedId/Type mới nhất để dùng trong keyDown */
   const selectedRef = useRef({ id: null, type: null })
@@ -106,13 +107,17 @@ const useFlowHandlers = () => {
         return
       }
 
-      const { id, type } = selectedRef.current
+      const storeState = useWorkflowStore.getState()
+      const { id, type } = storeState.selectedId
+        ? { id: storeState.selectedId, type: storeState.selectedType }
+        : selectedRef.current
       if (!id) {
         return
       }
 
       if (type === 'node') {
         const nodes = getNodes()
+        const edges = getEdges()
         const target = nodes.find((n) => n.id === id)
         const targetType = target?.data?.type
 
@@ -130,6 +135,10 @@ const useFlowHandlers = () => {
             message.warning('Không thể xoá bước End duy nhất')
             return
           }
+        }
+        if (edges.some((edge) => edge.source === id)) {
+          message.warning('Không thể xoá bước đã có đầu ra. Vui lòng xoá transition đi ra trước.')
+          return
         }
         deleteNode(id)
       }
