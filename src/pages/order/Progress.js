@@ -1,21 +1,59 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { Alert, Breadcrumb, Button, Card, Col, Descriptions, Empty, Row, Space, Spin, Tag, Timeline, Typography } from 'antd'
-import { ArrowLeftOutlined, CheckCircleOutlined, ClockCircleOutlined, FormOutlined } from '@ant-design/icons'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Alert, Breadcrumb, Button, Card, Col, Descriptions, Empty, message, Row, Space, Spin, Tag, Timeline, Typography } from 'antd'
+import { ArrowLeftOutlined, CheckCircleOutlined, ClockCircleOutlined, FormOutlined, SaveOutlined } from '@ant-design/icons'
 import { Helmet } from 'react-helmet'
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
-import { formatMoney, formatTime } from '@flast-erp/core/utils'
+import { formatMoney, formatTime, RequestUtils } from '@flast-erp/core/utils'
+import { SUCCESS_CODE } from '@/configs'
 import OrderService from '@/services/OrderService'
 import { loadRemote } from '@/utils/loadRemote'
+import { getBusinessIdLocal } from '@/utils/dataUtils'
 
 const { Text, Title } = Typography
 const TEST_REMOTE_ENTRY = 'https://micro-frontend.flast.vn/tao-don-hang/remoteEntry.js'
+const DATA_SAVE_API = '/workflow/forms/storage/submit'
 
 const getFirstArray = (...items) => items.find(Array.isArray) ?? []
 
 const getValue = (...items) => items.find(item => item !== undefined && item !== null && item !== '')
 
 const normalizeRemoteContainerName = (value = '') => value.replace(/[^A-Za-z0-9_$]/g, '_')
+
+const normalizeSubmissionValue = (value) => {
+  if (value && typeof value === 'object' && typeof value.toISOString === 'function' && typeof value.isValid === 'function') {
+    return value.isValid() ? value.toISOString() : null
+  }
+  if (Array.isArray(value)) {
+    return value.map(normalizeSubmissionValue)
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, normalizeSubmissionValue(item)]),
+    )
+  }
+  return value
+}
+
+const resolveBizId = (order) => {
+  const value = order?.bizId
+    ?? order?.businessId
+    ?? order?.biz?.id
+    ?? order?.business?.id
+    ?? getBusinessIdLocal()
+
+  const bizId = value ? Number(value) : null
+  return bizId && !Number.isNaN(bizId) ? bizId : null
+}
+
+const resolveTemplateId = (formTemplate) => {
+  const value = formTemplate?.templateId
+    ?? formTemplate?.formTemplateId
+    ?? formTemplate?.id
+
+  const templateId = value ? Number(value) : null
+  return templateId && !Number.isNaN(templateId) ? templateId : null
+}
 
 const getRemoteConfigFromEntry = (remoteEntry) => {
   if (!remoteEntry) {
@@ -245,8 +283,10 @@ const OrderProgressPage = () => {
   const location = useLocation()
   const params = useParams()
   const [searchParams] = useSearchParams()
+  const remoteFormRef = useRef(null)
   const [order, setOrder] = useState(location.state?.order ?? null)
   const [loadingOrder, setLoadingOrder] = useState(false)
+  const [submittingForm, setSubmittingForm] = useState(false)
 
   const orderId = getValue(order?.id, params.orderId, searchParams.get('orderId'), searchParams.get('id'))
 
@@ -321,6 +361,64 @@ const OrderProgressPage = () => {
   )
 
   const { Component: RemoteForm, loading: loadingRemote, error: remoteError } = useRemoteForm(remoteEntry)
+
+  const handleRemoteFormSubmit = useCallback(async (values) => {
+    const bizId = resolveBizId(order)
+    if (!bizId) {
+      message.error('Không tìm thấy bizId của tài khoản đăng nhập.')
+      return
+    }
+
+    const templateId = resolveTemplateId(currentForm)
+    if (!templateId) {
+      message.error('Không tìm thấy templateId của form.')
+      return
+    }
+
+    setSubmittingForm(true)
+    try {
+      const response = await RequestUtils.Post(DATA_SAVE_API, {
+        bizId,
+        templateId,
+        values: normalizeSubmissionValue(values),
+      })
+      const ok = response?.success || Number(response?.errorCode) === SUCCESS_CODE
+      if (!ok) {
+        message.error(response?.message || 'Không lưu được dữ liệu form.')
+        return
+      }
+
+      message.success(response?.message || 'Đã lưu dữ liệu form.')
+    } catch (error) {
+      message.error(error?.message || 'Không lưu được dữ liệu form.')
+    } finally {
+      setSubmittingForm(false)
+    }
+  }, [currentForm, order])
+
+  const handleRemoteFormSubmitError = useCallback((error) => {
+    if (error?.errorFields) {
+      message.warning('Vui lòng nhập đầy đủ thông tin bắt buộc.')
+      return
+    }
+    message.error(error?.message || 'Không lấy được dữ liệu form.')
+  }, [])
+
+  const handleSubmitCurrentForm = useCallback(async () => {
+    if (!remoteFormRef.current || typeof remoteFormRef.current.submit !== 'function') {
+      message.error('Remote form chưa hỗ trợ submit từ component cha.')
+      return
+    }
+
+    try {
+      await remoteFormRef.current.submit()
+    } catch (error) {
+      if (error?.remoteFormHandled) {
+        return
+      }
+      handleRemoteFormSubmitError(error)
+    }
+  }, [handleRemoteFormSubmitError])
 
   const orderInfoItems = useMemo(() => [
     {
@@ -402,7 +500,22 @@ const OrderProgressPage = () => {
                       <span>Form bắt buộc tại bước</span>
                     </Space>
                   )}
-                  extra={currentStep?.name || currentStep?.label ? <Tag color="blue">{currentStep?.label ?? currentStep?.name}</Tag> : null}
+                  extra={(
+                    <Space>
+                      {currentStep?.name || currentStep?.label ? <Tag color="blue">{currentStep?.label ?? currentStep?.name}</Tag> : null}
+                      {remoteEntry && RemoteForm ? (
+                        <Button
+                          type="primary"
+                          icon={<SaveOutlined />}
+                          loading={submittingForm}
+                          disabled={loadingRemote || Boolean(remoteError)}
+                          onClick={handleSubmitCurrentForm}
+                        >
+                          Lưu form
+                        </Button>
+                      ) : null}
+                    </Space>
+                  )}
                 >
                   {!remoteEntry && (
                     <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Bước hiện tại chưa có remoteEntry form" />
@@ -412,11 +525,14 @@ const OrderProgressPage = () => {
                   {remoteEntry && RemoteForm && (
                     <RemoteFormBoundary remoteEntry={remoteEntry}>
                       <RemoteForm
+                        ref={remoteFormRef}
                         order={order}
                         record={order}
                         data={order}
                         step={currentStep}
                         formTemplate={currentForm}
+                        onSubmit={handleRemoteFormSubmit}
+                        onSubmitError={handleRemoteFormSubmitError}
                       />
                     </RemoteFormBoundary>
                   )}

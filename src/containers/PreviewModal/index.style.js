@@ -8,9 +8,9 @@ const modalPop = keyframes`
 // ─── Scrim + modal ────────────────────────────────────────────────────────────
 
 export const Scrim = styled.div`
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: 500;
+  z-index: 1200;
   background: rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: center;

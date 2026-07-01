@@ -114,6 +114,72 @@ const propToString = (prop, fallback = '') => {
   return fallback
 }
 
+const parseLiteralValue = (value = '') => {
+  const trimmed = value.trim()
+  if ((trimmed.startsWith("'") && trimmed.endsWith("'")) || (trimmed.startsWith('"') && trimmed.endsWith('"'))) {
+    return trimmed.slice(1, -1)
+  }
+  if (trimmed === 'true') return true
+  if (trimmed === 'false') return false
+  if (trimmed === 'null') return null
+  const numberValue = Number(trimmed)
+  return Number.isNaN(numberValue) ? trimmed : numberValue
+}
+
+const parseOptionObjectLiteral = (source = '') => {
+  const option = {}
+  const propRe = /(['"]?[A-Za-z_$][\w$]*['"]?)\s*:\s*('(?:\\'|[^'])*'|"(?:\\"|[^"])*"|true|false|null|-?\d+(?:\.\d+)?)/g
+  let match = propRe.exec(source)
+
+  while (match) {
+    const key = match[1].replace(/^['"]|['"]$/g, '')
+    option[key] = parseLiteralValue(match[2])
+    match = propRe.exec(source)
+  }
+
+  return Object.keys(option).length > 0 ? option : null
+}
+
+const parseOptionArrayLiteral = (source = '') => {
+  const trimmed = source.trim()
+  if (!trimmed.startsWith('[')) {
+    return null
+  }
+
+  const options = []
+  let index = 0
+  while (index < trimmed.length) {
+    const objectStart = trimmed.indexOf('{', index)
+    if (objectStart === -1) break
+
+    try {
+      const { value, endIndex } = readBalanced(trimmed, objectStart, '{', '}')
+      const option = parseOptionObjectLiteral(value)
+      if (option) {
+        options.push(option)
+      }
+      index = endIndex + 1
+    } catch (_) {
+      break
+    }
+  }
+
+  return options.length > 0 ? options : null
+}
+
+const parseExpressionValue = (value) => {
+  try {
+    return JSON.parse(value)
+  } catch (_) {
+    return parseOptionArrayLiteral(value)
+  }
+}
+
+const normalizeOption = (item = {}) => ({
+  value: item.value ?? item.id,
+  label: item.label ?? item.name ?? item.value ?? item.id,
+})
+
 const mapComponentToField = (componentName, props, span) => {
   let inputType = COMPONENT_TO_INPUT[componentName] ?? 'text'
   const config = {}
@@ -132,21 +198,20 @@ const mapComponentToField = (componentName, props, span) => {
   if (componentName === 'FormSelect') {
     inputType = propToString(props.mode) === 'multiple' ? 'multi_select' : 'select'
     if (props.resourceData?.value) {
-      try {
-        const items = JSON.parse(props.resourceData.value)
-        config.options = items.map(item => ({
-          value: item.id ?? item.value,
-          label: item.name ?? item.label ?? item.value,
-        }))
-      } catch (_) {}
+      const items = parseExpressionValue(props.resourceData.value)
+      if (Array.isArray(items)) {
+        config.options = items.map(normalizeOption)
+      }
     }
   }
 
   if (componentName === 'FormRadioGroup' || componentName === 'FormCheckbox') {
-    if (props.options?.value) {
-      try {
-        config.options = JSON.parse(props.options.value)
-      } catch (_) {}
+    const optionSource = props.options?.value ?? props.resourceData?.value
+    if (optionSource) {
+      const items = parseExpressionValue(optionSource)
+      if (Array.isArray(items)) {
+        config.options = items.map(normalizeOption)
+      }
     }
   }
 
@@ -154,7 +219,7 @@ const mapComponentToField = (componentName, props, span) => {
     inputType = 'select_api'
     config.api = propToString(props.apiPath ?? props.api)
     config.entity = propToString(props.entity)
-    config.labelField = propToString(props.labelField, 'name')
+    config.labelField = propToString(props.labelField ?? props.searchKey ?? props.titleProp, 'name')
     config.valueProp = propToString(props.valueProp, 'id')
     config.titleProp = propToString(props.titleProp, config.labelField || 'name')
   }
@@ -164,13 +229,10 @@ const mapComponentToField = (componentName, props, span) => {
     config.valueProp = propToString(props.valueProp, 'value')
     config.titleProp = propToString(props.titleProp, 'label')
     if (props.resourceData?.value) {
-      try {
-        const items = JSON.parse(props.resourceData.value)
-        config.options = items.map(item => ({
-          value: item.id ?? item.value,
-          label: item.name ?? item.label ?? item.value,
-        }))
-      } catch (_) {}
+      const items = parseExpressionValue(props.resourceData.value)
+      if (Array.isArray(items)) {
+        config.options = items.map(normalizeOption)
+      }
     }
   }
 
@@ -269,11 +331,13 @@ const extractTopLevelCols = (content = '') => {
   return cols
 }
 
+const COMPONENT_OPEN_TAG_RE = /^<([A-Z][A-Za-z0-9]*(?:\.[A-Z][A-Za-z0-9]*)*)\s*([\s\S]*?)(\/?)>/
+
 const extractComponentNode = (block = '') => {
   const trimmed = block.replace(/\{\/\*[\s\S]*?\*\/\}/g, '').trim()
   if (!trimmed.startsWith('<')) return null
 
-  const openTagMatch = trimmed.match(/^<([A-Z][A-Za-z0-9]*)\s*([\s\S]*?)(\/?)>/)
+  const openTagMatch = trimmed.match(COMPONENT_OPEN_TAG_RE)
   if (!openTagMatch) return null
 
   const componentName = openTagMatch[1]
@@ -317,6 +381,35 @@ const parseFieldNodes = (content = '') => {
   for (const fieldBlock of fieldBlocks) {
     const node = extractComponentNode(fieldBlock.content)
     if (!node) continue
+
+    if (node.componentName === 'Form.Item') {
+      const childNode = extractComponentNode(node.childrenSource.trim())
+      if (childNode?.componentName === 'Switch') {
+        const itemProps = parseProps(node.propsSource)
+        fields.push({
+          _id: nanoid(),
+          id: null,
+          fieldKey: propToString(itemProps.name),
+          label: propToString(itemProps.label),
+          inputType: 'checkbox',
+          isRequired: Boolean(itemProps.required),
+          isSearchable: false,
+          isIndexed: false,
+          sortOrder: 0,
+          enabled: true,
+          config: {},
+          colSpan: fieldBlock.span,
+          refDomain: null,
+          autoGenerate: null,
+          fieldRole: null,
+        })
+      }
+      continue
+    }
+
+    if (!COMPONENT_TO_INPUT[node.componentName] && node.componentName !== 'FormBlockPreview') {
+      continue
+    }
 
     const props = parseProps(node.propsSource)
     const field = mapComponentToField(node.componentName, props, fieldBlock.span)

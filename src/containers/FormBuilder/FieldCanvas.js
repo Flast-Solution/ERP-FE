@@ -66,6 +66,7 @@ const isAiGeneratedField = (field) => (
 const FieldCanvas = () => {
   const fields       = useFormBuilderStore(s => s.fields)
   const templateMeta = useFormBuilderStore(s => s.templateMeta)
+  const setTemplateMeta = useFormBuilderStore(s => s.setTemplateMeta)
   const lockedByAi   = flattenFields(fields).some(isAiGeneratedField)
 
   // Canvas là droppable — nhận drag từ FieldTypeList
@@ -82,9 +83,12 @@ const FieldCanvas = () => {
 
       {/* ── Header ── */}
       <CanvasHeader>
-        <CanvasTitle>
-          {templateMeta.name || 'Form chưa đặt tên'}
-        </CanvasTitle>
+        <CanvasTitle
+          value={templateMeta.description ?? ''}
+          onChange={event => setTemplateMeta({ description: event.target.value })}
+          placeholder="Nhập tiêu đề form"
+          aria-label="Tiêu đề form"
+        />
 
         {templateMeta.domain && (
           <CanvasSubtitle>

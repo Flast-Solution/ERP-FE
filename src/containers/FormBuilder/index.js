@@ -32,6 +32,7 @@ import {
 } from '@dnd-kit/core'
 import PreviewModal from '@/containers/PreviewModal'
 
+import { SUCCESS_CODE } from '@/configs'
 import useFormBuilderStore from '@/store/useFormBuilderStore'
 import { FIELD_TYPE_MAP }  from '@/utils/fieldTypes'
 import { buildJSX } from '@/containers/PreviewModal/buildJSX'
@@ -165,9 +166,9 @@ const FormBuilder = ({
     importGeneratedTemplate({
       meta  : incomingTemplate.meta,
       fields: incomingTemplate.fields,
-      provenance: {
-        source: 'ai',
-        action: 'created',
+      provenance: incomingTemplate.provenance ?? {
+        source: 'api',
+        action: 'loaded',
       },
     })
     const nextSchema = {
@@ -322,12 +323,8 @@ const FormBuilder = ({
       const buildMeta = previewPayload?.build?.url
         ? {
           microFrontendUrl: previewPayload.build.url,
-          micro_frontend_url: previewPayload.build.url,
-          remoteEntryUrl: previewPayload.build.url,
-          remote_entry_url: previewPayload.build.url,
           componentId: previewPayload.build.componentId,
           component_id: previewPayload.build.componentId,
-          remoteEntry: previewPayload.build.url,
         }
         : {}
       const payload = {
@@ -345,11 +342,18 @@ const FormBuilder = ({
       }
 
       console.log('[FormBuilder] save payload', payload)
-      await onSave?.(payload)
+      const response = await onSave?.(payload)
+      const ok = response == null || response?.success === true || Number(response?.errorCode) === SUCCESS_CODE
+      if (!ok) {
+        throw new Error(response?.message || 'Lưu thất bại. Vui lòng thử lại.')
+      }
       message.success('Đã lưu form template.')
+      return response
     } catch (err) {
-      message.error('Lưu thất bại. Vui lòng thử lại.')
+      message.error(err?.message || 'Lưu thất bại. Vui lòng thử lại.')
       console.error(err)
+      err.formSaveHandled = true
+      throw err
     } finally {
       setSaving(false)
     }
@@ -470,9 +474,9 @@ const FormBuilder = ({
         initialJsxCode={jsxCode}
         onJsxCodeChange={setJsxCode}
         onClose={() => setPreviewOpen(false)}
-        onSave={(payload) => {
-          setPreviewOpen(false); 
-          handleSave(payload);
+        onSave={async (payload) => {
+          await handleSave(payload)
+          setPreviewOpen(false)
         }}
       />
     </DndContext>

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AutoComplete,
   Button,
@@ -11,19 +11,24 @@ import {
   message,
   Modal,
   Radio,
+  Row,
   Select,
   Tag,
+  Table,
+  Col,
 } from 'antd'
 import {
   EditOutlined,
   FormOutlined,
   MoreOutlined,
+  PlusOutlined,
   SaveOutlined,
 } from '@ant-design/icons'
 import { RestList } from '@flast-erp/core/components'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { SUCCESS_CODE } from '@/configs'
 import { getBusinessIdLocal } from '@/utils/dataUtils'
+import { parseJsxToSchema } from '@/containers/PreviewModal/parseJSXSchema'
 import useGetMe from '@/hooks/useGetMe'
 import dayjs from 'dayjs'
 import Filter from './Filter'
@@ -32,6 +37,8 @@ import '@/pages/form-list/style.css'
 const REST_LIST_API_PATH = 'workflow/forms/template/filter'
 const REQUEST_API_PATH = '/workflow/forms/template/filter'
 const DATA_SAVE_API = '/workflow/forms/storage/submit'
+const DATA_FILTER_API = '/workflow/forms/storage/template/filter-data'
+const DATA_LIST_RELOAD_DELAY_MS = 1500
 
 const formatDate = value => {
   if (!value) return ''
@@ -41,6 +48,12 @@ const formatDate = value => {
 
 const resolveStatus = (item = {}) => {
   if (item.status != null && item.status !== '') {
+    if (Number(item.status) === 0) {
+      return { label: 'Chưa gắn bước', kind: 'unassigned' }
+    }
+    if (Number(item.status) === 1) {
+      return { label: 'Đã gắn bước', kind: 'published' }
+    }
     return { label: String(item.status), kind: 'published' }
   }
   if (item.enabled === false) {
@@ -59,7 +72,8 @@ const mapTemplateRow = (item = {}) => {
     ?? item.updatedAt
     ?? item.createdAt
 
-  const displayName = (item.description ?? '').trim() || item.name || ''
+  const displayName = (item.name ?? '').trim() || item.description || ''
+  const formTitle = (item.description ?? '').trim()
   const formKey = item.name ?? ''
   const domain = (item.domain ?? '').trim()
   const { label: statusLabel, kind: statusKind } = resolveStatus(item)
@@ -67,6 +81,7 @@ const mapTemplateRow = (item = {}) => {
   return {
     id: item.id,
     name: displayName,
+    title: formTitle,
     formKey,
     fieldCount: fields.length,
     standard: domain || '—',
@@ -129,7 +144,9 @@ const replaceResponseItems = (response, embedded) => {
 const withOffset = (queryParams = {}) => {
   const page = Number(queryParams.page ?? 1)
   const limit = Number(queryParams.limit ?? 10)
-  const offset = queryParams.offset ?? ((page - 1) * limit)
+  const offset = Number.isFinite(page) && Number.isFinite(limit)
+    ? (page - 1) * limit
+    : Number(queryParams.offset ?? 0)
   const rest = { ...queryParams }
   delete rest.limit
   delete rest.offset
@@ -137,7 +154,7 @@ const withOffset = (queryParams = {}) => {
 
   return {
     limit: String(limit),
-    offset: String(offset),
+    offset: String(Math.max(offset, 0)),
     page: String(page),
     ...rest,
   }
@@ -146,7 +163,8 @@ const withOffset = (queryParams = {}) => {
 const useWorkflowFormsListQuery = ({ queryParams, onData }) => {
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState({ embedded: [], page: {} })
-  const nextQueryParams = useMemo(() => withOffset(queryParams), [queryParams])
+  const queryParamsKey = JSON.stringify(queryParams ?? {})
+  const nextQueryParams = useMemo(() => withOffset(JSON.parse(queryParamsKey)), [queryParamsKey])
 
   useEffect(() => {
     let mounted = true
@@ -221,12 +239,89 @@ const normalizeFieldOptions = (options = []) => options.map(option => ({
   label: option.label ?? option.name ?? option.value ?? option.id,
 }))
 
-const normalizeSubmissionValue = (value) => {
+const getTemplateCode = (template = {}) => (
+  template.jsx_code
+  ?? template.jsxCode
+  ?? template.code
+  ?? template.sourceComponent?.jsx_code
+  ?? template.sourceComponent?.jsxCode
+  ?? template.sourceComponent?.code
+  ?? ''
+)
+
+const collectOptionsByFieldKey = (fields = [], map = new Map()) => {
+  fields.forEach(field => {
+    if (field?.fieldKey && Array.isArray(field?.config?.options) && field.config.options.length > 0) {
+      map.set(field.fieldKey, field.config.options)
+    }
+    if (Array.isArray(field?.children)) {
+      collectOptionsByFieldKey(field.children, map)
+    }
+  })
+  return map
+}
+
+const mergeMissingOptions = (fields = [], optionsByKey = new Map()) => fields.map(field => {
+  const children = Array.isArray(field.children)
+    ? mergeMissingOptions(field.children, optionsByKey)
+    : field.children
+  const currentOptions = field?.config?.options
+  const parsedOptions = field?.fieldKey ? optionsByKey.get(field.fieldKey) : null
+
+  if (!parsedOptions?.length || currentOptions?.length) {
+    return { ...field, children }
+  }
+
+  return {
+    ...field,
+    children,
+    config: {
+      ...(field.config ?? {}),
+      options: parsedOptions,
+    },
+  }
+})
+
+const enrichTemplateOptionsFromCode = (template = {}) => {
+  const fields = Array.isArray(template.fields) ? template.fields : []
+  const code = getTemplateCode(template)
+  if (!code) {
+    return template
+  }
+
+  try {
+    const parsed = parseJsxToSchema(code, { name: template.name ?? '' })
+    const optionsByKey = collectOptionsByFieldKey(parsed.fields ?? [])
+    return {
+      ...template,
+      fields: mergeMissingOptions(fields, optionsByKey),
+    }
+  } catch (_) {
+    return template
+  }
+}
+
+const collectFieldTypeByKey = (fields = [], map = new Map()) => {
+  fields.forEach(field => {
+    if (field?.fieldKey) {
+      map.set(field.fieldKey, field.inputType)
+    }
+    if (Array.isArray(field?.children)) {
+      collectFieldTypeByKey(field.children, map)
+    }
+  })
+  return map
+}
+
+const normalizeSubmissionValue = (value, inputType) => {
   if (dayjs.isDayjs(value)) {
-    return value.toISOString()
+    if (inputType === 'datetime') {
+      return value.format('YYYY-MM-DD HH:mm:ss')
+    }
+    return value.format('YYYY-MM-DD')
   }
   if (Array.isArray(value)) {
-    return value.map(normalizeSubmissionValue)
+    return value.map(item => normalizeSubmissionValue(item, inputType))
   }
   if (value && typeof value === 'object') {
     return Object.fromEntries(
@@ -234,6 +329,16 @@ const normalizeSubmissionValue = (value) => {
     )
   }
   return value
+}
+
+const normalizeSubmissionValues = (values = {}, fields = []) => {
+  const fieldTypeByKey = collectFieldTypeByKey(fields)
+  return Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [
+      key,
+      normalizeSubmissionValue(value, fieldTypeByKey.get(key)),
+    ]),
+  )
 }
 
 const resolveBizId = (profile) => {
@@ -346,7 +451,7 @@ const FormEntryModal = ({ template, open, bizId, onCancel, onSaved }) => {
       const payload = {
         bizId,
         templateId,
-        values: normalizeSubmissionValue(values),
+        values: normalizeSubmissionValues(values, fields),
       }
 
       setSaving(true)
@@ -393,9 +498,294 @@ const FormEntryModal = ({ template, open, bizId, onCancel, onSaved }) => {
   )
 }
 
+const getStorageValues = (item = {}) => {
+  const rawValues = item.valuesJson ?? item.values ?? item.value ?? item.data ?? item.formData ?? {}
+  if (typeof rawValues === 'string') {
+    try {
+      return JSON.parse(rawValues)
+    } catch (_) {
+      return { value: rawValues }
+    }
+  }
+  return rawValues && typeof rawValues === 'object' ? rawValues : {}
+}
+
+const formatEntryValue = (value, field) => {
+  if (value == null || value === '') {
+    return '—'
+  }
+
+  const options = normalizeFieldOptions(field?.config?.options ?? [])
+  if (options.length > 0) {
+    if (Array.isArray(value)) {
+      return value.map(item => formatEntryValue(item, field)).join(', ')
+    }
+    const matchedOption = options.find(option => String(option.value) === String(value))
+    if (matchedOption) {
+      return matchedOption.label
+    }
+  }
+
+  if (dayjs.isDayjs(value) || field?.inputType === 'date' || field?.inputType === 'datetime') {
+    const parsed = dayjs.isDayjs(value) ? value : dayjs(value)
+    if (parsed.isValid()) {
+      return parsed.format(field?.inputType === 'date' ? 'DD/MM/YYYY' : 'DD/MM/YYYY HH:mm')
+    }
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(item => formatEntryValue(item, field)).join(', ')
+  }
+  if (value && typeof value === 'object') {
+    return JSON.stringify(value)
+  }
+  return String(value)
+}
+
+const normalizeStorageListResponse = (res = {}) => {
+  const payload = Array.isArray(res?.embedded)
+    ? res
+    : Array.isArray(res?.data?.embedded)
+      ? res.data
+      : Array.isArray(res?.data)
+        ? { embedded: res.data, totalElements: res.data.length }
+        : Array.isArray(res)
+          ? { embedded: res, totalElements: res.length }
+          : null
+
+  const ok = res?.success === true || Number(res?.errorCode) === SUCCESS_CODE || res?.errorCode == null
+  const embedded = payload?.embedded ?? []
+  const total = payload?.totalElements
+    ?? payload?.page?.totalElements
+    ?? res?.data?.totalElements
+    ?? embedded.length
+
+  return {
+    ok,
+    embedded,
+    total,
+    message: res?.message,
+  }
+}
+
+const buildFilterConditions = (filters = {}, fieldByKey = new Map()) => (
+  Object.fromEntries(
+    Object.entries(filters)
+      .map(([key, value]) => {
+        const nextValue = Array.isArray(value)
+          ? value.filter(item => String(item ?? '').trim())
+          : String(value ?? '').trim()
+        return [key, nextValue]
+      })
+      .filter(([, value]) => Array.isArray(value) ? value.length > 0 : value)
+      .map(([key, value]) => {
+        const inputType = fieldByKey.get(key)?.inputType
+        if (['select', 'multi_select', 'radio', 'checkbox'].includes(inputType)) {
+          return [key, value]
+        }
+        return [key, { $contains: value }]
+      }),
+  )
+)
+
+const FormDataListModal = ({ template, open, reloadKey, bizId, onCancel, onAddData }) => {
+  const [loading, setLoading] = useState(false)
+  const [rows, setRows] = useState([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(10)
+  const [draftFilters, setDraftFilters] = useState({})
+  const [columnFilters, setColumnFilters] = useState({})
+  const fields = useMemo(
+    () => Array.isArray(template?.fields) ? template.fields.filter(field => field.inputType !== 'block') : [],
+    [template?.fields],
+  )
+  const fieldByKey = useMemo(
+    () => new Map(fields.map(field => [field.fieldKey, field])),
+    [fields],
+  )
+  const title = (template?.description ?? '').trim() || template?.name || 'Form'
+
+  const fetchData = useCallback(async () => {
+    if (!open || !template?.id) {
+      return
+    }
+
+    setLoading(true)
+    try {
+      const conditions = buildFilterConditions(columnFilters, fieldByKey)
+      const response = await RequestUtils.Post(DATA_FILTER_API, {
+        ...(bizId ? { bizId } : {}),
+        templateId: Number(template.id),
+        ...(Object.keys(conditions).length ? { conditions } : {}),
+        limit,
+        offset: (page - 1) * limit,
+      })
+      const result = normalizeStorageListResponse(response)
+      if (!result.ok) {
+        message.error(result.message || 'Không tải được danh sách dữ liệu form.')
+        setRows([])
+        setTotal(0)
+        return
+      }
+      setRows(result.embedded)
+      setTotal(result.total)
+    } catch (error) {
+      message.error(error?.message || 'Không tải được danh sách dữ liệu form.')
+      setRows([])
+      setTotal(0)
+    } finally {
+      setLoading(false)
+    }
+  }, [bizId, columnFilters, fieldByKey, limit, open, page, template?.id])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData, reloadKey])
+
+  useEffect(() => {
+    if (open) {
+      setPage(1)
+      setDraftFilters({})
+      setColumnFilters({})
+    }
+  }, [open, template?.id])
+
+  const fieldLabelByKey = useMemo(
+    () => new Map(fields.map(field => [field.fieldKey, field.label || field.fieldKey])),
+    [fields],
+  )
+
+  const valueKeys = useMemo(() => [
+    ...new Set(rows.flatMap(row => Object.keys(getStorageValues(row)))),
+  ], [rows])
+
+  const displayKeys = useMemo(() => (
+    valueKeys.length > 0
+      ? valueKeys
+      : fields.map(field => field.fieldKey).filter(Boolean)
+  ), [fields, valueKeys])
+
+  const columns = useMemo(() => {
+    return [
+      {
+        title: '#',
+        key: 'index',
+        width: 64,
+        render: (_, __, index) => ((page - 1) * limit) + index + 1,
+      },
+      ...displayKeys.map(key => ({
+        title: fieldLabelByKey.get(key) ?? key,
+        key,
+        dataIndex: ['valuesJson', key],
+        ellipsis: true,
+        render: (_, record) => formatEntryValue(getStorageValues(record)[key], fieldByKey.get(key)),
+      })),
+    ]
+  }, [displayKeys, fieldByKey, fieldLabelByKey, limit, page])
+
+  const applyFilter = useCallback(() => {
+    setPage(1)
+    setColumnFilters(draftFilters)
+  }, [draftFilters])
+
+  const clearFilter = useCallback(() => {
+    setPage(1)
+    setDraftFilters({})
+    setColumnFilters({})
+  }, [])
+
+  return (
+    <Modal
+      open={open}
+      title={`Dữ liệu · ${title}`}
+      width={1280}
+      style={{ maxWidth: 'calc(100vw - 32px)' }}
+      onCancel={onCancel}
+      footer={[
+        <Button key="close" onClick={onCancel}>Đóng</Button>,
+        <Button key="add" type="primary" icon={<PlusOutlined />} onClick={onAddData}>
+          Thêm dữ liệu
+        </Button>,
+      ]}
+      destroyOnHidden
+    >
+      <div className="form-data-filter">
+        <Row gutter={[12, 12]} align="middle">
+          {displayKeys.map(key => (
+            <Col key={key} xs={24} md={12} xl={8}>
+              {['select', 'multi_select', 'radio', 'checkbox'].includes(fieldByKey.get(key)?.inputType) ? (
+                <Select
+                  allowClear
+                  className="form-data-filter-input"
+                  mode={['multi_select', 'checkbox'].includes(fieldByKey.get(key)?.inputType) ? 'multiple' : undefined}
+                  placeholder={fieldLabelByKey.get(key) ?? key}
+                  options={normalizeFieldOptions(fieldByKey.get(key)?.config?.options ?? [])}
+                  value={draftFilters[key] || undefined}
+                  onChange={value => {
+                    setDraftFilters(current => ({
+                      ...current,
+                      [key]: value,
+                    }))
+                  }}
+                />
+              ) : (
+                <Input
+                  allowClear
+                  className="form-data-filter-input"
+                  placeholder={fieldLabelByKey.get(key) ?? key}
+                  value={draftFilters[key] ?? ''}
+                  onChange={event => {
+                    const value = event.target.value
+                    setDraftFilters(current => ({
+                      ...current,
+                      [key]: value,
+                    }))
+                  }}
+                  onPressEnter={applyFilter}
+                />
+              )}
+            </Col>
+          ))}
+          <Col xs={24} md={12} xl={4}>
+            <Button type="primary" className="form-data-filter-button" block onClick={applyFilter}>
+              Lọc
+            </Button>
+          </Col>
+          <Col xs={24} md={12} xl={4}>
+            <Button className="form-data-filter-clear" block onClick={clearFilter}>
+              Xóa lọc
+            </Button>
+          </Col>
+        </Row>
+      </div>
+      <Table
+        rowKey={record => record.id ?? record.storageId ?? record.createdAt ?? JSON.stringify(record)}
+        size="small"
+        loading={loading}
+        columns={columns}
+        dataSource={rows}
+        pagination={{
+          current: page,
+          pageSize: limit,
+          total,
+          showSizeChanger: true,
+          onChange: (nextPage, nextLimit) => {
+            setPage(nextLimit !== limit ? 1 : nextPage)
+            setLimit(nextLimit)
+          },
+        }}
+      />
+    </Modal>
+  )
+}
+
 const WorkflowFormsList = ({ onCreate }) => {
   const { user: profile } = useGetMe()
   const bizId = useMemo(() => resolveBizId(profile), [profile])
+  const reloadDataTimerRef = useRef(null)
+  const [dataListTemplate, setDataListTemplate] = useState(null)
+  const [dataListReloadKey, setDataListReloadKey] = useState(0)
   const [entryTemplate, setEntryTemplate] = useState(null)
   const [entryLoadingId, setEntryLoadingId] = useState(null)
   const [reloadKey, setReloadKey] = useState(0)
@@ -416,12 +806,12 @@ const WorkflowFormsList = ({ onCreate }) => {
 
     if (!ok || !template) {
       if (record.source && isSameId(record.source.id, record.id)) {
-        return record.source
+        return enrichTemplateOptionsFromCode(record.source)
       }
       throw new Error(apiMessage || 'Không tải được dữ liệu form.')
     }
 
-    return template
+    return enrichTemplateOptionsFromCode(template)
   }, [])
 
   const handleEditForm = useCallback(async (record) => {
@@ -437,9 +827,9 @@ const WorkflowFormsList = ({ onCreate }) => {
     setEntryLoadingId(record?.id)
     try {
       const template = await fetchTemplateDetail(record)
-      setEntryTemplate(template)
+      setDataListTemplate(template)
     } catch (error) {
-      message.error(error?.message || 'Không tải được cấu hình form để nhập dữ liệu.')
+      message.error(error?.message || 'Không tải được cấu hình form để xem dữ liệu.')
       console.error('[WorkflowFormsList] handleAddData', error)
     } finally {
       setEntryLoadingId(null)
@@ -450,7 +840,13 @@ const WorkflowFormsList = ({ onCreate }) => {
     {
       title: 'Tên form',
       dataIndex: 'name',
-      width: 220,
+      width: 180,
+      ellipsis: true,
+    },
+    {
+      title: 'Tiêu đề',
+      dataIndex: 'title',
+      width: 240,
       ellipsis: true,
     },
     {
@@ -466,18 +862,18 @@ const WorkflowFormsList = ({ onCreate }) => {
       width: 80,
       align: 'center',
     },
-    {
-      title: 'Tiêu chuẩn',
-      dataIndex: 'standard',
-      width: 220,
-      ellipsis: true,
-    },
-    {
-      title: 'Đang gắn vào bước',
-      dataIndex: 'step',
-      width: 180,
-      render: value => value ? <Tag className="form-list-code">{value}</Tag> : null,
-    },
+    // {
+    //   title: 'Tiêu chuẩn',
+    //   dataIndex: 'standard',
+    //   width: 220,
+    //   ellipsis: true,
+    // },
+    // {
+    //   title: 'Đang gắn vào bước',
+    //   dataIndex: 'step',
+    //   width: 180,
+    //   render: value => value ? <Tag className="form-list-code">{value}</Tag> : null,
+    // },
     {
       title: 'Trạng thái',
       dataIndex: 'status',
@@ -542,14 +938,17 @@ const WorkflowFormsList = ({ onCreate }) => {
   ], [entryLoadingId, handleAddData, handleEditForm])
 
   const beforeSubmitFilter = useCallback((values = {}) => {
-    const nextValues = {
-      ...values,
-      isFull: true,
-    }
+    const nextValues = Object.fromEntries(
+      Object.entries(values)
+        .map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value])
+        .filter(([, value]) => value !== undefined && value !== null && value !== ''),
+    )
+
+    delete nextValues.isFull
     if (nextValues.status === 'all') {
       delete nextValues.status
     }
-    if (nextValues.page && nextValues.limit && nextValues.offset == null) {
+    if (nextValues.page && nextValues.limit) {
       nextValues.offset = String((Number(nextValues.page) - 1) * Number(nextValues.limit))
     } else if (nextValues.offset != null) {
       nextValues.offset = String(nextValues.offset)
@@ -566,6 +965,23 @@ const WorkflowFormsList = ({ onCreate }) => {
     return replaceResponseItems(response, embedded.map(mapTemplateRow))
   }, [])
 
+  useEffect(() => () => {
+    if (reloadDataTimerRef.current) {
+      clearTimeout(reloadDataTimerRef.current)
+    }
+  }, [])
+
+  const closeEntryModalAndReloadData = useCallback(() => {
+    setEntryTemplate(null)
+    if (reloadDataTimerRef.current) {
+      clearTimeout(reloadDataTimerRef.current)
+    }
+    reloadDataTimerRef.current = setTimeout(() => {
+      setDataListReloadKey(key => key + 1)
+      reloadDataTimerRef.current = null
+    }, DATA_LIST_RELOAD_DELAY_MS)
+  }, [])
+
   return (
     <>
       <RestList
@@ -573,7 +989,7 @@ const WorkflowFormsList = ({ onCreate }) => {
         rowKey="id"
         bordered
         xScroll={1060}
-        initialFilter={{ limit: 10, offset: '0', page: 1, isFull: true }}
+        initialFilter={{ limit: 10, offset: '0', page: 1 }}
         filter={<Filter />}
         customClickCreate={() => onCreate()}
         beforeSubmitFilter={beforeSubmitFilter}
@@ -583,13 +999,22 @@ const WorkflowFormsList = ({ onCreate }) => {
         columns={columns}
       />
 
+      <FormDataListModal
+        open={Boolean(dataListTemplate)}
+        template={dataListTemplate}
+        reloadKey={dataListReloadKey}
+        bizId={bizId}
+        onCancel={() => setDataListTemplate(null)}
+        onAddData={() => setEntryTemplate(dataListTemplate)}
+      />
+
       <FormEntryModal
         open={Boolean(entryTemplate)}
         template={entryTemplate}
         bizId={bizId}
-        onCancel={() => setEntryTemplate(null)}
+        onCancel={closeEntryModalAndReloadData}
         onSaved={() => {
-          setEntryTemplate(null)
+          closeEntryModalAndReloadData()
           setReloadKey(key => key + 1)
         }}
       />

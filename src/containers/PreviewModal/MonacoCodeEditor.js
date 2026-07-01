@@ -120,7 +120,7 @@ const createPropSuggestions = (monaco) => ([
   'mode',
   'apiPath',
   'entity',
-  'labelField',
+  'searchKey',
   'valueProp',
   'titleProp',
   'min',
