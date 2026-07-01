@@ -11,6 +11,7 @@
 const normalizeText = (value) =>
   String(value ?? '')
     .toLowerCase()
+    .replace(/đ/g, 'd')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
 
@@ -106,8 +107,14 @@ export const resolveFallbackProcessTypeKey = (stepTypes = []) => {
   return processType?.key ?? 'process'
 }
 
-const getNodeType = (node, stepTypes = []) =>
-  getNodeSemanticType(node, stepTypes)
+export const getNodeTopologyType = (node, edges = []) => {
+  const hasIncoming = edges.some((edge) => edge.target === node.id)
+  const hasOutgoing = edges.some((edge) => edge.source === node.id)
+
+  if (!hasIncoming && hasOutgoing) return 'start'
+  if (hasIncoming && !hasOutgoing) return 'end'
+  return null
+}
 
 export const validateBeforeExport = (nodes, edges, stepTypes = []) => {
   const errors = []
@@ -118,18 +125,20 @@ export const validateBeforeExport = (nodes, edges, stepTypes = []) => {
     return errors // không check thêm nếu rỗng
   }
 
-  // 2. Phải có đúng 1 start node
-  const startNodes = nodes.filter((n) => getNodeType(n, stepTypes) === 'start')
+  // 2. Phải có đúng 1 start node theo topology:
+  // không có đầu vào và có ít nhất 1 đầu ra.
+  const startNodes = nodes.filter((n) => getNodeTopologyType(n, edges) === 'start')
   if (startNodes.length === 0) {
-    errors.push('Thiếu step kiểu "start"')
+    errors.push('Thiếu step bắt đầu: cần có 1 bước không có đầu vào và có đầu ra')
   } else if (startNodes.length > 1) {
-    errors.push(`Có ${startNodes.length} step kiểu "start", chỉ được có 1`)
+    errors.push(`Có ${startNodes.length} bước bắt đầu, chỉ được có 1 bước không có đầu vào`)
   }
 
-  // 3. Phải có ít nhất 1 end node
-  const endNodes = nodes.filter((n) => getNodeType(n, stepTypes) === 'end')
+  // 3. Phải có ít nhất 1 end node theo topology:
+  // có đầu vào và không có đầu ra.
+  const endNodes = nodes.filter((n) => getNodeTopologyType(n, edges) === 'end')
   if (endNodes.length === 0) {
-    errors.push('Thiếu step kiểu "end"')
+    errors.push('Thiếu step kết thúc: cần có ít nhất 1 bước có đầu vào và không có đầu ra')
   }
 
   // 4. Code không được trùng nhau
@@ -182,24 +191,6 @@ export const validateBeforeExport = (nodes, edges, stepTypes = []) => {
 export const validateFlow = (nodes, edges, stepTypes = []) => {
   const errors = validateBeforeExport(nodes, edges, stepTypes)
   const warnings = []
-
-  // Warning: start node có edge đi vào
-  const startNode = nodes.find((n) => getNodeType(n, stepTypes) === 'start')
-  if (startNode) {
-    const hasIncoming = edges.some((e) => e.target === startNode.id)
-    if (hasIncoming) {
-      warnings.push(`Step "start" (${startNode.data?.label}) đang có edge đi vào — thường không nên có`)
-    }
-  }
-
-  // Warning: end node có edge đi ra
-  const endNodes = nodes.filter((n) => getNodeType(n, stepTypes) === 'end')
-  endNodes.forEach((n) => {
-    const hasOutgoing = edges.some((e) => e.source === n.id)
-    if (hasOutgoing) {
-      warnings.push(`Step "end" (${n.data?.label}) đang có edge đi ra — thường không nên có`)
-    }
-  })
 
   // Warning: guard có config rỗng
   edges.forEach((e) => {

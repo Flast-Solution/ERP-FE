@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { Col, Form, ColorPicker, Button, message } from 'antd'
 import { 
   FormInput, 
@@ -75,9 +75,19 @@ const StepTypeRow = ({ field }) => {
  * Props inject bởi modal system:
  *   stepTypes  — mảng loại bước hiện tại từ store
  *   onSave     — (updatedTypes) => void  — callback cập nhật store
+ *   onReload   — () => void              — callback reload process-type-find khi đóng modal
  */
-const ModalStepTypes = ({ stepTypes = [], onSave }) => {
+const ModalStepTypes = ({ stepTypes = [], onSave, onReload }) => {
   const [form] = Form.useForm()
+  const onReloadRef = useRef(onReload)
+
+  useEffect(() => {
+    onReloadRef.current = onReload
+  }, [onReload])
+
+  useEffect(() => () => {
+    onReloadRef.current?.()
+  }, [])
 
   useEffect(() => {
     // Map stepTypes store sang format form: thêm field status mặc định active
@@ -153,6 +163,7 @@ const ModalStepTypes = ({ stepTypes = [], onSave }) => {
     }
 
     onSave(updated)
+    await onReload?.()
   }
 
   return (

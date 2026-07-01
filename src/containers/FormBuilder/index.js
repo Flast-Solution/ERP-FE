@@ -144,6 +144,7 @@ const FormBuilder = ({
   const getParentId   = useFormBuilderStore(s => s.getParentId)
   const getFieldLocation = useFormBuilderStore(s => s.getFieldLocation)
   const toPayload     = useFormBuilderStore(s => s.toPayload)
+  const resetBuilder  = useFormBuilderStore(s => s.reset)
 
   const findFieldById = useCallback((items, targetId) => {
     for (const item of items) {
@@ -386,6 +387,16 @@ const FormBuilder = ({
     setPreviewOpen(true)
   }, [templateMeta, fields])
 
+  const handleCancel = useCallback(() => {
+    setPreviewOpen(false)
+    setPreviewMode('ui')
+    setJsxCode('')
+    setActiveDragId(null)
+    appliedIncomingRef.current = null
+    resetBuilder()
+    onCancel?.()
+  }, [onCancel, resetBuilder])
+
   return (
     <DndContext
       sensors={sensors}
@@ -435,7 +446,7 @@ const FormBuilder = ({
             <Popconfirm
               title="Hủy thay đổi?"
               description="Các thay đổi chưa lưu sẽ bị mất."
-              onConfirm={onCancel}
+              onConfirm={handleCancel}
               okText="Hủy thay đổi"
               cancelText="Tiếp tục chỉnh sửa"
               okButtonProps={{ danger: true }}
@@ -443,7 +454,7 @@ const FormBuilder = ({
             >
               <Button
                 icon={<CloseOutlined />}
-                onClick={fields.length === 0 ? onCancel : undefined}
+                onClick={fields.length === 0 ? handleCancel : undefined}
               >
                 Hủy
               </Button>

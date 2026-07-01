@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet'
-import { Breadcrumb, Layout, Input, Typography, Button, Modal, message, Space } from 'antd'
+import { Breadcrumb, Layout, Input, Button, Modal, message, Select, Space } from 'antd'
 import {
   ArrowLeftOutlined,
   SaveOutlined,
@@ -27,12 +27,17 @@ import {
 import { RequestUtils } from '@flast-erp/core/utils'
 import { SUCCESS_CODE } from '@/configs'
 import { flowToJson, jsonToFlow } from '@/utils/workflowSerializer'
-import { normalizeWorkflowStepType, validateFlow } from '@/utils/workflowValidators'
+import { getNodeTopologyType, normalizeWorkflowStepType, validateFlow } from '@/utils/workflowValidators'
 import { createUuidV7 } from '@/utils/uuid'
 
 const { Content } = Layout
-const { Text } = Typography
 const PROCESS_TYPE_FIND_API = '/workflow/process/process-type-find'
+const BUSINESS_TYPE_OPTIONS = [
+  { label: 'Đơn hàng', value: 'ORDER' },
+  { label: 'Hành Chính', value: 'ADMINISTRATION' },
+  { label: 'Lead', value: 'LEAD' },
+  { label: 'Kho', value: 'WAREHOUSE' },
+]
 
 const DesignerTopBar = styled.div`
   padding: 8px 16px;
@@ -95,7 +100,7 @@ const normalizeProcessType = (item, index) => {
   }
 }
 
-const WorkflowDesignerEditor = ({ onBack }) => {
+const WorkflowDesignerEditor = ({ onBack, onReloadStepTypes }) => {
   const process = useProcess()
   const nodes = useNodes()
   const edges = useEdges()
@@ -162,6 +167,7 @@ const WorkflowDesignerEditor = ({ onBack }) => {
         label: node.data?.label,
         name: node.data?.name,
         type: node.data?.type,
+        topologyType: getNodeTopologyType(node, edges),
         normalizedType: normalizeWorkflowStepType(node.data?.type, stepTypes, node),
         dataKeys: Object.keys(node.data ?? {}),
       })),
@@ -171,8 +177,8 @@ const WorkflowDesignerEditor = ({ onBack }) => {
         label: stepType.label,
         normalizedType: normalizeWorkflowStepType(stepType.key ?? stepType.id, stepTypes),
       })),
-      startNodes: nodes.filter((node) => normalizeWorkflowStepType(node.data?.type, stepTypes, node) === 'start'),
-      endNodes: nodes.filter((node) => normalizeWorkflowStepType(node.data?.type, stepTypes, node) === 'end'),
+      startNodes: nodes.filter((node) => getNodeTopologyType(node, edges) === 'start'),
+      endNodes: nodes.filter((node) => getNodeTopologyType(node, edges) === 'end'),
     })
 
     const { valid, errors, warnings } = validateFlow(nodes, edges, stepTypes)
@@ -206,7 +212,7 @@ const WorkflowDesignerEditor = ({ onBack }) => {
   return (
     <DesignerLayout>
       <LeftSider width={240} theme="light">
-        <StepPanel />
+        <StepPanel onReloadStepTypes={onReloadStepTypes} />
       </LeftSider>
 
       <Content style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -226,9 +232,14 @@ const WorkflowDesignerEditor = ({ onBack }) => {
             style={{ maxWidth: 260, fontWeight: 500 }}
             placeholder="Tạo luồng xử lý nghiệp vụ"
           />
-          <Text style={{ fontSize: 11, color: '#bfbfbf', fontFamily: 'monospace' }}>
-            [{process.code}]
-          </Text>
+          <Select
+            allowClear
+            value={process.flowType ?? undefined}
+            options={BUSINESS_TYPE_OPTIONS}
+            onChange={(value) => setProcess({ flowType: value })}
+            placeholder="Loại nghiệp vụ"
+            style={{ width: 180 }}
+          />
           <Space style={{ marginLeft: 'auto' }}>
             <Button
               type="primary"
@@ -308,7 +319,7 @@ const WorkflowDesignerPage = () => {
   }, [setSearchParams])
 
   if (view === 'designer') {
-    return <WorkflowDesignerEditor onBack={handleBack} />
+    return <WorkflowDesignerEditor onBack={handleBack} onReloadStepTypes={fetchProcessTypes} />
   }
 
   return (

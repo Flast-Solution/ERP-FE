@@ -1,7 +1,8 @@
 import React, { memo } from 'react'
 import { Handle, Position } from 'reactflow'
-import { Tooltip } from 'antd'
-import { useStepTypes } from '@/hooks/useWorkflowStore'
+import { DeleteOutlined } from '@ant-design/icons'
+import { message, Tooltip } from 'antd'
+import { useDeleteNode, useEdges, useStepTypes } from '@/hooks/useWorkflowStore'
 import {
   NodeWrapper,
   NodeHeader,
@@ -9,6 +10,7 @@ import {
   GroupBadgeDot,
   NodeLabel,
   DragHandle,
+  NodeDeleteButton,
   NodeCode,
   NodeFooter,
   FooterBadge,
@@ -44,13 +46,28 @@ const buildFooterBadges = (data) => {
 
 // ─── StepNode ─────────────────────────────────────────────────────────────────
 
-const StepNode = ({ data, selected }) => {
+const StepNode = ({ id, data, selected }) => {
   const stepTypes = useStepTypes()
+  const edges = useEdges()
+  const deleteNode = useDeleteNode()
 
   // Tìm config nhóm từ store theo data.type
   const typeConfig = stepTypes.find((t) => t.key === data.type)
+  const hasOutgoingEdge = edges.some((edge) => edge.source === id)
 
   const footerBadges = buildFooterBadges(data)
+
+  const handleDelete = (event) => {
+    event.stopPropagation()
+    event.preventDefault()
+
+    if (hasOutgoingEdge) {
+      message.warning('Không thể xoá bước đã có đầu ra. Vui lòng xoá transition đi ra trước.')
+      return
+    }
+
+    deleteNode(id)
+  }
 
   return (
     <NodeWrapper $selected={selected}>
@@ -78,6 +95,18 @@ const StepNode = ({ data, selected }) => {
         )}
 
         <NodeLabel>{data.label || 'Untitled'}</NodeLabel>
+
+        <Tooltip title={hasOutgoingEdge ? 'Không thể xoá bước đã có đầu ra' : 'Xoá bước'}>
+          <NodeDeleteButton
+            type="button"
+            $disabled={hasOutgoingEdge}
+            aria-disabled={hasOutgoingEdge}
+            onClick={handleDelete}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <DeleteOutlined />
+          </NodeDeleteButton>
+        </Tooltip>
 
         <DragHandle className="drag-handle__custom">⋮</DragHandle>
       </NodeHeader>

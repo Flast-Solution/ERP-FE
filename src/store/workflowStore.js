@@ -44,6 +44,8 @@ const useWorkflowStore = create((set, get) => ({
     name: '',
     code: '',
     description: '',
+    flowType: '',
+    status: 1,
   },
 
   setProcess: (partial) => set((state) => ({
@@ -130,6 +132,10 @@ const useWorkflowStore = create((set, get) => ({
       if (targetSemantic === 'end') {
         const endCount = state.nodes.filter((n) => getNodeSemanticType(n, stepTypes) === 'end').length
         if (endCount <= 1) return {}
+      }
+
+      if (state.edges.some((e) => e.source === nodeId)) {
+        return {}
       }
  
       const nextNodes = state.nodes.filter((n) => n.id !== nodeId)
@@ -256,7 +262,7 @@ const useWorkflowStore = create((set, get) => ({
       selectedType: null,
       history: [],
       future: [],
-      process: { id: null, processKey: '', name: '', code: '', description: '' },
+      process: { id: null, processKey: '', name: '', code: '', description: '', flowType: '', status: 1 },
     }),
 
   // ── Load từ JSON (import) ─────────────────────────────────────────────────────
@@ -264,7 +270,7 @@ const useWorkflowStore = create((set, get) => ({
     set({
       nodes: nodes ?? [],
       edges: edges ?? [],
-      process: processInfo ?? { id: null, processKey: '', name: '', code: '', description: '' },
+      process: processInfo ?? { id: null, processKey: '', name: '', code: '', description: '', flowType: '', status: 1 },
       selectedId: null,
       selectedType: null,
       history: [],

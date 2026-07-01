@@ -96,11 +96,11 @@ const toComponentSlug = (name = '') => {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
 
-  if (!slug) return 'form-view'
-  return /^[a-z]/.test(slug) ? slug : `form-${slug}`
+  if (!slug) return 'form_view'
+  return /^[a-z]/.test(slug) ? slug : `form_${slug}`
 }
 
 const LEGACY_FORM_IMPORT_RE = /import\s+(\w+)\s+from\s+['"](?:@\/)?(?:form-flast|components\/form)\/(\w+)['"]\s*;?\s*\n?/g

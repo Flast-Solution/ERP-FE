@@ -1,7 +1,7 @@
 import AIChatbot from "@/containers/AIChatbot";
 import FormBuilder from "@/containers/FormBuilder";
 import { useEffect, useState } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { message } from "antd";
 import { RequestUtils } from "@flast-erp/core/utils";
 import useFormBuilderStore from "@/store/useFormBuilderStore";
@@ -89,6 +89,7 @@ const enrichTemplateFieldsFromCode = (template = {}) => {
 const BuilderPage = () => {
 
   const location = useLocation()
+  const navigate = useNavigate()
   const params = useParams()
   const routeTemplateId = params.id ?? params['*']?.split('/')?.[0]
   const [chatbotOpen, setChatbotOpen] = useState(false)
@@ -256,6 +257,15 @@ const BuilderPage = () => {
     })
   }
 
+  const handleCancel = () => {
+    resetBuilder()
+    setIncomingTemplate(null)
+    setChatbotOpen(false)
+    setChatbotContext(null)
+    setChatbotMode('default')
+    navigate('/workflow-forms')
+  }
+
   return (
     <BuilderPageShell>
       <BuilderPane>
@@ -263,6 +273,7 @@ const BuilderPage = () => {
           onOpenAI={openChatbot}
           onPreview={()=> {}}
           onSave={handleSave}
+          onCancel={handleCancel}
           incomingTemplate={incomingTemplate}
         />
       </BuilderPane>

@@ -1,5 +1,5 @@
 import { DEFAULT_STEP, DEFAULT_TRANSITION } from '@/store/workflowConstants'
-import { normalizeWorkflowStepType } from './workflowValidators'
+import { getNodeTopologyType, normalizeWorkflowStepType } from './workflowValidators'
 
 const normalizeTrigger = (trigger) =>
   trigger == null || trigger === '' ? 'on_enter' : String(trigger).toLowerCase()
@@ -41,7 +41,7 @@ export const flowToJson = ({ nodes, edges, process, stepTypes = [] }) => {
 
   return {
     process: serializeProcess(process),
-    steps: nodes.map((node, index) => serializeStep(node, index, stepTypes)),
+    steps: nodes.map((node, index) => serializeStep(node, index, stepTypes, edges)),
     transitions: edges.map((edge, index) =>
       serializeTransition(edge, index, stepCodeByNodeId)
     ),
@@ -164,6 +164,7 @@ const normalizeProcess = (process = {}) => ({
   name: process?.name ?? 'Untitled',
   code: process?.code ?? process?.processKey ?? process?.process_key ?? 'untitled',
   description: process?.description ?? '',
+  flowType: process?.flowType ?? process?.flow_type ?? '',
 })
 
 /*
@@ -215,11 +216,11 @@ const serializeProcess = (process = {}) => {
     name: process.name ?? '',
     description: process.description ?? '',
     enabled: process.enabled ?? true,
-    status: process.status ?? 1,
+    status: Number(process.status ?? 1) === 1 ? 1 : 0,
   }
 
   const optionalFields = {
-    entityTable: process.entityTable ?? process.entity_table,
+    flowType: process.flowType ?? process.flow_type,
     bizId: process.bizId ?? process.biz_id,
     createdBy: process.createdBy ?? process.created_by,
     updatedBy: process.updatedBy ?? process.updated_by,
@@ -234,14 +235,15 @@ const serializeProcess = (process = {}) => {
   return payload
 }
 
-const serializeStep = (node, index, stepTypes = []) => {
+const serializeStep = (node, index, stepTypes = [], edges = []) => {
   const persistedId = node.data?.persistedId ?? node.data?.id
+  const topologyType = getNodeTopologyType(node, edges)
   const step = {
     ...(persistedId != null && persistedId !== '' ? { id: persistedId } : {}),
     stepCode: node.data?.code ?? node.id,
     name: node.data?.name ?? node.data?.label ?? node.data?.code ?? node.id,
     label: node.data?.label ?? node.data?.name ?? node.data?.code ?? node.id,
-    type: toApiStepType(node.data?.type, stepTypes, node),
+    type: toApiStepType(topologyType ?? node.data?.type, stepTypes, node),
     description: node.data?.description ?? '',
     position: node.position,
     sortOrder: node.data?.sortOrder ?? index,
