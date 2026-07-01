@@ -105,8 +105,22 @@ const toComponentSlug = (name = '') => {
 
 const LEGACY_FORM_IMPORT_RE = /import\s+(\w+)\s+from\s+['"](?:@\/)?(?:form-flast|components\/form)\/(\w+)['"]\s*;?\s*\n?/g
 const DEEP_CORE_FORM_IMPORT_RE = /import\s+(\w+)\s+from\s+['"]@flast-erp\/core\/components\/form\/(\w+)['"]\s*;?\s*\n?/g
-const CORE_COMPONENTS_BARREL_RE = /import\s+\{([^}]+)\}\s+from\s+['"]@flast-erp\/core\/components['"]\s*;?\s*\n?/g
+const CORE_COMPONENTS_BARREL_RE = /^\s*import\s+\{([^}]+)\}\s+from\s+['"]@flast-erp\/core\/components['"]\s*;?\s*\n?/gm
+const ONE_LINE_IMPORT_RE = /^\s*import\s+[^;\n]+;?\s*$/gm
 const BUILD_WAIT_TIMEOUT_MS = 5 * 60 * 1000
+const KNOWN_CORE_FORM_COMPONENTS = [
+  'FormInput',
+  'FormInputNumber',
+  'FormTextArea',
+  'FormSelect',
+  'FormRadioGroup',
+  'FormCheckbox',
+  'FormDatePicker',
+  'FormJoditEditor',
+  'FormSelectAPI',
+  'FormAutoComplete',
+  'FormHidden',
+]
 
 const collectNamedImports = (set, importList = '') => {
   importList.split(',').forEach(part => {
@@ -120,6 +134,23 @@ const insertAfterFirstImport = (code, line) => {
   if (!match) return `${line}${code}`
   const index = match.index + match[0].length
   return `${code.slice(0, index)}${line}${code.slice(index)}`
+}
+
+const hoistOneLineImports = (code = '') => {
+  const imports = []
+  const body = String(code).replace(ONE_LINE_IMPORT_RE, match => {
+    const line = match.trim().replace(/;$/, '')
+    if (line) {
+      imports.push(line)
+    }
+    return ''
+  }).replace(/^\n+/, '')
+
+  if (!imports.length) {
+    return body
+  }
+
+  return `${[...new Set(imports)].join('\n')}\n${body}`
 }
 
 /** Chuẩn hóa import form component về barrel @flast-erp/core/components. */
@@ -138,6 +169,12 @@ const normalizeBuildJsxCode = (code = '') => {
   jsx = jsx.replace(DEEP_CORE_FORM_IMPORT_RE, (_, name) => {
     components.add(name)
     return ''
+  })
+
+  KNOWN_CORE_FORM_COMPONENTS.forEach(name => {
+    if (new RegExp(`<${name}\\b`).test(jsx)) {
+      components.add(name)
+    }
   })
 
   if (components.size > 0) {
@@ -160,7 +197,7 @@ const prepareJsxForRemoteBuild = (code = '') => {
     return `import { ${names.join(', ')} } from '@flast-erp/core/components'\n`
   })
 
-  return jsx
+  return hoistOneLineImports(jsx)
 }
 
 const getBuildPreviewUrl = (data = {}) => (
@@ -808,7 +845,7 @@ const PreviewModal = ({
         return
       }
 
-      onSave?.({
+      await onSave?.({
         schema: effectiveSchema,
         jsxCode,
         syncError: '',
@@ -820,7 +857,9 @@ const PreviewModal = ({
         },
       })
     } catch (error) {
-      message.error(error.message)
+      if (!error?.formSaveHandled) {
+        message.error(error.message)
+      }
     } finally {
       setSavingAfterBuild(false)
     }

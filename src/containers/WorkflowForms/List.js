@@ -24,6 +24,7 @@ import { RestList } from '@flast-erp/core/components'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { SUCCESS_CODE } from '@/configs'
 import { getBusinessIdLocal } from '@/utils/dataUtils'
+import { parseJsxToSchema } from '@/containers/PreviewModal/parseJSXSchema'
 import useGetMe from '@/hooks/useGetMe'
 import dayjs from 'dayjs'
 import Filter from './Filter'
@@ -221,6 +222,68 @@ const normalizeFieldOptions = (options = []) => options.map(option => ({
   label: option.label ?? option.name ?? option.value ?? option.id,
 }))
 
+const getTemplateCode = (template = {}) => (
+  template.jsx_code
+  ?? template.jsxCode
+  ?? template.code
+  ?? template.sourceComponent?.jsx_code
+  ?? template.sourceComponent?.jsxCode
+  ?? template.sourceComponent?.code
+  ?? ''
+)
+
+const collectOptionsByFieldKey = (fields = [], map = new Map()) => {
+  fields.forEach(field => {
+    if (field?.fieldKey && Array.isArray(field?.config?.options) && field.config.options.length > 0) {
+      map.set(field.fieldKey, field.config.options)
+    }
+    if (Array.isArray(field?.children)) {
+      collectOptionsByFieldKey(field.children, map)
+    }
+  })
+  return map
+}
+
+const mergeMissingOptions = (fields = [], optionsByKey = new Map()) => fields.map(field => {
+  const children = Array.isArray(field.children)
+    ? mergeMissingOptions(field.children, optionsByKey)
+    : field.children
+  const currentOptions = field?.config?.options
+  const parsedOptions = field?.fieldKey ? optionsByKey.get(field.fieldKey) : null
+
+  if (!parsedOptions?.length || currentOptions?.length) {
+    return { ...field, children }
+  }
+
+  return {
+    ...field,
+    children,
+    config: {
+      ...(field.config ?? {}),
+      options: parsedOptions,
+    },
+  }
+})
+
+const enrichTemplateOptionsFromCode = (template = {}) => {
+  const fields = Array.isArray(template.fields) ? template.fields : []
+  const code = getTemplateCode(template)
+  if (!code) {
+    return template
+  }
+
+  try {
+    const parsed = parseJsxToSchema(code, { name: template.name ?? '' })
+    const optionsByKey = collectOptionsByFieldKey(parsed.fields ?? [])
+    return {
+      ...template,
+      fields: mergeMissingOptions(fields, optionsByKey),
+    }
+  } catch (_) {
+    return template
+  }
+}
+
 const normalizeSubmissionValue = (value) => {
   if (dayjs.isDayjs(value)) {
     return value.toISOString()
@@ -416,12 +479,12 @@ const WorkflowFormsList = ({ onCreate }) => {
 
     if (!ok || !template) {
       if (record.source && isSameId(record.source.id, record.id)) {
-        return record.source
+        return enrichTemplateOptionsFromCode(record.source)
       }
       throw new Error(apiMessage || 'Không tải được dữ liệu form.')
     }
 
-    return template
+    return enrichTemplateOptionsFromCode(template)
   }, [])
 
   const handleEditForm = useCallback(async (record) => {
@@ -544,8 +607,8 @@ const WorkflowFormsList = ({ onCreate }) => {
   const beforeSubmitFilter = useCallback((values = {}) => {
     const nextValues = {
       ...values,
-      isFull: true,
     }
+    delete nextValues.isFull
     if (nextValues.status === 'all') {
       delete nextValues.status
     }
@@ -573,7 +636,7 @@ const WorkflowFormsList = ({ onCreate }) => {
         rowKey="id"
         bordered
         xScroll={1060}
-        initialFilter={{ limit: 10, offset: '0', page: 1, isFull: true }}
+        initialFilter={{ limit: 10, offset: '0', page: 1 }}
         filter={<Filter />}
         customClickCreate={() => onCreate()}
         beforeSubmitFilter={beforeSubmitFilter}

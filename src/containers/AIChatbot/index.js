@@ -237,6 +237,11 @@ const AIChatbot = ({
     let diff = null
 
     session.connect({
+      onOpen: () => {
+        if (sessionRef.current === session) {
+          setSseStatus('connected')
+        }
+      },
       onChunk: (chunk) => {
         responseBufferRef.current += chunk
         appendChunk(currentMode, chunk)
@@ -297,8 +302,6 @@ const AIChatbot = ({
           applyTemplateSavedFromText(latestAssistantTemplate.content, 'history')
         }
       },
-    }).then(() => {
-      setSseStatus('connected')
     }).catch(() => setSseStatus('error'))
     /* eslint-disable-next-line */
   }, [])
@@ -339,7 +342,7 @@ const AIChatbot = ({
   }, [])
 
   const handleSend = useCallback(async (text) => {
-    if (streaming || !sessionRef.current) {
+    if (streaming || !sessionRef.current || !sessionRef.current.isConnected) {
       return
     }
 
@@ -490,10 +493,12 @@ const AIChatbot = ({
           <Composer
             suggestions={modeConfig.suggestions}
             onSend={handleSend}
-            disabled={streaming || sseStatus === 'connecting'}
+            disabled={streaming || sseStatus !== 'connected'}
             placeholder={
               sseStatus === 'connecting'
                 ? 'Đang kết nối...'
+                : sseStatus === 'error'
+                ? 'Kết nối lỗi, vui lòng tạo cuộc trò chuyện mới...'
                 : mode === 'default'
                 ? 'Hỏi bất cứ điều gì…'
                 : 'Mô tả thay đổi mong muốn…'

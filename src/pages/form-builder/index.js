@@ -5,6 +5,7 @@ import { useLocation, useParams } from "react-router-dom";
 import { message } from "antd";
 import { RequestUtils } from "@flast-erp/core/utils";
 import useFormBuilderStore from "@/store/useFormBuilderStore";
+import { parseJsxToSchema } from "@/containers/PreviewModal/parseJSXSchema";
 import styled from "styled-components";
 
 const FORM_TEMPLATE_DETAIL_API = '/workflow/forms/template/find-id'
@@ -26,6 +27,65 @@ const BuilderPane = styled.div`
   overflow: hidden;
 `
 
+const getTemplateCode = (template = {}) => (
+  template.jsx_code
+  ?? template.jsxCode
+  ?? template.code
+  ?? template.sourceComponent?.jsx_code
+  ?? template.sourceComponent?.jsxCode
+  ?? template.sourceComponent?.code
+  ?? ''
+)
+
+const collectOptionsByFieldKey = (fields = [], map = new Map()) => {
+  fields.forEach(field => {
+    if (field?.fieldKey && Array.isArray(field?.config?.options) && field.config.options.length > 0) {
+      map.set(field.fieldKey, field.config.options)
+    }
+    if (Array.isArray(field?.children)) {
+      collectOptionsByFieldKey(field.children, map)
+    }
+  })
+  return map
+}
+
+const mergeMissingOptions = (fields = [], optionsByKey = new Map()) => fields.map(field => {
+  const children = Array.isArray(field.children)
+    ? mergeMissingOptions(field.children, optionsByKey)
+    : field.children
+  const currentOptions = field?.config?.options
+  const parsedOptions = field?.fieldKey ? optionsByKey.get(field.fieldKey) : null
+
+  if (!parsedOptions?.length || currentOptions?.length) {
+    return { ...field, children }
+  }
+
+  return {
+    ...field,
+    children,
+    config: {
+      ...(field.config ?? {}),
+      options: parsedOptions,
+    },
+  }
+})
+
+const enrichTemplateFieldsFromCode = (template = {}) => {
+  const fields = Array.isArray(template.fields) ? template.fields : []
+  const code = getTemplateCode(template)
+  if (!code) {
+    return fields
+  }
+
+  try {
+    const parsed = parseJsxToSchema(code, { name: template.name ?? '' })
+    const optionsByKey = collectOptionsByFieldKey(parsed.fields ?? [])
+    return mergeMissingOptions(fields, optionsByKey)
+  } catch (_) {
+    return fields
+  }
+}
+
 const BuilderPage = () => {
 
   const location = useLocation()
@@ -40,6 +100,7 @@ const BuilderPage = () => {
   const resetBuilder = useFormBuilderStore(s => s.reset)
 
   const applyTemplate = (template, openPreview = false) => {
+    const code = getTemplateCode(template)
     setIncomingTemplate({
       meta: {
         id: template.id,
@@ -48,13 +109,8 @@ const BuilderPage = () => {
         description: template.description ?? '',
         enabled: template.enabled ?? true,
       },
-      fields: Array.isArray(template.fields) ? template.fields : [],
-      code: template.jsx_code
-        ?? template.jsxCode
-        ?? template.code
-        ?? template.sourceComponent?.jsx_code
-        ?? template.sourceComponent?.jsxCode
-        ?? '',
+      fields: enrichTemplateFieldsFromCode(template),
+      code,
       provenance: {
         source: 'api',
         action: 'loaded',
