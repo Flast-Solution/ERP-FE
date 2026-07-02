@@ -70,10 +70,12 @@ export function ApiConfigModal({ onBuild }) {
   const setConfigOpen = useEditorStore((s) => s.setConfigOpen)
   const apiConfig = useEditorStore((s) => s.apiConfig)
   const seoConfig = useEditorStore((s) => s.seoConfig)
-  const crumbConfig = useEditorStore((s) => s.crumbConfig)
+  const crumbConfig = useEditorStore((s) => s.crumbConfig) 
   const saveConfig = useEditorStore((s) => s.saveConfig)
   const saveSeo = useEditorStore((s) => s.saveSeo)
   const saveCrumb = useEditorStore((s) => s.saveCrumb)
+  const publishConfigPage = useEditorStore((s) => s.publishConfigPage)      // thêm                 // thêm
+  const uploadJsxFiles = useEditorStore((s) => s.uploadJsxFiles)
 
   const [tab, setTab] = useState('api')
   const [draft, setDraft] = useState(apiConfig)
@@ -81,9 +83,10 @@ export function ApiConfigModal({ onBuild }) {
   const [crumbDraft, setCrumbDraft] = useState(crumbConfig)
   const [codeDraft, setCodeDraft] = useState({})
   const [copiedId, setCopiedId] = useState(null)
+  const [uploadingId, setUploadingId] = useState(null) // component đang upload
 
   const fileInputs = useRef({})
-  
+
   /* Đồng bộ draft với cấu hình đã lưu mỗi khi mở modal */
   useEffect(() => {
     if (!open) return
@@ -128,24 +131,43 @@ export function ApiConfigModal({ onBuild }) {
   }
 
   /* Code JSX (đầu vào cho Build) */
-  const pickCode = (cid) => fileInputs.current[cid]?.click()
-  const onCodeFiles = (cid, e) => {
+  const pickCode = (cid) => {
+    fileInputs.current[cid]?.click(); 
+  }
+  const onCodeFiles = async (cid, e) => {
 
+    // const selected = Array.from(e.target.files || [])
+    // const files = selected.map((file) => ({
+    //   id: `${uid()}-${file.name}`,
+    //   name: file.name,
+    // }))
+
+    // if (files.length > 0) {
+    //   setCodeDraft((draft) => {
+    //     const current = draft[cid] || []
+    //     return { ...draft, [cid]: [...current, ...files] }
+    //   })
+    // }
+
+    // /* Reset để chọn lại đúng file vừa xoá vẫn kích hoạt onChange */
+    // e.target.value = ''
     const selected = Array.from(e.target.files || [])
-    const files = selected.map((file) => ({
-      id: `${uid()}-${file.name}`,
-      name: file.name,
-    }))
+    e.target.value = '' // reset trước để chọn lại đúng file vừa xoá vẫn kích hoạt onChange
 
-    if (files.length > 0) {
+    if (selected.length === 0) return
+
+    setUploadingId(cid)
+    try {
+      const uploaded = await uploadJsxFiles(cid, selected);
       setCodeDraft((draft) => {
         const current = draft[cid] || []
-        return { ...draft, [cid]: [...current, ...files] }
+        return { ...draft, [cid]: [...current, ...uploaded] }
       })
+    } catch {
+      // toast lỗi đã hiển thị trong store
+    } finally {
+      setUploadingId(null)
     }
-
-    /* Reset để chọn lại đúng file vừa xoá vẫn kích hoạt onChange */
-    e.target.value = ''
   }
 
   const removeCode = (cid, fid) => {
@@ -188,10 +210,32 @@ export function ApiConfigModal({ onBuild }) {
     setCrumbDraft((list) => list.filter((crumb) => crumb.id !== id))
   }
 
-  const handleSave = () => {
-    saveConfig(draft)
-    saveSeo(seoDraft)
-    saveCrumb(crumbDraft)
+  // const handleSave = () => {
+  //   saveConfig(draft)
+  //   saveSeo(seoDraft)
+  //   saveCrumb(crumbDraft)
+  // }
+
+  const handleSave = async () => {
+    const cleanedApi = Object.fromEntries(
+      Object.entries(draft).map(([cid, apis]) => [
+        cid,
+        apis.filter((api) => api.key.trim() && api.url.trim()),
+      ])
+    )
+    const cleanedSeo = seoDraft.filter((m) => m.name.trim() && m.value.trim())
+    const cleanedCrumb = crumbDraft.filter((c) => c.text.trim() && c.url.trim())
+
+    saveConfig(cleanedApi)
+    saveSeo(cleanedSeo)
+    saveCrumb(cleanedCrumb)
+
+    try {
+      await publishConfigPage()
+      setConfigOpen(false)
+    } catch {
+      // toast lỗi đã có ở store, không đóng modal để user sửa lại
+    }
   }
 
   const total = Object.values(draft || {}).reduce((n, arr) => n + (arr?.length ?? 0), 0)

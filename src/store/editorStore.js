@@ -1,3 +1,4 @@
+import { RequestUtils } from '@flast-erp/core/utils'
 import { create } from 'zustand'
 
 /* Dữ liệu mặc định — ràng buộc API cho từng phần tử trên trang */
@@ -55,6 +56,7 @@ export const useEditorStore = create((set, get) => ({
   apiConfig: DEFAULT_API,
   seoConfig: DEFAULT_SEO,
   crumbConfig: DEFAULT_CRUMBS,
+  jsxConfig: {}, 
 
   get apiCount() {
     return countApis(get().apiConfig)
@@ -136,10 +138,101 @@ export const useEditorStore = create((set, get) => ({
 
   saveCrumb: (crumbs) => set({ crumbConfig: crumbs }),
 
+  saveJsxConfig: (jsxConfig) => set({ jsxConfig }),  
+
   /* Nội bộ */
   _showToast: (message) => {
     if (toastTimer) clearTimeout(toastTimer)
     set({ toast: message })
     toastTimer = setTimeout(() => set({ toast: null }), TOAST_MS)
   },
+    /* Upload nhiều file JSX cho 1 component, trả về danh sách path server */
+  uploadJsxFiles: async (componentId, files) => {
+    const formData = new FormData()
+    files.forEach((file) => formData.append('files', file))
+    formData.append('folder', 'test')
+    set({ busy: true })
+    try {
+      const data = await RequestUtils.Post(
+        '/upload/folder/multiple',
+        formData
+      )
+
+      if (!data?.success) {
+        throw new Error(data?.message || `Tải file thất bại (mã lỗi: ${data?.success})`)
+      }
+
+      // data.files: ["test/20f576ff-....tsx", ...]
+      const uploaded = (data?.files || []).map((path) => ({
+        id: `${Date.now()}-${path}`,
+        name: path.split('/').pop(),
+        path,
+      }))
+      set((s) => ({
+        jsxConfig: {
+          ...s.jsxConfig,
+          [componentId]: [...(s.jsxConfig[componentId] || []), ...uploaded],
+        },
+      }))
+
+      get()._showToast(`Đã tải ${uploaded.length} file lên`)
+      return uploaded
+    } catch (err) {
+      console.error(err)
+      get()._showToast(err.message || 'Tải file thất bại, thử lại sau')
+      throw err
+    } finally {
+      set({ busy: false })
+    }
+  },
+
+
+  /* Lấy nội dung 1 file JSX đã upload, dùng cho Build/preview */
+  viewJsxFile: async (path) => {
+    const { data, errorCode, message: errMsg } = await RequestUtils.Get(
+      `/upload/folder/view?filename=${encodeURIComponent(path)}`
+    )
+    if (errorCode) {
+      throw new Error(errMsg || `Không đọc được file (mã lỗi: ${errorCode})`)
+    }
+    return data // nội dung raw của file .tsx
+  },
+
+  publishConfigPage: async () => {
+    const { apiConfig, jsxConfig, seoConfig, crumbConfig } = get()
+    const configs = Object.entries(apiConfig).map(([tag, apis]) => ({
+      titles: tag,
+      tag,
+      apis: (apis || []).map(({ key, method, url }) => ({ key, method, url })),
+      urlJsx: (jsxConfig[tag] || [])[0]?.path || '',
+    }))
+    
+    set({ busy: true })
+    try {
+      const bodys = {
+        bizId: 1,
+        name: "Trang chủ",
+        slug: "Trang chủ",
+        title: "Trang chủ - Website Bán Hàng",
+        configs,
+        seos: seoConfig,
+        breadcrumds: crumbConfig.map(({ text, url }) => ({ page: text, url })),
+      }
+      const { data, errorCode, message: errMsg } = await RequestUtils.Post('/api/web-page-view/create', bodys)
+
+      if (errorCode) {
+        throw new Error(errMsg || `Lưu trang thất bại (mã lỗi: ${errorCode})`)
+      }
+
+      get()._showToast('Đã lưu trang thành công')
+      return data
+    } catch (err) {
+      console.error(err)
+      get()._showToast(err.message || 'Lưu trang thất bại, thử lại sau')
+      throw err
+    } finally {
+      set({ busy: false })
+    }
+  },
+
 }))
