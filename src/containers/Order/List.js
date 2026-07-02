@@ -334,7 +334,8 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
                     return
                   }
                   if (key === 'progress') {
-                    navigate(`/sale/order/progress/${record.id}`, {
+                    const instanceId = record.workflowInstance?.id
+                    navigate(`/sale/order/progress/${record.id}${instanceId ? `?instanceId=${instanceId}` : ''}`, {
                       state: {
                         order: record,
                         workflowInstance: record.workflowInstance,
