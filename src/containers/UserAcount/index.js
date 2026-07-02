@@ -31,7 +31,7 @@ const UserAccount = ({ data }) => {
   const [ listProFile, setListProFile ] = useState([]);
 
   useEffect(() => {
-    RequestUtils.GetAsList('/auth/user/list-role').then(setListProFile);
+    RequestUtils.GetAsList('/auth/list-role').then(setListProFile);
   }, [])
 
   useEffect(() => {

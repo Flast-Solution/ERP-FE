@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet'
-import { Breadcrumb, Layout, Input, Button, Modal, message, Select, Space } from 'antd'
+import { Breadcrumb, Layout, Input, Button, Modal, message, Select, Space, Spin } from 'antd'
 import {
   ArrowLeftOutlined,
   SaveOutlined,
@@ -8,7 +8,10 @@ import {
 import { useSearchParams } from 'react-router-dom'
 import styled from 'styled-components'
 import { FlowCanvas, StepPanel, DetailPanel } from '@/containers/WorkflowDesigner'
-import WorkflowDesignerList, { ensureWorkflowPayload } from '@/containers/WorkflowDesigner/List'
+import WorkflowDesignerList, {
+  ensureWorkflowPayload,
+  fetchWorkflowDetail,
+} from '@/containers/WorkflowDesigner/List'
 import {
   useEdges,
   useLoadFlow,
@@ -26,7 +29,7 @@ import {
 } from '@/containers/WorkflowDesigner/styles'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { SUCCESS_CODE } from '@/configs'
-import { flowToJson, jsonToFlow } from '@/utils/workflowSerializer'
+import { enrichWorkflowForms, flowToJson, jsonToFlow } from '@/utils/workflowSerializer'
 import { getNodeTopologyType, normalizeWorkflowStepType, validateFlow } from '@/utils/workflowValidators'
 import { createUuidV7 } from '@/utils/uuid'
 
@@ -264,13 +267,23 @@ const WorkflowDesignerEditor = ({ onBack, onReloadStepTypes }) => {
   )
 }
 
+const getWorkflowIdFromPayload = (detail) => {
+  const payload = ensureWorkflowPayload(detail)
+  return payload?.process?.id ?? detail?.id ?? null
+}
+
 const WorkflowDesignerPage = () => {
   const resetFlow = useResetFlow()
   const loadFlow = useLoadFlow()
   const setStepTypes = useSetStepTypes()
   const [searchParams, setSearchParams] = useSearchParams()
   const [listVersion, setListVersion] = useState(0)
+  const [loadingWorkflow, setLoadingWorkflow] = useState(false)
+  const hydratedWorkflowIdRef = useRef(null)
+  const hydrateRequestRef = useRef(0)
   const view = searchParams.get('mode') === 'designer' ? 'designer' : 'list'
+  const action = searchParams.get('action')
+  const workflowId = searchParams.get('id')
 
   const fetchProcessTypes = useCallback(async () => {
     try {
@@ -299,26 +312,91 @@ const WorkflowDesignerPage = () => {
     }
   }, [fetchProcessTypes, view])
 
+  const loadWorkflowDetail = useCallback(async (detail) => {
+    const flow = jsonToFlow(ensureWorkflowPayload(detail))
+    const enrichedFlow = await enrichWorkflowForms(flow)
+    loadFlow(enrichedFlow)
+    return enrichedFlow
+  }, [loadFlow])
+
+  useEffect(() => {
+    if (view !== 'designer' || action !== 'edit' || !workflowId) {
+      hydratedWorkflowIdRef.current = null
+      return undefined
+    }
+
+    if (hydratedWorkflowIdRef.current === workflowId) {
+      return undefined
+    }
+
+    let mounted = true
+    const requestId = ++hydrateRequestRef.current
+
+    const hydrateFromUrl = async () => {
+      setLoadingWorkflow(true)
+      try {
+        const detail = await fetchWorkflowDetail({ id: workflowId })
+        if (!mounted || requestId !== hydrateRequestRef.current) return
+        await loadWorkflowDetail(detail)
+        if (!mounted || requestId !== hydrateRequestRef.current) return
+        hydratedWorkflowIdRef.current = workflowId
+      } catch (error) {
+        if (mounted && requestId === hydrateRequestRef.current) {
+          message.error(error?.message || 'Không tải được workflow để chỉnh sửa.')
+          setSearchParams({})
+        }
+      } finally {
+        if (mounted && requestId === hydrateRequestRef.current) {
+          setLoadingWorkflow(false)
+        }
+      }
+    }
+
+    hydrateFromUrl()
+
+    return () => {
+      mounted = false
+    }
+  }, [view, action, workflowId, loadWorkflowDetail, setSearchParams])
+
   const handleCreate = useCallback(() => {
+    hydratedWorkflowIdRef.current = null
     resetFlow()
     setSearchParams({ mode: 'designer', action: 'create' })
   }, [resetFlow, setSearchParams])
 
-  const handleEdit = useCallback((detail) => {
+  const handleEdit = useCallback(async (detail) => {
     try {
-      loadFlow(jsonToFlow(ensureWorkflowPayload(detail)))
-      setSearchParams({ mode: 'designer', action: 'edit' })
+      await loadWorkflowDetail(detail)
+      const id = getWorkflowIdFromPayload(detail)
+      if (id != null && id !== '') {
+        hydratedWorkflowIdRef.current = String(id)
+      }
+      setSearchParams({
+        mode: 'designer',
+        action: 'edit',
+        ...(id != null && id !== '' ? { id: String(id) } : {}),
+      })
     } catch (error) {
       message.error(error?.message || 'Dữ liệu workflow không hợp lệ.')
     }
-  }, [loadFlow, setSearchParams])
+  }, [loadWorkflowDetail, setSearchParams])
 
   const handleBack = useCallback(() => {
+    hydratedWorkflowIdRef.current = null
     setListVersion(version => version + 1)
     setSearchParams({})
   }, [setSearchParams])
 
   if (view === 'designer') {
+    if (loadingWorkflow) {
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 360 }}>
+          <Spin size="large" tip="Đang tải workflow..." />
+        </div>
+      )
+    }
+
     return <WorkflowDesignerEditor onBack={handleBack} onReloadStepTypes={fetchProcessTypes} />
   }
 

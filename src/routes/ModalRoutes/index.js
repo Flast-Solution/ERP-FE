@@ -36,6 +36,7 @@ import ActionChamSocDonHangRouter from './ChamSocDonHangRouter.js';
 import CommonRoute from './CommonRoute.js';
 import WebRouter from './WebRouter.js';
 import userRoute from './userRoute.js';
+import BusinessUnitRouter from './BusinessUnitRouter.js';
 
 const notFoundHash = { Component: () => <div /> };
 const modalRoutes = [
@@ -50,7 +51,8 @@ const modalRoutes = [
   ...UserGroupRouter,
   ...Cohoi7DayRouter,
   ...ActionChamSocDonHangRouter,
-  ...userRoute
+  ...userRoute,
+  ...BusinessUnitRouter,
 ]
 
 const getModalRoute = (urlHash) => {

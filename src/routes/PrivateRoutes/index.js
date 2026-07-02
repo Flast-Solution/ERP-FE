@@ -46,6 +46,7 @@ import { ShipConfig } from './ShipConfig';
 import { ListAcountConfig } from './ListAcountConnfig';
 import { ListAcountGroupConfig } from './ListUserGroupConfig';
 import { ListUserSystemConfig } from './ListUserSysTemConfig';
+import { BusinessUnitsConfig } from './BusinessUnitsConfig';
 
 /* CSKH */
 import { Lead3DayConfig } from './Lead3DayConfig'
@@ -79,6 +80,7 @@ const routeConfigs = [
     CustomerConfig,
     ListAcountConfig,
     ListAcountGroupConfig,
+    BusinessUnitsConfig,
     Cohoi7DayConfig,
     KeToanConfig,
     ListUserSystemConfig,

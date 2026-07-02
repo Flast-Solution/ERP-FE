@@ -153,6 +153,63 @@ const buildStepOptions = (nodes = []) =>
     label: `${node?.data?.label || node.id}${node?.data?.code ? ` (${node.data.code})` : ''}`,
   }))
 
+const findNodeByRef = (nodes = [], ref) => {
+  if (ref == null || ref === '') return null
+  const key = String(ref)
+  return nodes.find((node) => node.id === key || node?.data?.code === key) ?? null
+}
+
+const collectPredecessorNodeIds = (edges = [], startNodeId) => {
+  const visited = new Set([startNodeId])
+  const queue = [startNodeId]
+
+  while (queue.length > 0) {
+    const currentId = queue.shift()
+    edges.forEach((edge) => {
+      if (edge.target === currentId && !visited.has(edge.source)) {
+        visited.add(edge.source)
+        queue.push(edge.source)
+      }
+    })
+  }
+
+  return visited
+}
+
+const collectSuccessorNodeIds = (edges = [], startNodeId) => {
+  const visited = new Set()
+  const queue = [startNodeId]
+
+  while (queue.length > 0) {
+    const currentId = queue.shift()
+    edges.forEach((edge) => {
+      if (edge.source === currentId && !visited.has(edge.target)) {
+        visited.add(edge.target)
+        queue.push(edge.target)
+      }
+    })
+  }
+
+  return visited
+}
+
+const buildPredecessorStepOptions = (nodes = [], edges = [], sourceStepCode) => {
+  const sourceNode = findNodeByRef(nodes, sourceStepCode)
+  if (!sourceNode) return []
+
+  const allowedIds = collectPredecessorNodeIds(edges, sourceNode.id)
+  collectSuccessorNodeIds(edges, sourceNode.id).forEach((nodeId) => {
+    allowedIds.delete(nodeId)
+  })
+
+  return nodes
+    .filter((node) => allowedIds.has(node.id))
+    .map((node) => ({
+      value: node?.data?.code || node.id,
+      label: `${node?.data?.label || node.id}${node?.data?.code ? ` (${node.data.code})` : ''}`,
+    }))
+}
+
 const getNodeFormsByStep = (nodes = [], stepCode) => {
   const node = nodes.find((item) =>
     item.id === stepCode || item?.data?.code === stepCode
@@ -227,7 +284,7 @@ const FieldValueConfig = ({
     >
       <Select
         showSearch
-        placeholder="Chọn bước"
+        placeholder="Chọn bước trước đó"
         options={stepOptions}
         optionFilterProp="label"
         allowClear
@@ -280,7 +337,7 @@ const FieldValueConfig = ({
       </Form.Item>
     </ConditionRow>
     <FieldHelp>
-      Chọn bước trước để lấy field từ các form đã gắn vào bước đó.
+      Chỉ hiển thị bước trước bước nguồn của transition (và chính bước nguồn), không gồm các bước phía sau.
     </FieldHelp>
   </ConditionBuilder>
 )
@@ -446,6 +503,7 @@ const GuardConfigForm = ({
   formOptions,
   onFromStepChange,
   stepOptions,
+  predecessorStepOptions,
 }) => {
   if (guardType === 'field_value') {
     return (
@@ -454,7 +512,7 @@ const GuardConfigForm = ({
         fieldsLoading={fieldsLoading}
         form={form}
         onFromStepChange={onFromStepChange}
-        stepOptions={stepOptions}
+        stepOptions={predecessorStepOptions}
       />
     )
   }
@@ -507,6 +565,7 @@ const GuardDrawer = ({
   initialValue,
   nodeForms = [],
   nodes = [],
+  edges = [],
   sourceStepCode,
   targetStepCode,
   onConfirm,
@@ -521,6 +580,10 @@ const GuardDrawer = ({
 
   const fieldOptions = useMemo(() => buildGroupedFieldOptions(nodeForms), [nodeForms])
   const stepOptions = useMemo(() => buildStepOptions(nodes), [nodes])
+  const predecessorStepOptions = useMemo(
+    () => buildPredecessorStepOptions(nodes, edges, sourceStepCode),
+    [nodes, edges, sourceStepCode],
+  )
   const selectedStepCode = Form.useWatch(['config', 'step_code'], localForm)
   const selectedStepForms = useMemo(
     () => getNodeFormsByStep(nodes, selectedStepCode),
@@ -553,19 +616,32 @@ const GuardDrawer = ({
   useEffect(() => {
     const nextType = normalizeGuardType(initialValue?.type)
     setGuardType(nextType)
+    const allowedFromSteps = new Set(
+      buildPredecessorStepOptions(nodes, edges, sourceStepCode).map((item) => String(item.value)),
+    )
+    const initialFromStep = initialValue?.config?.from_step
+    const nextFromStep = initialFromStep != null && allowedFromSteps.has(String(initialFromStep))
+      ? initialFromStep
+      : undefined
+
     localForm.setFieldsValue({
       type: nextType,
       errorMessage: initialValue?.errorMessage ?? initialValue?.config?.message ?? '',
       sortOrder: initialValue?.sortOrder ?? guardIndex + 1,
       config: {
-        from_step: initialValue?.config?.from_step,
         operator: nextType === 'field_value' ? 'eq' : undefined,
         step_code: nextType === 'step_form_field' ? sourceStepCode : undefined,
         requirement: nextType === 'step_form_field' ? 'filled' : undefined,
         ...initialValue?.config,
+        from_step: nextFromStep,
       },
     })
-  }, [guardIndex, initialValue, localForm, sourceStepCode])
+
+    if (nextType === 'field_value' && nextFromStep) {
+      handleFieldStepChange(nextFromStep)
+    }
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [guardIndex, initialValue, localForm, sourceStepCode, nodes, edges])
 
   const handleTypeChange = (nextType) => {
     setGuardType(nextType)
@@ -663,6 +739,7 @@ const GuardDrawer = ({
                 formOptions={formOptions}
                 onFromStepChange={handleFieldStepChange}
                 stepOptions={stepOptions}
+                predecessorStepOptions={predecessorStepOptions}
               />
             </ConfigSection>
           )}

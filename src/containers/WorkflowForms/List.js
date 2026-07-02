@@ -24,7 +24,7 @@ import {
   PlusOutlined,
   SaveOutlined,
 } from '@ant-design/icons'
-import { FormSelectAPI, RestList } from '@flast-erp/core/components'
+import { RestList } from '@flast-erp/core/components'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { SUCCESS_CODE } from '@/configs'
 import { getBusinessIdLocal } from '@/utils/dataUtils'
@@ -261,7 +261,89 @@ const createSelectApiOnData = (dataLabel, dataValue) => {
   }))
 }
 
-const renderSelectApiMenuOnly = (menu) => menu
+const getSelectApiItems = (payload) => {
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.data)) return payload.data
+  if (Array.isArray(payload?.embedded)) return payload.embedded
+  if (Array.isArray(payload?.items)) return payload.items
+  if (Array.isArray(payload?.content)) return payload.content
+  return []
+}
+
+const normalizeSelectApiOptions = (payload, config = {}) => {
+  const customOnData = createSelectApiOnData(config.dataLabel, config.dataValue)
+  if (customOnData) {
+    return customOnData(payload)
+  }
+
+  const valueProp = config.valueProp ?? 'id'
+  const titleProp = config.titleProp ?? config.labelField ?? 'name'
+
+  return getSelectApiItems(payload).map(item => ({
+    value: item?.[valueProp],
+    label: item?.[titleProp] ?? item?.name ?? item?.label ?? item?.[valueProp],
+  }))
+}
+
+const SelectApiField = ({ field }) => {
+  const config = useMemo(() => field.config ?? {}, [field.config])
+  const placeholder = config.placeholder || field.label || 'Chọn dữ liệu từ API'
+  const [loading, setLoading] = useState(false)
+  const [options, setOptions] = useState([])
+
+  const fetchOptions = useCallback((keyword = '') => {
+    if (!config.api) {
+      setOptions([])
+      return
+    }
+
+    const params = keyword
+      ? { [config.labelField ?? config.titleProp ?? 'name']: keyword }
+      : {}
+
+    setLoading(true)
+    RequestUtils.Get(`/${config.api}`, params)
+      .then(response => {
+        const ok = response?.success || response?.errorCode === SUCCESS_CODE || response?.errorCode == null
+        if (!ok) {
+          message.error(response?.message || 'Không tải được dữ liệu select.')
+          setOptions([])
+          return
+        }
+        setOptions(normalizeSelectApiOptions(response?.data ?? response, config))
+      })
+      .catch(error => {
+        message.error(error?.message || 'Không tải được dữ liệu select.')
+        setOptions([])
+      })
+      .finally(() => setLoading(false))
+  }, [config])
+
+  useEffect(() => {
+    fetchOptions()
+  }, [fetchOptions])
+
+  return (
+    <Form.Item
+      name={field.fieldKey}
+      label={field.label}
+      rules={[
+        { required: field.isRequired, message: `${field.label || field.fieldKey} là bắt buộc.` },
+      ]}
+    >
+      <Select
+        showSearch
+        allowClear
+        loading={loading}
+        filterOption={false}
+        placeholder={placeholder}
+        options={options}
+        onSearch={fetchOptions}
+        style={{ width: '100%' }}
+      />
+    </Form.Item>
+  )
+}
 
 const getTemplateCode = (template = {}) => (
   template.jsx_code
@@ -406,21 +488,7 @@ const renderInputField = (field = {}) => {
     case 'lookup':
       return <Input placeholder={placeholder || 'Nhập hoặc tìm kiếm dữ liệu liên kết'} />
     case 'select_api':
-      return (
-        <FormSelectAPI
-          name={field.fieldKey}
-          label={field.label}
-          required={field.isRequired}
-          placeholder={placeholder || 'Chọn dữ liệu từ API'}
-          apiPath={config.api ?? undefined}
-          entity={config.entity ?? ''}
-          valueProp={config.dataLabel && config.dataValue ? 'value' : (config.valueProp ?? 'id')}
-          titleProp={config.dataLabel && config.dataValue ? 'label' : (config.titleProp ?? config.labelField ?? 'name')}
-          searchKey={config.labelField ?? config.titleProp ?? 'name'}
-          onData={createSelectApiOnData(config.dataLabel, config.dataValue)}
-          dropdownRender={renderSelectApiMenuOnly}
-        />
-      )
+      return <SelectApiField field={field} />
     case 'autocomplete':
       return <AutoComplete options={options} placeholder={placeholder || 'Nhập để tìm...'} />
     default:

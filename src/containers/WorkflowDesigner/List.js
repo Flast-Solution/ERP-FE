@@ -250,7 +250,7 @@ export const ensureWorkflowPayload = (raw) => {
   return raw
 }
 
-const fetchWorkflowDetail = async (record) => {
+export const fetchWorkflowDetail = async (record) => {
   if (record?.source?.process || record?.source?.steps || record?.source?.transitions) {
     return record.source
   }
