@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { Alert, Breadcrumb, Button, Card, Col, Descriptions, Empty, message, Row, Space, Spin, Tag, Timeline, Typography } from 'antd'
 import { ArrowLeftOutlined, CheckCircleOutlined, ClockCircleOutlined, FormOutlined, SaveOutlined } from '@ant-design/icons'
 import { Helmet } from 'react-helmet'
@@ -13,6 +13,30 @@ import { getBusinessIdLocal } from '@/utils/dataUtils'
 const { Text, Title } = Typography
 const TEST_REMOTE_ENTRY = 'https://micro-frontend.flast.vn/tao-don-hang/remoteEntry.js'
 const DATA_SAVE_API = '/workflow/forms/storage/submit'
+const WORKFLOW_INSTANCE_BY_ENTITY_API = '/workflow/process/instance/get-entity'
+const WORKFLOW_PREVIEW_API = '/workflow/process/preview'
+
+const resolveApiPayload = (response) => response?.data ?? response
+
+const resolveWorkflowInstances = (response) => {
+  const payload = resolveApiPayload(response)
+  const candidates = [
+    payload?.data,
+    payload?.embedded,
+    payload?.content,
+    payload?.items,
+    payload,
+  ]
+  return candidates.find(Array.isArray) ?? []
+}
+
+const resolveWorkflowPreview = (response) => {
+  const payload = resolveApiPayload(response)
+  if (payload?.data && typeof payload.data === 'object' && !Array.isArray(payload.data)) {
+    return payload.data
+  }
+  return payload
+}
 
 const getFirstArray = (...items) => items.find(Array.isArray) ?? []
 
@@ -136,6 +160,29 @@ const RemoteFormErrorFallback = ({ message }) => (
     message={message}
   />
 )
+
+const RemoteFormHost = forwardRef(({ Component, ...props }, ref) => {
+  const [submitSignal, setSubmitSignal] = useState(0)
+
+  useImperativeHandle(ref, () => ({
+    submit: async () => {
+      setSubmitSignal((signal) => signal + 1)
+    },
+  }), [])
+
+  if (!Component) {
+    return null
+  }
+
+  return (
+    <Component
+      {...props}
+      submitSignal={submitSignal}
+    />
+  )
+})
+
+RemoteFormHost.displayName = 'RemoteFormHost'
 
 class RemoteFormBoundary extends React.Component {
   constructor(props) {
@@ -285,10 +332,18 @@ const OrderProgressPage = () => {
   const [searchParams] = useSearchParams()
   const remoteFormRef = useRef(null)
   const [order, setOrder] = useState(location.state?.order ?? null)
+  const [workflowInstance, setWorkflowInstance] = useState(location.state?.workflowInstance ?? null)
+  const [workflowPreview, setWorkflowPreview] = useState(null)
   const [loadingOrder, setLoadingOrder] = useState(false)
+  const [loadingPreview, setLoadingPreview] = useState(false)
   const [submittingForm, setSubmittingForm] = useState(false)
 
   const orderId = getValue(order?.id, params.orderId, searchParams.get('orderId'), searchParams.get('id'))
+  const instanceId = getValue(
+    workflowInstance?.id,
+    order?.workflowInstance?.id,
+    searchParams.get('instanceId'),
+  )
 
   useEffect(() => {
     if (!orderId) {
@@ -321,20 +376,108 @@ const OrderProgressPage = () => {
     }
   }, [location.state?.order, orderId])
 
-  const workflow = order?.workflowProcess ?? order?.process ?? order?.workflow ?? {}
-  const steps = getFirstArray(workflow?.steps, order?.workflowSteps, order?.steps)
+  useEffect(() => {
+    if (workflowInstance?.id || !orderId) {
+      return undefined
+    }
+
+    let mounted = true
+
+    RequestUtils.Post(WORKFLOW_INSTANCE_BY_ENTITY_API, {
+      entityName: 'order',
+      entityIds: [Number(orderId)],
+    })
+      .then((response) => {
+        if (!mounted) return
+        const instance = resolveWorkflowInstances(response)[0] ?? null
+        if (instance) {
+          setWorkflowInstance(instance)
+        }
+      })
+      .catch((error) => {
+        console.error('[OrderProgress] workflow instance error', error)
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [orderId, workflowInstance?.id])
+
+  useEffect(() => {
+    if (!instanceId) {
+      setWorkflowPreview(null)
+      return undefined
+    }
+
+    let mounted = true
+    setLoadingPreview(true)
+
+    RequestUtils.Get(WORKFLOW_PREVIEW_API, { instanceId })
+      .then((response) => {
+        if (!mounted) return
+        const preview = resolveWorkflowPreview(response)
+        setWorkflowPreview(preview)
+
+        const ok = response?.success === true || Number(response?.errorCode) === SUCCESS_CODE
+        if (!ok && !preview) {
+          message.error(response?.message || 'Không tải được tiến trình workflow.')
+        }
+      })
+      .catch((error) => {
+        if (mounted) {
+          setWorkflowPreview(null)
+          message.error(error?.message || 'Không tải được tiến trình workflow.')
+        }
+      })
+      .finally(() => {
+        if (mounted) {
+          setLoadingPreview(false)
+        }
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [instanceId])
+
+  const workflow = workflowPreview?.process
+    ?? workflowPreview
+    ?? order?.workflowProcess
+    ?? order?.process
+    ?? order?.workflow
+    ?? {}
+  const steps = getFirstArray(
+    workflowPreview?.steps,
+    workflow?.steps,
+    order?.workflowSteps,
+    order?.steps,
+  )
+  const currentStepCode = getValue(
+    workflowInstance?.currentStepCode,
+    workflowPreview?.currentStepCode,
+    order?.currentStepCode,
+  )
   const currentStep = getValue(
+    workflowPreview?.currentStep,
+    steps.find(step =>
+      step?.current
+      || step?.active
+      || step?.id === order?.currentStepId
+      || step?.stepCode === currentStepCode
+      || step?.code === currentStepCode,
+    ),
     order?.currentWorkflowStep,
     order?.currentStep,
-    steps.find(step => step?.current || step?.active || step?.id === order?.currentStepId || step?.stepCode === order?.currentStepCode),
-    steps[0]
+    steps[0],
   )
   const formTemplates = getFirstArray(
+    workflowPreview?.currentFormTemplates,
+    workflowPreview?.formTemplates,
     currentStep?.formTemplates,
     currentStep?.forms,
     order?.currentFormTemplates,
     order?.formTemplates,
-    order?.forms
+    order?.forms,
   )
   const currentForm = getValue(order?.currentForm, order?.requiredForm, formTemplates[0])
   const remoteEntry = getValue(
@@ -346,18 +489,23 @@ const OrderProgressPage = () => {
     TEST_REMOTE_ENTRY
   )
   const checkResults = getFirstArray(
+    workflowPreview?.checkResults,
+    workflowPreview?.inspectionResults,
     order?.checkResults,
     order?.inspectionResults,
     order?.workflowCheckResults,
     currentStep?.checkResults,
-    currentStep?.results
+    currentStep?.results,
   )
   const histories = getFirstArray(
+    workflowPreview?.histories,
+    workflowPreview?.workflowHistories,
+    workflowPreview?.workflowHistory,
     order?.workflowHistories,
     order?.workflowHistory,
     order?.stepHistories,
     order?.histories,
-    workflow?.histories
+    workflow?.histories,
   )
 
   const { Component: RemoteForm, loading: loadingRemote, error: remoteError } = useRemoteForm(remoteEntry)
@@ -405,6 +553,11 @@ const OrderProgressPage = () => {
   }, [])
 
   const handleSubmitCurrentForm = useCallback(async () => {
+    if (!RemoteForm) {
+      message.error('Remote form chưa sẵn sàng.')
+      return
+    }
+
     if (!remoteFormRef.current || typeof remoteFormRef.current.submit !== 'function') {
       message.error('Remote form chưa hỗ trợ submit từ component cha.')
       return
@@ -418,7 +571,7 @@ const OrderProgressPage = () => {
       }
       handleRemoteFormSubmitError(error)
     }
-  }, [handleRemoteFormSubmitError])
+  }, [RemoteForm, handleRemoteFormSubmitError])
 
   const orderInfoItems = useMemo(() => [
     {
@@ -467,7 +620,7 @@ const OrderProgressPage = () => {
         ]}
       />
 
-      <Spin spinning={loadingOrder}>
+      <Spin spinning={loadingOrder || loadingPreview}>
         <div style={{ paddingBottom: 24 }}>
           <Button
             icon={<ArrowLeftOutlined />}
@@ -524,8 +677,9 @@ const OrderProgressPage = () => {
                   {remoteEntry && remoteError && <RemoteFormErrorFallback message={remoteError} />}
                   {remoteEntry && RemoteForm && (
                     <RemoteFormBoundary remoteEntry={remoteEntry}>
-                      <RemoteForm
+                      <RemoteFormHost
                         ref={remoteFormRef}
+                        Component={RemoteForm}
                         order={order}
                         record={order}
                         data={order}
