@@ -130,6 +130,8 @@ export const FIELD_TYPES = [
       labelField: 'name',
       valueProp : 'id',
       titleProp : 'name',
+      dataLabel : '',
+      dataValue : '',
     },
     configSchema : [
       { key: 'api',        label: 'API path', widget: 'input',
@@ -142,6 +144,10 @@ export const FIELD_TYPES = [
         props: { placeholder: 'id' } },
       { key: 'titleProp',  label: 'Title prop', widget: 'input',
         props: { placeholder: 'name' } },
+      { key: 'dataLabel',  label: 'Dữ liệu hiển thị', widget: 'input',
+        props: { placeholder: 'data?.valuesJson?.ten_menu' } },
+      { key: 'dataValue',  label: 'Dữ liệu gửi đi', widget: 'input',
+        props: { placeholder: 'data?.valuesJson?.so_thu_tu' } },
     ],
   },
 

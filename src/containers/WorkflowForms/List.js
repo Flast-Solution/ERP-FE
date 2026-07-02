@@ -24,7 +24,7 @@ import {
   PlusOutlined,
   SaveOutlined,
 } from '@ant-design/icons'
-import { RestList } from '@flast-erp/core/components'
+import { FormSelectAPI, RestList } from '@flast-erp/core/components'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { SUCCESS_CODE } from '@/configs'
 import { getBusinessIdLocal } from '@/utils/dataUtils'
@@ -239,6 +239,30 @@ const normalizeFieldOptions = (options = []) => options.map(option => ({
   label: option.label ?? option.name ?? option.value ?? option.id,
 }))
 
+const getValueByDataExpression = (item, expression = '') => {
+  const path = String(expression)
+    .trim()
+    .replace(/^data\??\.?/, '')
+    .split(/\??\./)
+    .map(part => part.trim())
+    .filter(Boolean)
+
+  if (path.length === 0) return undefined
+
+  return path.reduce((value, key) => value?.[key], item)
+}
+
+const createSelectApiOnData = (dataLabel, dataValue) => {
+  if (!dataLabel || !dataValue) return undefined
+
+  return (response) => (Array.isArray(response) ? response : (response?.data ?? [])).map(data => ({
+    label: getValueByDataExpression(data, dataLabel),
+    value: getValueByDataExpression(data, dataValue),
+  }))
+}
+
+const renderSelectApiMenuOnly = (menu) => menu
+
 const getTemplateCode = (template = {}) => (
   template.jsx_code
   ?? template.jsxCode
@@ -382,7 +406,21 @@ const renderInputField = (field = {}) => {
     case 'lookup':
       return <Input placeholder={placeholder || 'Nhập hoặc tìm kiếm dữ liệu liên kết'} />
     case 'select_api':
-      return <Select showSearch placeholder={placeholder || 'Chọn dữ liệu từ API'} options={[]} />
+      return (
+        <FormSelectAPI
+          name={field.fieldKey}
+          label={field.label}
+          required={field.isRequired}
+          placeholder={placeholder || 'Chọn dữ liệu từ API'}
+          apiPath={config.api ?? undefined}
+          entity={config.entity ?? ''}
+          valueProp={config.dataLabel && config.dataValue ? 'value' : (config.valueProp ?? 'id')}
+          titleProp={config.dataLabel && config.dataValue ? 'label' : (config.titleProp ?? config.labelField ?? 'name')}
+          searchKey={config.labelField ?? config.titleProp ?? 'name'}
+          onData={createSelectApiOnData(config.dataLabel, config.dataValue)}
+          dropdownRender={renderSelectApiMenuOnly}
+        />
+      )
     case 'autocomplete':
       return <AutoComplete options={options} placeholder={placeholder || 'Nhập để tìm...'} />
     default:
@@ -412,15 +450,19 @@ const FormEntryFields = ({ fields = [] }) => (
           className="form-entry-field"
           style={{ gridColumn: `span ${field.colSpan ?? 24}` }}
         >
-          <Form.Item
-            name={field.fieldKey}
-            label={field.label}
-            rules={[
-              { required: field.isRequired, message: `${field.label || field.fieldKey} là bắt buộc.` },
-            ]}
-          >
-            {renderInputField(field)}
-          </Form.Item>
+          {field.inputType === 'select_api' ? (
+            renderInputField(field)
+          ) : (
+            <Form.Item
+              name={field.fieldKey}
+              label={field.label}
+              rules={[
+                { required: field.isRequired, message: `${field.label || field.fieldKey} là bắt buộc.` },
+              ]}
+            >
+              {renderInputField(field)}
+            </Form.Item>
+          )}
         </div>
       )
     })}
