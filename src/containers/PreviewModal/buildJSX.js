@@ -47,6 +47,10 @@ function h(cls, text) {
   return `<span class="tk-${cls}">${esc(text)}</span>`
 }
 
+function normalizeDataExpression(expression = '') {
+  return String(expression).trim()
+}
+
 function toComponentName(name = '') {
   const words = String(name)
     .replace(/đ/g, 'd')
@@ -174,12 +178,25 @@ function buildProps(field) {
       break
 
     case 'select_api':
-      if (config.api)        props.push({ key: 'apiPath',    value: config.api,                               kind: 'str' })
-      if (config.entity)     props.push({ key: 'entity',     value: config.entity,                            kind: 'str' })
-      props.push({ key: 'valueProp', value: config.valueProp ?? 'id', kind: 'str' })
-      props.push({ key: 'titleProp', value: config.titleProp ?? config.labelField ?? 'name', kind: 'str' })
-      props.push({ key: 'searchKey', value: config.labelField ?? config.titleProp ?? 'name', kind: 'str' })
-      props.push({ key: 'style', value: '{{ width: \'100%\' }}', kind: 'raw' })
+      {
+        const dataLabel = normalizeDataExpression(config.dataLabel)
+        const dataValue = normalizeDataExpression(config.dataValue)
+        const hasDataMapping = Boolean(dataLabel && dataValue)
+
+        if (config.api)    props.push({ key: 'apiPath', value: config.api,    kind: 'str' })
+        if (config.entity) props.push({ key: 'entity',  value: config.entity, kind: 'str' })
+        props.push({ key: 'valueProp', value: hasDataMapping ? 'value' : (config.valueProp ?? 'id'), kind: 'str' })
+        props.push({ key: 'titleProp', value: hasDataMapping ? 'label' : (config.titleProp ?? config.labelField ?? 'name'), kind: 'str' })
+        props.push({ key: 'searchKey', value: config.labelField ?? config.titleProp ?? 'name', kind: 'str' })
+        if (hasDataMapping) {
+          props.push({
+            key: 'onData',
+            value: `{(response) => (Array.isArray(response) ? response : (response?.data ?? [])).map((data) => ({ label: ${dataLabel}, value: ${dataValue} }))}`,
+            kind: 'raw',
+          })
+        }
+        props.push({ key: 'style', value: '{{ width: \'100%\' }}', kind: 'raw' })
+      }
       break
 
     case 'autocomplete':

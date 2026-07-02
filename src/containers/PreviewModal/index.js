@@ -246,6 +246,28 @@ const buildMicroFrontend = async ({ sessionId, componentId, entryFilename, jsxCo
   }
 }
 
+const getValueByDataExpression = (item, expression = '') => {
+  const path = String(expression)
+    .trim()
+    .replace(/^data\??\.?/, '')
+    .split(/\??\./)
+    .map(part => part.trim())
+    .filter(Boolean)
+
+  if (path.length === 0) return undefined
+
+  return path.reduce((value, key) => value?.[key], item)
+}
+
+const createSelectApiOnData = (dataLabel, dataValue) => {
+  if (!dataLabel || !dataValue) return undefined
+
+  return (response) => (Array.isArray(response) ? response : (response?.data ?? [])).map(data => ({
+    label: getValueByDataExpression(data, dataLabel),
+    value: getValueByDataExpression(data, dataValue),
+  }))
+}
+
 
 const FieldPreview = ({ field }) => {
   const { inputType, fieldKey, label, isRequired, config: rawConfig, children = [] } = field
@@ -453,9 +475,10 @@ const FieldPreview = ({ field }) => {
           placeholder={placeholder || 'Tìm kiếm...'}
           apiPath={config.api ?? undefined}
           entity={config.entity ?? ''}
-          valueProp={config.valueProp ?? 'id'}
-          titleProp={config.titleProp ?? config.labelField ?? 'name'}
+          valueProp={config.dataLabel && config.dataValue ? 'value' : (config.valueProp ?? 'id')}
+          titleProp={config.dataLabel && config.dataValue ? 'label' : (config.titleProp ?? config.labelField ?? 'name')}
           searchKey={config.labelField ?? config.titleProp ?? 'name'}
+          onData={createSelectApiOnData(config.dataLabel, config.dataValue)}
         />
       )
 

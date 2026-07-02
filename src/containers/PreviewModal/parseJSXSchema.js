@@ -114,6 +114,19 @@ const propToString = (prop, fallback = '') => {
   return fallback
 }
 
+const parseSelectApiOnDataMapping = (prop) => {
+  const source = prop?.type === 'expr' ? prop.value : ''
+  if (!source) return null
+
+  const mappingMatch = source.match(/\{\s*label\s*:\s*([^,}]+?)\s*,\s*value\s*:\s*([^}]+?)\s*\}/)
+  if (!mappingMatch) return null
+
+  return {
+    dataLabel: mappingMatch[1].trim(),
+    dataValue: mappingMatch[2].trim(),
+  }
+}
+
 const parseLiteralValue = (value = '') => {
   const trimmed = value.trim()
   if ((trimmed.startsWith("'") && trimmed.endsWith("'")) || (trimmed.startsWith('"') && trimmed.endsWith('"'))) {
@@ -222,6 +235,11 @@ const mapComponentToField = (componentName, props, span) => {
     config.labelField = propToString(props.labelField ?? props.searchKey ?? props.titleProp, 'name')
     config.valueProp = propToString(props.valueProp, 'id')
     config.titleProp = propToString(props.titleProp, config.labelField || 'name')
+    const dataMapping = parseSelectApiOnDataMapping(props.onData)
+    if (dataMapping) {
+      config.dataLabel = dataMapping.dataLabel
+      config.dataValue = dataMapping.dataValue
+    }
   }
 
   if (componentName === 'FormAutoComplete') {
