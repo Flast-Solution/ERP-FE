@@ -1,3 +1,4 @@
+import { RequestUtils } from '@flast-erp/core/utils'
 import { DEFAULT_STEP, DEFAULT_TRANSITION } from '@/store/workflowConstants'
 import { getNodeTopologyType, normalizeWorkflowStepType } from './workflowValidators'
 
@@ -60,7 +61,10 @@ export const jsonToFlow = (raw) => {
     throw new Error('Dữ liệu không hợp lệ')
   }
 
-  const process = normalizeProcess(raw.process)
+  const process = normalizeProcess({
+    ...(raw.process ?? {}),
+    id: raw.process?.id ?? raw.id ?? raw.processId ?? raw.process_id ?? null,
+  })
 
   const nodes = (raw.steps ?? []).map((step) => {
     const stepCode = step.code ?? step.stepCode ?? step.step_code ?? ''
@@ -127,9 +131,183 @@ const getStepNodeId = (step = {}) => {
   return `step_${Math.random().toString(36).slice(2, 8)}`
 }
 
+export const getAttachedFormId = (form) => {
+  if (form == null || form === '') return null
+  if (typeof form === 'number' || typeof form === 'string') return form
+  return form.id
+    ?? form.templateId
+    ?? form.template_id
+    ?? form.formTemplateId
+    ?? form.form_template_id
+    ?? form.formId
+    ?? form.form_id
+    ?? null
+}
+
+export const normalizeAttachedForm = (form) => {
+  if (form == null || form === '') return null
+
+  if (typeof form === 'number' || typeof form === 'string') {
+    const id = form
+    return {
+      id,
+      name: `Form #${id}`,
+      formKey: '',
+      domain: '',
+      fields: [],
+      required: false,
+    }
+  }
+
+  const id = getAttachedFormId(form)
+  const fields = Array.isArray(form.fields) ? form.fields : []
+  const name = (form.description ?? '').trim()
+    || (form.name ?? '').trim()
+    || form.label
+    || form.formKey
+    || (id != null ? `Form #${id}` : 'Form')
+
+  return {
+    ...form,
+    id,
+    name,
+    formKey: form.name ?? form.formKey ?? form.key ?? '',
+    domain: form.domain ?? '',
+    fields,
+    required: form.required ?? false,
+  }
+}
+
+export const getFormDisplayName = (form) => normalizeAttachedForm(form)?.name ?? 'Form'
+
 const normalizeStepForms = (step = {}) => {
   const forms = step.forms ?? step.formTemplates ?? step.form_templates ?? []
-  return Array.isArray(forms) ? forms : []
+  if (!Array.isArray(forms)) return []
+  return forms.map(normalizeAttachedForm).filter(Boolean)
+}
+
+const getResponseArray = (response) => {
+  const data = response?.data ?? response
+  const candidates = [data?.items, data?.rows, data?.embedded, data?.data, data]
+  return candidates.find(Array.isArray) ?? []
+}
+
+const buildTemplateMetaMap = (items = []) => {
+  const map = new Map()
+
+  items.forEach((item) => {
+    const templateId = getAttachedFormId(item)
+    if (templateId == null || templateId === '') return
+
+    const fields = Array.isArray(item.fields) ? item.fields : []
+    const name = (item.description ?? '').trim()
+      || (item.name ?? '').trim()
+      || item.label
+      || `Form #${templateId}`
+
+    map.set(String(templateId), {
+      id: templateId,
+      name,
+      description: item.description ?? '',
+      formKey: item.name ?? item.formKey ?? '',
+      domain: item.domain ?? '',
+      fields,
+    })
+  })
+
+  return map
+}
+
+const fetchTemplateMeta = async (templateId) => {
+  try {
+    const response = await RequestUtils.Get('/workflow/forms/template/find-id', { id: templateId })
+    const item = response?.data ?? response
+    if (!item || typeof item !== 'object') return null
+
+    const fields = Array.isArray(item.fields) ? item.fields : []
+    const name = (item.description ?? '').trim()
+      || (item.name ?? '').trim()
+      || item.label
+      || `Form #${templateId}`
+
+    return {
+      id: templateId,
+      name,
+      description: item.description ?? '',
+      formKey: item.name ?? item.formKey ?? '',
+      domain: item.domain ?? '',
+      fields,
+    }
+  } catch (error) {
+    console.warn('[workflowSerializer] fetchTemplateMeta failed', templateId, error)
+    return null
+  }
+}
+
+/**
+ * Sau khi jsonToFlow, gọi hàm này để lấy tên form từ API
+ * (payload lưu forms chỉ còn id).
+ */
+export const enrichWorkflowForms = async (flow) => {
+  const nodes = flow?.nodes ?? []
+  const formIds = new Set()
+
+  nodes.forEach((node) => {
+    (node.data?.forms ?? []).forEach((form) => {
+      const id = getAttachedFormId(form)
+      if (id != null && id !== '') {
+        formIds.add(String(id))
+      }
+    })
+  })
+
+  if (formIds.size === 0) {
+    return flow
+  }
+
+  try {
+    const response = await RequestUtils.Post(
+      '/workflow/forms/template/find-template-field',
+      Array.from(formIds),
+    )
+    const metaMap = buildTemplateMetaMap(getResponseArray(response))
+
+    const missingIds = Array.from(formIds).filter((id) => !metaMap.has(String(id)))
+    if (missingIds.length > 0) {
+      const details = await Promise.all(missingIds.map(fetchTemplateMeta))
+      details.filter(Boolean).forEach((meta) => {
+        metaMap.set(String(meta.id), meta)
+      })
+    }
+
+    if (metaMap.size === 0) {
+      return flow
+    }
+
+    const enrichedNodes = nodes.map((node) => {
+      const forms = node.data?.forms ?? []
+      if (!forms.length) return node
+
+      const nextForms = forms.map((form) => {
+        const id = getAttachedFormId(form)
+        const meta = id != null ? metaMap.get(String(id)) : null
+        if (!meta) return normalizeAttachedForm(form)
+
+        return normalizeAttachedForm({
+          ...form,
+          ...meta,
+          required: form.required ?? meta.required ?? false,
+        })
+      })
+
+      return { ...node, data: { ...node.data, forms: nextForms } }
+    })
+
+    return { ...flow, nodes: enrichedNodes }
+  } catch (error) {
+    console.warn('[workflowSerializer] enrichWorkflowForms failed', error)
+    return flow
+  }
 }
 
 const getTransitionStepRef = (transition = {}, direction) => {

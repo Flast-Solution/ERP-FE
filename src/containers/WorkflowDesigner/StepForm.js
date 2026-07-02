@@ -7,6 +7,7 @@ import { FormInput } from '@flast-erp/core/components'
 import { useNodes, useStepTypes, useUpdateNodeData } from '@/hooks/useWorkflowStore'
 import { ACTION_TYPES } from '@/store/workflowConstants'
 import { slugifyCode } from '@/utils/workflowValidators'
+import { getFormDisplayName, normalizeAttachedForm } from '@/utils/workflowSerializer'
 import {
   Section,
   SectionDivider,
@@ -269,19 +270,21 @@ const StepForm = ({ node }) => {
                 {(node.data.forms ?? []).length === 0 ? (
                   <EmptyState>Chưa có form nào được gắn.</EmptyState>
                 ) : (
-                  (node.data.forms ?? []).map((f, i) => (
-                    <FormCard key={`${node.id}-form-${i}`}>
+                  (node.data.forms ?? []).map((f, i) => {
+                    const attachedForm = normalizeAttachedForm(f)
+                    return (
+                    <FormCard key={`${node.id}-form-${attachedForm?.id ?? i}`}>
                       <FormCardInfo>
-                        <FormCardName>{f.name}</FormCardName>
+                        <FormCardName>{getFormDisplayName(attachedForm)}</FormCardName>
                         <FormCardMeta>
                           {[
-                            f.domain,
-                            f.fields?.length != null && `${f.fields.length} fields`,
+                            attachedForm?.domain,
+                            attachedForm?.fields?.length != null && `${attachedForm.fields.length} fields`,
                           ].filter(Boolean).join(' · ')}
                         </FormCardMeta>
                       </FormCardInfo>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                        {f.required && (
+                        {attachedForm?.required && (
                           <Tag
                             style={{
                               borderRadius: 20,
@@ -308,7 +311,8 @@ const StepForm = ({ node }) => {
                         />
                       </div>
                     </FormCard>
-                  ))
+                    )
+                  })
                 )}
               </Section>
             </div>

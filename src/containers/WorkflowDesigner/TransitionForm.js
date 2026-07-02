@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Form, Select, Switch, Button, Divider } from 'antd'
 import {
   PlusOutlined,
@@ -6,7 +6,8 @@ import {
   RightOutlined,
   DeleteOutlined,
 } from '@ant-design/icons'
-import { useNodes, useUpdateEdgeData } from '@/hooks/useWorkflowStore'
+import { RequestUtils } from '@flast-erp/core/utils'
+import { useEdges, useNodes, useUpdateEdgeData } from '@/hooks/useWorkflowStore'
 import { SectionLabel } from './styles'
 import {
   StepInfoCard,
@@ -24,11 +25,25 @@ import {
 } from './transitionForm.styles'
 import GuardDrawer from './GuardDrawer'
 
+const ROLE_LIST_API = '/auth/list-role'
+
+const mapRoleOptions = (roles = []) => roles
+  .map((role) => {
+    const value = role.type ?? role.code ?? role.name ?? String(role.id ?? '')
+    const label = role.type ?? role.name ?? role.code ?? value
+    if (!value) return null
+    return { value: String(value), label: String(label) }
+  })
+  .filter(Boolean)
+
 const TransitionForm = ({ edge }) => {
   
   const [form] = Form.useForm()
   const nodes = useNodes()
+  const edges = useEdges()
   const updateEdgeData = useUpdateEdgeData()
+  const [roleOptions, setRoleOptions] = useState([])
+  const [loadingRoles, setLoadingRoles] = useState(false)
 
   const [guards, setGuards] = useState(edge.data?.guards ?? [])
   const [activeGuard, setActiveGuard] = useState(null)
@@ -36,6 +51,41 @@ const TransitionForm = ({ edge }) => {
   const fromNode = nodes.find((n) => n.id === edge.source)
   const toNode = nodes.find((n) => n.id === edge.target)
   const sourceForms = fromNode?.data?.forms ?? []
+
+  useEffect(() => {
+    let mounted = true
+    setLoadingRoles(true)
+    RequestUtils.GetAsList(ROLE_LIST_API)
+      .then((roles) => {
+        if (mounted) {
+          setRoleOptions(mapRoleOptions(roles))
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setRoleOptions([])
+        }
+      })
+      .finally(() => {
+        if (mounted) {
+          setLoadingRoles(false)
+        }
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const selectRoleOptions = useMemo(() => {
+    const selected = edge.data?.allowed_roles ?? []
+    const known = new Set(roleOptions.map((item) => item.value))
+    const extras = (Array.isArray(selected) ? selected : [])
+      .filter((value) => value != null && value !== '' && !known.has(String(value)))
+      .map((value) => ({ value: String(value), label: String(value) }))
+
+    return [...roleOptions, ...extras]
+  }, [roleOptions, edge.data?.allowed_roles])
 
   useEffect(() => {
     setActiveGuard(null)
@@ -131,11 +181,14 @@ const TransitionForm = ({ edge }) => {
               {/* Vai trò được phép */}
               <Form.Item name="allowed_roles" label="Vai trò được phép">
                 <Select
-                  mode="tags"
-                  placeholder="+ Thêm"
+                  mode="multiple"
+                  allowClear
+                  showSearch
+                  placeholder="Chọn vai trò được phép chuyển bước"
                   style={{ width: '100%' }}
-                  tokenSeparators={[',']}
-                  open={false}
+                  loading={loadingRoles}
+                  options={selectRoleOptions}
+                  optionFilterProp="label"
                 />
               </Form.Item>
 
@@ -218,6 +271,7 @@ const TransitionForm = ({ edge }) => {
                 initialValue={guards[activeGuard.index]}
                 nodeForms={sourceForms}
                 nodes={nodes}
+                edges={edges}
                 sourceStepCode={fromNode?.data?.code || fromNode?.id || edge.source}
                 targetStepCode={toNode?.data?.code || toNode?.id || edge.target}
                 onConfirm={handleConfirmGuard}
