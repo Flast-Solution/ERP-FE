@@ -1,8 +1,8 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react'
-import { FormCheckbox, FormInput, FormInputNumber, FormRadioGroup, FormSelect } from '@flast-erp/core/components'
+import { FormCheckbox, FormInput, FormInputNumber, FormRadioGroup, FormSelect, FormTextArea } from '@flast-erp/core/components'
 import { Form, Row, Col } from 'antd'
 
-const REMOTE_DEBUG_PREFIX = '[RemoteForm][FormTiepNhanMau]'
+const REMOTE_DEBUG_PREFIX = '[RemoteForm][FormKetQuaKiemTraNgoaiQuan]'
 
 const DROPDOWN_OPTIONS = {
   defect_level: [
@@ -71,7 +71,7 @@ const logDropdownValues = (values, context = 'change') => {
   return dropdownValues
 }
 
-const FormTiepNhanMau = forwardRef(({
+const FormKetQuaKiemTraNgoaiQuan = forwardRef(({
   initialValues,
   onSubmit,
   onSubmitError,
@@ -154,7 +154,7 @@ const FormTiepNhanMau = forwardRef(({
         <Col span={24}>
           <FormRadioGroup
             name="inspection_result"
-            label="Kết quả kiểm tra"
+            label="Kết quả kiểm tra ngoại quan"
             options={[
               { label: 'Đạt', value: 'PASS' },
               { label: 'Không đạt', value: 'FAIL' },
@@ -226,11 +226,25 @@ const FormTiepNhanMau = forwardRef(({
             style={{ width: '100%' }}
           />
         </Col>
+        <Col span={24}>
+          <FormTextArea
+            name="defect_note"
+            label="Ghi chú lỗi"
+            rows={3}
+          />
+        </Col>
+        <Col span={24}>
+          <FormTextArea
+            name="technician_note"
+            label="Ghi chú KTV"
+            rows={3}
+          />
+        </Col>
       </Row>
     </Form>
   )
 })
 
-FormTiepNhanMau.displayName = 'FormTiepNhanMau'
+FormKetQuaKiemTraNgoaiQuan.displayName = 'FormKetQuaKiemTraNgoaiQuan'
 
-export default FormTiepNhanMau
+export default FormKetQuaKiemTraNgoaiQuan
