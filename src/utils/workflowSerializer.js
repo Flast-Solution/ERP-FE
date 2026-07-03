@@ -68,7 +68,10 @@ export const jsonToFlow = (raw) => {
 
   const nodes = (raw.steps ?? []).map((step) => {
     const stepCode = step.code ?? step.stepCode ?? step.step_code ?? ''
-    const label = step.label ?? step.name ?? stepCode
+    const label = step.name ?? step.displayName ?? step.display_name ?? step.stepName ?? step.step_name ?? stepCode
+    const typeValue = step.label && step.label !== label
+      ? step.label
+      : (step.type ?? 'process')
     const nodeId = getStepNodeId(step)
 
     return {
@@ -83,7 +86,7 @@ export const jsonToFlow = (raw) => {
         code: stepCode,
         name: step.name ?? label,
         label,
-        type: normalizeStepType(step.type ?? 'process'),
+        type: normalizeStepType(typeValue),
         description: step.description ?? '',
         sortOrder: step.sortOrder ?? step.sort_order ?? null,
         enabled: step.enabled ?? true,
@@ -420,11 +423,12 @@ const serializeProcess = (process = {}) => {
 const serializeStep = (node, index, stepTypes = [], edges = []) => {
   const persistedId = node.data?.persistedId ?? node.data?.id
   const topologyType = getNodeTopologyType(node, edges)
+  const stepTypeValue = node.data?.type ?? topologyType ?? 'process'
   const step = {
     ...(persistedId != null && persistedId !== '' ? { id: persistedId } : {}),
     stepCode: node.data?.code ?? node.id,
     name: node.data?.name ?? node.data?.label ?? node.data?.code ?? node.id,
-    label: node.data?.label ?? node.data?.name ?? node.data?.code ?? node.id,
+    label: stepTypeValue,
     type: toApiStepType(topologyType ?? node.data?.type, stepTypes, node),
     description: node.data?.description ?? '',
     position: node.position,
