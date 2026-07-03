@@ -16,6 +16,7 @@ const WORKFLOW_SUBMISSION_API = '/workflow/process/submission'
 const WORKFLOW_TRANSITION_API = '/workflow/process/transition'
 const WORKFLOW_INSTANCE_BY_ENTITY_API = '/workflow/process/instance/get-entity'
 const WORKFLOW_PREVIEW_API = '/workflow/process/preview'
+const WORKFLOW_PROCESS_FIND_API = '/workflow/process/find-id'
 const PROCESS_TYPE_FIND_API = '/workflow/process/process-type-find'
 
 const resolveApiPayload = (response) => response?.data ?? response
@@ -36,6 +37,17 @@ const resolveWorkflowPreview = (response) => {
   const payload = resolveApiPayload(response)
   if (payload?.data && typeof payload.data === 'object' && !Array.isArray(payload.data)) {
     return payload.data
+  }
+  return payload
+}
+
+const resolveWorkflowProcessDetail = (response) => {
+  const payload = resolveApiPayload(response)
+  if (payload?.data && typeof payload.data === 'object' && !Array.isArray(payload.data)) {
+    return payload.data
+  }
+  if (payload?.process && typeof payload.process === 'object' && !Array.isArray(payload.process)) {
+    return payload.process
   }
   return payload
 }
@@ -914,10 +926,19 @@ const WorkflowProgressPanel = ({
           Quy trình
         </div>
         <Title level={3} style={{ margin: 0, fontSize: 18, lineHeight: '24px' }}>
-          {getValue(workflow?.name, order?.workflowProcessName, order?.processName, order?.workflowName, 'Chưa gắn workflow')}
+          {getValue(
+            workflow?.name,
+            workflow?.processName,
+            workflow?.process_name,
+            workflow?.title,
+            order?.workflowProcessName,
+            order?.processName,
+            order?.workflowName,
+            workflow?.id ? `Quy trình #${workflow.id}` : 'Chưa gắn workflow',
+          )}
         </Title>
         <Text style={{ display: 'block', marginTop: 4, color: '#4b5563', fontSize: 13 }}>
-          {getValue(workflow?.processKey, workflow?.code, order?.workflowProcessKey, '')}
+          {getValue(workflow?.processKey, workflow?.process_key, workflow?.code, order?.workflowProcessKey, '')}
           {steps.length ? ` · ${steps.length} bước` : ''}
         </Text>
       </div>
@@ -1016,6 +1037,7 @@ const OrderProgressPage = () => {
   const [order, setOrder] = useState(location.state?.order ?? null)
   const [workflowInstance, setWorkflowInstance] = useState(location.state?.workflowInstance ?? null)
   const [workflowPreview, setWorkflowPreview] = useState(null)
+  const [workflowProcessDetail, setWorkflowProcessDetail] = useState(null)
   const [processTypes, setProcessTypes] = useState([])
   const [loadingOrder, setLoadingOrder] = useState(false)
   const [loadingPreview, setLoadingPreview] = useState(false)
@@ -1143,15 +1165,59 @@ const OrderProgressPage = () => {
     fetchWorkflowPreview()
   }, [fetchWorkflowPreview])
 
+  const previewStepProcess = workflowPreview?.stepProcesses
+  const workflowProcessId = getValue(
+    workflowPreview?.process?.id,
+    workflowPreview?.processId,
+    workflowPreview?.process_id,
+    workflowPreview?.processInstance?.processId,
+    workflowPreview?.processInstance?.process_id,
+    previewStepProcess?.processId,
+    previewStepProcess?.process_id,
+    workflowInstance?.processId,
+    workflowInstance?.process_id,
+    order?.workflowProcessId,
+    order?.workflow_process_id,
+    order?.processId,
+    order?.process_id,
+  )
+
+  useEffect(() => {
+    if (!workflowProcessId) {
+      setWorkflowProcessDetail(null)
+      return undefined
+    }
+
+    if (isSameStepRef(workflowProcessDetail?.id, workflowProcessId)) {
+      return undefined
+    }
+
+    let mounted = true
+
+    RequestUtils.Get(`${WORKFLOW_PROCESS_FIND_API}/${workflowProcessId}`, {})
+      .then((response) => {
+        if (!mounted) return
+        setWorkflowProcessDetail(resolveWorkflowProcessDetail(response))
+      })
+      .catch((error) => {
+        if (!mounted) return
+        setWorkflowProcessDetail({ id: workflowProcessId })
+        console.error('[OrderProgress] workflow process detail error', error)
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [workflowProcessId, workflowProcessDetail?.id])
+
   const workflow = useMemo(() => (
-    workflowPreview?.process
-    ?? workflowPreview
+    workflowProcessDetail
+    ?? workflowPreview?.process
     ?? order?.workflowProcess
     ?? order?.process
     ?? order?.workflow
-    ?? {}
-  ), [workflowPreview, order])
-  const previewStepProcess = workflowPreview?.stepProcesses
+    ?? (workflowProcessId ? { id: workflowProcessId } : {})
+  ), [workflowProcessDetail, workflowPreview, order, workflowProcessId])
   const processTypeLabelMap = useMemo(
     () => buildProcessTypeLabelMap(processTypes),
     [processTypes]
