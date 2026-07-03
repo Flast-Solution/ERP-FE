@@ -23,13 +23,12 @@ import React, { useState, useCallback } from 'react'
 import { Button, Pagination, Row, Col, Tooltip, Tag } from 'antd';
 import { ClockCircleOutlined } from '@ant-design/icons';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
+import { InAppEvent } from '@flast-erp/core/utils';
 import { HASH_POPUP } from '@/configs/constant';
-import ListLayoutStyles from '@flast-erp/core/components/RestLayout/RestList/styles';
-import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
-import { arrayEmpty, formatMoney } from '@flast-erp/core/utils/dataUtils';
+import { BreadcrumbCustom } from '@flast-erp/core/components';
+import ListLayoutStyles from '@/components/ListLayoutStyles'
+import { useEffectAsync } from '@flast-erp/core/hooks';
+import { RequestUtils, arrayEmpty, formatMoney } from '@flast-erp/core/utils';
 import {
   KanbanCardWrapper,
   TitleWrapper,
@@ -40,8 +39,8 @@ import {
   DateText,
   AssigneeAvatar,
   getInitials
-} from 'css/cardStyle';
-import UserService from 'services/UserService';
+} from '@/css/cardStyle';
+import UserService from '@/services/UserService';
 
 const TITLE = "Thiết lập KPI";
 const CURRENT_DATE = new Date();
@@ -102,7 +101,7 @@ const KpiPage = () => {
       <Helmet>
         <title>{TITLE}</title>
       </Helmet>
-      <CustomBreadcrumb
+      <BreadcrumbCustom
         data={[{ title: 'Trang chủ' }, { title: TITLE }]}
       />
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>

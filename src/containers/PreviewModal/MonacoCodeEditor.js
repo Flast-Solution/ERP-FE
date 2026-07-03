@@ -53,6 +53,8 @@ const loadMonaco = () => {
   return monacoLoaderPromise
 }
 
+/* Monaco snippet placeholders use ${n:label} syntax — not JS template literals. */
+/* eslint-disable no-template-curly-in-string */
 const createSnippetSuggestions = (monaco) => ([
   {
     label: 'FormInput',
@@ -96,6 +98,7 @@ const createSnippetSuggestions = (monaco) => ([
     documentation: 'Snippet block field trong Row/Col',
   },
 ])
+/* eslint-enable no-template-curly-in-string */
 
 const createFieldKeySuggestions = (monaco, fieldKeys) => (
   fieldKeys
@@ -115,8 +118,11 @@ const createPropSuggestions = (monaco) => ([
   'required',
   'resourceData',
   'mode',
+  'apiPath',
   'entity',
-  'labelField',
+  'searchKey',
+  'valueProp',
+  'titleProp',
   'min',
   'max',
   'precision',
@@ -142,6 +148,8 @@ const MonacoCodeEditor = ({
 
   const safeFieldKeys = useMemo(() => Array.from(new Set(fieldKeys.filter(Boolean))), [fieldKeys])
 
+  /* Mount Monaco once; value/readOnly/onChange synced in effects below. */
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     let mounted = true
 
@@ -200,6 +208,7 @@ const MonacoCodeEditor = ({
       }
     }
   }, [])
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   useEffect(() => {
     const editor = editorRef.current

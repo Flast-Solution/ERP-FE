@@ -78,6 +78,26 @@ export const DragHandle = styled.div`
   }
 `
 
+export const NodeDeleteButton = styled.button`
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: ${({ $disabled }) => ($disabled ? '#d9d9d9' : '#8c8c8c')};
+  cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
+  transition: color 0.15s, background 0.15s;
+
+  &:hover {
+    color: ${({ $disabled }) => ($disabled ? '#d9d9d9' : '#ff4d4f')};
+    background: ${({ $disabled }) => ($disabled ? 'transparent' : '#fff1f0')};
+  }
+`
+
 export const NodeCode = styled.div`
   font-size: 11px;
   font-family: monospace;

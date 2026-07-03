@@ -18,19 +18,23 @@
 /* Đội ngũ phát triển mong rằng phần mềm được sử dụng đúng mục đích và    */
 /* có trách nghiệm                                                        */
 /**************************************************************************/
+
 import { Row, Col, Typography, Form } from 'antd';
-import FormHidden from '@/form-flast/FormHidden';
-import CustomButton from '@flast-erp/core/components/CustomButton';
-import FormSelectAPI from '@/form-flast/FormSelectAPI';
-import FormInput from '@/form-flast/FormInput';
-import FormListAddition from '@/form-flast/FormListAddtion';
+import {
+  FormInput,
+  FormInputNumber,
+  FormSelectAPI,
+  FormSelect,
+  FormHidden,
+  CustomButton,
+  FormListAddtion
+} from "@flast-erp/core/components";
+
 import ProductFormProperty from './ProductFormProperty';
 import { SwitcherOutlined } from '@ant-design/icons';
 import ProductFormPrice from './ProductFormPrice';
-import FormSelect from '@/form-flast/FormSelect';
 import { PRODUCT_STATUS } from '@/configs/localData';
 import { FormListStyles } from "@/css/global";
-import FormInputNumber from '@/form-flast/FormInputNumber';
 import FormInfiniteQcProduct from '@/components/FormInfiniteQcProduct';
 
 const ProductForm = () => {
@@ -109,12 +113,12 @@ const ProductForm = () => {
           <SwitcherOutlined />
           <span style={{ marginLeft: 20 }}>Thiết lập sản phẩm (Có tính nhận diện tồn kho)</span>
         </Typography.Title>
-        <FormListAddition
+        <FormListAddtion
           name="listProperties"
           textAddNew="Thêm mới thuộc tính"
         >
           <ProductFormProperty />
-        </FormListAddition>
+        </FormListAddtion>
       </Col>
 
       <Col md={24} xs={24}>
@@ -145,13 +149,13 @@ const ProductForm = () => {
           <SwitcherOutlined />
           <span style={{ marginLeft: 20 }}>Thông tin mở rộng</span>
         </Typography.Title>
-        <FormListAddition
+        <FormListAddtion
           name="listOpenInfo"
           textAddNew="Thêm mới"
           showBtnInLeft={false}
         >
           <FormOpenInfo />
-        </FormListAddition>
+        </FormListAddtion>
       </Col>
 
       <Col md={24} xs={24}>

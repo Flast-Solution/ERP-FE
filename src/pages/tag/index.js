@@ -22,14 +22,13 @@
 
 import React, { useState } from 'react';
 import { message } from 'antd';
-import RestList from "@flast-erp/core/components/RestLayout/RestList";
-import useGetList from "@flast-erp/core/hooks/useGetList";
+import { useGetList } from "@flast-erp/core/hooks";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
+import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
 import Filter from '@/pages/tag/Filter';
 import { GATEWAY } from '@/configs';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
-import { useNavigateSearch } from '@flast-erp/core/hooks/useNavigateSearch';
+import { RequestUtils } from '@flast-erp/core/utils';
+import { useNavigateSearch } from '@flast-erp/core/hooks';
 
 const Tag = () => {
 
@@ -69,7 +68,7 @@ const Tag = () => {
         <Helmet>
             <title>{title}</title>
         </Helmet>
-        <CustomBreadcrumb
+        <BreadcrumbCustom
             data={[{ title: 'Trang chủ' }, { title: title }]}
         />
         <RestList

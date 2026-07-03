@@ -19,15 +19,17 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import FormCascader from '@/form-flast/FormCascader';
-import FormListAddition from '@/form-flast/FormListAddtion';
+import {
+  FormInput,
+  FormInputNumber,
+  FormCascader,
+  FormListAddtion
+} from "@flast-erp/core/components";
 import { FormPriceStyle } from './styles';
 import { Col, Row } from 'antd';
-import FormInputNumber from '@/form-flast/FormInputNumber';
 import { useEffect, useState } from 'react';
 import { isEmpty } from 'lodash';
-import ProductAttrService from 'services/ProductAttrService';
-import FormInput from '@/form-flast/FormInput';
+import ProductAttrService from '@/services/ProductAttrService';
 
 /** 
  * listProperties Data simple
@@ -55,11 +57,11 @@ const ProductFormPrice = ({ listProperties }) => {
 
   return (
     <FormPriceStyle>
-      <FormListAddition name="skus" textAddNew="Thêm mới SKU" >
+      <FormListAddtion name="skus" textAddNew="Thêm mới SKU" >
         <FormListCascader
           dataInOptions={dataInOptions}
         />
-      </FormListAddition>
+      </FormListAddtion>
     </FormPriceStyle>
   )
 }
@@ -84,13 +86,13 @@ const FormListCascader = ({ field, dataInOptions }) => {
       </Col>
       <Col md={24} xs={24}>
         <div style={{ height: 20, width: '100%' }} />
-        <FormListAddition
+        <FormListAddtion
           name={[name, 'skuPrices']}
           textAddNew="Thêm khoảng gía"
           showBtnInLeft={false}
         >
           <FormListPriceRange />
-        </FormListAddition>
+        </FormListAddtion>
       </Col>
     </Row>
   )

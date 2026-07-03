@@ -113,14 +113,72 @@ const collectJsonCandidates = (text = '') => {
 
 const unique = (items) => Array.from(new Set(items.filter(Boolean)))
 
+const COMPONENT_TYPE_TO_INPUT = {
+  FormHidden: 'hidden',
+  FormInput: 'text',
+  FormTextArea: 'textarea',
+  FormInputNumber: 'number',
+  FormDatePicker: 'date',
+  FormSelect: 'select',
+  FormRadioGroup: 'radio',
+  FormCheckbox: 'checkbox',
+  FormJoditEditor: 'richtext',
+  FormSelectAPI: 'select_api',
+  FormAutoComplete: 'autocomplete',
+}
+
+const normalizeInputType = (type) => COMPONENT_TYPE_TO_INPUT[type] ?? type
+
+const normalizeField = (field, index = 0) => {
+  if (!field || typeof field !== 'object') return null
+
+  const fieldKey = field.fieldKey ?? field.name ?? field.key ?? (typeof field.id === 'string' ? field.id : '')
+  const inputType = normalizeInputType(field.inputType ?? field.type)
+
+  if (!fieldKey || !inputType) return null
+
+  return {
+    ...field,
+    id: typeof field.id === 'number' ? field.id : null,
+    fieldKey,
+    label: field.label ?? fieldKey,
+    inputType,
+    isRequired: field.isRequired ?? field.required ?? false,
+    isSearchable: field.isSearchable ?? false,
+    isIndexed: field.isIndexed ?? true,
+    sortOrder: field.sortOrder ?? index,
+    enabled: field.enabled ?? true,
+    config: field.config ?? {},
+    colSpan: field.colSpan ?? 24,
+    refDomain: field.refDomain ?? null,
+    autoGenerate: field.autoGenerate ?? null,
+    fieldRole: field.fieldRole ?? null,
+    children: Array.isArray(field.children)
+      ? field.children.map(normalizeField).filter(Boolean)
+      : undefined,
+  }
+}
+
+const normalizeFieldArray = (items) => Array.isArray(items)
+  ? items.map(normalizeField).filter(Boolean)
+  : null
+
 const isFieldLike = (item) => Boolean(
   item &&
   typeof item === 'object' &&
-  (item.fieldKey || item.label || item.inputType) &&
-  item.inputType
+  (item.fieldKey || item.name || item.label || item.inputType || item.type) &&
+  (item.inputType || item.type)
 )
 
 const isFieldArray = (items) => Array.isArray(items) && items.some(isFieldLike)
+
+const extractFieldsFromConfig = (config) => {
+  if (Array.isArray(config)) return normalizeFieldArray(config)
+  if (config && typeof config === 'object' && Array.isArray(config.fields)) {
+    return normalizeFieldArray(config.fields)
+  }
+  return null
+}
 
 const findFieldArrayInText = (text = '') => {
   let cursor = 0
@@ -147,7 +205,9 @@ const findFieldArrayInText = (text = '') => {
 }
 
 const collectTextVariants = (text = '') => {
-  const trimmed = String(text ?? '').trim()
+  const trimmed = String(text ?? '')
+    .replace(/\[ANSWER\]\s*/g, '')
+    .trim()
   const variants = [trimmed]
 
   try {
@@ -164,18 +224,46 @@ const collectTextVariants = (text = '') => {
   return unique(variants)
 }
 
+const isLikelyJsxCode = (source = '') => {
+  const code = source.trim()
+
+  if (!code) return false
+  if (!/<[A-Z][A-Za-z0-9]*[\s/>]/.test(code)) return false
+
+  return (
+    /from\s+['"](?:react|antd|@flast-erp\/core|@\/form-flast)/.test(code) ||
+    /export\s+default\s+[A-Za-z_][A-Za-z0-9_]*/.test(code) ||
+    /\b(?:FormInput|FormSelect|RestEditModal|Row|Col)\b/.test(code)
+  )
+}
+
+const collectJsxCodeCandidates = (text = '') => {
+  const candidates = []
+  const fenceMatches = String(text ?? '').matchAll(/```([a-zA-Z0-9_-]*)?\s*([\s\S]*?)```/g)
+
+  for (const match of fenceMatches) {
+    const language = (match[1] ?? '').toLowerCase()
+    const code = (match[2] ?? '').trim()
+    const isCodeLanguage = !language || ['jsx', 'tsx', 'js', 'javascript', 'typescript', 'react'].includes(language)
+
+    if (isCodeLanguage && isLikelyJsxCode(code)) {
+      candidates.push(code)
+    }
+  }
+
+  return candidates
+}
+
 const safeParseConfig = (value) => {
-  if (Array.isArray(value)) return value
+  if (Array.isArray(value) || (value && typeof value === 'object')) return value
   if (typeof value !== 'string') return null
 
   try {
-    const parsed = JSON.parse(value)
-    return Array.isArray(parsed) ? parsed : null
+    return JSON.parse(value)
   } catch (_) {
     try {
       const unescaped = value.replace(/\\"/g, '"').replace(/\\n/g, '\n')
-      const parsed = JSON.parse(unescaped)
-      return Array.isArray(parsed) ? parsed : null
+      return JSON.parse(unescaped)
     } catch (__) {
       return null
     }
@@ -185,7 +273,8 @@ const safeParseConfig = (value) => {
 const normalizePayload = (payload) => {
   const data = payload?.data ?? payload ?? {}
   const code = data.code ?? data.jsx_code ?? data.jsxCode ?? payload?.code ?? payload?.jsx_code ?? ''
-  let fields = safeParseConfig(data.config ?? data.fields ?? payload?.config ?? payload?.fields)
+  const parsedConfig = safeParseConfig(data.config ?? data.fields ?? payload?.config ?? payload?.fields)
+  let fields = extractFieldsFromConfig(parsedConfig)
   fields = isFieldArray(fields) ? fields : null
 
   if (!fields && typeof code === 'string' && code.trim()) {
@@ -200,19 +289,59 @@ const normalizePayload = (payload) => {
     event : payload?.event ?? 'template_saved',
     fields,
     code  : typeof code === 'string' ? code : '',
-    meta  : data.meta ?? payload?.meta ?? {},
+    meta  : data.meta ?? payload?.meta ?? {
+      name: parsedConfig?.title,
+      description: parsedConfig?.description,
+    },
   }
 }
 
 const extractCodeBlock = (text = '') => {
-  const start = text.indexOf('import React')
+  const source = String(text ?? '')
+  const starts = [
+    source.indexOf('import React'),
+    source.search(/import\s+\{[\s\S]*?\}\s+from\s+['"]@flast-erp\/core/),
+    source.search(/import\s+\{[\s\S]*?\}\s+from\s+['"]antd['"]/),
+    source.search(/const\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*\(/),
+  ].filter(index => index >= 0)
+
+  const start = starts.length ? Math.min(...starts) : -1
   if (start === -1) return ''
 
-  const rest = text.slice(start)
+  const rest = source.slice(start)
   const exportMatch = rest.match(/export\s+default\s+[A-Za-z_][A-Za-z0-9_]*/)
-  if (!exportMatch?.index && exportMatch?.index !== 0) return rest
+  if (!exportMatch?.index && exportMatch?.index !== 0) {
+    return isLikelyJsxCode(rest) ? rest : ''
+  }
 
   return rest.slice(0, exportMatch.index + exportMatch[0].length)
+}
+
+const extractComponentName = (code = '') => {
+  const explicitExport = code.match(/export\s+default\s+([A-Za-z_][A-Za-z0-9_]*)/)
+  if (explicitExport?.[1]) return explicitExport[1]
+
+  const componentDeclaration = code.match(/const\s+([A-Z][A-Za-z0-9_]*)\s*=/)
+  if (componentDeclaration?.[1]) return componentDeclaration[1]
+
+  return undefined
+}
+
+const parseJsxTemplate = (code = '') => {
+  if (!isLikelyJsxCode(code)) return null
+
+  const schema = parseJsxToSchema(code, {
+    name: extractComponentName(code),
+  })
+
+  if (!isFieldArray(schema.fields)) return null
+
+  return {
+    event : 'template_saved',
+    fields: schema.fields,
+    code,
+    meta  : schema.meta ?? {},
+  }
 }
 
 const extractLooseTemplate = (text = '') => {
@@ -223,11 +352,15 @@ const extractLooseTemplate = (text = '') => {
   const configKeyIndex = text.indexOf('"config"')
   const configArrayStart = configKeyIndex === -1 ? -1 : text.indexOf('[', configKeyIndex)
   const configSource = configArrayStart === -1 ? '' : readBalancedArray(text, configArrayStart)
-  const fields = isFieldArray(safeParseConfig(configSource))
-    ? safeParseConfig(configSource)
+  const parsedConfig = safeParseConfig(configSource)
+  const fields = isFieldArray(extractFieldsFromConfig(parsedConfig))
+    ? extractFieldsFromConfig(parsedConfig)
     : findFieldArrayInText(text)
 
-  const codeKeyIndex = text.indexOf('"code"')
+  const codeKeyIndex = ['"code"', '"jsx_code"', '"jsxCode"']
+    .map(key => text.indexOf(key))
+    .filter(index => index !== -1)
+    .sort((left, right) => left - right)[0] ?? -1
   let code = ''
   if (codeKeyIndex !== -1) {
     const codeValueStart = text.indexOf('"', text.indexOf(':', codeKeyIndex) + 1)
@@ -297,17 +430,21 @@ export function parseTemplateSavedMessage(text = '') {
     }
   }
 
+  const jsxCandidates = unique(textVariants.flatMap(collectJsxCodeCandidates))
+  for (const code of jsxCandidates) {
+    try {
+      const jsxTemplate = parseJsxTemplate(code)
+      if (jsxTemplate) return jsxTemplate
+    } catch (_) {}
+  }
+
   for (const variant of textVariants) {
     const code = extractCodeBlock(variant)
     if (!code) continue
 
     try {
-      return {
-        event : 'template_saved',
-        fields: parseJsxToSchema(code).fields,
-        code,
-        meta  : {},
-      }
+      const jsxTemplate = parseJsxTemplate(code)
+      if (jsxTemplate) return jsxTemplate
     } catch (_) {}
   }
 

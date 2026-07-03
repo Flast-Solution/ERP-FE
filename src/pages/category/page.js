@@ -22,16 +22,18 @@
 import React, { useCallback, useState } from 'react';
 import { Button, message, Space } from 'antd';
 import { cloneDeep } from 'lodash';
-import RestList from "@flast-erp/core/components/RestLayout/RestList";
-import useGetList from "@flast-erp/core/hooks/useGetList";
+import { 
+  RestList,
+  CustomImage,
+  BreadcrumbCustom
+} from "@flast-erp/core/components";
+
+import { useGetList } from "@flast-erp/core/hooks";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
 import Filter from '@/pages/category/Filter';
-import { InAppEvent } from "@flast-erp/core/utils/FuseUtils";
+import { RequestUtils, InAppEvent } from "@flast-erp/core/utils";
 import { GATEWAY, HASH_MODAL } from '@/configs';
-import { dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils/dataUtils';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
-import CustomImage from '@flast-erp/core/components/common/CustomImage';
+import { dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils';
 
 const CatePage = () => {
 
@@ -130,7 +132,7 @@ const CatePage = () => {
       <Helmet>
         <title>{title}</title>
       </Helmet>
-      <CustomBreadcrumb
+      <BreadcrumbCustom
         data={[{ title: 'Trang chủ' }, { title: title }]}
       />
       <RestList

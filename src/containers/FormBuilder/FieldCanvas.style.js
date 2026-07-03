@@ -4,6 +4,7 @@ import styled from 'styled-components'
 
 export const CanvasWrapper = styled.div`
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -18,11 +19,21 @@ export const CanvasHeader = styled.div`
   flex-shrink: 0;
 `
 
-export const CanvasTitle = styled.div`
+export const CanvasTitle = styled.input`
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
   font-size: 16px;
   font-weight: 600;
   color: #1a1a1a;
   line-height: 1.4;
+
+  &::placeholder {
+    color: #8c8c8c;
+  }
 `
 
 export const CanvasSubtitle = styled.div`
@@ -132,8 +143,13 @@ export const AddFieldBtn = styled.button`
   transition: border-color 0.15s, color 0.15s, background 0.15s;
 
   &:hover {
-    border-color: #1677ff;
-    color: #1677ff;
-    background: #f0f7ff;
+    border-color: ${({ disabled }) => (disabled ? '#d9d9d9' : '#1677ff')};
+    color: ${({ disabled }) => (disabled ? '#8c8c8c' : '#1677ff')};
+    background: ${({ disabled }) => (disabled ? 'none' : '#f0f7ff')};
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
   }
 `

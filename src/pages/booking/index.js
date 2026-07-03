@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
+import { BreadcrumbCustom } from "@flast-erp/core/components";
 import { Tabs } from 'antd';
 import Car from './Car';
 import Flight from './Flight';
@@ -33,7 +33,7 @@ const Booking = () => {
       <Helmet>
         <title>Booking - Quản lý hành chính</title>
       </Helmet>
-      <CustomBreadcrumb
+      <BreadcrumbCustom
         data={[
           { title: 'Quản lý hành chính' },
           { title: 'Booking' }

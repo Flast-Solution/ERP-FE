@@ -1,9 +1,11 @@
 import { Row, Col } from 'antd';
-import FormInput from '@/form-flast/FormInput';
-import FormHidden from '@/form-flast/FormHidden';
-import BtnSubmit from '@flast-erp/core/components/common/BtnSubmit';
-import FormSelectUser from '@/form-flast/FormSelectUser';
-import FormSelect from '@/form-flast/FormSelect';
+import { 
+  FormInput, 
+  FormHidden, 
+  BtnSubmit,
+  FormSelectUser,
+  FormSelect
+} from "@flast-erp/core/components";
 
 const EditUserForm = () => {
   return (

@@ -21,7 +21,7 @@
 
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import FuseUtils from '@flast-erp/core/utils/FuseUtils';
+import { FuseUtils } from '@flast-erp/core/utils';
 
 import { LoginConfig } from './AuthConfig';
 import { CommonConfig } from './CommonConfig';
@@ -46,6 +46,7 @@ import { ShipConfig } from './ShipConfig';
 import { ListAcountConfig } from './ListAcountConnfig';
 import { ListAcountGroupConfig } from './ListUserGroupConfig';
 import { ListUserSystemConfig } from './ListUserSysTemConfig';
+import { BusinessUnitsConfig } from './BusinessUnitsConfig';
 
 /* CSKH */
 import { Lead3DayConfig } from './Lead3DayConfig'
@@ -64,7 +65,6 @@ import { WorkflowDesignerConfig } from './WorkflowDesignerConfig';
 
 /* HR - Quản lý hành chính */
 import { HRConfig } from './HRConfig';
-import { QcConfig } from './QcConfig';
 
 const routeConfigs = [
     LoginConfig,
@@ -80,6 +80,7 @@ const routeConfigs = [
     CustomerConfig,
     ListAcountConfig,
     ListAcountGroupConfig,
+    BusinessUnitsConfig,
     Cohoi7DayConfig,
     KeToanConfig,
     ListUserSystemConfig,
@@ -89,7 +90,6 @@ const routeConfigs = [
     DragDropConfig,
     WebConfig,
     HRConfig,
-    QcConfig,
     WorkflowDesignerConfig
 ];
 

@@ -28,7 +28,7 @@ import {
   DisconnectOutlined,
 } from '@ant-design/icons'
 import { buildJSX } from '@/containers/PreviewModal/buildJSX'
-import { arrayEmpty } from '@flast-erp/core/utils/dataUtils';
+import { arrayEmpty } from '@flast-erp/core/utils';
 
 import * as AntdIcons from '@ant-design/icons'
 import useChatStore       from './useChatStore'
@@ -50,7 +50,20 @@ import {
   ContextLabel,
   ContextMeta,
   ContextDot,
+  ResizeHandle,
 } from './index.style'
+
+const DEFAULT_PANEL_WIDTH = 420
+const MIN_PANEL_WIDTH = 360
+const PANEL_WIDTH_STORAGE_KEY = 'flast_ai_chat_panel_width'
+
+const clampPanelWidth = (value) => {
+  const viewportLimit = typeof window === 'undefined'
+    ? Number.MAX_SAFE_INTEGER
+    : Math.max(MIN_PANEL_WIDTH, window.innerWidth)
+
+  return Math.min(Math.max(value, MIN_PANEL_WIDTH), viewportLimit)
+}
 
 const DynamicIcon = ({ name, ...props }) => {
   const Icon = AntdIcons[name]
@@ -70,6 +83,7 @@ function buildWelcomeMessages(modeConfig) {
 
 const AIChatbot = ({
   open,
+  embedded   = false,
   mode       = 'default',
   context    = null,
   unread     = 0,
@@ -101,6 +115,21 @@ const AIChatbot = ({
 
   const messages = threads[mode] ?? []
   const [ sseStatus, setSseStatus ] = useState('idle')
+  const [ panelWidth, setPanelWidth ] = useState(() => {
+    const storedWidth = typeof window === 'undefined'
+      ? DEFAULT_PANEL_WIDTH
+      : Number(window.localStorage.getItem(PANEL_WIDTH_STORAGE_KEY))
+
+    return clampPanelWidth(Number.isFinite(storedWidth) && storedWidth > 0
+      ? storedWidth
+      : DEFAULT_PANEL_WIDTH
+    )
+  })
+  const [ resizing, setResizing ] = useState(false)
+  const [ humanInput, setHumanInput ] = useState(null)
+
+  const resizeStateRef = useRef(null)
+  const panelWidthRef = useRef(panelWidth)
 
   /* Luôn giữ ref trỏ đến context mới nhất mà không cần re-render */
   useEffect(() => {
@@ -111,10 +140,69 @@ const AIChatbot = ({
     onTemplateSavedRef.current = onTemplateSaved
   }, [onTemplateSaved])
 
+  useEffect(() => {
+    panelWidthRef.current = panelWidth
+  }, [panelWidth])
+
+  useEffect(() => {
+    if (!open) {
+      return undefined
+    }
+
+    const handleResize = () => {
+      setPanelWidth(width => {
+        const nextWidth = clampPanelWidth(width)
+        panelWidthRef.current = nextWidth
+        window.localStorage.setItem(PANEL_WIDTH_STORAGE_KEY, String(nextWidth))
+        return nextWidth
+      })
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [open])
+
+  useEffect(() => {
+    if (!resizing) {
+      return undefined
+    }
+
+    const handleMouseMove = (event) => {
+      const resizeState = resizeStateRef.current
+      if (!resizeState) {
+        return
+      }
+
+      const nextWidth = clampPanelWidth(
+        resizeState.startWidth + resizeState.startX - event.clientX
+      )
+      panelWidthRef.current = nextWidth
+      setPanelWidth(nextWidth)
+    }
+
+    const handleMouseUp = () => {
+      setResizing(false)
+      resizeStateRef.current = null
+      window.localStorage.setItem(PANEL_WIDTH_STORAGE_KEY, String(panelWidthRef.current))
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+  }, [resizing])
+
   const applyTemplateSavedFromText = useCallback((rawText, source) => {
     const templateSaved = parseTemplateSavedMessage(rawText)
-    console.log(`[AIChatbot] ${source} response`, rawText)
-    console.log(`[AIChatbot] ${source} parsed template_saved`, templateSaved)
 
     if (!templateSaved) {
       return null
@@ -122,7 +210,7 @@ const AIChatbot = ({
 
     const fingerprint = JSON.stringify({
       fields: templateSaved.fields?.map(field => field.fieldKey),
-      codeLength: templateSaved.code?.length ?? 0,
+      code: templateSaved.code ?? '',
     })
 
     if (appliedTemplateRef.current.has(fingerprint)) {
@@ -149,10 +237,16 @@ const AIChatbot = ({
     let diff = null
 
     session.connect({
+      onOpen: () => {
+        if (sessionRef.current === session) {
+          setSseStatus('connected')
+        }
+      },
       onChunk: (chunk) => {
         responseBufferRef.current += chunk
         appendChunk(currentMode, chunk)
       },
+      onHumanInput: (payload) => setHumanInput(payload),
       onCore: (payload) => {
         if (payload) {
           pushMessage(currentMode, {
@@ -165,11 +259,17 @@ const AIChatbot = ({
         }
       },
       onDone: () => {
+        setHumanInput(null)
         const rawResponse = responseBufferRef.current
         finishStreaming(currentMode, diff)
         responseBufferRef.current = ''
         applyTemplateSavedFromText(rawResponse, 'assistant')
         diff = null
+      },
+      onBuild: (payload) => {
+        window.dispatchEvent(new CustomEvent('flast-ai-build', {
+          detail: payload,
+        }))
       },
       onError: (err) => {
         setSseStatus('error')
@@ -202,14 +302,19 @@ const AIChatbot = ({
           applyTemplateSavedFromText(latestAssistantTemplate.content, 'history')
         }
       },
-    }).then(() => {
-      setSseStatus('connected')
     }).catch(() => setSseStatus('error'))
     /* eslint-disable-next-line */
   }, [])
 
 
   useEffect(() => {
+    if (!open) {
+      sessionRef.current?.destroy()
+      sessionRef.current = null
+      setSseStatus('idle')
+      return undefined
+    }
+
     setActiveMode(mode)
 
     if (!threads[mode]?.length) {
@@ -227,7 +332,7 @@ const AIChatbot = ({
     }
     /* sessions[mode] thay đổi khi newSession() được gọi → re-connect */
     /* eslint-disable-next-line */
-  }, [mode, useChatStore.getState().sessions[mode]])
+  }, [open, mode, useChatStore.getState().sessions[mode]])
 
   useEffect(() => {
     return () => {
@@ -237,7 +342,7 @@ const AIChatbot = ({
   }, [])
 
   const handleSend = useCallback(async (text) => {
-    if (streaming || !sessionRef.current) {
+    if (streaming || !sessionRef.current || !sessionRef.current.isConnected) {
       return
     }
 
@@ -260,7 +365,7 @@ const AIChatbot = ({
 
   /* Khi context (fields[]) thay đổi → debounce 2s → gửi schema update lên LLM */
   useEffect(() => {
-    if (!context || arrayEmpty(context.fields)) {
+    if (!open || !context || arrayEmpty(context.fields)) {
       return
     }
     clearTimeout(schemaDebounceRef.current)
@@ -270,11 +375,17 @@ const AIChatbot = ({
       }
       const ctx = contextRef.current
       const { plain } = buildJSX(ctx)
-      sessionRef.current.sendSchemaUpdate({ schema: ctx, jsxCode: plain })
-    }, 4000)
+      sessionRef.current.sendSchemaUpdate({
+        templateId: context.templateId,
+        schema: ctx, 
+        jsxCode: plain, 
+        type: "FORM", 
+        title: "FormTemplate có SCHEMA như sau:" 
+      })
+    }, 2000)
     return () => clearTimeout(schemaDebounceRef.current)
     /* eslint-disable-next-line */
-  }, [context])
+  }, [open, context])
 
 
   const handleClear = useCallback(() => {
@@ -284,6 +395,15 @@ const AIChatbot = ({
     welcomes.forEach(msg => pushMessage(mode, msg))
     /* eslint-disable-next-line */
   }, [mode, modeConfig])
+
+  const handleResizeStart = useCallback((event) => {
+    event.preventDefault()
+    resizeStateRef.current = {
+      startX: event.clientX,
+      startWidth: panelWidth,
+    }
+    setResizing(true)
+  }, [panelWidth])
 
   const contextMeta = modeConfig.getContextMeta?.(context) ?? ''
 
@@ -297,19 +417,24 @@ const AIChatbot = ({
   return (
     <>
       {/* FAB */}
-      <Tooltip title={open ? 'Đóng AI Agent' : 'Mở AI Agent'} placement="left">
-        <FABButton onClick={() => open ? onClose?.() : onOpen?.(mode)}>
-          {open
-            ? <CloseOutlined style={{ fontSize: 16 }} />
-            : <ThunderboltOutlined style={{ fontSize: 18 }} />
-          }
-          {!open && unread > 0 && <FABBadge>{unread}</FABBadge>}
-        </FABButton>
-      </Tooltip>
+      {!embedded && !open && (
+        <Tooltip title="Mở AI Agent" placement="left">
+          <FABButton onClick={() => onOpen?.(mode)}>
+            <ThunderboltOutlined style={{ fontSize: 18 }} />
+            {unread > 0 && <FABBadge>{unread}</FABBadge>}
+          </FABButton>
+        </Tooltip>
+      )}
 
       {/* Panel */}
       {open && (
-        <PanelWrapper>
+        <PanelWrapper $width={panelWidth} $embedded={embedded}>
+          <ResizeHandle
+            $active={resizing}
+            onMouseDown={handleResizeStart}
+            aria-label="Kéo để đổi kích thước AI Agent"
+            role="separator"
+          />
 
           <PanelHeader>
             <HeaderBrand>
@@ -368,14 +493,21 @@ const AIChatbot = ({
           <Composer
             suggestions={modeConfig.suggestions}
             onSend={handleSend}
-            disabled={streaming || sseStatus === 'connecting'}
+            disabled={streaming || sseStatus !== 'connected'}
             placeholder={
               sseStatus === 'connecting'
                 ? 'Đang kết nối...'
+                : sseStatus === 'error'
+                ? 'Kết nối lỗi, vui lòng tạo cuộc trò chuyện mới...'
                 : mode === 'default'
                 ? 'Hỏi bất cứ điều gì…'
                 : 'Mô tả thay đổi mong muốn…'
             }
+            humanInput={humanInput}
+            onHumanInputReply={(requestId, answer) => {
+              sessionRef?.current?.sendHumanInput(requestId, answer)
+              setHumanInput(null)
+            }}
           />
 
         </PanelWrapper>

@@ -22,7 +22,7 @@
 import React, { Suspense } from 'react';
 import { useRoutes } from 'react-router-dom';
 import privateRoutes from './PrivateRoutes';
-import Loading from '@flast-erp/core/components/Loading';
+import { Loading } from '@flast-erp/core/components';
 
 function MyRoutes() {
   return (

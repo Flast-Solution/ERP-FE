@@ -21,12 +21,12 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { message } from 'antd';
-import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
-import { arrayEmpty, arrayNotEmpty, f5List } from '@flast-erp/core/utils/dataUtils';
+import { RestEditModal } from "@flast-erp/core/components";
+
+import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
+import { arrayEmpty, arrayNotEmpty, f5List } from '@flast-erp/core/utils';
 import ProductForm from './ProductForm';
-import ProductAttrService from 'services/ProductAttrService';
+import ProductAttrService from '@/services/ProductAttrService';
 import { cloneDeep } from 'lodash';
 
 /**

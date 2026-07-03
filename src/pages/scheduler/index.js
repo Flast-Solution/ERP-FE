@@ -1,22 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import TimeSheet from './TimeSheet';
 import MyScheduner from './MyScheduner';
-import useGetMe from '@flast-erp/core/hooks/useGetMe';
+import useGetMe from '@/hooks/useGetMe';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
-import useGetRestApi from '@flast-erp/core/hooks/useGetRestApi';
-import FormSelectUser from '@/form-flast/FormSelectUser';
-import { FilterContent, SchedulerWrapper, SchedulerHeader, HeaderLeft, HeaderTitle, NavGroup, CalendarBody } from './styles';
+import { BreadcrumbCustom, FormSelectUser, FormSelect } from '@flast-erp/core/components';
+import { useGetRestApi } from '@flast-erp/core/hooks';
+import { 
+  FilterContent, 
+  SchedulerWrapper, 
+  SchedulerHeader, 
+  HeaderLeft, 
+  HeaderTitle, 
+  NavGroup, 
+  CalendarBody 
+} from './styles';
 import { Dropdown, Button, Col, Form, Badge } from 'antd';
-import FormSelect from '@/form-flast/FormSelect';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { APP_FOLLOW_STATUS_CONFIRM, APP_FOLLOW_STATUS_WAITING } from '@/configs/constant';
-import UserService from 'services/UserService';
-import { arrayEmpty } from '@flast-erp/core/utils/dataUtils';
+import UserService from '@/services/UserService';
+import { arrayEmpty } from '@flast-erp/core/utils';
+
 const currentDate = dayjs();
 const month = currentDate.month();
 const year = currentDate.year();
+
 const menus = (items, onClick) => {
   return arrayEmpty(items) ? [] : items.map((item) => ({
     label: (
@@ -97,7 +105,7 @@ const Scheduner = () => {
       <Helmet>
         <title>{pageTitle}</title>
       </Helmet>
-      <CustomBreadcrumb
+      <BreadcrumbCustom
         data={[{ title: t('calendarPage.breadcrumbHome') }, { title: pageTitle }]}
       />
       {isTimeSheet ? (

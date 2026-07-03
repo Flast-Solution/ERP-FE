@@ -19,20 +19,23 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 import { useState, useContext } from 'react';
-import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
-import FormListAddition from "@/form-flast/FormListAddtion";
+import {
+  FormInput,
+  FormInputNumber,
+  RestEditModal,
+  FormSelect,
+  FormListAddtion,
+  FormSelectInfiniteMaterial,
+  FormHidden,
+  FormContextCustom,
+  CustomButton
+} from "@flast-erp/core/components";
+
 import { Col, Row, Typography, Form, message } from 'antd';
 import { SwitcherOutlined } from '@ant-design/icons';
-import FormSelectInfiniteMaterial from '@/form-flast/SelectInfinite/FormSelectInfiniteMaterial';
-import FormInputNumber from '@/form-flast/FormInputNumber';
-import FormHidden from '@/form-flast/FormHidden';
-import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
-import CustomButton from '@flast-erp/core/components/CustomButton';
-import FormInput from '@/form-flast/FormInput';
-import { arrayEmpty, formatMoney } from '@flast-erp/core/utils/dataUtils';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
-import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
-import FormSelect from '@/form-flast/FormSelect';
+
+import { RequestUtils, arrayEmpty, formatMoney } from '@flast-erp/core/utils';
+import { useEffectAsync } from '@flast-erp/core/hooks';
 
 const ProductBomContainer = ({ closeModal, data }) => {
 
@@ -67,12 +70,12 @@ const ProductBomContainer = ({ closeModal, data }) => {
         <SwitcherOutlined />
         <span style={{ marginLeft: 20 }}>Cấu hình BOM cho {data.name}</span>
       </Typography.Title>
-      <FormListAddition
+      <FormListAddtion
         name="models"
         textAddNew="Thêm vật liệu mới"
       >
         <FormOpenBom />
-      </FormListAddition>
+      </FormListAddtion>
       <div style={{width: '100%'}}>
         <CustomButton htmlType="submit" />
       </div>

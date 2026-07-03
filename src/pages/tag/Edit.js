@@ -1,18 +1,20 @@
 import { useState, useCallback, useContext } from 'react';
 import { Row, Col, message, Form } from 'antd';
 import { CloseOutlined } from '@ant-design/icons';
-import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
+import { useEffectAsync } from '@flast-erp/core/hooks';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
-import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
-import FormHidden from '@/form-flast/FormHidden';
-import FormInput from '@/form-flast/FormInput';
-import FormTextArea from '@/form-flast/FormTextArea';
-import RequestUtils, { SUCCESS_CODE } from '@flast-erp/core/utils/RequestUtils';
-import { useQueryParams } from '@flast-erp/core/hooks/useQueryParams';
-import { useNavigateSearch } from '@flast-erp/core/hooks/useNavigateSearch';
-import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
-import CustomButton from '@flast-erp/core/components/CustomButton';
+import { 
+  RestEditModal, 
+  BreadcrumbCustom,
+  FormHidden,
+  FormInput,
+  FormTextArea,
+  CustomButton,
+  FormContextCustom
+} from '@flast-erp/core/components';
+import { RequestUtils } from '@flast-erp/core/utils';
+import { useNavigateSearch, useQueryParams } from '@flast-erp/core/hooks';
+import { SUCCESS_CODE } from '@/configs';
 
 const TagEdit = () => {
   const { get } = useQueryParams();
@@ -172,7 +174,7 @@ const TagEdit = () => {
       <Helmet>
         <title>{id ? 'Sửa tag' : 'Thêm mới tag'}</title>
       </Helmet>
-      <CustomBreadcrumb
+      <BreadcrumbCustom
         data={[
           { title: 'Trang chủ' },
           { title: 'Tag' },

@@ -21,14 +21,14 @@
 /**************************************************************************/
 
 import React, { useCallback, useEffect, useState } from 'react';
-import jwtService from '@flast-erp/core/utils/jwtService';
-import { useStore } from "@/DataContext";
+import { jwtService} from '@flast-erp/core/utils';
+import { useStore } from '@flast-erp/core/components';
 import { ACTIONS } from '@/configs';
 
 const log = (value) => console.log('[auth.Auth] ', value);
 const Auth = (props) => {
 
-	const [state, setState] = useState({ waitAuthCheck: true })
+	const [ state, setState ] = useState({ waitAuthCheck: true })
 	const { dispatch } = useStore();
 
 	const logout = useCallback(() => {

@@ -21,13 +21,12 @@
 
 import React, { useCallback, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
-import RestList from '@flast-erp/core/components/RestLayout/RestList';
+import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
 import LeadFilter from './Filter';
-import useGetList from "@flast-erp/core/hooks/useGetList";
-import { dateFormatOnSubmit } from '@flast-erp/core/utils/dataUtils';
+import { useGetList } from "@flast-erp/core/hooks";
+import { dateFormatOnSubmit } from '@flast-erp/core/utils';
 import { GATEWAY, HASH_MODAL } from '@/configs';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
+import { InAppEvent } from '@flast-erp/core/utils';
 import { Button, Image } from 'antd';
 
 const ListUserSystem = () => {
@@ -109,7 +108,7 @@ const ListUserSystem = () => {
       <Helmet>
         <title>{title}</title>
       </Helmet>
-      <CustomBreadcrumb
+      <BreadcrumbCustom
         data={[{ title: 'Trang chủ' }, { title: title }]}
       />
       <RestList

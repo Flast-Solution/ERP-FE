@@ -21,18 +21,21 @@
 
 import React, { useCallback, useState, useRef } from 'react';
 import { Row, Col, message } from 'antd';
-import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
-import FormHidden from '@/form-flast/FormHidden';
-import FormInput from '@/form-flast/FormInput';
-import CustomButton from '@flast-erp/core/components/CustomButton';
-import FormTextArea from '@/form-flast/FormTextArea';
-import ImageUploader from '@flast-erp/core/components/common/File/ImageUploader';
-import FormJoditEditor from '@/form-flast/FormJoditEditor';
+
+import { 
+  CustomButton,
+  FormHidden,
+  FormTextArea,
+  FormInput,
+  ImageUploader,
+  RestEditModal,
+  FormJoditEditor
+} from '@flast-erp/core/components';
+
 import logger from '@/logger';
-import RequestUtils, { SUCCESS_CODE } from '@flast-erp/core/utils/RequestUtils';
-import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
+import { useEffectAsync } from '@flast-erp/core/hooks';
 import MediaService from '@/services/MediaService';
-import { f5List } from '@flast-erp/core/utils/dataUtils';
+import { f5List, RequestUtils } from '@flast-erp/core/utils';
 
 const LOGGER_TAG = '[container/category/sanpham.js]';
 const FormCateSanPHam = ({ closeModal, data }) => {
@@ -54,7 +57,7 @@ const FormCateSanPHam = ({ closeModal, data }) => {
     const { images, ...body } = values;
     const { data, message: MEG, errorCode } = await RequestUtils.Post("/category/product/updated", body);
     message.info(MEG);
-    if (SUCCESS_CODE === errorCode) {
+    if (200 === errorCode) {
       setRecord(pre => ({ ...pre, ...data }));
       f5List("category/product/fetch");
     }

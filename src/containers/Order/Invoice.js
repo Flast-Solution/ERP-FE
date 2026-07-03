@@ -23,12 +23,11 @@ import React, { useRef, useState } from 'react';
 import { Row, Col, Table, Typography } from 'antd';
 import OrderTextTableOnly from './OrderTextTableOnly';
 import { useReactToPrint } from "react-to-print";
-import CustomButton from '@flast-erp/core/components/CustomButton';
-import { formatMoney } from '@flast-erp/core/utils/dataUtils';
-import { formatPhoneNumber } from '@flast-erp/core/utils/tools';
-import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
-import UserService from 'services/UserService';
-import HeaderCompany from '@flast-erp/core/components/common/HeaderCompany';
+
+import { CustomButton, HeaderCompany } from '@flast-erp/core/components';
+import { formatPhoneNumber, formatMoney } from '@flast-erp/core/utils';
+import { useEffectAsync } from '@flast-erp/core/hooks';
+import UserService from '@/services/UserService';
 import { StyledHeaderInvoice } from "@/css/global";
 
 const { Title, Text } = Typography;

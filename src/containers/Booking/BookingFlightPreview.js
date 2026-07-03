@@ -1,9 +1,9 @@
 import { render } from '@react-email/render';
 import { useEffect, useState } from 'react';
-import { useStore } from "@/DataContext";
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
+import { useStore } from "@flast-erp/core/components";
+import { RequestUtils } from '@flast-erp/core/utils';
 import { SUCCESS_API_CODE } from '@/configs/constant';
-import FlightReview from 'containers/Email/FlightReview';
+import FlightReview from '@/containers/Email/FlightReview';
 
 const BookingFlightPreview = ({
   record,

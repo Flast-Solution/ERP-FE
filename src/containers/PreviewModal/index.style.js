@@ -10,20 +10,20 @@ const modalPop = keyframes`
 export const Scrim = styled.div`
   position: fixed;
   inset: 0;
-  z-index: 500;
+  z-index: 1200;
   background: rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
+  padding: 0;
 `
 
 export const ModalWrapper = styled.div`
   background: #fff;
-  border-radius: 8px;
+  border-radius: 0;
   width: 100%;
-  max-width: 960px;
-  height: calc(100vh - 80px);
+  max-width: none;
+  height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;

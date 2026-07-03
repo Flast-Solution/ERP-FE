@@ -20,9 +20,12 @@
 /**************************************************************************/
 import React from 'react'
 import { Col, Row } from 'antd'
-import FormDatePicker from '@/form-flast/FormDatePicker'
-import FormInput from '@/form-flast/FormInput'
-import FormSelectInfiniteBusinessUser from '@/form-flast/SelectInfinite/FormSelectInfiniteBusinessUser'
+
+import {
+  FormDatePicker,
+  FormInput,
+  FormSelectInfiniteBusinessUser
+ } from '@flast-erp/core/components'
 
 const Filter = () => {
   return (

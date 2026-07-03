@@ -1,14 +1,14 @@
 import React, { useCallback, useState } from 'react';
-import RestList from "@flast-erp/core/components/RestLayout/RestList";
-import useGetList from "@flast-erp/core/hooks/useGetList";
+
+import { RestList, BreadcrumbCustom } from "@flast-erp/core/components";
+import { useGetList } from "@flast-erp/core/hooks";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
 import Filter from './Filter';
 import { Button } from 'antd';
-import { InAppEvent } from "@flast-erp/core/utils/FuseUtils";
-import { HASH_MODAL } from 'configs';
-import { dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils/dataUtils';
-import useGetMe from '@flast-erp/core/hooks/useGetMe';
+import { InAppEvent } from "@flast-erp/core/utils";
+import { HASH_MODAL } from '@/configs';
+import { dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils';
+import useGetMe from '@/hooks/useGetMe';
 import {
   NGHI_PHEP_META,
   NGHI_PHEP_STATUS_TEXT,
@@ -125,7 +125,7 @@ const User = () => {
       <Helmet>
         <title>{title}</title>
       </Helmet>
-      <CustomBreadcrumb
+      <BreadcrumbCustom
         data={[{ title: 'Home' }, { title: title }]}
       />
       <RestList

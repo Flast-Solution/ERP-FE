@@ -1,12 +1,14 @@
 import FormStyles from './styles'
 import { Form, Col, Typography } from 'antd';
-import FormDatePicker from '@/form-flast/FormDatePicker';
-import FormInputNumber from '@/form-flast/FormInputNumber';
-import FormSelectUser from '@/form-flast/FormSelectUser';
-import FormInput from '@/form-flast/FormInput';
-import UserService from 'services/UserService';
-import FormAutoComplete from '@/form-flast/FormAutoComplete';
-import HotelService from 'services/HotelService';
+import { 
+  FormDatePicker,
+  FormInputNumber,
+  FormSelectUser,
+  FormAutoComplete,
+  FormInput
+} from '@flast-erp/core/components';
+import UserService from '@/services/UserService';
+import HotelService from '@/services/HotelService';
 
 const HotelUserForm = ({ field }) => {
   const { name } = field || { name: 0 };

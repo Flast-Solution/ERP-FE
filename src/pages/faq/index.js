@@ -19,12 +19,11 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
+import { CustomList, BreadcrumbCustom } from '@flast-erp/core/components';
 import Filter from '@/pages/faq/Filter';
-import { f5List } from '@flast-erp/core/utils/dataUtils';
+import { f5List } from '@flast-erp/core/utils';
 import { HASH_MODAL } from '@/configs/constant';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
-import CustomList from '@flast-erp/core/components/RestLayout/CustomList';
+import { InAppEvent } from '@flast-erp/core/utils';
 import {
   GridWrapper,
   TitleWrapper,
@@ -54,7 +53,7 @@ const FaqPage = () => {
       <Helmet>
         <title>{TITLE}</title>
       </Helmet>
-      <CustomBreadcrumb
+      <BreadcrumbCustom
         data={[{ title: 'Trang chủ' }, { title: TITLE }]}
       />
       <CustomList

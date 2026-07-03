@@ -1,13 +1,17 @@
 import { Row, Col, Form } from 'antd';
-import FormHidden from '@/form-flast/FormHidden';
-import CustomButton from '@flast-erp/core/components/CustomButton';
+
+import { 
+  FormHidden,
+  FormDatePicker,
+  CustomButton,
+  FormContextCustom,
+  FormTextArea,
+  FormListAddtion
+} from '@flast-erp/core/components';
+
 import { HourglassOutlined } from '@ant-design/icons';
-import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
 import { useCallback, useContext } from 'react';
-import FormListAddition from '@/form-flast/FormListAddtion';
-import FormTextArea from '@/form-flast/FormTextArea';
 import FlightListForm from './FlightListForm';
-import FormDatePicker from '@/form-flast/FormDatePicker';
 
 const FlightBookForm = () => {
 
@@ -30,9 +34,9 @@ const FlightBookForm = () => {
           return preview ? "" : (
             <>
               <Col md={24} xs={24}>
-                <FormListAddition name="scheduleBusList">
+                <FormListAddtion name="scheduleBusList">
                   <FlightListForm />
-                </FormListAddition>
+                </FormListAddtion>
               </Col>
 
               <Col md={24} xs={24}>

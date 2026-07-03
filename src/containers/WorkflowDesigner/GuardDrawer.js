@@ -1,102 +1,663 @@
-import React, { useState } from 'react'
-import { Form, Select, Input, InputNumber, Button, Divider } from 'antd'
-import { CloseOutlined } from '@ant-design/icons'
-import { GUARD_TYPES, GUARD_TYPE_OPTIONS } from '@/store/workflowConstants'
+import React, { useEffect, useMemo, useState } from 'react'
+import { Button, Form, Input, InputNumber, Select } from 'antd'
+import { ArrowRightOutlined, CloseOutlined } from '@ant-design/icons'
+import { RequestUtils } from '@flast-erp/core/utils'
+import { GUARD_TYPES } from '@/store/workflowConstants'
 import { PanelBody, SectionLabel } from './styles'
 import {
-  DrawerHeader,
-  DrawerTitle,
-  DrawerSubtitle,
+  CodeChip,
+  ConditionBuilder,
+  ConditionLabel,
+  ConditionRow,
+  ConfigSection,
   DrawerFooter,
+  DrawerHeader,
+  DrawerShell,
+  DrawerSubtitle,
+  DrawerTitle,
+  FieldHelp,
+  GuardTypeCard,
+  GuardTypeDesc,
+  GuardTypeGrid,
+  GuardTypeHead,
+  GuardTypeName,
+  MessageSection,
+  SectionTitle,
+  SegmentedButton,
+  SegmentedControl,
+  TransitionChips,
 } from './guardDrawer.styles'
 
 const { TextArea } = Input
 
+const OPERATOR_OPTIONS = [
+  { value: 'eq', label: '= (bằng)' },
+  { value: 'neq', label: '≠ (khác)' },
+  { value: 'gt', label: '> (lớn hơn)' },
+  { value: 'gte', label: '≥ (lớn hơn hoặc bằng)' },
+  { value: 'lt', label: '< (nhỏ hơn)' },
+  { value: 'lte', label: '≤ (nhỏ hơn hoặc bằng)' },
+]
+
+const CONFIG_FIELD_NAMES = [
+  'from_step',
+  'field_name',
+  'expected_value',
+  'operator',
+  'step_code',
+  'form_key',
+  'requirement',
+  'table_name',
+  'min_rows',
+]
+
+const normalizeGuardType = (type) => {
+  if (type === 'form_field') return 'step_form_field'
+  if (type === 'sub_table') return 'sub_table_count'
+  return GUARD_TYPES[type] ? type : 'field_value'
+}
+
 const buildGroupedFieldOptions = (nodeForms = []) =>
   nodeForms.filter((form) => form.fields?.length > 0).map((form) => ({
     label: form.name,
-    options: form.fields.map((f) => ({
-      value: f.fieldKey,
-      label: `${f.label} (${f.inputType})`,
-    })),
+    options: form.fields.map((field) => ({
+      value: field.fieldKey ?? field.key ?? field.id ?? field.name,
+      label: `${field.label ?? field.name ?? field.fieldKey ?? field.key} (${field.inputType ?? field.type ?? 'field'})`,
+    })).filter((field) => field.value != null && field.value !== ''),
   }))
 
-const ConfigFields = ({ fields = [], nodeForms = [] }) => {
+const getResponseArray = (response) => {
+  if (Array.isArray(response)) return response
+  if (Array.isArray(response?.data)) return response.data
+  if (Array.isArray(response?.embedded)) return response.embedded
+  if (Array.isArray(response?.data?.embedded)) return response.data.embedded
+  if (Array.isArray(response?.items)) return response.items
+  if (Array.isArray(response?.data?.items)) return response.data.items
+  return []
+}
 
-  const groupedFieldOptions = buildGroupedFieldOptions(nodeForms)
-  const hasFormFields = groupedFieldOptions.length > 0
+const getFormTemplateId = (form = {}) =>
+  form.templateId ?? form.template_id ?? form.formId ?? form.form_id ?? form.id
 
-  return fields.map((f) => {
-    const rules = f.required ? [{ required: true, message: `Nhập ${f.label}` }] : []
-    const name = ['config', f.name]
+const normalizeFieldOption = (field = {}) => {
+  const value = field.fieldKey ?? field.field_key ?? field.key ?? field.name ?? field.id
+  const label = field.label ?? field.title ?? field.name ?? field.fieldKey ?? field.field_key ?? field.key
+  const type = field.inputType ?? field.input_type ?? field.type
 
-    if (f.name === 'field_name' && hasFormFields) {
+  if (value == null || value === '') return null
+
+  return {
+    value: String(value),
+    label: `${label ?? value}${type ? ` (${type})` : ''}`,
+  }
+}
+
+const fetchTemplateFieldOptions = async (forms = []) => {
+  const formById = new Map()
+  const templateIds = forms
+    .map((form) => {
+      const templateId = getFormTemplateId(form)
+      if (templateId != null && templateId !== '') {
+        formById.set(String(templateId), form)
+      }
+      return templateId
+    })
+    .filter((templateId) => templateId != null && templateId !== '')
+
+  if (!templateIds.length) return []
+
+  const response = await RequestUtils.Post(
+    '/workflow/forms/template/find-template-field',
+    templateIds
+  )
+  const items = getResponseArray(response)
+
+  if (items.some((item) => Array.isArray(item?.fields))) {
+    return items.map((item) => {
+      const templateId = item.templateId ?? item.template_id ?? item.formId ?? item.form_id ?? item.id
+      const form = formById.get(String(templateId)) ?? item
+      const fields = (item.fields ?? [])
+        .map(normalizeFieldOption)
+        .filter(Boolean)
+
+      return {
+        label: form.name ?? form.label ?? item.name ?? item.label ?? `Form #${templateId}`,
+        options: fields,
+      }
+    }).filter((group) => group.options.length > 0)
+  }
+
+  const groupedByTemplate = items.reduce((map, field) => {
+    const templateId = field.templateId ?? field.template_id ?? field.formId ?? field.form_id
+    const key = templateId != null && templateId !== '' ? String(templateId) : '__ungrouped__'
+    const option = normalizeFieldOption(field)
+    if (!option) return map
+
+    if (!map.has(key)) map.set(key, [])
+    map.get(key).push(option)
+    return map
+  }, new Map())
+
+  return Array.from(groupedByTemplate.entries()).map(([templateId, options]) => {
+    const form = formById.get(templateId)
+    return {
+      label: form?.name ?? form?.label ?? (templateId === '__ungrouped__' ? 'Fields' : `Form #${templateId}`),
+      options,
+    }
+  }).filter((group) => group.options.length > 0)
+}
+
+const buildStepOptions = (nodes = []) =>
+  nodes.map((node) => ({
+    value: node?.data?.code || node.id,
+    label: `${node?.data?.label || node.id}${node?.data?.code ? ` (${node.data.code})` : ''}`,
+  }))
+
+const findNodeByRef = (nodes = [], ref) => {
+  if (ref == null || ref === '') return null
+  const key = String(ref)
+  return nodes.find((node) => node.id === key || node?.data?.code === key) ?? null
+}
+
+const collectPredecessorNodeIds = (edges = [], startNodeId) => {
+  const visited = new Set([startNodeId])
+  const queue = [startNodeId]
+
+  while (queue.length > 0) {
+    const currentId = queue.shift()
+    edges.forEach((edge) => {
+      if (edge.target === currentId && !visited.has(edge.source)) {
+        visited.add(edge.source)
+        queue.push(edge.source)
+      }
+    })
+  }
+
+  return visited
+}
+
+const collectSuccessorNodeIds = (edges = [], startNodeId) => {
+  const visited = new Set()
+  const queue = [startNodeId]
+
+  while (queue.length > 0) {
+    const currentId = queue.shift()
+    edges.forEach((edge) => {
+      if (edge.source === currentId && !visited.has(edge.target)) {
+        visited.add(edge.target)
+        queue.push(edge.target)
+      }
+    })
+  }
+
+  return visited
+}
+
+const buildPredecessorStepOptions = (nodes = [], edges = [], sourceStepCode) => {
+  const sourceNode = findNodeByRef(nodes, sourceStepCode)
+  if (!sourceNode) return []
+
+  const allowedIds = collectPredecessorNodeIds(edges, sourceNode.id)
+  collectSuccessorNodeIds(edges, sourceNode.id).forEach((nodeId) => {
+    allowedIds.delete(nodeId)
+  })
+
+  return nodes
+    .filter((node) => allowedIds.has(node.id))
+    .map((node) => ({
+      value: node?.data?.code || node.id,
+      label: `${node?.data?.label || node.id}${node?.data?.code ? ` (${node.data.code})` : ''}`,
+    }))
+}
+
+const getNodeFormsByStep = (nodes = [], stepCode) => {
+  const node = nodes.find((item) =>
+    item.id === stepCode || item?.data?.code === stepCode
+  )
+
+  return node?.data?.forms ?? []
+}
+
+const buildFormOptions = (forms = []) =>
+  forms.map((form) => ({
+    value: String(form.id ?? form.templateId ?? form.formId ?? form.key ?? form.name),
+    label: form.name ?? form.label ?? String(form.id ?? form.templateId ?? form.formId ?? form.key),
+  }))
+
+const GuardTypePicker = ({ value, onChange }) => (
+  <GuardTypeGrid>
+    {Object.entries(GUARD_TYPES).map(([type, config]) => {
+      const active = value === type
+
       return (
-        <Form.Item key={f.name} name={name} label={f.label} rules={rules}>
+        <GuardTypeCard
+          key={type}
+          type="button"
+          $active={active}
+          onClick={() => onChange(type)}
+        >
+          <GuardTypeHead>
+            <GuardTypeName>{config.label}</GuardTypeName>
+            <CodeChip $active={active}>{type}</CodeChip>
+          </GuardTypeHead>
+          {config.description && (
+            <GuardTypeDesc>{config.description}</GuardTypeDesc>
+          )}
+        </GuardTypeCard>
+      )
+    })}
+  </GuardTypeGrid>
+)
+
+const FieldNameSelect = ({ name, label, rules, fieldOptions }) => {
+  const hasFormFields = fieldOptions.length > 0
+
+  return (
+    <Form.Item name={name} label={label} rules={rules}>
+      {hasFormFields ? (
+        <Select
+          showSearch
+          placeholder="Chọn field từ form"
+          options={fieldOptions}
+          optionFilterProp="label"
+          allowClear
+        />
+      ) : (
+        <Input placeholder="Nhập tên field" />
+      )}
+    </Form.Item>
+  )
+}
+
+const FieldValueConfig = ({
+  fieldOptions,
+  fieldsLoading,
+  form,
+  onFromStepChange,
+  stepOptions,
+}) => (
+  <ConditionBuilder>
+    <Form.Item
+      name={['config', 'from_step']}
+      label="Lấy field từ bước"
+      rules={[{ required: true, message: 'Chọn bước' }]}
+    >
+      <Select
+        showSearch
+        placeholder="Chọn bước trước đó"
+        options={stepOptions}
+        optionFilterProp="label"
+        allowClear
+        onChange={(stepCode) => {
+          form.setFieldValue(['config', 'field_name'], undefined)
+          onFromStepChange(stepCode)
+        }}
+        onOpenChange={(open) => {
+          if (!open) return
+          const stepCode = form.getFieldValue(['config', 'from_step'])
+          if (stepCode && fieldOptions.length === 0) {
+            onFromStepChange(stepCode)
+          }
+        }}
+      />
+    </Form.Item>
+
+    <Form.Item
+      name={['config', 'field_name']}
+      label="Field"
+      rules={[{ required: true, message: 'Chọn field' }]}
+    >
+      <Select
+        showSearch
+        placeholder="Chọn field"
+        options={fieldOptions}
+        optionFilterProp="label"
+        allowClear
+        loading={fieldsLoading}
+        disabled={fieldsLoading || fieldOptions.length === 0}
+        notFoundContent={fieldsLoading ? 'Đang tải field...' : 'Bước này chưa có field'}
+      />
+    </Form.Item>
+
+    <ConditionRow>
+      <ConditionLabel>Khi</ConditionLabel>
+      <Form.Item
+        name={['config', 'operator']}
+        rules={[{ required: true, message: 'Chọn toán tử' }]}
+        style={{ flex: 1, minWidth: 0 }}
+      >
+        <Select options={OPERATOR_OPTIONS} />
+      </Form.Item>
+      <Form.Item
+        name={['config', 'expected_value']}
+        rules={[{ required: true, message: 'Nhập giá trị' }]}
+        style={{ flex: 1, minWidth: 0 }}
+      >
+        <Input placeholder="giá trị" />
+      </Form.Item>
+    </ConditionRow>
+    <FieldHelp>
+      Chỉ hiển thị bước trước bước nguồn của transition (và chính bước nguồn), không gồm các bước phía sau.
+    </FieldHelp>
+  </ConditionBuilder>
+)
+
+const StepFormFieldConfig = ({ form, stepOptions, formOptions }) => {
+  const requirement = Form.useWatch(['config', 'requirement'], form) ?? 'filled'
+
+  return (
+    <>
+      <Form.Item
+        name={['config', 'step_code']}
+        label="Bước"
+        rules={[{ required: true, message: 'Chọn bước' }]}
+      >
+        <Select
+          showSearch
+          placeholder="Chọn bước"
+          options={stepOptions}
+          optionFilterProp="label"
+          allowClear
+          onChange={() => {
+            form.setFieldValue(['config', 'form_key'], undefined)
+          }}
+        />
+      </Form.Item>
+
+      <Form.Item name={['config', 'form_key']} label="Form">
+        <Select
+          showSearch
+          placeholder="Tự động theo form của bước hoặc chọn form"
+          options={formOptions}
+          optionFilterProp="label"
+          allowClear
+          disabled={formOptions.length === 0}
+        />
+      </Form.Item>
+
+      <Form.Item name={['config', 'requirement']} hidden>
+        <Input />
+      </Form.Item>
+
+      <div>
+        <div style={{ marginBottom: 8, fontSize: 12, fontWeight: 600, color: '#262626' }}>
+          Yêu cầu <span style={{ color: '#ff4d4f' }}>*</span>
+        </div>
+        <SegmentedControl>
+          <SegmentedButton
+            type="button"
+            $active={requirement === 'filled'}
+            onClick={() => form.setFieldValue(['config', 'requirement'], 'filled')}
+          >
+            Đã điền đầy đủ
+          </SegmentedButton>
+          <SegmentedButton
+            type="button"
+            $active={requirement === 'not_filled'}
+            onClick={() => form.setFieldValue(['config', 'requirement'], 'not_filled')}
+          >
+            Chưa điền
+          </SegmentedButton>
+        </SegmentedControl>
+      </div>
+      <FieldHelp>Guard kiểm tra trạng thái form đã gắn vào bước được chọn.</FieldHelp>
+    </>
+  )
+}
+
+const SubTableConfig = ({ guardType }) => (
+  <>
+    <Form.Item
+      name={['config', 'table_name']}
+      label="Bảng phụ"
+      rules={[{ required: true, message: 'Nhập bảng phụ' }]}
+    >
+      <Input placeholder="Tên bảng phụ" />
+    </Form.Item>
+
+    {guardType === 'sub_table_count' && (
+      <ConditionBuilder>
+        <ConditionRow>
+          <ConditionLabel>Số row</ConditionLabel>
+          <Form.Item
+            name={['config', 'operator']}
+            rules={[{ required: true, message: 'Chọn toán tử' }]}
+            style={{ width: 150 }}
+          >
+            <Select options={OPERATOR_OPTIONS} />
+          </Form.Item>
+          <Form.Item
+            name={['config', 'expected_value']}
+            rules={[{ required: true, message: 'Nhập số row' }]}
+            style={{ flex: 1, minWidth: 0 }}
+          >
+            <InputNumber style={{ width: '100%' }} min={0} placeholder="1" />
+          </Form.Item>
+        </ConditionRow>
+      </ConditionBuilder>
+    )}
+
+    {guardType !== 'sub_table_count' && (
+      <FieldHelp>Điều kiện chi tiết của từng row sẽ được engine xử lý theo cấu hình bảng phụ.</FieldHelp>
+    )}
+  </>
+)
+
+const GenericConfigFields = ({ fields = [], fieldOptions = [] }) => (
+  <>
+    {fields.map((field) => {
+      const rules = field.required ? [{ required: true, message: `Nhập ${field.label}` }] : []
+      const name = ['config', field.name]
+
+      if (field.name === 'field_name') {
+        return (
+          <FieldNameSelect
+            key={field.name}
+            name={name}
+            label={field.label}
+            rules={rules}
+            fieldOptions={fieldOptions}
+          />
+        )
+      }
+
+      if (field.type === 'textarea') {
+        return (
+          <Form.Item key={field.name} name={name} label={field.label} rules={rules}>
+            <TextArea rows={3} placeholder={field.label} />
+          </Form.Item>
+        )
+      }
+
+      if (field.type === 'number') {
+        return (
+          <Form.Item key={field.name} name={name} label={field.label} rules={rules}>
+            <InputNumber style={{ width: '100%' }} min={0} placeholder={field.label} />
+          </Form.Item>
+        )
+      }
+
+      if (field.type === 'select') {
+        return (
+          <Form.Item key={field.name} name={name} label={field.label} rules={rules}>
+            <Select options={field.options} placeholder={field.label} />
+          </Form.Item>
+        )
+      }
+
+      return (
+        <Form.Item key={field.name} name={name} label={field.label} rules={rules}>
+          <Input placeholder={field.label} />
+        </Form.Item>
+      )
+    })}
+  </>
+)
+
+const GuardConfigForm = ({
+  guardType,
+  configFields,
+  fieldOptions,
+  fieldsLoading,
+  form,
+  formOptions,
+  onFromStepChange,
+  stepOptions,
+  predecessorStepOptions,
+}) => {
+  if (guardType === 'field_value') {
+    return (
+      <FieldValueConfig
+        fieldOptions={fieldOptions}
+        fieldsLoading={fieldsLoading}
+        form={form}
+        onFromStepChange={onFromStepChange}
+        stepOptions={predecessorStepOptions}
+      />
+    )
+  }
+
+  if (guardType === 'step_form_field') {
+    return (
+      <StepFormFieldConfig
+        form={form}
+        formOptions={formOptions}
+        stepOptions={stepOptions}
+      />
+    )
+  }
+
+  if (guardType === 'step_completed' && stepOptions.length > 0) {
+    return (
+      <>
+        <Form.Item
+          name={['config', 'step_code']}
+          label="Code của bước"
+          rules={[{ required: true, message: 'Chọn bước' }]}
+        >
           <Select
             showSearch
-            placeholder="Chọn field từ form"
-            options={groupedFieldOptions}
+            placeholder="Chọn bước cần hoàn thành"
+            options={stepOptions}
             optionFilterProp="label"
             allowClear
           />
         </Form.Item>
-      )
-    }
-
-    if (f.type === 'textarea')
-      return (
-        <Form.Item key={f.name} name={name} label={f.label} rules={rules}>
-          <TextArea rows={3} />
-        </Form.Item>
-      )
-
-    if (f.type === 'number')
-      return (
-        <Form.Item key={f.name} name={name} label={f.label} rules={rules}>
-          <InputNumber style={{ width: '100%' }} min={0} />
-        </Form.Item>
-      )
-
-    if (f.type === 'select')
-      return (
-        <Form.Item key={f.name} name={name} label={f.label} rules={rules}>
-          <Select options={f.options} />
-        </Form.Item>
-      )
-
-    return (
-      <Form.Item key={f.name} name={name} label={f.label} rules={rules}>
-        <Input />
-      </Form.Item>
+        <FieldHelp>Engine sẽ kiểm tra bước này đã hoàn thành trước khi cho chuyển tiếp.</FieldHelp>
+      </>
     )
-  })
+  }
+
+  if (guardType.startsWith('sub_table_')) {
+    return <SubTableConfig guardType={guardType} />
+  }
+
+  return (
+    <GenericConfigFields
+      fields={configFields}
+      fieldOptions={fieldOptions}
+    />
+  )
 }
 
-/**
- * Props:
- *   guardIndex   — index trong guards array
- *   initialValue — { type, config }
- *   nodeForms    — node.data.forms[] từ source node (cho field_name Select)
- *   onConfirm    — (values) => void
- *   onCancel     — () => void
- */
 const GuardDrawer = ({
   guardIndex,
   initialValue,
   nodeForms = [],
+  nodes = [],
+  edges = [],
+  sourceStepCode,
+  targetStepCode,
   onConfirm,
   onCancel,
 }) => {
-
   const [localForm] = Form.useForm()
-  const [guardType, setGuardType] = useState(initialValue?.type ?? 'form_field')
-  const configFields = GUARD_TYPES[guardType]?.configFields ?? []
+  const [guardType, setGuardType] = useState(normalizeGuardType(initialValue?.type))
+  const [fieldApiOptions, setFieldApiOptions] = useState([])
+  const [fieldsLoading, setFieldsLoading] = useState(false)
   const guardConfig = GUARD_TYPES[guardType]
+  const configFields = guardConfig?.configFields ?? []
 
-  const handleTypeChange = (val) => {
-    setGuardType(val)
-    localForm.setFieldsValue({ config: {} })
+  const fieldOptions = useMemo(() => buildGroupedFieldOptions(nodeForms), [nodeForms])
+  const stepOptions = useMemo(() => buildStepOptions(nodes), [nodes])
+  const predecessorStepOptions = useMemo(
+    () => buildPredecessorStepOptions(nodes, edges, sourceStepCode),
+    [nodes, edges, sourceStepCode],
+  )
+  const selectedStepCode = Form.useWatch(['config', 'step_code'], localForm)
+  const selectedStepForms = useMemo(
+    () => getNodeFormsByStep(nodes, selectedStepCode),
+    [nodes, selectedStepCode]
+  )
+  const formOptions = useMemo(() => buildFormOptions(selectedStepForms), [selectedStepForms])
+
+  const handleFieldStepChange = (stepCode) => {
+    if (!stepCode) {
+      setFieldApiOptions([])
+      return
+    }
+
+    setFieldApiOptions([])
+    setFieldsLoading(true)
+
+    fetchTemplateFieldOptions(getNodeFormsByStep(nodes, stepCode))
+      .then((options) => {
+        setFieldApiOptions(options)
+      })
+      .catch((error) => {
+        console.error('[GuardDrawer] fetch template fields', error)
+        setFieldApiOptions([])
+      })
+      .finally(() => {
+        setFieldsLoading(false)
+      })
+  }
+
+  useEffect(() => {
+    const nextType = normalizeGuardType(initialValue?.type)
+    setGuardType(nextType)
+    const allowedFromSteps = new Set(
+      buildPredecessorStepOptions(nodes, edges, sourceStepCode).map((item) => String(item.value)),
+    )
+    const initialFromStep = initialValue?.config?.from_step
+    const nextFromStep = initialFromStep != null && allowedFromSteps.has(String(initialFromStep))
+      ? initialFromStep
+      : undefined
+
+    localForm.setFieldsValue({
+      type: nextType,
+      errorMessage: initialValue?.errorMessage ?? initialValue?.config?.message ?? '',
+      sortOrder: initialValue?.sortOrder ?? guardIndex + 1,
+      config: {
+        operator: nextType === 'field_value' ? 'eq' : undefined,
+        step_code: nextType === 'step_form_field' ? sourceStepCode : undefined,
+        requirement: nextType === 'step_form_field' ? 'filled' : undefined,
+        ...initialValue?.config,
+        from_step: nextFromStep,
+      },
+    })
+
+    if (nextType === 'field_value' && nextFromStep) {
+      handleFieldStepChange(nextFromStep)
+    }
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [guardIndex, initialValue, localForm, sourceStepCode, nodes, edges])
+
+  const handleTypeChange = (nextType) => {
+    setGuardType(nextType)
+    setFieldApiOptions([])
+    CONFIG_FIELD_NAMES.forEach((fieldName) => {
+      localForm.setFieldValue(['config', fieldName], undefined)
+    })
+    localForm.setFieldsValue({
+      type: nextType,
+      config: {
+        from_step: undefined,
+        operator: ['field_value', 'sub_table_count'].includes(nextType) ? 'eq' : undefined,
+        step_code: nextType === 'step_form_field' ? sourceStepCode : undefined,
+        requirement: nextType === 'step_form_field' ? 'filled' : undefined,
+      },
+    })
   }
 
   const handleConfirm = () => {
@@ -107,11 +668,24 @@ const GuardDrawer = ({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-
+    <DrawerShell>
       <DrawerHeader>
         <div>
-          <DrawerTitle>Guard #{guardIndex + 1}</DrawerTitle>
+          <SectionLabel style={{ margin: 0 }}>Guard {guardIndex + 1}</SectionLabel>
+          <DrawerTitle>
+            {initialValue?.config && Object.keys(initialValue.config).length > 0
+              ? 'Cấu hình guard'
+              : 'Thêm guard cho transition'}
+          </DrawerTitle>
+          {(sourceStepCode || targetStepCode) && (
+            <TransitionChips>
+              {sourceStepCode && <CodeChip>{sourceStepCode}</CodeChip>}
+              {sourceStepCode && targetStepCode && (
+                <ArrowRightOutlined style={{ fontSize: 11, color: '#8c8c8c' }} />
+              )}
+              {targetStepCode && <CodeChip>{targetStepCode}</CodeChip>}
+            </TransitionChips>
+          )}
           {guardConfig?.description && (
             <DrawerSubtitle>{guardConfig.description}</DrawerSubtitle>
           )}
@@ -130,25 +704,66 @@ const GuardDrawer = ({
           form={localForm}
           layout="vertical"
           size="small"
+          component={false}
+          preserve={false}
           initialValues={{
-            type: initialValue?.type ?? 'form_field',
-            config: initialValue?.config ?? {},
+            type: normalizeGuardType(initialValue?.type),
+            errorMessage: initialValue?.errorMessage ?? initialValue?.config?.message ?? '',
+            sortOrder: initialValue?.sortOrder ?? guardIndex + 1,
+            config: {
+              from_step: initialValue?.config?.from_step,
+              operator: normalizeGuardType(initialValue?.type) === 'field_value' ? 'eq' : undefined,
+              step_code: normalizeGuardType(initialValue?.type) === 'step_form_field' ? sourceStepCode : undefined,
+              requirement: normalizeGuardType(initialValue?.type) === 'step_form_field' ? 'filled' : undefined,
+              ...initialValue?.config,
+            },
           }}
         >
-          <Form.Item name="type" label="Loại guard">
-            <Select options={GUARD_TYPE_OPTIONS} onChange={handleTypeChange} />
+          <Form.Item name="type" hidden>
+            <Input />
+          </Form.Item>
+
+          <Form.Item label="Loại guard" style={{ marginBottom: 0 }}>
+            <GuardTypePicker value={guardType} onChange={handleTypeChange} />
           </Form.Item>
 
           {configFields.length > 0 && (
-            <>
-              <Divider style={{ margin: '4px 0 12px' }} />
-              <SectionLabel>Cấu hình</SectionLabel>
-              <ConfigFields
-                fields={configFields}
-                nodeForms={nodeForms}
+            <ConfigSection>
+              <SectionTitle>Cấu hình</SectionTitle>
+              <GuardConfigForm
+                guardType={guardType}
+                configFields={configFields}
+                fieldOptions={guardType === 'field_value' ? fieldApiOptions : fieldOptions}
+                fieldsLoading={fieldsLoading}
+                form={localForm}
+                formOptions={formOptions}
+                onFromStepChange={handleFieldStepChange}
+                stepOptions={stepOptions}
+                predecessorStepOptions={predecessorStepOptions}
               />
-            </>
+            </ConfigSection>
           )}
+
+          <MessageSection>
+            <SectionTitle>Thông báo & ưu tiên</SectionTitle>
+            <Form.Item
+              name="errorMessage"
+              label="Thông báo lỗi cho người dùng"
+            >
+              <TextArea rows={2} placeholder="Hiển thị khi guard chặn chuyển bước…" />
+            </Form.Item>
+            <FieldHelp>
+              Hỗ trợ <CodeChip>{'{{values.fieldKey}}'}</CodeChip> và <CodeChip>{'{{step.title}}'}</CodeChip>.
+            </FieldHelp>
+            <Form.Item
+              name="sortOrder"
+              label="Thứ tự ưu tiên"
+              style={{ marginBottom: 0, marginTop: 12 }}
+            >
+              <InputNumber style={{ width: 120 }} min={1} />
+            </Form.Item>
+            <FieldHelp>Guard có thứ tự nhỏ hơn sẽ chạy trước.</FieldHelp>
+          </MessageSection>
         </Form>
       </PanelBody>
 
@@ -160,8 +775,7 @@ const GuardDrawer = ({
           Huỷ
         </Button>
       </DrawerFooter>
-
-    </div>
+    </DrawerShell>
   )
 }
 

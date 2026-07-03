@@ -21,13 +21,16 @@
 
 import React, { useContext } from 'react'
 import { Col, Row } from 'antd'
-import CustomButton from '@flast-erp/core/components/CustomButton'
-import FormHidden from '@/form-flast/FormHidden'
-import FormInput from '@/form-flast/FormInput'
-import FormSelect from '@/form-flast/FormSelect'
-import FormSelectInfiniteBusinessUser from '@/form-flast/SelectInfinite/FormSelectInfiniteBusinessUser'
+import { 
+  FormInput, 
+  FormHidden, 
+  CustomButton,
+  FormSelect,
+	FormSelectInfiniteBusinessUser,
+	FormContextCustom
+} from "@flast-erp/core/components";
+
 import { ACTIVE_TYPES, DEPARTMENT } from '@/configs/localData'
-import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom'
 
 const UserGroupForm = () => {
 	const { record } = useContext(FormContextCustom);

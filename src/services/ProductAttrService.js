@@ -20,8 +20,7 @@
 /**************************************************************************/
 
 import { SUCCESS_CODE } from '@/configs';
-import { arrayEmpty, arrayNotEmpty } from '@flast-erp/core/utils/dataUtils';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
+import { RequestUtils, arrayEmpty, arrayNotEmpty } from '@flast-erp/core/utils';
 
 const ProductAttrService = {
   allData: [],

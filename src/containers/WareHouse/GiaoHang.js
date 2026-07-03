@@ -21,20 +21,22 @@
 
 import React, { useState } from 'react'
 import { Col, Form, Row, message, Table } from 'antd'
-import CustomButton from '@flast-erp/core/components/CustomButton';
-import FormAddress from '@/form-flast/FormAddress';
-import FormInput from '@/form-flast/FormInput';
-import FormInputNumber from '@/form-flast/FormInputNumber';
-import FormSelectAPI from '@/form-flast/FormSelectAPI';
-import FormInfiniteOrderCode from '@/form-flast/SelectInfinite/FormInfiniteOrderCode';
-import FormSelect from '@/form-flast/FormSelect';
-import WarehouseService from 'services/WarehouseService';
-import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
-import { arrayEmpty } from '@flast-erp/core/utils/dataUtils';
-import OrderTextTableOnly from 'containers/Order/OrderTextTableOnly';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
-import FormTextArea from '@/form-flast/FormTextArea';
-import { SUCCESS_CODE } from 'configs';
+import { 
+  FormInput, 
+  FormAddress, 
+  CustomButton,
+  FormSelect,
+	FormInputNumber,
+	FormSelectAPI,
+  FormInfiniteOrderCode,
+  FormTextArea
+} from "@flast-erp/core/components";
+
+import WarehouseService from '@/services/WarehouseService';
+import { useEffectAsync } from '@flast-erp/core/hooks';
+import { RequestUtils, arrayEmpty } from '@flast-erp/core/utils';
+import OrderTextTableOnly from '@/containers/Order/OrderTextTableOnly';
+import { SUCCESS_CODE } from '@/configs';
 
 const GiaoHangForm = ({ title, data }) => {
 

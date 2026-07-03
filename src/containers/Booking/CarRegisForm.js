@@ -1,18 +1,22 @@
-import FormCheckbox from '@/form-flast/FormCheckbox';
+
+import { 
+  FormCheckbox,
+  FormDatePicker,
+  FormInput,
+  FormInputNumber,
+  FormSelectUser,
+  FormSelect,
+  FormTextArea,
+  FormListAddtion,
+  FormAutoComplete
+} from '@flast-erp/core/components';
+
 import FormStyles from './styles'
 import { Form, Row, Col, Typography } from 'antd';
-import FormDatePicker from '@/form-flast/FormDatePicker';
-import FormInput from '@/form-flast/FormInput';
-import FormInputNumber from '@/form-flast/FormInputNumber';
-import FormSelectUser from '@/form-flast/FormSelectUser';
-import FormSelect from '@/form-flast/FormSelect';
 import { REGISTER_WORK_TYPE } from '@/configs/localData';
-import FormTextArea from '@/form-flast/FormTextArea';
-import UserService from 'services/UserService';
-import FormListAddition from '@/form-flast/FormListAddtion';
+import UserService from '@/services/UserService';
 import { EnvironmentOutlined } from '@ant-design/icons';
-import CarService from 'services/CarService';
-import FormAutoComplete from '@/form-flast/FormAutoComplete';
+import CarService from '@/services/CarService';
 
 const CarListPickUp = ({ field }) => {
   const { name } = field || { name: 0 };
@@ -205,7 +209,7 @@ const CarRegisForm = ({ field }) => {
       </Col>
 
       <Col md={24} xs={24}>
-        <FormListAddition
+        <FormListAddtion
           name={[name, 'listPickup']}
           text="Thêm điểm đón"
           title={"Địa điểm đón/ Pick up Location"}
@@ -214,11 +218,11 @@ const CarRegisForm = ({ field }) => {
           showBtnInLeft={false}
         >
           <CarListPickUp />
-        </FormListAddition>
+        </FormListAddtion>
       </Col>
 
       <Col md={24} xs={24}>
-        <FormListAddition
+        <FormListAddtion
           name={[name, 'listDestinations']}
           text="Thêm lịch trình mới"
           title={"Địa điểm đến/ Destination"}
@@ -226,7 +230,7 @@ const CarRegisForm = ({ field }) => {
           showBtnInLeft={false}
         >
           <CarListDestinations />
-        </FormListAddition>
+        </FormListAddtion>
       </Col>
       <Col md={24} xs={24}>
         <FormTextArea

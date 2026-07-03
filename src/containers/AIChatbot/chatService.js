@@ -3,7 +3,7 @@
  *
  * Protocol (theo chat_client.py):
  *   1. GET  /chat/stream?session_id=xxx  → SSE stream liên tục (1 connection/session)
- *   2. POST /chat { session_id, message } → trigger AI response cho turn hiện tại
+ *   2. POST /chat { session_id, message, use_orchestrator } → trigger AI response cho turn hiện tại
  *
  * SSE events:
  *   event: llms  data: "text chunk"     — stream text từ LLM
@@ -14,47 +14,94 @@
 
 const BASE_URL     = 'https://ai.flast.vn'
 const PING_INTERVAL_MS = 60_000
+const SSE_DEBUG = process.env.NODE_ENV !== 'production'
+
+function logSSE(...args) {
+  if (!SSE_DEBUG) {
+    return
+  }
+  console.log('[ChatSession][SSE]', ...args)
+}
+
+function hasPayloadData(payload) {
+  if (payload == null || payload === '') {
+    return false
+  }
+  if (typeof payload === 'string') {
+    return payload.trim().length > 0
+  }
+  if (Array.isArray(payload)) {
+    return payload.length > 0
+  }
+  if (typeof payload === 'object') {
+    return Object.keys(payload).length > 0
+  }
+  return true
+}
 
 function stripServerPrefix(text = '') {
   return text.replace(/^\[[A-Z_]+\]\n?/g, '').trim()
+}
+
+function parseEventData(eventData) {
+  try {
+    const raw = JSON.parse(eventData)
+    return raw?.body ?? ''
+  } catch {
+    return eventData
+  }
+}
+
+function stripAnswerPrefix(text = '') {
+  return text.replace(/^\s*\[ANSWER\]\s*/i, '')
 }
 
 export class ChatSession {
   constructor(sessionId) {
     this.sessionId       = sessionId
     this._abortCtrl      = new AbortController()
-    this._onChunk        = null
-    this._onCore         = null
-    this._onDone         = null
-    this._onError        = null
-    this._onClose        = null
+    this._onChunk         = null
+    this._onCore          = null
+    this._onDone          = null
+    this._onBuild         = null
+    this._onError         = null
+    this._onClose         = null
     this._onHistoryLoaded = null
+    this._onHumanInput    = null
     this._connected      = false
     this._pingTimer      = null
     this._connectPromise = null
+    this._llmsBuffer     = ''
+    this._answerStarted  = false
+    this._hasThinkMarker = false
   }
 
   // ─── Public API ────────────────────────────────────────────────────────────
 
-  connect({ onChunk, onCore, onDone, onError, onClose, onHistoryLoaded }) {
+  connect({ onOpen, onChunk, onCore, onDone, onBuild, onError, onClose, onHistoryLoaded, onHumanInput }) {
+    this._onOpen          = onOpen
     this._onChunk         = onChunk
     this._onCore          = onCore
     this._onDone          = onDone
+    this._onBuild         = onBuild
     this._onError         = onError
     this._onClose         = onClose
     this._onHistoryLoaded = onHistoryLoaded
+    this._onHumanInput    = onHumanInput
 
     this._connectPromise = this._openSSE()
     return this._connectPromise
   }
 
   async send(message) {
+    this._resetAnswerStream()
     const res = await fetch(`${BASE_URL}/chat`, {
       method : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body   : JSON.stringify({
         session_id: this.sessionId,
         message,
+        use_orchestrator: true,
       }),
     })
 
@@ -67,13 +114,87 @@ export class ChatSession {
     }
   }
 
-  async sendSchemaUpdate({ schema, jsxCode }) {
+  async sendHumanInput(requestId, answer) {
+    const res = await fetch(`${BASE_URL}/workflow/input`, {
+      method : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body   : JSON.stringify({
+        session_id: this.sessionId,
+        request_id: requestId,
+        answer,
+      }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.message ?? `Server error ${res.status}`)
+    }
+    /* Không gọi _resetAnswerStream() vì message sau sẽ tiếp tục chảy qua SSE bình thường */
+  }
+
+  _resetAnswerStream() {
+    this._llmsBuffer     = ''
+    this._answerStarted  = false
+    this._hasThinkMarker = false
+  }
+
+  _extractDisplayChunk(text = '') {
+    if (!text) {
+      return ''
+    }
+
+    if (this._answerStarted) {
+      return stripAnswerPrefix(text)
+    }
+
+    this._llmsBuffer += text
+    if (this._llmsBuffer.includes('[THINK]')) {
+      this._hasThinkMarker = true
+    }
+
+    const answerIndex = this._llmsBuffer.indexOf('[ANSWER]')
+    if (answerIndex !== -1) {
+      this._answerStarted = true
+      const displayText = this._llmsBuffer.slice(answerIndex + '[ANSWER]'.length)
+      this._llmsBuffer = ''
+      return displayText.replace(/^\s+/, '')
+    }
+
+    if (this._hasThinkMarker) {
+      return ''
+    }
+
+    if (this._llmsBuffer.length > 64) {
+      this._answerStarted = true
+      const displayText = this._llmsBuffer
+      this._llmsBuffer = ''
+      return displayText
+    }
+
+    return ''
+  }
+
+  async sendSchemaUpdate({
+    schema, 
+    jsxCode,
+    type, 
+    title,
+    templateId = null
+  }) {
     try {
-      let content = "Đây là FormView mà bạn cần thay đổi theo yêu cầu: \n";
-      content += JSON.stringify({ fields: schema.fields, jsx_code: jsxCode});
+      let content = ""
+      content += `================= Tôi cần chỉnh, sửa ${type} ==================`
       content += "\n";
-      content += "Sau khi chỉnh sửa xong, hãy lưu code với config là fields và code là jsx_code đã chỉnh sửa.";
+      content += templateId != null ? `Dự án có ID = ${templateId}` : "Đây là dự án mới chưa có ID";
       content += "\n";
+      content += title;
+      content += "\n";
+      content += JSON.stringify(schema.fields, null, 2);
+      content += "\n";
+      content += "Code này cần sửa:";
+      content += "\n";
+      content += jsxCode;
+      content += "\n";
+      content += "==========================================================="
 
       await fetch(`${BASE_URL}/session/form-context`, {
         method : 'POST',
@@ -146,6 +267,8 @@ export class ChatSession {
 
       this._connected = true
       this._startPing()
+      this._onOpen?.()
+      logSSE('connected', { sessionId: this.sessionId, url })
       this._fetchAndEmitHistory()
 
       await this._readStream(res.body)
@@ -210,38 +333,72 @@ export class ChatSession {
     }
 
     let eventName = 'message'
-    let eventData = ''
+    const dataLines = []
 
     for (const line of part.split('\n')) {
       if (line.startsWith('event:')) {
         eventName = line.slice(6).trim()
       } else if (line.startsWith('data:')) {
-        eventData = line.slice(5).trim()
+        dataLines.push(line.slice(5).trim())
       }
     }
 
+    const eventData = dataLines.join('\n')
+    const payload = parseEventData(eventData)
+    const shouldLog = hasPayloadData(payload) || eventData.trim().length > 0
+
     switch (eventName) {
       case 'llms': {
-        let text = eventData
-        try { text = JSON.parse(eventData) } catch {}
-        this._onChunk?.(String(text))
+        const text = this._extractDisplayChunk(payload)
+        if (shouldLog) {
+          logSSE('llms', {
+            sessionId: this.sessionId,
+            rawPayload: payload,
+            displayChunk: text,
+          })
+        }
+        if (text) {
+          this._onChunk?.(text)
+        }
         break
       }
 
       case 'core': {
-        let payload = eventData
-        try { payload = JSON.parse(eventData) } catch {}
+        if (shouldLog) {
+          logSSE('core', payload)
+        }
         this._onCore?.(payload)
         break
       }
 
       case 'done': {
+        if (shouldLog) {
+          logSSE('done', { sessionId: this.sessionId, payload })
+        }
         this._onDone?.()
         break
       }
 
+      case 'build': {
+        if (shouldLog) {
+          logSSE('build', payload)
+        }
+        this._onBuild?.(payload)
+        break
+      }
+
+      case 'human_input_required': {
+        if (shouldLog) {
+          logSSE('human_input_required', payload)
+        }
+        this._onHumanInput?.(payload)
+        break
+      }
+
       case 'close': {
-        /* Server idle-timeout → stop ping, reconnect */
+        if (shouldLog) {
+          logSSE('close', { sessionId: this.sessionId, payload })
+        }
         this._stopPing()
         this._connected = false
         this._onClose?.()
@@ -252,6 +409,9 @@ export class ChatSession {
       }
 
       default:
+        if (shouldLog) {
+          logSSE('unhandled', { event: eventName, eventData, payload })
+        }
         break
     }
   }
@@ -263,10 +423,10 @@ export class ChatSession {
       return
     }
     try {
-      const res = await fetch(`${BASE_URL}/history?session_id=${this.sessionId}`)
-      if (!res.ok) return
-      const data     = await res.json()
-      const messages = (data.messages ?? []).map(msg => ({
+      const request = await fetch(`${BASE_URL}/history?session_id=${this.sessionId}`)
+      if (!request.ok) return
+      const res     = await request.json()
+      const messages = (res?.data ?? []).map(msg => ({
         ...msg,
         content: stripServerPrefix(msg.content),
       }))

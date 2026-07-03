@@ -22,8 +22,8 @@
 import React from 'react';
 import { Tag, Tooltip } from 'antd';
 import { ClockCircleOutlined } from '@ant-design/icons';
-import { formatMoney, formatTime } from '@flast-erp/core/utils/dataUtils';
-import { ShowSkuDetail } from 'containers/Product/SkuView';
+import { formatMoney, formatTime } from '@flast-erp/core/utils';
+import { ShowSkuDetail } from '@/containers/Product/SkuView';
 import {
   KanbanCardWrapper,
   TitleWrapper,
@@ -35,7 +35,7 @@ import {
   DateText,
   AssigneeAvatar,
   getInitials
-} from 'css/cardStyle';
+} from '@/css/cardStyle';
 
 const KanbanCard = ({
   code,

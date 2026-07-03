@@ -1,21 +1,25 @@
 import { useState, useRef } from 'react';
-import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
-import RequestUtils, { SUCCESS_CODE } from '@flast-erp/core/utils/RequestUtils';
+import { useEffectAsync } from '@flast-erp/core/hooks';
+
+import { RequestUtils } from '@flast-erp/core/utils';
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
-import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
-import FormHidden from '@/form-flast/FormHidden';
+import {
+  BreadcrumbCustom,
+  RestEditModal,
+  FormHidden,
+  FormInput,
+  FormTextArea,
+  FormJoditEditor,
+  CustomButton,
+  ImageUploader,
+  FormCategoryPost
+} from '@flast-erp/core/components';
 import { Row, Col, message } from 'antd';
-import FormInput from '@/form-flast/FormInput';
-import FormTextArea from '@/form-flast/FormTextArea';
-import FormJoditEditor from '@/form-flast/FormJoditEditor';
-import CustomButton from '@flast-erp/core/components/CustomButton';
 import { useCallback } from 'react';
-import ImageUploader from '@flast-erp/core/components/common/File/ImageUploader';
-import { useQueryParams } from '@flast-erp/core/hooks/useQueryParams';
+import { useQueryParams } from '@flast-erp/core/hooks';
 import logger from '@/logger';
-import FormCategoryPost from '@/form-flast/SelectInfinite/FormCategoryPost';
 import MediaService from '@/services/MediaService';
+import { SUCCESS_CODE } from '@/configs';
 
 const LOGGER_TAG = '[pages/post/Edit.js]';
 const PostEdit = () => {
@@ -71,7 +75,7 @@ const PostEdit = () => {
       <Helmet>
         <title>Sửa nội dung tin tức</title>
       </Helmet>
-      <CustomBreadcrumb
+      <BreadcrumbCustom
         data={[{ title: 'Trang chủ' }, { title: 'Tin tức' }, { title: mContent?.name ?? 'Thêm mới nội dung' }]}
       />
       <RestEditModal

@@ -21,16 +21,14 @@
 
 import React, { useCallback, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
-import RestList from '@flast-erp/core/components/RestLayout/RestList';
+import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
 import CustomerFilter from './Filter';
-import useGetList from '@flast-erp/core/hooks/useGetList';
+import { useGetList } from '@flast-erp/core/hooks';
 import { Button, Tag } from 'antd';
-import { dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils/dataUtils';
+import { RequestUtils, dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingCartOutlined } from '@ant-design/icons';
 import styled from 'styled-components';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 
 const StyledTag = styled(Tag)`
   cursor: pointer;
@@ -121,7 +119,7 @@ const ListEnterprise = () => {
       <Helmet>
         <title>{title}</title>
       </Helmet>
-      <CustomBreadcrumb
+      <BreadcrumbCustom
         data={[{ title: 'Trang chủ' }, { title: title }]}
       />
       <RestList

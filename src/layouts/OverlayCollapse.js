@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import useCollapseSidebar from '@flast-erp/core/hooks/useCollapseSidebar';
+import { useCollapseSidebar } from '@flast-erp/core/hooks';
 
 function OverlayCollapse() {
   const { isCollapseSidebar, toggleCollapse } = useCollapseSidebar();

@@ -21,11 +21,11 @@
 
 import React, { useCallback, useState } from 'react';
 import { Table, Button, InputNumber, Select, Typography, message } from 'antd';
-import { ShowSkuDetail } from 'containers/Product/SkuView';
-import { arrayEmpty, arrayNotEmpty, formatMoney } from '@flast-erp/core/utils/dataUtils';
-import { formatterInputNumber, parserInputNumber } from '@flast-erp/core/utils/tools';
+import { ShowSkuDetail } from '@/containers/Product/SkuView';
+import { arrayEmpty, arrayNotEmpty, formatMoney } from '@flast-erp/core/utils';
+import { formatterInputNumber, parserInputNumber } from '@flast-erp/core/utils';
 import { HASH_POPUP } from '@/configs/constant';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
+import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import {
   SaveOutlined,
   TagOutlined,
@@ -36,10 +36,9 @@ import {
   FilePptOutlined
 } from '@ant-design/icons';
 import _ from 'lodash';
-import { HASH_MODAL, SUCCESS_CODE } from 'configs';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
-import OrderService, { getWarehouseByProduct } from 'services/OrderService';
-import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
+import { HASH_MODAL, SUCCESS_CODE } from '@/configs';
+import OrderService, { getWarehouseByProduct } from '@/services/OrderService';
+import { useEffectAsync } from '@flast-erp/core/hooks';
 
 const { Text } = Typography;
 const warrantyOptions = [

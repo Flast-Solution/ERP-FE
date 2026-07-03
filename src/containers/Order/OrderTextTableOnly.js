@@ -22,8 +22,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Table, Typography } from "antd";
 import styled from "styled-components";
-import { arrayEmpty, formatMoney } from '@flast-erp/core/utils/dataUtils';
-import { ShowSkuDetail } from 'containers/Product/SkuView';
+import { arrayEmpty, formatMoney } from '@flast-erp/core/utils';
+import { ShowSkuDetail } from '@/containers/Product/SkuView';
 
 const { Text } = Typography;
 const COL_SPAN_0 = { props: { colSpan: 0 } };

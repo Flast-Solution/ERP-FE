@@ -41,19 +41,12 @@ export const STEP_TYPE_OPTIONS = Object.entries(STEP_TYPES).map(([value, { label
 // ─── Guard Types ──────────────────────────────────────────────────────────────
 // Mỗi guard type có configFields mô tả các field cần render trong GuardItem
 export const GUARD_TYPES = {
-  form_field: {
-    label: 'Form field required',
-    description: 'Yêu cầu field trong form phải được điền',
-    configFields: [
-      { name: 'field_name', label: 'Tên field', type: 'input', required: true },
-    ],
-  },
   field_value: {
-    label: 'Field value equals',
-    description: 'Kiểm tra giá trị của một field',
+    label: 'Field tại bước nguồn',
+    description: 'So sánh giá trị một field trong form đã điền ở bước nào đó với một hằng số.',
     configFields: [
+      { name: 'from_step', label: 'Lấy field từ bước', type: 'select', required: true },
       { name: 'field_name', label: 'Tên field', type: 'input', required: true },
-      { name: 'expected_value', label: 'Giá trị mong đợi', type: 'input', required: true },
       {
         name: 'operator',
         label: 'Toán tử',
@@ -68,21 +61,75 @@ export const GUARD_TYPES = {
           { value: 'lte', label: '≤ (nhỏ hơn hoặc bằng)' },
         ],
       },
+      { name: 'expected_value', label: 'Giá trị mong đợi', type: 'input', required: true },
+    ],
+  },
+  step_form_field: {
+    label: 'Form của bước đã điền',
+    description: 'Yêu cầu form gắn vào một bước phải được điền đầy đủ (hoặc ngược lại).',
+    configFields: [
+      { name: 'step_code', label: 'Bước', type: 'input', required: true },
+      { name: 'form_key', label: 'Form', type: 'input', required: false },
+      {
+        name: 'requirement',
+        label: 'Yêu cầu',
+        type: 'select',
+        required: true,
+        options: [
+          { value: 'filled', label: 'Đã điền đầy đủ' },
+          { value: 'not_filled', label: 'Chưa điền' },
+        ],
+      },
     ],
   },
   step_completed: {
-    label: 'Step completed',
-    description: 'Yêu cầu một bước khác đã hoàn thành',
+    label: 'Bước đã hoàn thành',
+    description: 'Một bước nào đó trong quy trình phải đã chuyển xong.',
     configFields: [
       { name: 'step_code', label: 'Code của bước', type: 'input', required: true },
     ],
   },
-  sub_table: {
-    label: 'Sub table check',
-    description: 'Kiểm tra dữ liệu trong sub table',
+  sub_table_all: {
+    label: 'Bảng phụ — tất cả thỏa',
+    description: 'Mọi row trong bảng phụ phải pass điều kiện.',
     configFields: [
-      { name: 'table_name', label: 'Tên bảng', type: 'input', required: true },
-      { name: 'min_rows', label: 'Số dòng tối thiểu', type: 'number', required: false },
+      { name: 'table_name', label: 'Bảng phụ', type: 'input', required: true },
+    ],
+  },
+  sub_table_any: {
+    label: 'Bảng phụ — ít nhất một thỏa',
+    description: 'Có ít nhất một row pass điều kiện.',
+    configFields: [
+      { name: 'table_name', label: 'Bảng phụ', type: 'input', required: true },
+    ],
+  },
+  sub_table_none: {
+    label: 'Bảng phụ — không có row nào thỏa',
+    description: 'Không row nào pass — đảm bảo không có lỗi.',
+    configFields: [
+      { name: 'table_name', label: 'Bảng phụ', type: 'input', required: true },
+    ],
+  },
+  sub_table_count: {
+    label: 'Bảng phụ — đếm số row',
+    description: 'So sánh số lượng row với một hằng số.',
+    configFields: [
+      { name: 'table_name', label: 'Bảng phụ', type: 'input', required: true },
+      {
+        name: 'operator',
+        label: 'Toán tử',
+        type: 'select',
+        required: true,
+        options: [
+          { value: 'eq', label: '= (bằng)' },
+          { value: 'neq', label: '≠ (khác)' },
+          { value: 'gt', label: '> (lớn hơn)' },
+          { value: 'gte', label: '≥ (lớn hơn hoặc bằng)' },
+          { value: 'lt', label: '< (nhỏ hơn)' },
+          { value: 'lte', label: '≤ (nhỏ hơn hoặc bằng)' },
+        ],
+      },
+      { name: 'expected_value', label: 'Số row', type: 'number', required: true },
     ],
   },
 }
@@ -110,7 +157,7 @@ export const ACTION_TYPES = {
     ],
   },
   call_webhook: {
-    label: 'Call webhook',
+    label: 'Gọi webhook',
     configFields: [
       { name: 'url', label: 'URL', type: 'input', required: true },
       {
@@ -135,7 +182,7 @@ export const ACTION_TYPES = {
     ],
   },
   notification: {
-    label: 'Thông báo in-app',
+    label: 'Push notification',
     configFields: [
       { name: 'title', label: 'Tiêu đề', type: 'input', required: true },
       { name: 'message', label: 'Nội dung', type: 'textarea', required: false },
@@ -174,7 +221,7 @@ export const DEFAULT_TRANSITION = {
 export const DEFAULT_STEP = {
   label: 'New Step',
   code: 'new_step',
-  type: 'process',
+  type: '',
   description: '',
   actions: [],
 }

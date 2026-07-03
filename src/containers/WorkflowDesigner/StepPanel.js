@@ -1,15 +1,17 @@
 import React from 'react'
-import { Empty, Tooltip } from 'antd'
+import { Empty, Switch, Tooltip } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import {
   useNodes,
+  useProcess,
   useSelectedId,
   useSetSelected,
+  useSetProcess,
   useStepTypes,
   useSetStepTypes,
 } from '@/hooks/useWorkflowStore'
 import { HASH_POPUP } from '@/configs/constant'
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils'
+import { InAppEvent } from '@flast-erp/core/utils'
 import {
   PanelContainer,
   SectionTitleRow,
@@ -23,6 +25,10 @@ import {
   TypePillIcon,
   PaletteDivider,
   StepListWrapper,
+  WorkflowStatusRow,
+  WorkflowStatusText,
+  WorkflowStatusLabel,
+  WorkflowStatusValue,
   StepRow,
   StepRowDot,
   StepRowLabel,
@@ -73,12 +79,15 @@ const ExistingStepItem = ({ node, stepTypes, isActive, onClick }) => {
 
 // ─── StepPanel ────────────────────────────────────────────────────────────────
 
-const StepPanel = () => {
+const StepPanel = ({ onReloadStepTypes }) => {
   const nodes = useNodes()
+  const process = useProcess()
   const selectedId = useSelectedId()
   const setSelected = useSetSelected()
+  const setProcess = useSetProcess()
   const stepTypes = useStepTypes()
   const setStepTypes = useSetStepTypes()
+  const isWorkflowActive = Number(process.status ?? 1) === 1
 
   // Mở modal cấu hình loại bước
   const handleOpenConfig = () => {
@@ -88,6 +97,7 @@ const StepPanel = () => {
       data: {
         stepTypes,
         onSave: (updatedTypes) => setStepTypes(updatedTypes),
+        onReload: onReloadStepTypes,
       },
     })
   }
@@ -107,9 +117,20 @@ const StepPanel = () => {
 
       {/* Palette pills — scroll khi > 250px */}
       <PaletteWrapper>
-        {stepTypes.map((stepType) => (
-          <TypeItem key={stepType.key} stepType={stepType} />
-        ))}
+        {stepTypes.length === 0 ? (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description="Chưa có loại bước"
+            style={{ margin: '12px 0' }}
+          />
+        ) : (
+          stepTypes.map((stepType) => (
+            <TypeItem
+              key={String(stepType.id ?? stepType.key)}
+              stepType={stepType}
+            />
+          ))
+        )}
       </PaletteWrapper>
 
       <PaletteDivider />
@@ -143,6 +164,19 @@ const StepPanel = () => {
           ))
         )}
       </StepListWrapper>
+
+      <WorkflowStatusRow>
+        <WorkflowStatusText>
+          <WorkflowStatusLabel>Trạng thái</WorkflowStatusLabel>
+          <WorkflowStatusValue>{isWorkflowActive ? 'Đang kích hoạt' : 'Tạm ngưng'}</WorkflowStatusValue>
+        </WorkflowStatusText>
+        <Switch
+          checked={isWorkflowActive}
+          checkedChildren="Bật"
+          unCheckedChildren="Tắt"
+          onChange={(checked) => setProcess({ status: checked ? 1 : 0 })}
+        />
+      </WorkflowStatusRow>
 
     </PanelContainer>
   )

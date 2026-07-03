@@ -57,10 +57,12 @@ import {
   RotateLeftOutlined
 } from '@ant-design/icons';
 
-import useCollapseSidebar from '@flast-erp/core/hooks/useCollapseSidebar';
+import { useCollapseSidebar } from '@flast-erp/core/hooks';
 import { useTranslation } from 'react-i18next';
 import { Link } from "react-router-dom";
 import SideBarStyles from './styles';
+import useGetMe from '@/hooks/useGetMe';
+import { isSuperAdmin } from '@/utils/authUtils';
 
 function getItem(label, key, icon, children) {
   return { key, icon, children, label };
@@ -72,6 +74,8 @@ function SideBar() {
 
   const { t } = useTranslation();
   const { isCollapseSidebar: collapsed, toggleCollapse } = useCollapseSidebar();
+  const { user } = useGetMe();
+  const canManageBusinessUnits = isSuperAdmin(user);
 
   const items = [
     getItem(<Link to="/sale/report-common">{t('sideBar.dashboard')}</Link>, 'home', <FundViewOutlined />),
@@ -89,6 +93,7 @@ function SideBar() {
     ]),
     getItem('Qui trình', 'business_flow', <DollarCircleFilled />, [
       getItem(<Link to="/workflow-designer">Tạo nghiệp vụ</Link>, 'business_create', <UnorderedListOutlined />),
+      getItem(<Link to="/workflow-forms">Danh sách form</Link>, 'workflow_form_list', <UnorderedListOutlined />),
       getItem(<Link to="/workflow-form">Tạo Form nhập</Link>, 'workflow_form', <UnorderedListOutlined />),
       getItem(<Link to="/sale/drag-drop-order">Quy trình đơn</Link>, 'business_order', <ForkOutlined />),
     ]),
@@ -127,6 +132,9 @@ function SideBar() {
       getItem(<Link to="/tag">Quản lý Tag</Link>, 'tag', <span> - </span>)
     ]),
     getItem('Tài khoản', 'tai_khoan', <UserOutlined />, [
+      ...(canManageBusinessUnits
+        ? [getItem(<Link to="/system/business-units">Đơn vị sử dụng</Link>, 'business_units', <BankOutlined />)]
+        : []),
       getItem(<Link to="/user/group">Team</Link>, 'user_group', <TeamOutlined />),
       getItem(<Link to="/user/list-system">Tài khoản hệ thống</Link>, 'user_system', <SettingOutlined />)
     ]),

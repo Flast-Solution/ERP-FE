@@ -20,9 +20,7 @@
 /**************************************************************************/
 
 import { Row, Col } from 'antd';
-import FormDatePicker from '@/form-flast/FormDatePicker';
-import FormInput from '@/form-flast/FormInput';
-import FormSelect from '@/form-flast/FormSelect';
+import { FormDatePicker, FormInput, FormSelect } from '@flast-erp/core/components';
 import { CHANNEL_SOURCE } from '@/configs/localData';
 
 const Filter = () => {

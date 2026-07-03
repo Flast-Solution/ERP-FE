@@ -22,17 +22,16 @@
 import React, { useCallback, useState } from 'react';
 import { Button } from 'antd';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
-import RestList from '@flast-erp/core/components/RestLayout/RestList';
-import useGetList from "@flast-erp/core/hooks/useGetList";
-import { HASH_MODAL } from 'configs';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
+import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
+import { useGetList } from "@flast-erp/core/hooks";
+import { HASH_MODAL } from '@/configs';
+import { InAppEvent } from '@flast-erp/core/utils';
 import { cloneDeep } from 'lodash';
-import { dateFormatOnSubmit } from '@flast-erp/core/utils/dataUtils';
-import { ORDER_COLUMN_ACTION } from 'containers/Order/utils';
+import { dateFormatOnSubmit } from '@flast-erp/core/utils';
+import { ORDER_COLUMN_ACTION } from '@/containers/Order/utils';
 import Filter from './Filter';
-import OrderService from 'services/OrderService';
-import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
+import OrderService from '@/services/OrderService';
+import { useEffectAsync } from '@flast-erp/core/hooks';
 
 const CoHoi7DayPage = ( { type }) => {
 
@@ -81,7 +80,7 @@ const CoHoi7DayPage = ( { type }) => {
       <Helmet>
         <title>{title}</title>
       </Helmet>
-      <CustomBreadcrumb
+      <BreadcrumbCustom
         data={[{ title: 'Trang chủ' }, { title: title }]}
       />
       <RestList

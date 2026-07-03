@@ -21,10 +21,13 @@
 
 import React from 'react'
 import { Col, Row } from 'antd'
-import CustomButton from '@flast-erp/core/components/CustomButton'
-import FormHidden from '@/form-flast/FormHidden'
-import FormInput from '@/form-flast/FormInput'
-import FormSelect from '@/form-flast/FormSelect'
+import { 
+  FormInput, 
+  FormHidden, 
+  CustomButton,
+  FormSelect
+} from "@flast-erp/core/components";
+
 import { USER_STATUS } from '@/configs/localData'
 
 const UserForm = ({ listProFile }) => {
@@ -82,8 +85,11 @@ const UserForm = ({ listProFile }) => {
 			</Col>
 			<Col md={12} xs={24}>
 				<FormSelect 
-					label="Quyền thao tác" 
+					required
+					label="user.accountType"
 					name="userProfiles"
+					messageRequire="user.accountType.validateMsg.required"
+					formItemProps={{ required: true }}
 					resourceData={listProFile}
 					titleProp='type'
 					valueProp='id'

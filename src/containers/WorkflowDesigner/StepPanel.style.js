@@ -123,6 +123,35 @@ export const StepListWrapper = styled.div`
   min-height: 0;
 `
 
+export const WorkflowStatusRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 12px 12px;
+  padding: 9px 10px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  background: #fafafa;
+  flex-shrink: 0;
+`
+
+export const WorkflowStatusText = styled.div`
+  min-width: 0;
+`
+
+export const WorkflowStatusLabel = styled.div`
+  font-size: 13px;
+  font-weight: 600;
+  color: #262626;
+`
+
+export const WorkflowStatusValue = styled.div`
+  margin-top: 2px;
+  font-size: 11px;
+  color: #8c8c8c;
+`
+
 export const StepRow = styled.div`
   display: flex;
   align-items: center;

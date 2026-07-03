@@ -20,7 +20,7 @@
 /**************************************************************************/
 
 import { Row, Col } from 'antd';
-import FormInput from '@/form-flast/FormInput';
+import { FormInput } from '@flast-erp/core/components';
 
 const TagFilter = () => {
   return (

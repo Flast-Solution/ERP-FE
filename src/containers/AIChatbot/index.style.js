@@ -1,4 +1,4 @@
-import styled, { keyframes } from 'styled-components'
+import styled, { css, keyframes } from 'styled-components'
 
 /* ── Animations ── */
 
@@ -8,8 +8,8 @@ const fabPop = keyframes`
 `
 
 const panelPop = keyframes`
-  from { transform: translateY(8px) scale(0.96); opacity: 0; }
-  to   { transform: translateY(0)   scale(1);    opacity: 1; }
+  from { transform: translateX(16px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
 `
 
 /* ── FAB ── */
@@ -60,21 +60,66 @@ export const FABBadge = styled.span`
 /* ── Panel ── */
 
 export const PanelWrapper = styled.div`
-  position: fixed;
-  bottom: 80px;
-  right: 24px;
+  position: ${({ $embedded }) => $embedded ? 'absolute' : 'fixed'};
+  top: ${({ $embedded }) => $embedded ? '52px' : '64px'};
+  right: 0;
   z-index: 1000;
-  width: 360px;
-  height: 520px;
-  max-height: calc(100vh - 100px);
+  width: ${({ $width }) => $width}px;
+  min-width: 360px;
+  max-width: 100vw;
+  height: ${({ $embedded }) => $embedded ? 'calc(100% - 52px)' : 'calc(100vh - 64px)'};
   background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.16), 0 2px 8px rgba(0,0,0,0.08);
+  border-left: 1px solid #e4e4e7;
+  box-shadow: -8px 0 28px rgba(15, 23, 42, 0.12);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  transform-origin: bottom right;
+  flex: none;
+  overflow: visible;
   animation: ${panelPop} 180ms cubic-bezier(0.22, 1, 0.36, 1);
+
+  @media (max-width: 640px) {
+    top: 0;
+    right: 0;
+    width: 100vw;
+    min-width: 0;
+    max-width: 100vw;
+    height: 100vh;
+  }
+`
+
+export const ResizeHandle = styled.div`
+  position: absolute;
+  top: 0;
+  left: -5px;
+  width: 10px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 2;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 4px;
+    width: 2px;
+    height: 100%;
+    background: transparent;
+    transition: background 120ms ease;
+  }
+
+  &:hover::after {
+    background: #1677ff;
+  }
+
+  ${({ $active }) => $active && css`
+    &::after {
+      background: #1677ff;
+    }
+  `}
+
+  @media (max-width: 640px) {
+    display: none;
+  }
 `
 
 /* ── Panel header ── */
@@ -86,6 +131,7 @@ export const PanelHeader = styled.div`
   padding: 12px 14px 10px;
   border-bottom: 1px solid #f0f0f0;
   flex-shrink: 0;
+  background: #fff;
 `
 
 export const HeaderBrand = styled.div`

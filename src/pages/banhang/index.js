@@ -21,9 +21,9 @@
 
 import Order from 'containers/Order';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
+import { BreadcrumbCustom } from '@flast-erp/core/components';
 import { useParams } from "react-router-dom";
-import { useQueryParams } from '@flast-erp/core/hooks/useQueryParams';
+import { useQueryParams } from '@flast-erp/core/hooks';
 
 const title = 'Tạo cơ hội bán hàng';
 const BanHangPage = (props) => {
@@ -34,7 +34,7 @@ const BanHangPage = (props) => {
 		<Helmet>
 			<title>{title}</title>
 		</Helmet>
-		<CustomBreadcrumb
+		<BreadcrumbCustom
 			data={[{ title: 'Trang chủ' }, { title: title }]}
 		/>
 		<Order

@@ -1,6 +1,12 @@
 import { create } from 'zustand'
 import { addEdge, applyNodeChanges, applyEdgeChanges } from 'reactflow'
-import { DEFAULT_STEP, DEFAULT_TRANSITION, STEP_TYPES } from './workflowConstants'
+import { DEFAULT_STEP, DEFAULT_TRANSITION } from './workflowConstants'
+import {
+  getNodeSemanticType,
+  getStepSemanticType,
+  resolveFallbackProcessTypeKey,
+  resolveStepTypeConfig,
+} from '@/utils/workflowValidators'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const generateId = () => `id_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
@@ -13,70 +19,33 @@ const snapshot = (nodes, edges) => ({
 const MAX_HISTORY = 50
 
 // ─── Initial state ────────────────────────────────────────────────────────────
-const initialNodes = [
-  {
-    id: 'step_new',
-    type: 'stepNode',
-    position: { x: 80, y: 200 },
-    data: { label: 'New', code: 'new', type: 'start', description: 'Khởi tạo', actions: [] },
-  },
-  {
-    id: 'step_confirmed',
-    type: 'stepNode',
-    position: { x: 320, y: 200 },
-    data: { label: 'Confirmed', code: 'confirmed', type: 'process', description: 'Đã xác nhận', actions: [] },
-  },
-  {
-    id: 'step_done',
-    type: 'stepNode',
-    position: { x: 560, y: 200 },
-    data: { label: 'Done', code: 'done', type: 'end', description: 'Hoàn thành', actions: [] },
-  },
-]
-
-const initialEdges = [
-  {
-    id: 'e_new_confirmed',
-    source: 'step_new',
-    target: 'step_confirmed',
-    type: 'transitionEdge',
-    data: { label: 'Confirm', require_note: false, guards: [], actions: [] },
-  },
-  {
-    id: 'e_confirmed_done',
-    source: 'step_confirmed',
-    target: 'step_done',
-    type: 'transitionEdge',
-    data: { label: 'Complete', require_note: false, guards: [], actions: [] },
-  },
-]
-
-// Default stepTypes từ constants — Backend sẽ ghi đè qua setStepTypes()
-const initialStepTypes = Object.entries(STEP_TYPES).map(([key, config]) => ({
-  key,
-  ...config,
-}))
+const initialNodes = []
+const initialEdges = []
+const initialStepTypes = []
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 const useWorkflowStore = create((set, get) => ({
 
   // ── Step types (palette "Thêm bước") ─────────────────────────────────────────
-  // Mặc định lấy từ STEP_TYPES constant, Backend có thể ghi đè qua setStepTypes()
-  // Mỗi item: { key, label, color, bgColor, borderColor }
+  // Mỗi item lấy từ API process-type-find: { key, label, color, bgColor, borderColor }
   stepTypes: initialStepTypes,
 
   // Gọi khi API trả về danh sách loại bước
   // Ví dụ: store.getState().setStepTypes(apiResponse)
   setStepTypes: (types) => set({ stepTypes: types }),
 
-  // Reset về default constants
+  // Reset về danh sách rỗng, không fallback hardcode.
   resetStepTypes: () => set({ stepTypes: initialStepTypes }),
 
   // ── Process info ────────────────────────────────────────────────────────────
   process: {
-    name: 'New Tạo luồng xử lý nghiệp vụ',
-    code: 'new_process_business',
+    id: null,
+    processKey: '',
+    name: '',
+    code: '',
     description: '',
+    flowType: '',
+    status: 1,
   },
 
   setProcess: (partial) => set((state) => ({
@@ -92,19 +61,36 @@ const useWorkflowStore = create((set, get) => ({
     }))
   },
 
-  addNode: (position, stepType) => {
+  addNode: (position, stepTypeKey) => {
     const id = generateId()
-    const newNode = {
-      id,
-      type: 'stepNode',
-      position,
-      data: {
-        ...DEFAULT_STEP,
-        type: stepType ?? 'process',
-        code: `step_${id.slice(-5)}`,
-      },
-    }
     set((state) => {
+      const stepTypes = get().stepTypes
+      const droppedSemantic = getStepSemanticType(stepTypeKey, stepTypes)
+      const fallbackProcessKey = resolveFallbackProcessTypeKey(stepTypes)
+
+      /* Nếu drop start mà đã có start → fallback process
+       * Nếu drop end mà đã có end → fallback process 
+      */
+      const resolvedType =
+        (droppedSemantic === 'start' && state.nodes.some((n) => getNodeSemanticType(n, stepTypes) === 'start'))
+          ? fallbackProcessKey
+        : (droppedSemantic === 'end' && state.nodes.some((n) => getNodeSemanticType(n, stepTypes) === 'end'))
+          ? fallbackProcessKey
+        : (stepTypeKey ?? fallbackProcessKey)
+
+      const stepTypeConfig = resolveStepTypeConfig(stepTypes, resolvedType)
+
+      const newNode = {
+        id,
+        type: 'stepNode',
+        position,
+        data: {
+          ...DEFAULT_STEP,
+          label: stepTypeConfig?.label ?? DEFAULT_STEP.label,
+          type: resolvedType,
+          code: `step_${id.slice(-5)}`,
+        },
+      }
       const next = [...state.nodes, newNode]
       return {
         nodes: next,
@@ -128,6 +114,30 @@ const useWorkflowStore = create((set, get) => ({
 
   deleteNode: (nodeId) => {
     set((state) => {
+      const target = state.nodes.find((n) => n.id === nodeId)
+      if (!target) {
+        return {}
+      }
+
+      const stepTypes = get().stepTypes
+      const targetSemantic = getNodeSemanticType(target, stepTypes)
+
+      /* Chặn xoá start duy nhất */
+      if (targetSemantic === 'start') {
+        const startCount = state.nodes.filter((n) => getNodeSemanticType(n, stepTypes) === 'start').length
+        if (startCount <= 1) return {}
+      }
+
+      /* Chặn xoá end duy nhất */
+      if (targetSemantic === 'end') {
+        const endCount = state.nodes.filter((n) => getNodeSemanticType(n, stepTypes) === 'end').length
+        if (endCount <= 1) return {}
+      }
+
+      if (state.edges.some((e) => e.source === nodeId)) {
+        return {}
+      }
+ 
       const nextNodes = state.nodes.filter((n) => n.id !== nodeId)
       const nextEdges = state.edges.filter(
         (e) => e.source !== nodeId && e.target !== nodeId
@@ -252,7 +262,7 @@ const useWorkflowStore = create((set, get) => ({
       selectedType: null,
       history: [],
       future: [],
-      process: { name: 'New Process', code: 'new_process', description: '' },
+      process: { id: null, processKey: '', name: '', code: '', description: '', flowType: '', status: 1 },
     }),
 
   // ── Load từ JSON (import) ─────────────────────────────────────────────────────
@@ -260,7 +270,7 @@ const useWorkflowStore = create((set, get) => ({
     set({
       nodes: nodes ?? [],
       edges: edges ?? [],
-      process: processInfo ?? { name: '', code: '', description: '' },
+      process: processInfo ?? { id: null, processKey: '', name: '', code: '', description: '', flowType: '', status: 1 },
       selectedId: null,
       selectedType: null,
       history: [],

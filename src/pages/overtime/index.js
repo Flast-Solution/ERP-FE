@@ -1,19 +1,18 @@
 import React, { useCallback, useState } from 'react';
-import RestList from "@flast-erp/core/components/RestLayout/RestList";
-import useGetList from "@flast-erp/core/hooks/useGetList";
+import { useGetList } from "@flast-erp/core/hooks";
 import { Helmet } from "react-helmet";
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
+import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
 import Filter from './Filter';
 import { Button, Typography } from 'antd';
-import { InAppEvent } from "@flast-erp/core/utils/FuseUtils";
+import { InAppEvent } from "@flast-erp/core/utils";
 import { HASH_MODAL } from 'configs';
-import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils/dataUtils';
-import useGetMe from '@flast-erp/core/hooks/useGetMe';
+import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils';
+import useGetMe from '@/hooks/useGetMe';
 import {
   NGHI_PHEP_STATUS_TEXT, 
   NGHI_PHEP_STATUS_WAITING,
 } from '@/configs/constant';
-import { formatDateDayjs } from '@flast-erp/core/utils/textUtils'
+import { formatDateDayjs } from '@flast-erp/core/utils'
 import { OTContent } from './styles';
 
 const { Paragraph, Text } = Typography;
@@ -117,7 +116,7 @@ const Overtime = () => {
 			<Helmet>
 				<title>{title}</title>
 			</Helmet>
-			<CustomBreadcrumb 
+			<BreadcrumbCustom 
 				data={[ { title: 'Home' }, { title: title} ]} 
 			/>
 			<RestList 

@@ -22,17 +22,19 @@
 import React, { useCallback, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Button, Popconfirm, Form, message } from 'antd';
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
-import RestList from '@flast-erp/core/components/RestLayout/RestList';
+import { 
+  RestList, 
+  BreadcrumbCustom,
+  FormInfiniteStock,
+  FormInputNumber
+ } from '@flast-erp/core/components';
+
 import WarehouseFilter from './Filter';
-import useGetList from "@flast-erp/core/hooks/useGetList";
-import { dateFormatOnSubmit, f5List, formatTime } from '@flast-erp/core/utils/dataUtils';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
-import { ShowSkuDetail } from 'containers/Product/SkuView';
+import { useGetList } from "@flast-erp/core/hooks";
+import { dateFormatOnSubmit, f5List, formatTime } from '@flast-erp/core/utils';
+import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
+import { ShowSkuDetail } from '@/containers/Product/SkuView';
 import { HASH_POPUP, HASH_MODAL } from '@/configs/constant';
-import FormInfiniteStock from '@/form-flast/SelectInfinite/FormInfiniteStock';
-import FormInputNumber from '@/form-flast/FormInputNumber';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
 
 const ListInStock = () => {
 
@@ -168,7 +170,7 @@ const ListInStock = () => {
       <Helmet>
         <title>{title}</title>
       </Helmet>
-      <CustomBreadcrumb
+      <BreadcrumbCustom
         data={[{ title: 'Trang chủ' }, { title: title }]}
       />
       <RestList

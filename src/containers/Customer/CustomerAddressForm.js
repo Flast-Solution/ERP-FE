@@ -21,19 +21,22 @@
 
 import React, { useState } from "react";
 import { Col, Row, Form, message } from "antd";
-import FormInput from "@/form-flast/FormInput";
-import FormSelect from "@/form-flast/FormSelect";
-import RestEditModal from "@flast-erp/core/components/RestLayout/RestEditModal";
-import FormDatePicker from "@/form-flast/FormDatePicker";
-import FormListAddition from "@/form-flast/FormListAddtion";
+
+import { 
+  CustomButton,
+  FormHidden,
+  FormSelect,
+  FormInput,
+  FormDatePicker,
+  RestEditModal,
+  FormListAddtion,
+  FormCheckbox,
+  FormSelectInfiniteProvince
+} from '@flast-erp/core/components';
+
 import { FormListStyles } from "@/css/global";
-import CustomButton from "@flast-erp/core/components/CustomButton";
-import FormSelectInfiniteProvince from "@/form-flast/SelectInfinite/FormSelectInfiniteProvince";
-import { useEffectAsync } from "@flast-erp/core/hooks/MyHooks";
-import RequestUtils from "@flast-erp/core/utils/RequestUtils";
-import FormCheckbox from "@/form-flast/FormCheckbox";
-import { dateFormatOnSubmit } from "@flast-erp/core/utils/dataUtils";
-import FormHidden from "@/form-flast/FormHidden";
+import { useEffectAsync } from "@flast-erp/core/hooks";
+import { RequestUtils, dateFormatOnSubmit } from "@flast-erp/core/utils";
 import { SUCCESS_CODE } from "@/configs";
 
 const CustomerAddressForm = ({ data }) => {
@@ -103,12 +106,12 @@ const CustomerAddressForm = ({ data }) => {
           />
         </Col>
         <Col md={24} xs={24}>
-          <FormListAddition
+          <FormListAddtion
             name="customerAddress"
             textAddNew="Thêm mới địa chỉ"
           >
             <AddressFormItem />
-          </FormListAddition>
+          </FormListAddtion>
         </Col>
         <Col md={24} xs={24}>
           <CustomButton htmlType="submit" title="Cập nhật" />

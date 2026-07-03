@@ -1,7 +1,7 @@
 import { Body, Container, Column, Head, Heading, Html, Preview, Row, Section, Text, } from "@react-email/components";
 import { NGHI_PHEP_STATUS_DONE, NGHI_PHEP_STATUS_WAITING } from "@/configs/constant";
-import { formatDateDayjs } from "utils/textUtils";
-import { arrayNotEmpty } from "utils/dataUtils";
+import { formatDateDayjs } from "@/utils/textUtils";
+import { arrayNotEmpty } from "@/utils/dataUtils";
 import ESig from "./ESig";
 
 const nRow = {

@@ -1,7 +1,7 @@
 import { TZDate } from '@toast-ui/calendar';
 import dayjs from 'dayjs';
-import UserService from 'services/UserService';
-import { arrayEmpty, arrayNotEmpty } from '@flast-erp/core/utils/dataUtils';
+import UserService from '@/services/UserService';
+import { arrayEmpty, arrayNotEmpty } from '@flast-erp/core/utils';
 
 export function clone(date) {
   return new TZDate(date);

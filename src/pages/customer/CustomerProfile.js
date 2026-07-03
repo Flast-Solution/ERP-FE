@@ -36,16 +36,15 @@ import {
 } from 'antd';
 
 import { DollarCircleOutlined, MailOutlined, FileDoneOutlined } from "@ant-design/icons";
-import { useEffectAsync } from '@flast-erp/core/hooks/MyHooks';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
-import { SUCCESS_CODE } from 'configs';
-import { arrayNotEmpty, formatMoney, formatTime } from '@flast-erp/core/utils/dataUtils';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
+import { useEffectAsync } from '@flast-erp/core/hooks';
+import { SUCCESS_CODE } from '@/configs';
+import { arrayNotEmpty, formatMoney, formatTime } from '@flast-erp/core/utils';
+import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import { useNavigate } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
 import OrderService from 'services/OrderService';
-import { renderArrayColor } from 'containers/Order/utils';
-import CareNoteList from 'containers/Customer/CareNoteList';
+import { renderArrayColor } from '@/containers/Order/utils';
+import CareNoteList from '@/containers/Customer/CareNoteList';
 
 const { Title, Text, Paragraph } = Typography;
 const customer = {

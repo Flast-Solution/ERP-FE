@@ -38,7 +38,58 @@ import { slugifyFieldKey } from '@/utils/slugify';
 
 // ─── Factory: tạo field mới từ type ─────────────────────────────────────────
 
+function createProvenance(source = 'user', action = 'created', existing = null) {
+  const now = new Date().toISOString();
+  const previous = existing?._provenance ?? existing?.config?.__provenance ?? existing?.provenance ?? null;
+
+  if (previous && source === 'api' && action === 'loaded') {
+    return previous;
+  }
+
+  const createdBySource = previous?.createdBySource ?? previous?.source ?? source;
+  const createdAction = previous?.createdAction ?? previous?.sourceAction ?? action;
+  const createdAt = previous?.createdAt ?? now;
+
+  return {
+    source: createdBySource,
+    sourceAction: createdAction,
+    createdBySource,
+    createdAction,
+    createdAt,
+    updatedBySource: source,
+    updatedAction: action,
+    updatedAt: now,
+  };
+}
+
+function touchProvenance(field, source = 'user', action = 'edited') {
+  field._provenance = createProvenance(source, action, field);
+  field.config = {
+    ...(field.config ?? {}),
+    __provenance: field._provenance,
+  };
+}
+
+function isAiProvenance(provenance) {
+  return (provenance?.createdBySource ?? provenance?.source) === 'ai';
+}
+
+function isAiGeneratedField(field) {
+  return isAiProvenance(field?._provenance ?? field?.config?.__provenance ?? field?.provenance);
+}
+
+function hasAiGeneratedField(fields = []) {
+  let found = false;
+  walkFields(fields, (field) => {
+    if (isAiGeneratedField(field)) {
+      found = true;
+    }
+  });
+  return found;
+}
+
 function createField(type) {
+  const provenance = createProvenance('user', 'dragged');
   return {
     _id         : nanoid(),
     id          : null,           // chưa save → null
@@ -47,15 +98,19 @@ function createField(type) {
     inputType   : type,
     isRequired  : false,
     isSearchable: false,
-    isIndexed   : false,
+    isIndexed   : true,
     sortOrder   : 0,              // tính lại khi save
     enabled     : true,
-    config      : getDefaultConfig(type),
     colSpan     : 24,
     refDomain   : null,
     autoGenerate: null,
     fieldRole   : null,
     children    : type === 'block' ? [] : undefined,
+    _provenance : provenance,
+    config      : {
+      ...getDefaultConfig(type),
+      __provenance: provenance,
+    },
   };
 }
 
@@ -82,33 +137,68 @@ function normalizeConfig(config = {}) {
   };
 }
 
-function mapFieldFromApi(field) {
+function mapFieldFromApi(field, provenance = { source: 'api', action: 'loaded' }, previousByKey = new Map()) {
   const fieldKey = normalizeFieldKey(field);
+  const previousField = previousByKey.get(fieldKey);
+  const incomingProvenance =
+    field._provenance ??
+    field.provenance ??
+    field.config?.__provenance ??
+    null;
+  const nextProvenance = incomingProvenance
+    ? createProvenance(
+      provenance.source ?? incomingProvenance.updatedBySource ?? incomingProvenance.source ?? 'api',
+      provenance.action ?? incomingProvenance.updatedAction ?? incomingProvenance.sourceAction ?? 'loaded',
+      { ...field, _provenance: incomingProvenance }
+    )
+    : createProvenance(provenance.source ?? 'api', provenance.action ?? 'loaded', previousField);
+  const config = normalizeConfig(field.config ?? {});
+  const persistedId = normalizePersistedId(field.id);
+  const isNewGeneratedField = persistedId == null && provenance.source !== 'api';
+
   return {
     _id         : nanoid(),
-    id          : normalizePersistedId(field.id),
+    id          : persistedId,
     fieldKey,
     label       : field.label ?? fieldKey,
     inputType   : field.inputType,
     isRequired  : field.isRequired  ?? false,
     isSearchable: field.isSearchable ?? false,
-    isIndexed   : field.isIndexed   ?? false,
+    isIndexed   : field.isIndexed   ?? previousField?.isIndexed ?? isNewGeneratedField,
     sortOrder   : field.sortOrder   ?? 0,
     enabled     : field.enabled     ?? true,
-    config      : normalizeConfig(field.config ?? {}),
+    config      : {
+      ...config,
+      __provenance: nextProvenance,
+    },
     refDomain   : field.refDomain   ?? null,
     autoGenerate: field.autoGenerate ?? null,
     colSpan     : field.colSpan     ?? 24,
     fieldRole   : field.fieldRole   ?? null,
-    children    : Array.isArray(field.children) ? field.children.map(mapFieldFromApi) : (field.inputType === 'block' ? [] : undefined),
+    children    : Array.isArray(field.children)
+      ? field.children.map(child => mapFieldFromApi(child, provenance, previousByKey))
+      : (field.inputType === 'block' ? [] : undefined),
+    _provenance : nextProvenance,
   };
 }
 
-function normalizeFieldList(fields = []) {
+function buildPreviousFieldMap(fields = []) {
+  const map = new Map();
+  walkFields(fields, (field) => {
+    if (field.fieldKey) {
+      map.set(field.fieldKey, field);
+    }
+  });
+  return map;
+}
+
+function normalizeFieldList(fields = [], provenance = { source: 'api', action: 'loaded' }, previousFields = []) {
+  const previousByKey = buildPreviousFieldMap(previousFields);
+
   return (fields ?? [])
     .filter(field => field?.inputType)
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-    .map(mapFieldFromApi);
+    .map(field => mapFieldFromApi(field, provenance, previousByKey));
 }
 
 function walkFields(fields, callback, parentId = null) {
@@ -148,6 +238,7 @@ function findContainerInfo(fields, targetId, parentId = null) {
 }
 
 function serializeField(field, index) {
+  const provenance = field._provenance ?? field.config?.__provenance ?? null;
   return {
     id          : field.id,
     fieldKey    : field.fieldKey,
@@ -158,7 +249,10 @@ function serializeField(field, index) {
     isIndexed   : field.isIndexed,
     sortOrder   : index,
     enabled     : field.enabled,
-    config      : field.config,
+    config      : {
+      ...(field.config ?? {}),
+      ...(provenance ? { __provenance: provenance } : {}),
+    },
     refDomain   : field.refDomain,
     autoGenerate: field.autoGenerate,
     colSpan     : field.colSpan,
@@ -222,9 +316,11 @@ const useFormBuilderStore = create(
           enabled    : template.enabled ?? true,
         };
 
-        state.fields = (template.fields ?? [])
-          .sort((a, b) => a.sortOrder - b.sortOrder)
-          .map(mapFieldFromApi);
+        state.fields = normalizeFieldList(
+          template.fields ?? [],
+          { source: 'api', action: 'loaded' },
+          []
+        );
 
         const savedFieldKeys = [];
         walkFields(state.fields, (field) => {
@@ -233,12 +329,11 @@ const useFormBuilderStore = create(
           }
         });
         state.savedFieldKeys = new Set(savedFieldKeys);
-
         state.selectedId = null;
       });
     },
 
-    importGeneratedTemplate({ meta = {}, fields = [] }) {
+    importGeneratedTemplate({ meta = {}, fields = [], provenance = { source: 'ai', action: 'created' } }) {
       set(state => {
         state.templateMeta = {
           ...state.templateMeta,
@@ -246,7 +341,7 @@ const useFormBuilderStore = create(
           id: normalizePersistedId(meta.id ?? state.templateMeta.id),
         };
 
-        state.fields = normalizeFieldList(fields);
+        state.fields = normalizeFieldList(fields, provenance, state.fields);
 
         state.savedFieldKeys = new Set();
         state.selectedId = null;
@@ -264,6 +359,10 @@ const useFormBuilderStore = create(
     addField(type, atIndex, parentId = null) {
       const field = createField(type);
       set(state => {
+        if (hasAiGeneratedField(state.fields)) return;
+        const targetParentField = parentId ? findField(state.fields, parentId) : null;
+        if (isAiGeneratedField(targetParentField)) return;
+
         const targetContainer = parentId
           ? (findField(state.fields, parentId)?.children ?? null)
           : state.fields;
@@ -287,6 +386,7 @@ const useFormBuilderStore = create(
       set(state => {
         const location = findContainerInfo(state.fields, _id);
         if (!location) return;
+        if (isAiGeneratedField(location.field)) return;
         location.container.splice(location.index, 1);
         if (state.selectedId === _id) {
           state.selectedId = null;
@@ -303,7 +403,9 @@ const useFormBuilderStore = create(
       set(state => {
         const field = findField(state.fields, _id);
         if (!field) return;
+        if (isAiGeneratedField(field)) return;
         Object.assign(field, patch);
+        touchProvenance(field, 'user', 'edited');
       });
     },
 
@@ -317,6 +419,7 @@ const useFormBuilderStore = create(
       set(state => {
         const field = findField(state.fields, _id);
         if (!field) return;
+        if (isAiGeneratedField(field)) return;
 
         const prevSlug = slugifyFieldKey(field.label);
         const shouldAutoSlug =
@@ -327,6 +430,7 @@ const useFormBuilderStore = create(
         if (shouldAutoSlug) {
           field.fieldKey = slugifyFieldKey(newLabel);
         }
+        touchProvenance(field, 'user', 'edited');
       });
     },
 
@@ -339,7 +443,9 @@ const useFormBuilderStore = create(
       set(state => {
         const field = findField(state.fields, _id);
         if (!field) return;
+        if (isAiGeneratedField(field)) return;
         field.config = { ...field.config, ...configPatch };
+        touchProvenance(field, 'user', 'edited');
       });
     },
 
@@ -352,6 +458,7 @@ const useFormBuilderStore = create(
         const map = Object.fromEntries(targetContainer.map(f => [f._id, f]));
         const reordered = newOrder.map(id => map[id]).filter(Boolean);
         targetContainer.splice(0, targetContainer.length, ...reordered);
+        reordered.forEach(field => touchProvenance(field, 'user', 'moved'));
       });
     },
 
@@ -364,30 +471,35 @@ const useFormBuilderStore = create(
 
         const source = findContainerInfo(state.fields, activeId);
         if (!source) return;
+        if (isAiGeneratedField(source.field)) return;
         const [movingField] = source.container.splice(source.index, 1);
         if (!movingField) return;
 
         const targetContainer = targetParentId
           ? (findField(state.fields, targetParentId)?.children ?? null)
           : state.fields;
+        const targetParentField = targetParentId ? findField(state.fields, targetParentId) : null;
 
-        if (!targetContainer) {
+        if (!targetContainer || isAiGeneratedField(targetParentField)) {
           source.container.splice(source.index, 0, movingField);
           return;
         }
 
         if (!overId || overId === activeId) {
           targetContainer.push(movingField);
+          touchProvenance(movingField, 'user', 'moved');
           return;
         }
 
         const overLocation = findContainerInfo(state.fields, overId);
-        if (!overLocation || overLocation.parentId !== targetParentId) {
+        if (!overLocation || overLocation.parentId !== targetParentId || isAiGeneratedField(overLocation.field)) {
           targetContainer.push(movingField);
+          touchProvenance(movingField, 'user', 'moved');
           return;
         }
 
         targetContainer.splice(overLocation.index, 0, movingField);
+        touchProvenance(movingField, 'user', 'moved');
       });
     },
 
@@ -416,6 +528,17 @@ const useFormBuilderStore = create(
       return location
         ? { index: location.index, parentId: location.parentId }
         : null;
+    },
+
+    isAiGeneratedField(_id) {
+      const { fields } = get();
+      const field = findField(fields, _id);
+      return isAiGeneratedField(field);
+    },
+
+    hasAiGeneratedField() {
+      const { fields } = get();
+      return hasAiGeneratedField(fields);
     },
 
     /**

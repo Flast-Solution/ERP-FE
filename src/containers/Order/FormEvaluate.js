@@ -1,10 +1,13 @@
 import React from 'react';
 import { Col, Form } from 'antd';
-import FormInput from '@/form-flast/FormInput';
-import FormSelect from '@/form-flast/FormSelect';
-import FormInputNumber from '@/form-flast/FormInputNumber';
-import FormTextArea from '@/form-flast/FormTextArea';
-import FormHidden from '@/form-flast/FormHidden';
+import { 
+  FormInput,
+  FormSelect,
+  FormInputNumber,
+  FormTextArea,
+  FormHidden
+} from '@flast-erp/core/components'
+
 import { FormListStyles } from '@/css/global';
 
 const FormEvaluate = ({ form, field }) => {

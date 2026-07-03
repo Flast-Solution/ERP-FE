@@ -1,8 +1,10 @@
 import { Row, Col } from 'antd';
-import FormInput from '@/form-flast/FormInput';
-import FormSelectUser from '@/form-flast/FormSelectUser';
-import FormSelect from '@/form-flast/FormSelect';
-import FormDatePicker from '@/form-flast/FormDatePicker';
+import { 
+  FormInput, 
+  FormSelectUser, 
+  FormDatePicker,
+  FormSelect
+} from "@flast-erp/core/components";
 import { APP_STATUS_TEXT } from '@/configs/constant';
 
 const BookingFilter = () => {

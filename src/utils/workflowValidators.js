@@ -8,7 +8,115 @@
 
 // ─── validateBeforeExport ─────────────────────────────────────────────────────
 // Gọi trong useWorkflowExport trước khi serialize
-export const validateBeforeExport = (nodes, edges) => {
+const normalizeText = (value) =>
+  String(value ?? '')
+    .toLowerCase()
+    .replace(/đ/g, 'd')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+
+const classifyStepTypeText = (value) => {
+  const text = normalizeText(value)
+
+  if (!text) return ''
+  if (/\bstart\b|bat dau|buoc dau|khoi tao/.test(text)) return 'start'
+  if (/\bend\b|ket thuc|buoc cuoi|khong dat|tu choi|hoan thanh/.test(text)) return 'end'
+  if (/approval|duyet|phe duyet/.test(text)) return 'approval'
+  if (/revision|bo sung|sua lai|tra ve/.test(text)) return 'revision'
+  if (/condition|dieu kien|dat cap|dat \/ cap/.test(text)) return 'condition'
+  if (/process|kiem tra|xu ly/.test(text)) return 'process'
+
+  return text
+}
+
+export const normalizeWorkflowStepType = (type, stepTypes = [], node = {}) => {
+  const raw = String(type ?? '').trim()
+  const lower = raw.toLowerCase()
+  const canonical = ['start', 'end', 'approval', 'revision', 'condition', 'process']
+
+  if (canonical.includes(lower)) return lower
+
+  const matchedStepType = stepTypes.find((stepType) => {
+    const candidates = [
+      stepType?.key,
+      stepType?.id,
+      stepType?.rawKey,
+      stepType?.semanticType,
+      stepType?.code,
+      stepType?.type,
+      stepType?.processTypeCode,
+      stepType?.process_type_code,
+    ]
+
+    return candidates.some((candidate) => String(candidate ?? '') === raw)
+  })
+
+  if (matchedStepType?.semanticType && canonical.includes(matchedStepType.semanticType)) {
+    return matchedStepType.semanticType
+  }
+
+  if (matchedStepType) {
+    const semantic = classifyStepTypeText([
+      matchedStepType.semanticType,
+      matchedStepType.rawKey,
+      matchedStepType.key,
+      matchedStepType.code,
+      matchedStepType.type,
+      matchedStepType.processTypeCode,
+      matchedStepType.process_type_code,
+      matchedStepType.label,
+      matchedStepType.name,
+    ].filter(Boolean).join(' '))
+
+    if (canonical.includes(semantic)) return semantic
+  }
+
+  const fallback = classifyStepTypeText([
+    raw,
+    node?.data?.typeLabel,
+    node?.data?.typeName,
+    node?.data?.label,
+    node?.data?.name,
+  ].filter(Boolean).join(' '))
+
+  return canonical.includes(fallback) ? fallback : lower
+}
+
+const CANONICAL_STEP_TYPES = ['start', 'end', 'approval', 'revision', 'condition', 'process']
+
+export const resolveStepTypeConfig = (stepTypes = [], typeKey) =>
+  stepTypes.find((stepType) =>
+    String(stepType?.key ?? '') === String(typeKey ?? '')
+    || String(stepType?.id ?? '') === String(typeKey ?? '')
+    || String(stepType?.rawKey ?? '') === String(typeKey ?? '')
+  )
+
+export const getStepSemanticType = (typeKey, stepTypes = [], node = {}) => {
+  const config = resolveStepTypeConfig(stepTypes, typeKey)
+  if (config?.semanticType && CANONICAL_STEP_TYPES.includes(config.semanticType)) {
+    return config.semanticType
+  }
+  return normalizeWorkflowStepType(typeKey, stepTypes, node)
+}
+
+export const getNodeSemanticType = (node, stepTypes = []) =>
+  getStepSemanticType(node?.data?.type, stepTypes, node)
+
+export const resolveFallbackProcessTypeKey = (stepTypes = []) => {
+  const processType = stepTypes.find((stepType) => stepType.semanticType === 'process')
+  return processType?.key ?? 'process'
+}
+
+export const getNodeTopologyType = (node, edges = []) => {
+  const hasIncoming = edges.some((edge) => edge.target === node.id)
+  const hasOutgoing = edges.some((edge) => edge.source === node.id)
+
+  if (!hasIncoming && hasOutgoing) return 'start'
+  if (hasIncoming && !hasOutgoing) return 'end'
+  return null
+}
+
+export const validateBeforeExport = (nodes, edges, stepTypes = []) => {
   const errors = []
 
   // 1. Phải có ít nhất 1 node
@@ -17,18 +125,20 @@ export const validateBeforeExport = (nodes, edges) => {
     return errors // không check thêm nếu rỗng
   }
 
-  // 2. Phải có đúng 1 start node
-  const startNodes = nodes.filter((n) => n.data?.type === 'start')
+  // 2. Phải có đúng 1 start node theo topology:
+  // không có đầu vào và có ít nhất 1 đầu ra.
+  const startNodes = nodes.filter((n) => getNodeTopologyType(n, edges) === 'start')
   if (startNodes.length === 0) {
-    errors.push('Thiếu step kiểu "start"')
+    errors.push('Thiếu step bắt đầu: cần có 1 bước không có đầu vào và có đầu ra')
   } else if (startNodes.length > 1) {
-    errors.push(`Có ${startNodes.length} step kiểu "start", chỉ được có 1`)
+    errors.push(`Có ${startNodes.length} bước bắt đầu, chỉ được có 1 bước không có đầu vào`)
   }
 
-  // 3. Phải có ít nhất 1 end node
-  const endNodes = nodes.filter((n) => n.data?.type === 'end')
+  // 3. Phải có ít nhất 1 end node theo topology:
+  // có đầu vào và không có đầu ra.
+  const endNodes = nodes.filter((n) => getNodeTopologyType(n, edges) === 'end')
   if (endNodes.length === 0) {
-    errors.push('Thiếu step kiểu "end"')
+    errors.push('Thiếu step kết thúc: cần có ít nhất 1 bước có đầu vào và không có đầu ra')
   }
 
   // 4. Code không được trùng nhau
@@ -78,27 +188,9 @@ export const validateBeforeExport = (nodes, edges) => {
 // ─── validateFlow ─────────────────────────────────────────────────────────────
 // Validation đầy đủ hơn, dùng khi save lên API
 // Trả về { valid: boolean, errors: string[], warnings: string[] }
-export const validateFlow = (nodes, edges) => {
-  const errors = validateBeforeExport(nodes, edges)
+export const validateFlow = (nodes, edges, stepTypes = []) => {
+  const errors = validateBeforeExport(nodes, edges, stepTypes)
   const warnings = []
-
-  // Warning: start node có edge đi vào
-  const startNode = nodes.find((n) => n.data?.type === 'start')
-  if (startNode) {
-    const hasIncoming = edges.some((e) => e.target === startNode.id)
-    if (hasIncoming) {
-      warnings.push(`Step "start" (${startNode.data?.label}) đang có edge đi vào — thường không nên có`)
-    }
-  }
-
-  // Warning: end node có edge đi ra
-  const endNodes = nodes.filter((n) => n.data?.type === 'end')
-  endNodes.forEach((n) => {
-    const hasOutgoing = edges.some((e) => e.source === n.id)
-    if (hasOutgoing) {
-      warnings.push(`Step "end" (${n.data?.label}) đang có edge đi ra — thường không nên có`)
-    }
-  })
 
   // Warning: guard có config rỗng
   edges.forEach((e) => {

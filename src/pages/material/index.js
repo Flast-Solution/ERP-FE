@@ -22,20 +22,21 @@
 import React, { useCallback, useState } from 'react';
 import { Button, Space, Popconfirm, Form, message, Row, Col } from 'antd';
 import { Helmet } from 'react-helmet';
-import CustomBreadcrumb from '@flast-erp/core/components/BreadcrumbCustom';
-import RestList from '@flast-erp/core/components/RestLayout/RestList';
+import { 
+	BreadcrumbCustom,
+	RestList,
+	FormInfiniteStock,
+	FormInputNumber,
+	FormTextArea,
+	FormInput
+} from '@flast-erp/core/components';
 import Filter from './Filter';
-import useGetList from "@flast-erp/core/hooks/useGetList";
-import { dateFormatOnSubmit, formatMoney, formatTime, f5List, arrayEmpty } from '@flast-erp/core/utils/dataUtils';
+import { useGetList } from "@flast-erp/core/hooks";
+import { dateFormatOnSubmit, formatMoney, formatTime, f5List, arrayEmpty } from '@flast-erp/core/utils';
 import { HASH_POPUP } from '@/configs/constant';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
+import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import { DeleteOutlined } from '@ant-design/icons';
-import FormInfiniteStock from '@/form-flast/SelectInfinite/FormInfiniteStock';
-import FormInputNumber from '@/form-flast/FormInputNumber';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
-import FormTextArea from '@/form-flast/FormTextArea';
-import FormInput from '@/form-flast/FormInput';
-import { SUCCESS_CODE } from 'configs';
+import { SUCCESS_CODE } from '@/configs';
 
 const PopconfirmImport = ({ form, record }) => {
   return (
@@ -227,7 +228,7 @@ const MaterialPage = () => {
 			<Helmet>
 				<title>{title}</title>
 			</Helmet>
-			<CustomBreadcrumb
+			<BreadcrumbCustom
 				data={[{ title: 'Trang chủ' }, { title: title }]}
 			/>
 			<RestList

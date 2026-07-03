@@ -20,10 +20,7 @@
 /**************************************************************************/
 
 import { SUCCESS_CODE } from "@/configs";
-import { arrayEmpty } from "@flast-erp/core/utils/dataUtils";
-import RequestUtils from "@flast-erp/core/utils/RequestUtils";
-
-
+import { RequestUtils, arrayEmpty } from "@flast-erp/core/utils";
 
 const UserService = {
   allData: [],

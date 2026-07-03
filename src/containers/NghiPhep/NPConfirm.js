@@ -1,19 +1,21 @@
 import React, { useCallback, useContext, useMemo, useState } from 'react';
-import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
-import { f5List } from '@flast-erp/core/utils/dataUtils';
+
+import {
+  RestEditModal,
+  FormContextCustom, 
+  CustomButton,
+  FormTextArea
+} from '@flast-erp/core/components';
+
+import { InAppEvent, f5List, RequestUtils } from '@flast-erp/core/utils';
 import NPReview from './NPReview';
-import useGetMe from '@flast-erp/core/hooks/useGetMe';
-import CustomButton from '@flast-erp/core/components/CustomButton';
+import useGetMe from '@/hooks/useGetMe';
 import { Popconfirm } from 'antd';
 import {
   NGHI_PHEP_STATUS_DONE,
   NGHI_PHEP_STATUS_REJECT,
   NGHI_PHEP_STATUS_WAITING
 } from '@/configs/constant';
-import FormTextArea from '@/form-flast/FormTextArea';
-import RequestUtils from '@flast-erp/core/utils/RequestUtils';
-import { FormContextCustom } from '@flast-erp/core/components/context/FormContextCustom';
 
 const applyStyleDaKy = (element, text) => {
   let daKy = document.getElementById(element);

@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { Button, Table, Tag, message } from 'antd';
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils';
-import { HASH_MODAL } from 'configs';
-import RestEditModal from '@flast-erp/core/components/RestLayout/RestEditModal';
-import { formatMoney } from '@flast-erp/core/utils/dataUtils';
+import { formatMoney, InAppEvent } from '@flast-erp/core/utils';
+import { HASH_MODAL } from '@/configs';
+import { RestEditModal } from '@flast-erp/core/components';
 import styled from 'styled-components';
 
 const StyledModal = styled.div`

@@ -19,17 +19,20 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import FormListAddition from "@/form-flast/FormListAddtion";
+import {
+  FormListAddtion,
+  FormInput,
+  FormSelect,
+  FormHidden,
+  CustomButton,
+  FormInputNumber
+} from "@flast-erp/core/components";
 import { Col, Form, ColorPicker, message } from 'antd';
-import FormInput from "@/form-flast/FormInput";
-import FormSelect from "@/form-flast/FormSelect";
+
 import { FormListStyles } from "@/css/global";
 import { useEffect } from "react";
-import RequestUtils from "@flast-erp/core/utils/RequestUtils";
+import { RequestUtils } from "@flast-erp/core/utils";
 import { SUCCESS_CODE } from "@/configs";
-import FormHidden from "@/form-flast/FormHidden";
-import CustomButton from "@flast-erp/core/components/CustomButton";
-import FormInputNumber from "@/form-flast/FormInputNumber";
 
 const ModalEditStatus = ({ listStatus, onSave }) => {
 
@@ -50,13 +53,13 @@ const ModalEditStatus = ({ listStatus, onSave }) => {
 
   return (
     <Form form={form} onFinish={onSubmit} >
-      <FormListAddition
+      <FormListAddtion
         required
         name="lists"
         textAddNew="Thêm trạng thái mới"
       >
         <OrderStatusList />
-      </FormListAddition>
+      </FormListAddtion>
       <div style={{ marginTop: -50 }}>
         <CustomButton htmlType="submit" />
       </div>

@@ -5,13 +5,12 @@
  *   plain  — text thuần cho clipboard
  *   html   — string có <span class="tk-*"> cho syntax highlight
  *
- * Output dùng @/form-flast components + antd Row/Col theo colSpan.
+ * Output dùng @flast-erp/core/components + antd Row/Col theo colSpan.
  *
  * Ví dụ output:
  *   import React from 'react'
+ *   import { FormInput, FormRadioGroup } from '@flast-erp/core/components'
  *   import { Form, Row, Col } from 'antd'
- *   import FormInput from '@/form-flast/FormInput'
- *   import FormRadioGroup from '@/form-flast/FormRadioGroup'
  *
  *   const FormView = () => {
  *     const [form] = Form.useForm()
@@ -48,6 +47,10 @@ function h(cls, text) {
   return `<span class="tk-${cls}">${esc(text)}</span>`
 }
 
+function normalizeDataExpression(expression = '') {
+  return String(expression).trim()
+}
+
 function toComponentName(name = '') {
   const words = String(name)
     .replace(/đ/g, 'd')
@@ -70,10 +73,11 @@ function toComponentName(name = '') {
   return /^[A-Z]/.test(baseName) ? baseName : `Form${baseName}`
 }
 
-/* ─── InputType → form-flast component name ─────────────────────────────────── */
+/* ─── InputType → @flast-erp/core component name ────────────────────────────── */
 
 const COMPONENT_MAP = {
   block       : 'FormBlockPreview',
+  hidden      : 'FormHidden',
   text        : 'FormInput',
   textarea    : 'FormTextArea',
   number      : 'FormInputNumber',
@@ -88,12 +92,15 @@ const COMPONENT_MAP = {
   image       : 'FormInput',
   richtext    : 'FormJoditEditor',
   lookup      : 'FormSelectAPI',
+  select_api  : 'FormSelectAPI',
+  autocomplete: 'FormAutoComplete',
 }
 
 /* ─── Sinh props string cho từng type ───────────────────────────────────────── */
 
 function buildProps(field) {
-  const { inputType, fieldKey, label, isRequired, config = {} } = field
+  const { inputType, fieldKey, label, isRequired, config: rawConfig } = field
+  const config = rawConfig ?? {}
   const props = []   /* [{ key, value, kind }] — kind: 'str'|'expr'|'bare' */
 
   props.push({ key: 'name',  value: fieldKey, kind: 'str' })
@@ -108,6 +115,11 @@ function buildProps(field) {
   }
 
   switch (inputType) {
+    case 'hidden':
+      props.length = 0
+      props.push({ key: 'name', value: fieldKey, kind: 'str' })
+      break
+
     case 'block':
       props.length = 0
       props.push({ key: 'name', value: fieldKey, kind: 'str' })
@@ -140,6 +152,8 @@ function buildProps(field) {
       if (config.options?.length) {
         props.push({ key: 'resourceData', value: config.options, kind: 'json' })
       }
+      props.push({ key: 'valueProp', value: 'value', kind: 'str' })
+      props.push({ key: 'titleProp', value: 'label', kind: 'str' })
       props.push({ key: 'style', value: '{{ width: \'100%\' }}', kind: 'raw' })
       break
 
@@ -148,6 +162,8 @@ function buildProps(field) {
       if (config.options?.length) {
         props.push({ key: 'resourceData', value: config.options, kind: 'json' })
       }
+      props.push({ key: 'valueProp', value: 'value', kind: 'str' })
+      props.push({ key: 'titleProp', value: 'label', kind: 'str' })
       props.push({ key: 'style', value: '{{ width: \'100%\' }}', kind: 'raw' })
       break
 
@@ -156,12 +172,45 @@ function buildProps(field) {
       if (config.options?.length) {
         props.push({ key: 'options', value: config.options, kind: 'json' })
       }
+      props.push({ key: 'valueProp', value: 'value', kind: 'str' })
+      props.push({ key: 'titleProp', value: 'label', kind: 'str' })
       break
 
     case 'lookup':
       if (config.entity)     props.push({ key: 'entity',     value: config.entity,               kind: 'str' })
-      if (config.labelField) props.push({ key: 'labelField', value: config.labelField ?? 'name', kind: 'str' })
+      if (config.labelField) props.push({ key: 'titleProp',  value: config.labelField ?? 'name', kind: 'str' })
+      if (config.labelField) props.push({ key: 'searchKey',  value: config.labelField ?? 'name', kind: 'str' })
       props.push({ key: 'style', value: '{{ width: \'100%\' }}', kind: 'raw' })
+      break
+
+    case 'select_api':
+      {
+        const dataLabel = normalizeDataExpression(config.dataLabel)
+        const dataValue = normalizeDataExpression(config.dataValue)
+        const hasDataMapping = Boolean(dataLabel && dataValue)
+
+        if (config.api)    props.push({ key: 'apiPath', value: config.api,    kind: 'str' })
+        if (config.entity) props.push({ key: 'entity',  value: config.entity, kind: 'str' })
+        props.push({ key: 'valueProp', value: hasDataMapping ? 'value' : (config.valueProp ?? 'id'), kind: 'str' })
+        props.push({ key: 'titleProp', value: hasDataMapping ? 'label' : (config.titleProp ?? config.labelField ?? 'name'), kind: 'str' })
+        props.push({ key: 'searchKey', value: config.labelField ?? config.titleProp ?? 'name', kind: 'str' })
+        if (hasDataMapping) {
+          props.push({
+            key: 'onData',
+            value: `{(response) => (Array.isArray(response) ? response : (response?.data ?? [])).map((data) => ({ label: ${dataLabel}, value: ${dataValue} }))}`,
+            kind: 'raw',
+          })
+        }
+        props.push({ key: 'style', value: '{{ width: \'100%\' }}', kind: 'raw' })
+      }
+      break
+
+    case 'autocomplete':
+      if (config.options?.length) {
+        props.push({ key: 'resourceData', value: config.options, kind: 'json' })
+      }
+      props.push({ key: 'valueProp', value: config.valueProp ?? 'value', kind: 'str' })
+      props.push({ key: 'titleProp', value: config.titleProp ?? 'label', kind: 'str' })
       break
 
     default:
@@ -230,6 +279,25 @@ function syntaxHighlightJson(obj) {
     .replace(/: (true|false)/g, (_, v) => `: ${h('boolean', v)}`)
 }
 
+function getProvenance(field) {
+  return field?._provenance ?? field?.config?.__provenance ?? null
+}
+
+function getProvenanceComment(field) {
+  const provenance = getProvenance(field)
+  if (!provenance) return ''
+
+  const createdBy = provenance.createdBySource ?? provenance.source
+  const updatedBy = provenance.updatedBySource
+  const action = provenance.updatedAction ?? provenance.sourceAction
+
+  if (updatedBy && updatedBy !== createdBy) {
+    return `source: ${createdBy}; updated: ${updatedBy}${action ? `:${action}` : ''}`
+  }
+
+  return `source: ${createdBy}${action ? `; action: ${action}` : ''}`
+}
+
 /* ─── Field → JSX block (plain + html lines) ────────────────────────────────── */
 
 function fieldToJSXLines(field, colIndent) {
@@ -242,6 +310,12 @@ function fieldToJSXLines(field, colIndent) {
   const html  = []
 
   const add = (p, h_) => { plain.push(p); html.push(h_) }
+  const provenanceComment = getProvenanceComment(field)
+
+  if (provenanceComment) {
+    const comment = `{/* ${provenanceComment} */}`
+    add(`${colIndent}${comment}`, `${colIndent}${h('comment', comment)}`)
+  }
 
   if (field.inputType === 'block') {
     add(
@@ -305,13 +379,16 @@ function buildImports(fields) {
     }
   }
   collect(fields)
-  const antd = `import { Form, Row, Col } from 'antd'`
-  const formFlast = [...used]
-    .sort()
-    .map(c => `import ${c} from '@/form-flast/${c}'`)
-    .join('\n')
+  used.delete('FormBlockPreview')
 
-  return [`import React from 'react'`, antd, formFlast].filter(Boolean).join('\n')
+  const lines = [`import React from 'react'`]
+  const coreComponents = [...used].sort()
+  if (coreComponents.length > 0) {
+    lines.push(`import { ${coreComponents.join(', ')} } from '@flast-erp/core/components'`)
+  }
+  lines.push(`import { Form, Row, Col } from 'antd'`)
+
+  return lines.join('\n')
 }
 
 function buildBlockHelper(fields) {
@@ -347,12 +424,23 @@ export function buildJSX(schema) {
 
   /* ── Imports ── */
   const importsPlain = buildImports(fields)
-  const importsHtml  = importsPlain
-    .replace(/import React from 'react'/g, `${h('comment', "import React from 'react'")}`)
-    .replace(/import \{ (.*?) \} from 'antd'/g,
-      (_, names) => `${h('punct', 'import')} ${h('punct', '{')} ${h('tag', names)} ${h('punct', '}')} ${h('punct', 'from')} ${h('string', "'antd'")}`)
-    .replace(/import (\w+) from '(@\/form-flast\/\w+)'/g,
-      (_, name, path) => `${h('punct', 'import')} ${h('tag', name)} ${h('punct', 'from')} ${h('string', `'${path}'`)}`)
+  const highlightNamedImport = (source, pkg) => source
+    .replace(/import React from 'react'/g, `${h('punct', 'import')} ${h('tag', 'React')} ${h('punct', 'from')} ${h('string', "'react'")}`)
+    .replace(
+      new RegExp(`import \\{ (.*?) \\} from '${pkg.replace(/\//g, '\\/')}'`, 'g'),
+      (_, names) => {
+        const highlighted = names
+          .split(',')
+          .map(part => h('tag', part.trim()))
+          .join(`${h('punct', ', ')}`)
+        return `${h('punct', 'import')} ${h('punct', '{')} ${highlighted} ${h('punct', '}')} ${h('punct', 'from')} ${h('string', `'${pkg}'`)}`
+      },
+    )
+
+  const importsHtml = highlightNamedImport(
+    highlightNamedImport(importsPlain, '@flast-erp/core/components'),
+    'antd',
+  )
 
   importsPlain.split('\n').forEach((line, i) => {
     add(line, importsHtml.split('\n')[i] ?? line)
