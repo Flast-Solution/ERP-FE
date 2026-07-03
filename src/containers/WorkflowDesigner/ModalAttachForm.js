@@ -536,6 +536,7 @@ const ModalAttachForm = ({
 
   if (view === 'create') {
     const starter = STARTERS.find(item => item.id === starterId) ?? STARTERS[0]
+    // const formKey = watchFormKey || 'form_key'
 
     return (
       <Shell>
