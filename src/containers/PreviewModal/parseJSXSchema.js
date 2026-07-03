@@ -188,12 +188,102 @@ const parseExpressionValue = (value) => {
   }
 }
 
+const parseObjectLiteralWithArrays = (source = '') => {
+  const result = {}
+  const entryRe = /([A-Za-z_$][\w$]*)\s*:\s*\[/g
+  let match
+
+  while ((match = entryRe.exec(source))) {
+    const key = match[1]
+    const bracketStart = match.index + match[0].length - 1
+    try {
+      const { value, endIndex } = readBalanced(source, bracketStart, '[', ']')
+      const arr = parseOptionArrayLiteral(`[${value}]`)
+      if (arr?.length) {
+        result[key] = arr
+      }
+      entryRe.lastIndex = endIndex + 1
+    } catch (_) {
+      // skip invalid array entry
+    }
+  }
+
+  return Object.keys(result).length > 0 ? result : null
+}
+
+const extractNamedConstants = (jsxCode = '') => {
+  const constants = new Map()
+  const constRe = /\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*/g
+  let match
+
+  while ((match = constRe.exec(jsxCode))) {
+    const name = match[1]
+    let index = match.index + match[0].length
+    while (index < jsxCode.length && /\s/.test(jsxCode[index])) {
+      index += 1
+    }
+    if (index >= jsxCode.length) {
+      continue
+    }
+
+    const char = jsxCode[index]
+    try {
+      if (char === '[') {
+        const { value, endIndex } = readBalanced(jsxCode, index, '[', ']')
+        const arr = parseOptionArrayLiteral(`[${value}]`)
+        if (arr?.length) {
+          constants.set(name, arr)
+        }
+        constRe.lastIndex = endIndex + 1
+      } else if (char === '{') {
+        const { value, endIndex } = readBalanced(jsxCode, index, '{', '}')
+        const obj = parseObjectLiteralWithArrays(value)
+        if (obj) {
+          constants.set(name, obj)
+        }
+        constRe.lastIndex = endIndex + 1
+      }
+    } catch (_) {
+      // skip invalid const declaration
+    }
+  }
+
+  return constants
+}
+
+const resolveExpressionValue = (expression, constants = new Map()) => {
+  const trimmed = String(expression ?? '').trim()
+  if (!trimmed) {
+    return null
+  }
+
+  if (/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)+$/.test(trimmed)) {
+    const parts = trimmed.split('.')
+    let value = constants.get(parts[0])
+    for (let i = 1; i < parts.length; i += 1) {
+      value = value?.[parts[i]]
+    }
+    if (Array.isArray(value)) {
+      return value
+    }
+  }
+
+  if (/^[A-Za-z_$][\w$]*$/.test(trimmed)) {
+    const value = constants.get(trimmed)
+    if (Array.isArray(value)) {
+      return value
+    }
+  }
+
+  return parseExpressionValue(trimmed)
+}
+
 const normalizeOption = (item = {}) => ({
   value: item.value ?? item.id,
   label: item.label ?? item.name ?? item.value ?? item.id,
 })
 
-const mapComponentToField = (componentName, props, span) => {
+const mapComponentToField = (componentName, props, span, constants = new Map()) => {
   let inputType = COMPONENT_TO_INPUT[componentName] ?? 'text'
   const config = {}
 
@@ -211,7 +301,7 @@ const mapComponentToField = (componentName, props, span) => {
   if (componentName === 'FormSelect') {
     inputType = propToString(props.mode) === 'multiple' ? 'multi_select' : 'select'
     if (props.resourceData?.value) {
-      const items = parseExpressionValue(props.resourceData.value)
+      const items = resolveExpressionValue(props.resourceData.value, constants)
       if (Array.isArray(items)) {
         config.options = items.map(normalizeOption)
       }
@@ -221,7 +311,7 @@ const mapComponentToField = (componentName, props, span) => {
   if (componentName === 'FormRadioGroup' || componentName === 'FormCheckbox') {
     const optionSource = props.options?.value ?? props.resourceData?.value
     if (optionSource) {
-      const items = parseExpressionValue(optionSource)
+      const items = resolveExpressionValue(optionSource, constants)
       if (Array.isArray(items)) {
         config.options = items.map(normalizeOption)
       }
@@ -247,7 +337,7 @@ const mapComponentToField = (componentName, props, span) => {
     config.valueProp = propToString(props.valueProp, 'value')
     config.titleProp = propToString(props.titleProp, 'label')
     if (props.resourceData?.value) {
-      const items = parseExpressionValue(props.resourceData.value)
+      const items = resolveExpressionValue(props.resourceData.value, constants)
       if (Array.isArray(items)) {
         config.options = items.map(normalizeOption)
       }
@@ -388,7 +478,7 @@ const extractComponentNode = (block = '') => {
   }
 }
 
-const parseFieldNodes = (content = '') => {
+const parseFieldNodes = (content = '', constants = new Map()) => {
   const fields = []
   const cols = extractTopLevelCols(content)
 
@@ -430,10 +520,10 @@ const parseFieldNodes = (content = '') => {
     }
 
     const props = parseProps(node.propsSource)
-    const field = mapComponentToField(node.componentName, props, fieldBlock.span)
+    const field = mapComponentToField(node.componentName, props, fieldBlock.span, constants)
 
     if (node.componentName === 'FormBlockPreview') {
-      field.children = parseFieldNodes(node.childrenSource)
+      field.children = parseFieldNodes(node.childrenSource, constants)
     }
 
     fields.push(field)
@@ -478,7 +568,8 @@ const extractDirectFieldBlocks = (content = '') => {
 }
 
 export const parseJsxToSchema = (jsxCode, meta = {}) => {
-  const fields = parseFieldNodes(jsxCode)
+  const constants = extractNamedConstants(jsxCode)
+  const fields = parseFieldNodes(jsxCode, constants)
 
   if (fields.length === 0) {
     throw new Error('Khong parse duoc field nao tu JSX.')
