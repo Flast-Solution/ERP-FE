@@ -1,18 +1,23 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
-import { Alert, Breadcrumb, Button, Card, Col, Descriptions, Empty, message, Row, Space, Spin, Tag, Timeline, Typography } from 'antd'
+import { Alert, Breadcrumb, Button, Card, Col, Descriptions, Empty, message, Row, Select, Space, Spin, Tag, Timeline, Typography } from 'antd'
 import { ArrowLeftOutlined, CheckCircleOutlined, ClockCircleOutlined, FormOutlined, SaveOutlined } from '@ant-design/icons'
 import { Helmet } from 'react-helmet'
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 import { formatMoney, formatTime, RequestUtils } from '@flast-erp/core/utils'
 import { SUCCESS_CODE } from '@/configs'
+import useGetMe from '@/hooks/useGetMe'
+import { getTokenPayload } from '@/utils/authUtils'
 import OrderService from '@/services/OrderService'
 import { loadRemote } from '@/utils/loadRemote'
 
 const { Text, Title } = Typography
 const WORKFLOW_SUBMISSION_API = '/workflow/process/submission'
+const WORKFLOW_TRANSITION_API = '/workflow/process/transition'
 const WORKFLOW_INSTANCE_BY_ENTITY_API = '/workflow/process/instance/get-entity'
 const WORKFLOW_PREVIEW_API = '/workflow/process/preview'
+const WORKFLOW_PROCESS_FIND_API = '/workflow/process/find-id'
+const PROCESS_TYPE_FIND_API = '/workflow/process/process-type-find'
 
 const resolveApiPayload = (response) => response?.data ?? response
 
@@ -36,6 +41,49 @@ const resolveWorkflowPreview = (response) => {
   return payload
 }
 
+const resolveWorkflowProcessDetail = (response) => {
+  const payload = resolveApiPayload(response)
+  if (payload?.data && typeof payload.data === 'object' && !Array.isArray(payload.data)) {
+    return payload.data
+  }
+  if (payload?.process && typeof payload.process === 'object' && !Array.isArray(payload.process)) {
+    return payload.process
+  }
+  return payload
+}
+
+const getResponseDataArray = (response) => {
+  const data = response?.data ?? response
+  const candidates = [
+    data?.items,
+    data?.rows,
+    data?.content,
+    data?.records,
+    data?.list,
+    data?.result,
+    data?.results,
+    data?.data,
+    data?.data?.items,
+    data?.data?.rows,
+    data?.data?.content,
+    data?.data?.records,
+    data?.data?.list,
+    data?.data?.result,
+    data?.data?.results,
+    data?.embedded,
+    data,
+  ]
+  const arrayValue = candidates.find(Array.isArray)
+  if (arrayValue) return arrayValue
+
+  const objectValue = candidates.find(item => item && typeof item === 'object')
+  if (!objectValue) return []
+
+  return Object.entries(objectValue)
+    .filter(([, value]) => value && typeof value !== 'object')
+    .map(([key, value]) => ({ id: key, name: value }))
+}
+
 const getFirstArray = (...items) => items.find(Array.isArray) ?? []
 
 const getValue = (...items) => items.find(item => item !== undefined && item !== null && item !== '')
@@ -47,6 +95,331 @@ const toNumberOrNull = (value) => {
 }
 
 const normalizeRemoteContainerName = (value = '') => value.replace(/[^A-Za-z0-9_$]/g, '_')
+
+const normalizeProcessType = (item, index) => {
+  const id = item?.id ?? item?.key ?? `process_type_${index + 1}`
+  const value = item?.code
+    ?? item?.processTypeCode
+    ?? item?.process_type_code
+    ?? item?.typeCode
+    ?? item?.type_code
+    ?? item?.type
+    ?? item?.key
+    ?? id
+  const label = item?.name
+    ?? item?.label
+    ?? item?.title
+    ?? item?.text
+    ?? item?.displayText
+    ?? item?.display_text
+    ?? item?.displayName
+    ?? item?.display_name
+    ?? item?.processTypeName
+    ?? item?.process_type_name
+    ?? item?.typeName
+    ?? item?.type_name
+    ?? item?.description
+    ?? String(value)
+
+  return {
+    ...item,
+    id,
+    value: String(value),
+    label,
+  }
+}
+
+const buildProcessTypeLabelMap = (processTypes = []) => {
+  const map = new Map()
+
+  processTypes.forEach((item) => {
+    const label = item?.label ?? item?.name
+    if (!label) return
+
+    const keys = [
+      item?.id,
+      item?.value,
+      item?.key,
+      item?.code,
+      item?.type,
+      item?.typeCode,
+      item?.type_code,
+      item?.processTypeCode,
+      item?.process_type_code,
+    ]
+
+    keys.forEach((key) => {
+      if (key !== undefined && key !== null && key !== '') {
+        map.set(String(key), label)
+      }
+    })
+  })
+
+  return map
+}
+
+const getStepProcessTypeLabel = (step, processTypeLabelMap = new Map()) => {
+  const processTypeValue = getValue(
+    step?.label,
+    step?.processType,
+    step?.process_type,
+    step?.processTypeCode,
+    step?.process_type_code,
+    step?.type,
+  )
+
+  const mappedLabel = processTypeLabelMap.get(String(processTypeValue ?? ''))
+  if (mappedLabel) return mappedLabel
+
+  return Number.isNaN(Number(processTypeValue))
+    ? processTypeValue
+    : getValue(step?.typeName, step?.type_name, step?.processTypeName, step?.process_type_name, step?.name, step?.stepCode)
+}
+
+const normalizeStepRef = (value) => String(value ?? '').trim()
+
+const isSameStepRef = (left, right) => {
+  const normalizedLeft = normalizeStepRef(left)
+  const normalizedRight = normalizeStepRef(right)
+  return Boolean(normalizedLeft && normalizedRight && normalizedLeft === normalizedRight)
+}
+
+const isStepInRefs = (step, refs = []) => {
+  const candidates = [
+    step?.id,
+    step?.stepCode,
+    step?.code,
+  ].map(normalizeStepRef).filter(Boolean)
+
+  return refs.some((ref) => candidates.includes(normalizeStepRef(ref)))
+}
+
+const isSubmissionForStep = (submission, step) => {
+  if (!submission || !step) return false
+
+  return isSameStepRef(submission?.stepCode, step?.stepCode)
+    || isSameStepRef(submission?.stepCode, step?.code)
+    || isSameStepRef(submission?.stepId ?? submission?.step_id, step?.id)
+}
+
+const isSubmissionForTemplate = (submission, formTemplate) => {
+  if (!submission || !formTemplate) return false
+
+  return isSameStepRef(
+    submission?.templateId ?? submission?.template_id,
+    formTemplate?.id ?? formTemplate?.templateId ?? formTemplate?.formTemplateId,
+  )
+}
+
+const getSubmissionValues = (submission) => {
+  const values = submission?.valuesJson
+    ?? submission?.values_json
+    ?? submission?.values
+    ?? submission?.value
+    ?? submission?.formData
+    ?? submission?.form_data
+    ?? {}
+
+  return values && typeof values === 'object' ? values : {}
+}
+
+const getStepDisplayName = (step, fallback) => getValue(
+  step?.name,
+  step?.labelName,
+  step?.label_name,
+  step?.title,
+  step?.stepCode,
+  step?.code,
+  fallback,
+)
+
+const getStepTransitionCode = (transition) => {
+  if (typeof transition === 'string' || typeof transition === 'number') {
+    return String(transition)
+  }
+
+  return getValue(
+    transition?.toStepCode,
+    transition?.to_step_code,
+    transition?.stepCode,
+    transition?.step_code,
+    transition?.code,
+    transition?.value,
+  )
+}
+
+const getStepTransitionLabel = (transition, steps = []) => {
+  if (transition && typeof transition === 'object') {
+    const directLabel = getValue(
+      transition?.toStepName,
+      transition?.to_step_name,
+      transition?.name,
+      transition?.label,
+      transition?.title,
+    )
+    if (directLabel) return directLabel
+  }
+
+  const code = getStepTransitionCode(transition)
+  const step = steps.find((item) =>
+    isSameStepRef(item?.stepCode, code)
+    || isSameStepRef(item?.code, code)
+    || isSameStepRef(item?.id, code)
+  )
+
+  return getStepDisplayName(step, code)
+}
+
+const buildStepTransitionOptions = (transitions = [], steps = []) => (
+  transitions
+    .map((transition) => {
+      const value = getStepTransitionCode(transition)
+      if (!value) return null
+
+      return {
+        value,
+        label: getStepTransitionLabel(transition, steps),
+      }
+    })
+    .filter(Boolean)
+)
+
+const findWorkflowStep = (steps = [], ref) => {
+  if (ref == null || ref === '') return null
+
+  return steps.find((step) =>
+    isSameStepRef(step?.stepCode, ref)
+    || isSameStepRef(step?.code, ref)
+    || isSameStepRef(step?.id, ref)
+  ) ?? null
+}
+
+const resolveStepHistoryName = (steps = [], ...refs) => {
+  const ref = getValue(...refs)
+  const step = findWorkflowStep(steps, ref)
+  return getStepDisplayName(step, ref)
+}
+
+const normalizeStepInstanceLog = (log = {}, steps = []) => ({
+  id: log?.id,
+  success: log?.success,
+  fromStepName: resolveStepHistoryName(steps, log?.fromStepCode, log?.from_step_code, log?.fromStepId, log?.from_step_id),
+  toStepName: resolveStepHistoryName(steps, log?.toStepCode, log?.to_step_code, log?.toStepId, log?.to_step_id),
+  createdAt: log?.createdAt ?? log?.created_at,
+  createdByName: log?.byUserName ?? log?.by_user_name ?? log?.createdByName ?? log?.created_by_name,
+  note: log?.note,
+})
+
+const normalizeCompletedStepHistory = (item = {}, steps = []) => {
+  const stepName = resolveStepHistoryName(
+    steps,
+    item?.stepCode,
+    item?.step_code,
+    item?.code,
+    item?.stepId,
+    item?.step_id,
+  )
+
+  return {
+    id: item?.id ?? `${item?.step_code ?? item?.stepCode ?? item?.step_id ?? item?.stepId}-completed`,
+    success: true,
+    title: `${stepName || 'Bước'} đã hoàn thành`,
+    createdAt: item?.completedAt ?? item?.completed_at ?? item?.createdAt ?? item?.created_at,
+    createdByName: item?.completedByName ?? item?.completed_by_name ?? item?.createdByName ?? item?.created_by_name,
+    userName: item?.completedBy ?? item?.completed_by,
+    note: item?.note,
+  }
+}
+
+const buildWorkflowHistoryItems = ({
+  workflowPreview,
+  workflowInstance,
+  order,
+  workflow,
+  steps,
+}) => {
+  const explicitHistories = getFirstArray(
+    workflowPreview?.histories,
+    workflowPreview?.workflowHistories,
+    workflowPreview?.workflowHistory,
+    order?.workflowHistories,
+    order?.workflowHistory,
+    order?.stepHistories,
+    order?.histories,
+    workflow?.histories,
+  )
+
+  if (explicitHistories.length) {
+    return explicitHistories
+  }
+
+  const stepLogs = getFirstArray(
+    workflowPreview?.stepInstanceLogs,
+    workflowPreview?.step_instance_logs,
+    workflowPreview?.processInstance?.stepInstanceLogs,
+    workflowPreview?.processInstance?.step_instance_logs,
+    workflowInstance?.stepInstanceLogs,
+    workflowInstance?.step_instance_logs,
+  ).map((item) => normalizeStepInstanceLog(item, steps))
+
+  if (stepLogs.length) {
+    return stepLogs
+  }
+
+  return getFirstArray(
+    workflowPreview?.processInstance?.completedSteps,
+    workflowPreview?.processInstance?.completed_steps,
+    workflowInstance?.completedSteps,
+    workflowInstance?.completed_steps,
+    order?.workflowInstance?.completedSteps,
+    order?.workflowInstance?.completed_steps,
+  ).map((item) => normalizeCompletedStepHistory(item, steps))
+}
+
+const buildStepGroups = (steps = [], processTypeLabelMap = new Map()) => {
+  const sortedSteps = [...steps].sort((a, b) => Number(a?.sortOrder ?? 0) - Number(b?.sortOrder ?? 0))
+  const groups = []
+
+  sortedSteps.forEach((step) => {
+    const title = getStepProcessTypeLabel(step, processTypeLabelMap) || 'Quy trình'
+    const lastGroup = groups[groups.length - 1]
+
+    if (lastGroup && lastGroup.title === title) {
+      lastGroup.steps.push(step)
+      return
+    }
+
+    groups.push({ title, steps: [step] })
+  })
+
+  return groups
+}
+
+const getCurrentStepSortOrder = (currentStep) => {
+  const value = Number(currentStep?.sortOrder)
+  return Number.isNaN(value) ? null : value
+}
+
+const getStepStatus = ({ step, currentStep, currentStepCode, completedRefs, submittedRefs }) => {
+  const active = isSameStepRef(currentStep?.id, step?.id)
+    || isSameStepRef(currentStep?.stepCode, step?.stepCode)
+    || isSameStepRef(currentStep?.code, step?.code)
+    || isSameStepRef(step?.stepCode, currentStepCode)
+    || isSameStepRef(step?.code, currentStepCode)
+  const explicitCompleted = isStepInRefs(step, completedRefs) || isStepInRefs(step, submittedRefs)
+  const currentSortOrder = getCurrentStepSortOrder(currentStep)
+  const stepSortOrder = Number(step?.sortOrder)
+  const beforeCurrent = currentSortOrder !== null && !Number.isNaN(stepSortOrder) && stepSortOrder < currentSortOrder
+
+  if (active) return 'active'
+  if (explicitCompleted || beforeCurrent) return 'completed'
+  return 'pending'
+}
+
+const isParallelGroup = (group) => {
+  const title = String(group?.title ?? '').toLowerCase()
+  return group?.steps?.length > 3 || title.includes('song song') || title.includes('parallel')
+}
 
 const normalizeSubmissionValue = (value) => {
   if (value && typeof value === 'object' && typeof value.toISOString === 'function' && typeof value.isValid === 'function') {
@@ -92,6 +465,46 @@ const buildWorkflowSubmissionPayload = ({
     instanceId: toNumberOrNull(processInstance?.id ?? instanceId),
     stepCode: stepProcess?.stepCode ?? stepProcess?.code ?? processInstance?.currentStepCode ?? workflowInstance?.currentStepCode,
     values: normalizeSubmissionValue(values),
+  }
+}
+
+const resolveUserId = (user = {}) => toNumberOrNull(
+  user?.id
+  ?? user?.userId
+  ?? user?.user_id
+  ?? user?.accountId
+  ?? user?.account_id
+  ?? user?.ssoId
+  ?? getTokenPayload()?.id
+  ?? getTokenPayload()?.userId
+  ?? getTokenPayload()?.user_id
+  ?? getTokenPayload()?.accountId
+  ?? getTokenPayload()?.account_id
+  ?? getTokenPayload()?.sub
+)
+
+const buildWorkflowTransitionPayload = ({
+  workflow,
+  workflowPreview,
+  workflowInstance,
+  order,
+  orderId,
+  instanceId,
+  currentSubmission,
+  user,
+  toStepCode,
+}) => {
+  const processInstance = workflowPreview?.processInstance ?? workflowInstance ?? {}
+
+  return {
+    processId: toNumberOrNull(workflow?.id ?? workflowPreview?.processId ?? processInstance?.processId),
+    processInstanceId: toNumberOrNull(processInstance?.id ?? instanceId),
+    entityType: processInstance?.entityType ?? order?.entityType ?? 'order',
+    entityId: toNumberOrNull(processInstance?.entityId ?? order?.entityId ?? order?.id ?? orderId),
+    toStepCode: toStepCode || null,
+    byUserId: resolveUserId(user),
+    note: '',
+    fromStepSubmissionId: toNumberOrNull(currentSubmission?.id),
   }
 }
 
@@ -225,64 +638,337 @@ class RemoteFormBoundary extends React.Component {
   }
 }
 
-const WorkflowStepList = ({ steps, currentStep }) => {
+const WorkflowStepItem = ({ step, status, index }) => {
+  const isActive = status === 'active'
+  const isCompleted = status === 'completed'
+  const muted = status === 'pending'
+  const boxColor = isCompleted ? '#16a34a' : isActive ? '#2563eb' : '#d1d5db'
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        minWidth: 0,
+        color: isActive ? '#1d4ed8' : muted ? '#64748b' : '#111827',
+        fontWeight: isActive ? 650 : 500,
+        fontSize: 12,
+        lineHeight: '18px',
+      }}
+    >
+      <span
+        aria-checked={isCompleted}
+        aria-disabled="true"
+        role="checkbox"
+        style={{
+          flex: '0 0 auto',
+          width: 14,
+          height: 14,
+          borderRadius: 3,
+          border: `1.5px solid ${boxColor}`,
+          background: isCompleted ? boxColor : isActive ? '#eff6ff' : '#f9fafb',
+          color: '#fff',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 10,
+          lineHeight: '12px',
+          fontWeight: 800,
+          cursor: 'not-allowed',
+        }}
+      >
+        {isCompleted ? '✓' : null}
+      </span>
+      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {step?.name ?? step?.label ?? step?.stepCode ?? `Bước ${index}`}
+      </span>
+    </div>
+  )
+}
+
+const WorkflowStepList = ({
+  steps,
+  currentStep,
+  currentStepCode,
+  processTypeLabelMap,
+  completedRefs = [],
+  submittedRefs = [],
+}) => {
   if (!steps.length) {
     return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có dữ liệu quy trình workflow" />
   }
 
+  const groups = buildStepGroups(steps, processTypeLabelMap)
+
   return (
-    <Space direction="vertical" size={12} style={{ width: '100%' }}>
-      {steps.map((step, index) => {
-        const active = currentStep?.id === step?.id || currentStep?.stepCode === step?.stepCode
-        const completed = Boolean(step?.completed ?? step?.done)
+    <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      {groups.map((group, groupIndex) => {
+        const parallel = isParallelGroup(group)
 
         return (
-          <div
-            key={step?.id ?? step?.stepCode ?? index}
-            style={{
-              display: 'flex',
-              gap: 12,
-              padding: '10px 12px',
-              border: active ? '1px solid #597ef7' : '1px solid #eef1f5',
-              borderRadius: 8,
-              background: active ? '#f0f5ff' : '#fff',
-            }}
-          >
-            <span
+          <section key={`${group.title}-${groupIndex}`}>
+            <div
               style={{
-                width: 24,
-                height: 24,
-                borderRadius: '50%',
-                display: 'inline-flex',
+                display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                flex: '0 0 24px',
-                background: completed ? '#52c41a' : active ? '#597ef7' : '#d9d9d9',
-                color: '#fff',
-                fontSize: 12,
-                fontWeight: 700,
+                justifyContent: 'space-between',
+                gap: 12,
+                marginBottom: 10,
               }}
             >
-              {index + 1}
-            </span>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 600, color: active ? '#1d39c4' : '#1f2937' }}>
-                {step?.label ?? step?.name ?? step?.stepCode ?? `Bước ${index + 1}`}
+              <div
+                style={{
+                  color: '#6b7280',
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: 1,
+                  textTransform: 'uppercase',
+                }}
+              >
+                {group.title}
               </div>
-              <Text type="secondary" ellipsis>
-                {step?.description ?? step?.type ?? ''}
-              </Text>
+              {parallel && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '4px 12px',
+                    borderRadius: 999,
+                    border: '1px solid #bfdbfe',
+                    background: '#dbeafe',
+                    color: '#2563eb',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6' }} />
+                  {group.steps.length} song song
+                </span>
+              )}
             </div>
-          </div>
+
+            <div
+              style={parallel ? {
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: '8px 12px',
+                padding: 12,
+                borderRadius: 8,
+                border: '1px dashed #d8dee9',
+                background: '#f8fafc',
+              } : {
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 0,
+              }}
+            >
+              {group.steps.map((step, index) => {
+                const status = getStepStatus({ step, currentStep, currentStepCode, completedRefs, submittedRefs })
+                return (
+                  <div
+                    key={step?.id ?? step?.stepCode ?? step?.code ?? index}
+                    style={!parallel ? { position: 'relative', paddingBottom: index === group.steps.length - 1 ? 0 : 10 } : undefined}
+                  >
+                    {!parallel && group.steps.length > 1 && index < group.steps.length - 1 && (
+                      <span
+                        style={{
+                          position: 'absolute',
+                          left: 7,
+                          top: 20,
+                          bottom: -2,
+                          width: 2,
+                          background: '#d1d5db',
+                        }}
+                      />
+                    )}
+                    <WorkflowStepItem
+                      step={step}
+                      status={status}
+                      index={index + 1}
+                    />
+                  </div>
+                )
+              })}
+            </div>
+          </section>
         )
       })}
     </Space>
   )
 }
 
+const WorkflowBlockingNotice = ({ currentForm, hasCurrentSubmission }) => {
+  if (!currentForm || hasCurrentSubmission) {
+    return null
+  }
+
+  const formName = currentForm?.name ?? currentForm?.label ?? currentForm?.description ?? 'form hiện tại'
+
+  return (
+    <div
+      style={{
+        margin: '24px -24px 0',
+        padding: '18px 24px',
+        background: '#fee2e2',
+        borderTop: '1px solid #fecaca',
+        borderBottom: '1px solid #fca5a5',
+        color: '#b91c1c',
+      }}
+    >
+      <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+        <span style={{ width: 18, height: 18, background: '#fff', flex: '0 0 18px', marginTop: 4 }} />
+        <div>
+          <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 8 }}>
+            Không thể chuyển bước
+          </div>
+          <div style={{ display: 'flex', gap: 10, fontSize: 15, lineHeight: '24px' }}>
+            <span style={{ fontSize: 20, lineHeight: '22px' }}>•</span>
+            <span>
+              Form <strong>{formName}</strong> chưa được điền
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const WorkflowAdvanceSection = ({
+  disabled,
+  loading,
+  onAdvance,
+  transitionOptions = [],
+  selectedToStepCode,
+  onToStepCodeChange,
+}) => (
+  <div style={{ paddingTop: 24 }}>
+    <div
+      style={{
+        color: '#6b7280',
+        fontSize: 14,
+        fontWeight: 800,
+        letterSpacing: 1.4,
+        textTransform: 'uppercase',
+        marginBottom: 16,
+      }}
+    >
+      Chuyển bước
+    </div>
+    {transitionOptions.length > 0 && (
+      <Select
+        value={selectedToStepCode}
+        onChange={onToStepCodeChange}
+        options={transitionOptions}
+        placeholder="Chọn bước tiếp theo"
+        style={{ width: '100%', marginBottom: 12 }}
+        disabled={loading}
+      />
+    )}
+    <Button
+      type="primary"
+      block
+      disabled={disabled || loading}
+      loading={loading}
+      onClick={onAdvance}
+      style={{
+        height: 54,
+        borderRadius: 8,
+        fontSize: 16,
+        fontWeight: 700,
+        background: disabled ? '#a5b4fc' : '#4f46e5',
+        borderColor: disabled ? '#a5b4fc' : '#4f46e5',
+      }}
+    >
+      Đã xong test này
+    </Button>
+  </div>
+)
+
+const WorkflowProgressPanel = ({
+  workflow,
+  order,
+  steps,
+  currentStep,
+  currentStepCode,
+  processTypeLabelMap,
+  completedRefs,
+  submittedRefs,
+  currentForm,
+  hasCurrentSubmission,
+  transitioning,
+  onAdvance,
+  transitionOptions,
+  selectedToStepCode,
+  onToStepCodeChange,
+}) => {
+  const canAdvance = !currentForm || hasCurrentSubmission
+
+  return (
+    <Card
+      bordered
+      bodyStyle={{ padding: 0 }}
+      style={{ borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 4px rgba(15, 23, 42, 0.08)' }}
+    >
+      <div style={{ padding: '22px 20px 18px' }}>
+        <div
+          style={{
+            color: '#6b7280',
+            fontSize: 12,
+            fontWeight: 800,
+            letterSpacing: 1,
+            textTransform: 'uppercase',
+            marginBottom: 6,
+          }}
+        >
+          Quy trình
+        </div>
+        <Title level={3} style={{ margin: 0, fontSize: 18, lineHeight: '24px' }}>
+          {getValue(
+            workflow?.name,
+            workflow?.processName,
+            workflow?.process_name,
+            workflow?.title,
+            order?.workflowProcessName,
+            order?.processName,
+            order?.workflowName,
+            workflow?.id ? `Quy trình #${workflow.id}` : 'Chưa gắn workflow',
+          )}
+        </Title>
+        <Text style={{ display: 'block', marginTop: 4, color: '#4b5563', fontSize: 13 }}>
+          {getValue(workflow?.processKey, workflow?.process_key, workflow?.code, order?.workflowProcessKey, '')}
+          {steps.length ? ` · ${steps.length} bước` : ''}
+        </Text>
+      </div>
+
+      <div style={{ borderTop: '1px solid #e5e7eb', padding: '22px 20px 20px' }}>
+        <WorkflowStepList
+          steps={steps}
+          currentStep={currentStep}
+          currentStepCode={currentStepCode}
+          processTypeLabelMap={processTypeLabelMap}
+          completedRefs={completedRefs}
+          submittedRefs={submittedRefs}
+        />
+        <WorkflowBlockingNotice currentForm={currentForm} hasCurrentSubmission={hasCurrentSubmission} />
+        <WorkflowAdvanceSection
+          disabled={!canAdvance}
+          loading={transitioning}
+          onAdvance={onAdvance}
+          transitionOptions={transitionOptions}
+          selectedToStepCode={selectedToStepCode}
+          onToStepCodeChange={onToStepCodeChange}
+        />
+      </div>
+    </Card>
+  )
+}
+
 const ResultList = ({ data }) => {
   if (!data.length) {
-    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có dữ liệu kết quả kiểm tra từ BE" />
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có dữ liệu" />
   }
 
   return (
@@ -327,7 +1013,7 @@ const HistoryList = ({ data }) => {
         children: (
           <div key={item?.id ?? index}>
             <div style={{ fontWeight: 600 }}>
-              {item?.fromStepName ?? item?.fromStep ?? 'Bước trước'} → {item?.toStepName ?? item?.toStep ?? item?.stepName ?? 'Bước tiếp theo'}
+              {item?.title ?? `${item?.fromStepName ?? item?.fromStep ?? 'Bước trước'} → ${item?.toStepName ?? item?.toStep ?? item?.stepName ?? 'Bước tiếp theo'}`}
             </div>
             <Text type="secondary">
               {formatTime(item?.createdAt ?? item?.createdDate ?? item?.time) || '-'}
@@ -346,13 +1032,18 @@ const OrderProgressPage = () => {
   const location = useLocation()
   const params = useParams()
   const [searchParams] = useSearchParams()
+  const { user } = useGetMe()
   const remoteFormRef = useRef(null)
   const [order, setOrder] = useState(location.state?.order ?? null)
   const [workflowInstance, setWorkflowInstance] = useState(location.state?.workflowInstance ?? null)
   const [workflowPreview, setWorkflowPreview] = useState(null)
+  const [workflowProcessDetail, setWorkflowProcessDetail] = useState(null)
+  const [processTypes, setProcessTypes] = useState([])
   const [loadingOrder, setLoadingOrder] = useState(false)
   const [loadingPreview, setLoadingPreview] = useState(false)
   const [submittingForm, setSubmittingForm] = useState(false)
+  const [transitioning, setTransitioning] = useState(false)
+  const [selectedToStepCode, setSelectedToStepCode] = useState()
 
   const orderId = getValue(order?.id, params.orderId, searchParams.get('orderId'), searchParams.get('id'))
   const instanceId = getValue(
@@ -360,6 +1051,57 @@ const OrderProgressPage = () => {
     order?.workflowInstance?.id,
     searchParams.get('instanceId'),
   )
+
+  const fetchWorkflowPreview = useCallback(async ({ silent = false } = {}) => {
+    if (!instanceId) {
+      setWorkflowPreview(null)
+      return null
+    }
+
+    if (!silent) {
+      setLoadingPreview(true)
+    }
+
+    try {
+      const response = await RequestUtils.Get(WORKFLOW_PREVIEW_API, { instanceId })
+      const preview = resolveWorkflowPreview(response)
+      setWorkflowPreview(preview)
+
+      const ok = response?.success === true || Number(response?.errorCode) === SUCCESS_CODE
+      if (!ok && !preview) {
+        message.error(response?.message || 'Không tải được tiến trình workflow.')
+      }
+
+      return preview
+    } catch (error) {
+      setWorkflowPreview(null)
+      message.error(error?.message || 'Không tải được tiến trình workflow.')
+      return null
+    } finally {
+      if (!silent) {
+        setLoadingPreview(false)
+      }
+    }
+  }, [instanceId])
+
+  useEffect(() => {
+    let mounted = true
+
+    RequestUtils.Get(PROCESS_TYPE_FIND_API, {})
+      .then((response) => {
+        if (!mounted) return
+        setProcessTypes(getResponseDataArray(response).map(normalizeProcessType))
+      })
+      .catch((error) => {
+        if (!mounted) return
+        setProcessTypes([])
+        console.error('[OrderProgress] process type error', error)
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   useEffect(() => {
     if (!orderId) {
@@ -420,58 +1162,91 @@ const OrderProgressPage = () => {
   }, [orderId, workflowInstance?.id])
 
   useEffect(() => {
-    if (!instanceId) {
-      setWorkflowPreview(null)
+    fetchWorkflowPreview()
+  }, [fetchWorkflowPreview])
+
+  const previewStepProcess = workflowPreview?.stepProcesses
+  const workflowProcessId = getValue(
+    workflowPreview?.process?.id,
+    workflowPreview?.processId,
+    workflowPreview?.process_id,
+    workflowPreview?.processInstance?.processId,
+    workflowPreview?.processInstance?.process_id,
+    previewStepProcess?.processId,
+    previewStepProcess?.process_id,
+    workflowInstance?.processId,
+    workflowInstance?.process_id,
+    order?.workflowProcessId,
+    order?.workflow_process_id,
+    order?.processId,
+    order?.process_id,
+  )
+
+  useEffect(() => {
+    if (!workflowProcessId) {
+      setWorkflowProcessDetail(null)
+      return undefined
+    }
+
+    if (isSameStepRef(workflowProcessDetail?.id, workflowProcessId)) {
       return undefined
     }
 
     let mounted = true
-    setLoadingPreview(true)
 
-    RequestUtils.Get(WORKFLOW_PREVIEW_API, { instanceId })
+    RequestUtils.Get(`${WORKFLOW_PROCESS_FIND_API}/${workflowProcessId}`, {})
       .then((response) => {
         if (!mounted) return
-        const preview = resolveWorkflowPreview(response)
-        setWorkflowPreview(preview)
-
-        const ok = response?.success === true || Number(response?.errorCode) === SUCCESS_CODE
-        if (!ok && !preview) {
-          message.error(response?.message || 'Không tải được tiến trình workflow.')
-        }
+        setWorkflowProcessDetail(resolveWorkflowProcessDetail(response))
       })
       .catch((error) => {
-        if (mounted) {
-          setWorkflowPreview(null)
-          message.error(error?.message || 'Không tải được tiến trình workflow.')
-        }
-      })
-      .finally(() => {
-        if (mounted) {
-          setLoadingPreview(false)
-        }
+        if (!mounted) return
+        setWorkflowProcessDetail({ id: workflowProcessId })
+        console.error('[OrderProgress] workflow process detail error', error)
       })
 
     return () => {
       mounted = false
     }
-  }, [instanceId])
+  }, [workflowProcessId, workflowProcessDetail?.id])
 
-  const workflow = workflowPreview?.process
-    ?? workflowPreview
+  const workflow = useMemo(() => (
+    workflowProcessDetail
+    ?? workflowPreview?.process
     ?? order?.workflowProcess
     ?? order?.process
     ?? order?.workflow
-    ?? {}
-  const previewStepProcess = workflowPreview?.stepProcesses
+    ?? (workflowProcessId ? { id: workflowProcessId } : {})
+  ), [workflowProcessDetail, workflowPreview, order, workflowProcessId])
+  const processTypeLabelMap = useMemo(
+    () => buildProcessTypeLabelMap(processTypes),
+    [processTypes]
+  )
   const steps = getFirstArray(
+    workflowPreview?.stepProcessList,
+    workflowPreview?.step_process_list,
     workflowPreview?.steps,
     previewStepProcess ? [previewStepProcess] : undefined,
     workflow?.steps,
     order?.workflowSteps,
     order?.steps,
   )
+  const stepTransitions = getFirstArray(
+    workflowPreview?.stepTransitions,
+    workflowPreview?.step_transitions,
+    workflowPreview?.transitions,
+    workflowPreview?.nextSteps,
+    workflowPreview?.next_steps,
+    workflowPreview?.availableTransitions,
+    workflowPreview?.available_transitions,
+  )
+  const stepTransitionOptions = useMemo(
+    () => buildStepTransitionOptions(stepTransitions, steps),
+    [stepTransitions, steps]
+  )
   const currentStepCode = getValue(
     workflowInstance?.currentStepCode,
+    workflowPreview?.processInstance?.currentStepCode,
     workflowPreview?.currentStepCode,
     order?.currentStepCode,
   )
@@ -481,14 +1256,28 @@ const OrderProgressPage = () => {
     steps.find(step =>
       step?.current
       || step?.active
-      || step?.id === order?.currentStepId
-      || step?.stepCode === currentStepCode
-      || step?.code === currentStepCode,
+      || isSameStepRef(step?.id, order?.currentStepId)
+      || isSameStepRef(step?.stepCode, currentStepCode)
+      || isSameStepRef(step?.code, currentStepCode),
     ),
     order?.currentWorkflowStep,
     order?.currentStep,
     steps[0],
   )
+
+  useEffect(() => {
+    if (!stepTransitionOptions.length) {
+      setSelectedToStepCode(undefined)
+      return
+    }
+
+    setSelectedToStepCode((currentValue) => {
+      if (stepTransitionOptions.some(option => option.value === currentValue)) {
+        return currentValue
+      }
+      return stepTransitionOptions.length === 1 ? stepTransitionOptions[0].value : undefined
+    })
+  }, [stepTransitionOptions])
   const formTemplates = getFirstArray(
     workflowPreview?.currentFormTemplates,
     workflowPreview?.formTemplates,
@@ -530,16 +1319,32 @@ const OrderProgressPage = () => {
     currentStep?.checkResults,
     currentStep?.results,
   )
-  const histories = getFirstArray(
-    workflowPreview?.histories,
-    workflowPreview?.workflowHistories,
-    workflowPreview?.workflowHistory,
-    order?.workflowHistories,
-    order?.workflowHistory,
-    order?.stepHistories,
-    order?.histories,
-    workflow?.histories,
+  const histories = buildWorkflowHistoryItems({
+    workflowPreview,
+    workflowInstance,
+    order,
+    workflow,
+    steps,
+  })
+  const submissions = getFirstArray(
+    workflowPreview?.submissions,
+    order?.submissions,
   )
+  const currentSubmission = submissions.find((item) =>
+    isSubmissionForStep(item, currentStep) && isSubmissionForTemplate(item, currentForm)
+  ) ?? submissions.find((item) =>
+    isSubmissionForStep(item, currentStep)
+  ) ?? submissions.find((item) =>
+    isSubmissionForTemplate(item, currentForm)
+  )
+  const currentSubmissionValues = getSubmissionValues(currentSubmission)
+  const completedRefs = getFirstArray(
+    workflowPreview?.processInstance?.completedSteps,
+    workflowInstance?.completedSteps,
+    order?.workflowInstance?.completedSteps,
+  )
+  const submittedRefs = submissions.map((item) => getValue(item?.stepCode, item?.stepId, item?.step_id, item?.id))
+  const hasCurrentSubmission = Boolean(currentSubmission)
 
   const { Component: RemoteForm, loading: loadingRemote, error: remoteError } = useRemoteForm(remoteEntry, remoteComponentId)
 
@@ -592,6 +1397,79 @@ const OrderProgressPage = () => {
       setSubmittingForm(false)
     }
   }, [currentForm, currentStep, workflowPreview, workflowInstance, order, orderId, instanceId])
+
+  const handleAdvanceWorkflow = useCallback(async () => {
+    if (stepTransitionOptions.length > 0 && !selectedToStepCode) {
+      message.warning('Vui lòng chọn bước tiếp theo.')
+      return
+    }
+
+    const payload = buildWorkflowTransitionPayload({
+      workflow,
+      workflowPreview,
+      workflowInstance,
+      order,
+      orderId,
+      instanceId,
+      currentSubmission,
+      user,
+      toStepCode: selectedToStepCode,
+    })
+
+    if (!payload.processId) {
+      message.error('Không tìm thấy processId của quy trình.')
+      return
+    }
+    if (!payload.processInstanceId) {
+      message.error('Không tìm thấy processInstanceId của tiến trình.')
+      return
+    }
+    if (!payload.entityId) {
+      message.error('Không tìm thấy entityId của đơn hàng.')
+      return
+    }
+    if (!payload.byUserId) {
+      message.error('Không tìm thấy byUserId của người thao tác.')
+      return
+    }
+    if (currentForm && !payload.fromStepSubmissionId) {
+      message.error('Bước hiện tại chưa có submission để chuyển bước.')
+      return
+    }
+
+    setTransitioning(true)
+    try {
+      const response = await RequestUtils.Post(WORKFLOW_TRANSITION_API, payload)
+      const ok = response?.success || Number(response?.errorCode) === SUCCESS_CODE
+      if (!ok) {
+        message.error(response?.message || 'Không chuyển được bước workflow.')
+        return
+      }
+
+      message.success(response?.message || 'Đã chuyển bước workflow.')
+      const preview = await fetchWorkflowPreview({ silent: true })
+      if (preview?.processInstance) {
+        setWorkflowInstance(preview.processInstance)
+      }
+    } catch (error) {
+      message.error(error?.message || 'Không chuyển được bước workflow.')
+    } finally {
+      setTransitioning(false)
+    }
+  }, [
+    workflow,
+    workflowPreview,
+    workflowInstance,
+    order,
+    orderId,
+    instanceId,
+    currentSubmission,
+    user,
+    currentForm,
+    fetchWorkflowPreview,
+    stepTransitionOptions,
+    selectedToStepCode,
+  ])
 
   const handleRemoteFormSubmitError = useCallback((error) => {
     if (error?.errorFields) {
@@ -704,7 +1582,7 @@ const OrderProgressPage = () => {
                   )}
                   extra={(
                     <Space>
-                      {currentStep?.name || currentStep?.label ? <Tag color="blue">{currentStep?.label ?? currentStep?.name}</Tag> : null}
+                      {currentStep?.name || currentStep?.label ? <Tag color="blue">{getStepProcessTypeLabel(currentStep, processTypeLabelMap) ?? currentStep?.name}</Tag> : null}
                       {remoteEntry && RemoteForm ? (
                         <Button
                           type="primary"
@@ -734,6 +1612,10 @@ const OrderProgressPage = () => {
                         data={order}
                         step={currentStep}
                         formTemplate={currentForm}
+                        submission={currentSubmission}
+                        initialValues={currentSubmissionValues}
+                        values={currentSubmissionValues}
+                        defaultValues={currentSubmissionValues}
                         onSubmit={handleRemoteFormSubmit}
                         onSubmitError={handleRemoteFormSubmitError}
                       />
@@ -752,28 +1634,34 @@ const OrderProgressPage = () => {
             </Col>
 
             <Col xs={24} lg={8}>
-              <Card
-                title="Quy trình workflow"
+              <div
                 style={{
-                  minHeight: 420,
                   position: 'fixed',
-                  top: 164,
+                  top: 96,
                   width: '25%',
-                  maxHeight: 'calc(100vh - 32px)',
+                  maxHeight: 'calc(100vh - 120px)',
                   overflowY: 'auto',
+                  paddingRight: 4,
                 }}
               >
-                <div style={{ marginBottom: 16 }}>
-                  <Title level={4} style={{ marginBottom: 4 }}>
-                    {getValue(workflow?.name, order?.workflowProcessName, order?.processName, order?.workflowName, 'Chưa gắn workflow')}
-                  </Title>
-                  <Text type="secondary">
-                    {getValue(workflow?.processKey, workflow?.code, order?.workflowProcessKey, '')}
-                    {steps.length ? ` · ${steps.length} bước` : ''}
-                  </Text>
-                </div>
-                <WorkflowStepList steps={steps} currentStep={currentStep} />
-              </Card>
+                <WorkflowProgressPanel
+                  workflow={workflow}
+                  order={order}
+                  steps={steps}
+                  currentStep={currentStep}
+                  currentStepCode={currentStepCode}
+                  processTypeLabelMap={processTypeLabelMap}
+                  completedRefs={completedRefs}
+                  submittedRefs={submittedRefs}
+                  currentForm={currentForm}
+                  hasCurrentSubmission={hasCurrentSubmission}
+                  transitioning={transitioning}
+                  onAdvance={handleAdvanceWorkflow}
+                  transitionOptions={stepTransitionOptions}
+                  selectedToStepCode={selectedToStepCode}
+                  onToStepCodeChange={setSelectedToStepCode}
+                />
+              </div>
             </Col>
           </Row>
         </div>
