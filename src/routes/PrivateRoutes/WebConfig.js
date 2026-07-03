@@ -8,6 +8,7 @@ const ContentPage = React.lazy(() => import('@/pages/post'));
 const ContentEdit = React.lazy(() => import('@/pages/post/Edit'));
 const TagPage = React.lazy(() => import('@/pages/tag'));
 const TagEditPage = React.lazy(() => import('@/pages/tag/Edit'));
+const Landing = React.lazy(() => import('@/pages/landing'));
 
 export const WebConfig = {
   auth    : authRoles.user,
@@ -18,6 +19,8 @@ export const WebConfig = {
     { path     : '/post', element: <ContentPage /> },
     { path     : '/post/edit', element: <ContentEdit /> },
     { path     : '/tag', element: <TagPage /> },
-    { path     : '/tag/edit', element: <TagEditPage /> }
+    { path     : '/tag/edit', element: <TagEditPage /> },
+    { path     : '/landing', element: <Landing /> },
+    { path     : '/landing/edit', element: <Landing /> }
   ]
 };
