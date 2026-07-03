@@ -152,6 +152,8 @@ function buildProps(field) {
       if (config.options?.length) {
         props.push({ key: 'resourceData', value: config.options, kind: 'json' })
       }
+      props.push({ key: 'valueProp', value: 'value', kind: 'str' })
+      props.push({ key: 'titleProp', value: 'label', kind: 'str' })
       props.push({ key: 'style', value: '{{ width: \'100%\' }}', kind: 'raw' })
       break
 
@@ -160,6 +162,8 @@ function buildProps(field) {
       if (config.options?.length) {
         props.push({ key: 'resourceData', value: config.options, kind: 'json' })
       }
+      props.push({ key: 'valueProp', value: 'value', kind: 'str' })
+      props.push({ key: 'titleProp', value: 'label', kind: 'str' })
       props.push({ key: 'style', value: '{{ width: \'100%\' }}', kind: 'raw' })
       break
 
@@ -168,6 +172,8 @@ function buildProps(field) {
       if (config.options?.length) {
         props.push({ key: 'options', value: config.options, kind: 'json' })
       }
+      props.push({ key: 'valueProp', value: 'value', kind: 'str' })
+      props.push({ key: 'titleProp', value: 'label', kind: 'str' })
       break
 
     case 'lookup':

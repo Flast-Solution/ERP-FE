@@ -384,13 +384,9 @@ const makeField = (field, index) => ({
   fieldRole: null,
 })
 
-const mergeAttachedForm = (attachedForms, form) => {
-  const next = attachedForms.filter(item => String(item.id) !== String(form.id))
-  return [...next, form]
-}
+const attachSingleForm = (form) => [form]
 
 const ModalAttachForm = ({
-  attachedForms = [],
   onSave,
   closeModal,
   stepCode,
@@ -404,7 +400,6 @@ const ModalAttachForm = ({
   const [selectedId, setSelectedId] = useState(null)
   const [creating, setCreating] = useState(false)
   const [createForm] = Form.useForm()
-  const watchFormKey = Form.useWatch('formKey', createForm)
   const [starterId, setStarterId] = useState('blank')
   const [required, setRequired] = useState(true)
 
@@ -448,7 +443,7 @@ const ModalAttachForm = ({
       ...selectedTemplate,
       required: selectedTemplate.required ?? true,
     }
-    onSave(mergeAttachedForm(attachedForms, nextForm))
+    onSave(attachSingleForm(nextForm))
     closeModal?.()
   }
 
@@ -505,7 +500,7 @@ const ModalAttachForm = ({
         id: templateId,
       })
 
-      onSave(mergeAttachedForm(attachedForms, created))
+      onSave(attachSingleForm(created))
       message.success('Đã tạo và gắn form vào bước.')
       return created
     } finally {
@@ -541,7 +536,6 @@ const ModalAttachForm = ({
 
   if (view === 'create') {
     const starter = STARTERS.find(item => item.id === starterId) ?? STARTERS[0]
-    const formKey = watchFormKey || 'form_key'
 
     return (
       <Shell>

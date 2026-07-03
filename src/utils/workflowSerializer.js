@@ -30,7 +30,7 @@ const serializeAllowedRoles = (roles) => {
  *
  * {
  *   process: { processKey, name, description },
- *   steps: [{ stepCode, name, label, type, description, position, forms, actions }],
+ *   steps: [{ stepCode, name, label, type, description, position, form, actions }],
  *   transitions: [{ fromStepCode, toStepCode, allowedRoles, requireNote, guards }]
  * }
  */
@@ -181,7 +181,10 @@ export const normalizeAttachedForm = (form) => {
 export const getFormDisplayName = (form) => normalizeAttachedForm(form)?.name ?? 'Form'
 
 const normalizeStepForms = (step = {}) => {
-  const forms = step.forms ?? step.formTemplates ?? step.form_templates ?? []
+  const forms = step.forms
+    ?? step.formTemplates
+    ?? step.form_templates
+    ?? (step.form != null && step.form !== '' ? [step.form] : [])
   if (!Array.isArray(forms)) return []
   return forms.map(normalizeAttachedForm).filter(Boolean)
 }
@@ -379,13 +382,14 @@ const getPersistedTransitionId = (edge = {}) => {
   return isTemporaryTransitionId(edge.id) ? null : edge.id
 }
 
-const serializeFormIds = (forms = []) => forms
-  .map(form => {
-    if (form == null || form === '') return null
-    if (typeof form !== 'object') return form
-    return form.id ?? form.templateId ?? form.formId ?? null
-  })
-  .filter(id => id != null && id !== '')
+const serializeFormId = (forms = []) => {
+  const form = forms[0]
+  const id = getAttachedFormId(form)
+  if (id == null || id === '') return null
+
+  const numericId = Number(id)
+  return Number.isInteger(numericId) ? numericId : null
+}
 
 const serializeProcess = (process = {}) => {
   const payload = {
@@ -426,7 +430,7 @@ const serializeStep = (node, index, stepTypes = [], edges = []) => {
     position: node.position,
     sortOrder: node.data?.sortOrder ?? index,
     enabled: node.data?.enabled ?? true,
-    forms: serializeFormIds(node.data?.forms ?? []),
+    form: serializeFormId(node.data?.forms ?? []),
     actions: (node.data?.actions ?? []).map(serializeAction),
   }
 

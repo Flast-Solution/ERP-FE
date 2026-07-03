@@ -8,11 +8,9 @@ import { formatMoney, formatTime, RequestUtils } from '@flast-erp/core/utils'
 import { SUCCESS_CODE } from '@/configs'
 import OrderService from '@/services/OrderService'
 import { loadRemote } from '@/utils/loadRemote'
-import { getBusinessIdLocal } from '@/utils/dataUtils'
 
 const { Text, Title } = Typography
-const TEST_REMOTE_ENTRY = 'https://micro-frontend.flast.vn/tao-don-hang/remoteEntry.js'
-const DATA_SAVE_API = '/workflow/forms/storage/submit'
+const WORKFLOW_SUBMISSION_API = '/workflow/process/submission'
 const WORKFLOW_INSTANCE_BY_ENTITY_API = '/workflow/process/instance/get-entity'
 const WORKFLOW_PREVIEW_API = '/workflow/process/preview'
 
@@ -42,6 +40,12 @@ const getFirstArray = (...items) => items.find(Array.isArray) ?? []
 
 const getValue = (...items) => items.find(item => item !== undefined && item !== null && item !== '')
 
+const toNumberOrNull = (value) => {
+  if (value === undefined || value === null || value === '') return null
+  const numberValue = Number(value)
+  return Number.isNaN(numberValue) ? null : numberValue
+}
+
 const normalizeRemoteContainerName = (value = '') => value.replace(/[^A-Za-z0-9_$]/g, '_')
 
 const normalizeSubmissionValue = (value) => {
@@ -58,18 +62,6 @@ const normalizeSubmissionValue = (value) => {
   }
   return value
 }
-
-const resolveBizId = (order) => {
-  const value = order?.bizId
-    ?? order?.businessId
-    ?? order?.biz?.id
-    ?? order?.business?.id
-    ?? getBusinessIdLocal()
-
-  const bizId = value ? Number(value) : null
-  return bizId && !Number.isNaN(bizId) ? bizId : null
-}
-
 const resolveTemplateId = (formTemplate) => {
   const value = formTemplate?.templateId
     ?? formTemplate?.formTemplateId
@@ -79,7 +71,31 @@ const resolveTemplateId = (formTemplate) => {
   return templateId && !Number.isNaN(templateId) ? templateId : null
 }
 
-const getRemoteConfigFromEntry = (remoteEntry) => {
+const buildWorkflowSubmissionPayload = ({
+  values,
+  currentForm,
+  currentStep,
+  workflowPreview,
+  workflowInstance,
+  order,
+  orderId,
+  instanceId,
+}) => {
+  const processInstance = workflowPreview?.processInstance ?? workflowInstance ?? {}
+  const stepProcess = workflowPreview?.stepProcesses ?? currentStep ?? {}
+
+  return {
+    templateId: resolveTemplateId(currentForm),
+    processStepId: toNumberOrNull(stepProcess?.id),
+    entityType: processInstance?.entityType ?? order?.entityType ?? 'order',
+    entityId: toNumberOrNull(processInstance?.entityId ?? order?.entityId ?? order?.id ?? orderId),
+    instanceId: toNumberOrNull(processInstance?.id ?? instanceId),
+    stepCode: stepProcess?.stepCode ?? stepProcess?.code ?? processInstance?.currentStepCode ?? workflowInstance?.currentStepCode,
+    values: normalizeSubmissionValue(values),
+  }
+}
+
+const getRemoteConfigFromEntry = (remoteEntry, remoteComponentId) => {
   if (!remoteEntry) {
     return null
   }
@@ -95,7 +111,7 @@ const getRemoteConfigFromEntry = (remoteEntry) => {
     }
 
     return {
-      componentId: normalizeRemoteContainerName(remoteEntryComponentId),
+      componentId: normalizeRemoteContainerName(remoteComponentId || remoteEntryComponentId),
       remoteBaseUrl: url.origin,
       remoteEntryComponentId,
     }
@@ -104,13 +120,13 @@ const getRemoteConfigFromEntry = (remoteEntry) => {
   }
 }
 
-const useRemoteForm = (remoteEntry) => {
+const useRemoteForm = (remoteEntry, remoteComponentId) => {
   const [ Component, setComponent ] = useState(null)
   const [ loading, setLoading ] = useState(false)
   const [ error, setError ] = useState('')
 
   useEffect(() => {
-    const remoteConfig = getRemoteConfigFromEntry(remoteEntry)
+    const remoteConfig = getRemoteConfigFromEntry(remoteEntry, remoteComponentId)
     let mounted = true
 
     setComponent(null)
@@ -148,7 +164,7 @@ const useRemoteForm = (remoteEntry) => {
     return () => {
       mounted = false
     }
-  }, [remoteEntry])
+  }, [remoteEntry, remoteComponentId])
 
   return { Component, loading, error }
 }
@@ -162,11 +178,11 @@ const RemoteFormErrorFallback = ({ message }) => (
 )
 
 const RemoteFormHost = forwardRef(({ Component, ...props }, ref) => {
-  const [submitSignal, setSubmitSignal] = useState(0)
+  const [submitSignal, setSubmitSignal] = useState(null)
 
   useImperativeHandle(ref, () => ({
     submit: async () => {
-      setSubmitSignal((signal) => signal + 1)
+      setSubmitSignal((signal) => (signal ?? 0) + 1)
     },
   }), [])
 
@@ -446,8 +462,10 @@ const OrderProgressPage = () => {
     ?? order?.process
     ?? order?.workflow
     ?? {}
+  const previewStepProcess = workflowPreview?.stepProcesses
   const steps = getFirstArray(
     workflowPreview?.steps,
+    previewStepProcess ? [previewStepProcess] : undefined,
     workflow?.steps,
     order?.workflowSteps,
     order?.steps,
@@ -459,6 +477,7 @@ const OrderProgressPage = () => {
   )
   const currentStep = getValue(
     workflowPreview?.currentStep,
+    previewStepProcess,
     steps.find(step =>
       step?.current
       || step?.active
@@ -473,20 +492,34 @@ const OrderProgressPage = () => {
   const formTemplates = getFirstArray(
     workflowPreview?.currentFormTemplates,
     workflowPreview?.formTemplates,
+    currentStep?.formTemplate ? [currentStep.formTemplate] : undefined,
     currentStep?.formTemplates,
     currentStep?.forms,
     order?.currentFormTemplates,
     order?.formTemplates,
     order?.forms,
   )
-  const currentForm = getValue(order?.currentForm, order?.requiredForm, formTemplates[0])
+  const currentForm = getValue(
+    currentStep?.formTemplate,
+    order?.currentForm,
+    order?.requiredForm,
+    formTemplates[0],
+  )
+  const sourceComponent = getValue(currentForm?.sourceComponent, currentForm?.source_component)
   const remoteEntry = getValue(
+    sourceComponent?.microFrontendUrl,
+    sourceComponent?.micro_frontend_url,
     currentForm?.remoteEntry,
     currentForm?.remoteEntryUrl,
     currentForm?.microFrontendUrl,
     currentStep?.remoteEntry,
     order?.remoteEntry,
-    TEST_REMOTE_ENTRY
+  )
+  const remoteComponentId = getValue(
+    sourceComponent?.componentId,
+    sourceComponent?.component_id,
+    currentForm?.componentId,
+    currentForm?.component_id,
   )
   const checkResults = getFirstArray(
     workflowPreview?.checkResults,
@@ -508,28 +541,44 @@ const OrderProgressPage = () => {
     workflow?.histories,
   )
 
-  const { Component: RemoteForm, loading: loadingRemote, error: remoteError } = useRemoteForm(remoteEntry)
+  const { Component: RemoteForm, loading: loadingRemote, error: remoteError } = useRemoteForm(remoteEntry, remoteComponentId)
 
   const handleRemoteFormSubmit = useCallback(async (values) => {
-    const bizId = resolveBizId(order)
-    if (!bizId) {
-      message.error('Không tìm thấy bizId của tài khoản đăng nhập.')
+    const payload = buildWorkflowSubmissionPayload({
+      values,
+      currentForm,
+      currentStep,
+      workflowPreview,
+      workflowInstance,
+      order,
+      orderId,
+      instanceId,
+    })
+
+    if (!payload.templateId) {
+      message.error('Không tìm thấy templateId của form.')
       return
     }
-
-    const templateId = resolveTemplateId(currentForm)
-    if (!templateId) {
-      message.error('Không tìm thấy templateId của form.')
+    if (!payload.processStepId) {
+      message.error('Không tìm thấy processStepId của bước hiện tại.')
+      return
+    }
+    if (!payload.entityId) {
+      message.error('Không tìm thấy entityId của đơn hàng.')
+      return
+    }
+    if (!payload.instanceId) {
+      message.error('Không tìm thấy instanceId của workflow.')
+      return
+    }
+    if (!payload.stepCode) {
+      message.error('Không tìm thấy stepCode của bước hiện tại.')
       return
     }
 
     setSubmittingForm(true)
     try {
-      const response = await RequestUtils.Post(DATA_SAVE_API, {
-        bizId,
-        templateId,
-        values: normalizeSubmissionValue(values),
-      })
+      const response = await RequestUtils.Post(WORKFLOW_SUBMISSION_API, payload)
       const ok = response?.success || Number(response?.errorCode) === SUCCESS_CODE
       if (!ok) {
         message.error(response?.message || 'Không lưu được dữ liệu form.')
@@ -542,7 +591,7 @@ const OrderProgressPage = () => {
     } finally {
       setSubmittingForm(false)
     }
-  }, [currentForm, order])
+  }, [currentForm, currentStep, workflowPreview, workflowInstance, order, orderId, instanceId])
 
   const handleRemoteFormSubmitError = useCallback((error) => {
     if (error?.errorFields) {

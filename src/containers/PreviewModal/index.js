@@ -398,6 +398,8 @@ const FieldPreview = ({ field }) => {
           required={required}
           placeholder={placeholder || 'Chọn...'}
           resourceData={opts}
+          valueProp="value"
+          titleProp="label"
         />
       )
 
@@ -409,6 +411,8 @@ const FieldPreview = ({ field }) => {
           required={required}
           placeholder={placeholder || 'Chọn nhiều...'}
           resourceData={opts}
+          valueProp="value"
+          titleProp="label"
           mode="multiple"
         />
       )
@@ -420,6 +424,8 @@ const FieldPreview = ({ field }) => {
           label={label}
           required={required}
           options={config.options ?? []}
+          valueProp="value"
+          titleProp="label"
         />
       )
 
@@ -430,6 +436,8 @@ const FieldPreview = ({ field }) => {
           label={label}
           required={required}
           options={config.options ?? []}
+          valueProp="value"
+          titleProp="label"
         />
       )
 

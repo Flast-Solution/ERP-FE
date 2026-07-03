@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Form, Tag, Button } from 'antd'
+import { Form, Tag, Button, message } from 'antd'
 import { DeleteOutlined, RightOutlined } from '@ant-design/icons'
 import { InAppEvent } from '@flast-erp/core/utils'
 import { HASH_POPUP } from '@/configs/constant'
@@ -154,11 +154,17 @@ const StepForm = ({ node }) => {
   }
 
   const handleAttachForm = () => {
+    const attachedForms = node.data.forms ?? []
+    if (attachedForms.length > 0) {
+      message.warning('Mỗi bước chỉ được gắn 1 form. Vui lòng xóa form hiện tại trước khi gắn form mới.')
+      return
+    }
+
     InAppEvent.emit(HASH_POPUP, {
       hash: 'workflow.step.attach-form',
       title: '',
       data: {
-        attachedForms: node.data.forms ?? [],
+        attachedForms,
         stepCode: node.data?.code,
         stepLabel: node.data?.label,
         onSave: (selectedForms) => {
