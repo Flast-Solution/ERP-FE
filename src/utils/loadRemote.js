@@ -129,7 +129,7 @@ function ensureInit() {
   })
 }
 
-function ensureRemoteRegistered(componentId, entry) {
+function ensureRemoteRegistered(componentId, entry, entryGlobalName = componentId) {
   ensureInit()
   if (registeredRemotes.has(componentId)) {
     return
@@ -140,7 +140,7 @@ function ensureRemoteRegistered(componentId, entry) {
       name: componentId,
       entry,
       type: "global",
-      entryGlobalName: componentId
+      entryGlobalName
     }]
   )
 
@@ -152,15 +152,25 @@ function ensureRemoteRegistered(componentId, entry) {
  * @param {string} exposedModule - Tên module
  * @param {string} remoteBaseUrl - Base URL
  * @param {string} remoteEntryComponentId - ID/path chứa remoteEntry.js nếu khác remote container name
+ * @param {string} remoteEntryGlobalName - Global name thật của remote nếu componentId là alias nội bộ
+ * @param {string} remoteEntryVersion - Version/cache key để tránh dùng remoteEntry cũ
  *Ư
  * @example
  * const mod = await loadRemote("component_001", "MPage", "https://remote.aa.vn")
  * const MPage = mod.default
  */
-export async function loadRemote(componentId, exposedModule, remoteBaseUrl, remoteEntryComponentId = componentId) {
+export async function loadRemote(
+  componentId,
+  exposedModule,
+  remoteBaseUrl,
+  remoteEntryComponentId = componentId,
+  remoteEntryGlobalName = componentId,
+  remoteEntryVersion = ''
+) {
 
-  const entry = `${remoteBaseUrl}/${remoteEntryComponentId}/remoteEntry.js`
-  ensureRemoteRegistered(componentId, entry)
+  const entryVersion = String(remoteEntryVersion || '').trim()
+  const entry = `${remoteBaseUrl}/${remoteEntryComponentId}/remoteEntry.js${entryVersion ? `?v=${encodeURIComponent(entryVersion)}` : ''}`
+  ensureRemoteRegistered(componentId, entry, remoteEntryGlobalName)
 
   const mod = await mfLoadRemote(`${componentId}/${exposedModule}`)
   if (!mod) {

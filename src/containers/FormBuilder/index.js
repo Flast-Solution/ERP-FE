@@ -118,6 +118,20 @@ const isAiGeneratedField = (field) => (
   (getFieldProvenance(field)?.createdBySource ?? getFieldProvenance(field)?.source) === 'ai'
 )
 
+const isStaleGeneratedUploadCode = (code = '', generatedCode = '') => (
+  /forwardRef\(\(\{[\s\S]*submitSignal[\s\S]*useImperativeHandle/.test(code)
+  && generatedCode.includes('resolveUploadFilename')
+  && generatedCode.includes('thumbUrl')
+  && generatedCode.includes('onPreview')
+  && generatedCode.includes('accept={accept || undefined}')
+  && !(
+    code.includes('resolveUploadFilename')
+    && code.includes('thumbUrl')
+    && code.includes('onPreview')
+    && code.includes('accept={accept || undefined}')
+  )
+)
+
 const FormBuilder = ({
   templateId = null,
   domain     = '',
@@ -176,9 +190,10 @@ const FormBuilder = ({
       meta  : { ...templateMeta, ...(incomingTemplate.meta ?? {}) },
       fields: incomingTemplate.fields ?? [],
     }
+    const generatedFallbackCode = buildJSX(nextSchema).plain
     const nextJsxCode = typeof incomingTemplate.code === 'string' && incomingTemplate.code.trim()
       ? incomingTemplate.code
-      : buildJSX(nextSchema).plain
+      : generatedFallbackCode
     setJsxCode(nextJsxCode)
     if (incomingTemplate.openPreview === true) {
       setPreviewMode('code')
@@ -342,7 +357,6 @@ const FormBuilder = ({
         setJsxCode(previewPayload.jsxCode)
       }
 
-      console.log('[FormBuilder] save payload', payload)
       const response = await onSave?.(payload)
       const ok = response == null || response?.success === true || Number(response?.errorCode) === SUCCESS_CODE
       if (!ok) {
@@ -352,7 +366,6 @@ const FormBuilder = ({
       return response
     } catch (err) {
       message.error(err?.message || 'Lưu thất bại. Vui lòng thử lại.')
-      console.error(err)
       err.formSaveHandled = true
       throw err
     } finally {
@@ -382,7 +395,12 @@ const FormBuilder = ({
       meta: templateMeta,
       fields,
     }).plain
-    setJsxCode(current => mode === 'code' && current?.trim() ? current : generatedJsxCode)
+    setJsxCode(current => {
+      if (isStaleGeneratedUploadCode(current, generatedJsxCode)) {
+        return generatedJsxCode
+      }
+      return current?.trim() ? current : generatedJsxCode
+    })
     setPreviewMode(mode)
     setPreviewOpen(true)
   }, [templateMeta, fields])

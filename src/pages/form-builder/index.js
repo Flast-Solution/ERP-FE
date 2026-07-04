@@ -27,15 +27,25 @@ const BuilderPane = styled.div`
   overflow: hidden;
 `
 
-const getTemplateCode = (template = {}) => (
-  template.jsx_code
-  ?? template.jsxCode
-  ?? template.code
-  ?? template.sourceComponent?.jsx_code
-  ?? template.sourceComponent?.jsxCode
-  ?? template.sourceComponent?.code
-  ?? ''
+const getTemplateSourceComponent = (template = {}) => (
+  template.sourceComponent
+  ?? template.source_component
+  ?? template.data?.sourceComponent
+  ?? template.data?.source_component
+  ?? {}
 )
+
+const getTemplateCode = (template = {}) => {
+  const sourceComponent = getTemplateSourceComponent(template)
+
+  return sourceComponent?.code
+    ?? sourceComponent?.jsx_code
+    ?? sourceComponent?.jsxCode
+    ?? template.jsx_code
+    ?? template.jsxCode
+    ?? template.code
+    ?? ''
+}
 
 const collectOptionsByFieldKey = (fields = [], map = new Map()) => {
   fields.forEach(field => {
@@ -70,6 +80,52 @@ const mergeMissingOptions = (fields = [], optionsByKey = new Map()) => fields.ma
   }
 })
 
+const collectFieldsByKey = (fields = [], map = new Map()) => {
+  fields.forEach(field => {
+    if (field?.fieldKey) {
+      map.set(field.fieldKey, field)
+    }
+    if (Array.isArray(field?.children)) {
+      collectFieldsByKey(field.children, map)
+    }
+  })
+  return map
+}
+
+const mergeParsedFieldsWithApiMetadata = (parsedFields = [], apiFields = []) => {
+  const apiFieldsByKey = collectFieldsByKey(apiFields)
+
+  const mergeField = (field) => {
+    const apiField = field?.fieldKey ? apiFieldsByKey.get(field.fieldKey) : null
+    const children = Array.isArray(field.children)
+      ? field.children.map(mergeField)
+      : field.children
+
+    if (!apiField) {
+      return { ...field, children }
+    }
+
+    return {
+      ...apiField,
+      ...field,
+      id: apiField.id,
+      bizId: apiField.bizId,
+      templateId: apiField.templateId,
+      parentId: apiField.parentId,
+      fieldPath: apiField.fieldPath,
+      depth: apiField.depth,
+      enabled: apiField.enabled,
+      children,
+      config: {
+        ...(apiField.config ?? {}),
+        ...(field.config ?? {}),
+      },
+    }
+  }
+
+  return parsedFields.map(mergeField)
+}
+
 const enrichTemplateFieldsFromCode = (template = {}) => {
   const fields = Array.isArray(template.fields) ? template.fields : []
   const code = getTemplateCode(template)
@@ -79,7 +135,12 @@ const enrichTemplateFieldsFromCode = (template = {}) => {
 
   try {
     const parsed = parseJsxToSchema(code, { name: template.name ?? '' })
-    const optionsByKey = collectOptionsByFieldKey(parsed.fields ?? [])
+    const parsedFields = parsed.fields ?? []
+    if (parsedFields.length > 0) {
+      return mergeParsedFieldsWithApiMetadata(parsedFields, fields)
+    }
+
+    const optionsByKey = collectOptionsByFieldKey(parsedFields)
     return mergeMissingOptions(fields, optionsByKey)
   } catch (_) {
     return fields
@@ -224,6 +285,7 @@ const BuilderPage = () => {
       : '/workflow/forms/template/save'
 
     const response = await RequestUtils.Post(endpoint, payload)
+
     const nextTemplateId =
       response?.data?.id ??
       response?.data?.templateId ??
@@ -238,12 +300,6 @@ const BuilderPage = () => {
   }
 
   const handleTemplateSaved = ({ fields, code, meta }) => {
-    console.log('[FormBuilderPage] applying AI template', {
-      fieldCount: fields?.length ?? 0,
-      fields,
-      code,
-      meta,
-    })
     setIncomingTemplate({
       fields,
       code,
