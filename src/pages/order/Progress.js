@@ -96,6 +96,13 @@ const toNumberOrNull = (value) => {
 
 const normalizeRemoteContainerName = (value = '') => value.replace(/[^A-Za-z0-9_$]/g, '_')
 
+const buildRemoteAlias = (...parts) => normalizeRemoteContainerName(
+  parts
+    .map(part => String(part ?? '').trim())
+    .filter(Boolean)
+    .join('__')
+)
+
 const normalizeProcessType = (item, index) => {
   const id = item?.id ?? item?.key ?? `process_type_${index + 1}`
   const value = item?.code
@@ -508,7 +515,7 @@ const buildWorkflowTransitionPayload = ({
   }
 }
 
-const getRemoteConfigFromEntry = (remoteEntry, remoteComponentId) => {
+const getRemoteConfigFromEntry = (remoteEntry, remoteComponentId, remoteVersionKey) => {
   if (!remoteEntry) {
     return null
   }
@@ -523,8 +530,12 @@ const getRemoteConfigFromEntry = (remoteEntry, remoteComponentId) => {
       return null
     }
 
+    const entryGlobalName = normalizeRemoteContainerName(remoteComponentId || remoteEntryComponentId)
+    const componentId = buildRemoteAlias(entryGlobalName, remoteVersionKey)
+
     return {
-      componentId: normalizeRemoteContainerName(remoteComponentId || remoteEntryComponentId),
+      componentId,
+      entryGlobalName,
       remoteBaseUrl: url.origin,
       remoteEntryComponentId,
     }
@@ -533,13 +544,13 @@ const getRemoteConfigFromEntry = (remoteEntry, remoteComponentId) => {
   }
 }
 
-const useRemoteForm = (remoteEntry, remoteComponentId) => {
+const useRemoteForm = (remoteEntry, remoteComponentId, remoteVersionKey) => {
   const [ Component, setComponent ] = useState(null)
   const [ loading, setLoading ] = useState(false)
   const [ error, setError ] = useState('')
 
   useEffect(() => {
-    const remoteConfig = getRemoteConfigFromEntry(remoteEntry, remoteComponentId)
+    const remoteConfig = getRemoteConfigFromEntry(remoteEntry, remoteComponentId, remoteVersionKey)
     let mounted = true
 
     setComponent(null)
@@ -556,7 +567,9 @@ const useRemoteForm = (remoteEntry, remoteComponentId) => {
       remoteConfig.componentId,
       'MPage',
       remoteConfig.remoteBaseUrl,
-      remoteConfig.remoteEntryComponentId
+      remoteConfig.remoteEntryComponentId,
+      remoteConfig.entryGlobalName,
+      remoteVersionKey
     )
       .then(mod => {
         if (mounted) {
@@ -577,7 +590,7 @@ const useRemoteForm = (remoteEntry, remoteComponentId) => {
     return () => {
       mounted = false
     }
-  }, [remoteEntry, remoteComponentId])
+  }, [remoteEntry, remoteComponentId, remoteVersionKey])
 
   return { Component, loading, error }
 }
@@ -624,7 +637,7 @@ class RemoteFormBoundary extends React.Component {
   }
 
   componentDidUpdate(prevProps) {
-    if (prevProps.remoteEntry !== this.props.remoteEntry && this.state.hasError) {
+    if (prevProps.remoteKey !== this.props.remoteKey && this.state.hasError) {
       this.setState({ hasError: false })
     }
   }
@@ -1310,6 +1323,15 @@ const OrderProgressPage = () => {
     currentForm?.componentId,
     currentForm?.component_id,
   )
+  const remoteVersionKey = buildRemoteAlias(
+    resolveTemplateId(currentForm),
+    sourceComponent?.version,
+    sourceComponent?.updatedDate,
+    sourceComponent?.updated_date,
+    currentStep?.stepCode,
+    currentStep?.code,
+  )
+  const remoteRenderKey = buildRemoteAlias(remoteComponentId, remoteEntry, remoteVersionKey)
   const checkResults = getFirstArray(
     workflowPreview?.checkResults,
     workflowPreview?.inspectionResults,
@@ -1346,7 +1368,7 @@ const OrderProgressPage = () => {
   const submittedRefs = submissions.map((item) => getValue(item?.stepCode, item?.stepId, item?.step_id, item?.id))
   const hasCurrentSubmission = Boolean(currentSubmission)
 
-  const { Component: RemoteForm, loading: loadingRemote, error: remoteError } = useRemoteForm(remoteEntry, remoteComponentId)
+  const { Component: RemoteForm, loading: loadingRemote, error: remoteError } = useRemoteForm(remoteEntry, remoteComponentId, remoteVersionKey)
 
   const handleRemoteFormSubmit = useCallback(async (values) => {
     const payload = buildWorkflowSubmissionPayload({
@@ -1391,12 +1413,16 @@ const OrderProgressPage = () => {
       }
 
       message.success(response?.message || 'Đã lưu dữ liệu form.')
+      const preview = await fetchWorkflowPreview({ silent: true })
+      if (preview?.processInstance) {
+        setWorkflowInstance(preview.processInstance)
+      }
     } catch (error) {
       message.error(error?.message || 'Không lưu được dữ liệu form.')
     } finally {
       setSubmittingForm(false)
     }
-  }, [currentForm, currentStep, workflowPreview, workflowInstance, order, orderId, instanceId])
+  }, [currentForm, currentStep, workflowPreview, workflowInstance, order, orderId, instanceId, fetchWorkflowPreview])
 
   const handleAdvanceWorkflow = useCallback(async () => {
     if (stepTransitionOptions.length > 0 && !selectedToStepCode) {
@@ -1603,8 +1629,9 @@ const OrderProgressPage = () => {
                   {remoteEntry && loadingRemote && <Spin />}
                   {remoteEntry && remoteError && <RemoteFormErrorFallback message={remoteError} />}
                   {remoteEntry && RemoteForm && (
-                    <RemoteFormBoundary remoteEntry={remoteEntry}>
+                    <RemoteFormBoundary key={remoteRenderKey} remoteKey={remoteRenderKey}>
                       <RemoteFormHost
+                        key={remoteRenderKey}
                         ref={remoteFormRef}
                         Component={RemoteForm}
                         order={order}
