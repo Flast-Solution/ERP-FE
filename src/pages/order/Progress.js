@@ -1413,12 +1413,16 @@ const OrderProgressPage = () => {
       }
 
       message.success(response?.message || 'Đã lưu dữ liệu form.')
+      const preview = await fetchWorkflowPreview({ silent: true })
+      if (preview?.processInstance) {
+        setWorkflowInstance(preview.processInstance)
+      }
     } catch (error) {
       message.error(error?.message || 'Không lưu được dữ liệu form.')
     } finally {
       setSubmittingForm(false)
     }
-  }, [currentForm, currentStep, workflowPreview, workflowInstance, order, orderId, instanceId])
+  }, [currentForm, currentStep, workflowPreview, workflowInstance, order, orderId, instanceId, fetchWorkflowPreview])
 
   const handleAdvanceWorkflow = useCallback(async () => {
     if (stepTransitionOptions.length > 0 && !selectedToStepCode) {
