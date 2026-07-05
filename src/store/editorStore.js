@@ -189,13 +189,11 @@ export const useEditorStore = create((set, get) => ({
 
   /* Lấy nội dung 1 file JSX đã upload, dùng cho Build/preview */
   viewJsxFile: async (path) => {
-    const { data, errorCode, message: errMsg } = await RequestUtils.Get(
+    // Backend trả thẳng raw text nội dung file (không bọc trong { data, errorCode, message })
+    const raw = await RequestUtils.Get(
       `/upload/folder/view?filename=${encodeURIComponent(path)}`
     )
-    if (errorCode) {
-      throw new Error(errMsg || `Không đọc được file (mã lỗi: ${errorCode})`)
-    }
-    return data // nội dung raw của file .tsx
+    return raw
   },
 
   publishConfigPage: async () => {

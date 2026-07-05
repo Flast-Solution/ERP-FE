@@ -7,6 +7,8 @@ import {
   PlanCtaPrimary, PlanCtaGhost, Footer,
 } from './PreviewCanvas.style'
 import { EditableHighlight } from './EditableHighlight'
+import { RenderJsx } from './RenderJsx'
+import { useEffect, useState } from 'react'
 
 const BoltIcon = () => (
   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
@@ -32,7 +34,16 @@ export function PreviewCanvas() {
   const edits = useEditorStore((s) => s.edits)
   const openEdit = useEditorStore((s) => s.openEdit)
   const e = edits || {}
+  const viewjsx = useEditorStore((s) => s.viewJsxFile)
+  const [jsxPreview, setJsxPreview] = useState('')
 
+  useEffect(() => {
+    const fetchJsx = async () => {
+      const jsx = await viewjsx('test/3c1923d2-ab32-48de-aed9-fb6ea8067eba.tsx')
+      setJsxPreview(jsx)
+    }
+    fetchJsx()
+  }, [viewjsx])
   return (
     <Page className="patch-light">
       <EditableHighlight elementId="nav" selected={selected === 'nav'} onEdit={openEdit}>
@@ -96,6 +107,8 @@ export function PreviewCanvas() {
           </Plans>
         </Pricing>
       </EditableHighlight>
+
+      {jsxPreview && <RenderJsx code={jsxPreview} />}
 
       <Footer>© 2026 Nimbus · Được tạo với Patch</Footer>
     </Page>
