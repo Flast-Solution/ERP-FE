@@ -1,6 +1,6 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { Alert, Breadcrumb, Button, Card, Col, Descriptions, Empty, message, Row, Select, Space, Spin, Tag, Timeline, Typography } from 'antd'
-import { ArrowLeftOutlined, CheckCircleOutlined, ClockCircleOutlined, FormOutlined, SaveOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, CheckCircleOutlined, ClockCircleOutlined, FormOutlined } from '@ant-design/icons'
 import { Helmet } from 'react-helmet'
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
@@ -602,6 +602,29 @@ const RemoteFormErrorFallback = ({ message }) => (
     message={message}
   />
 )
+
+const hideDuplicatedRemoteFormTitle = (container, title) => {
+  const normalizedTitle = String(title ?? '').replace(/\s+/g, ' ').trim().toLowerCase()
+  if (!container || !normalizedTitle) return
+
+  const candidates = Array.from(container.querySelectorAll('h1,h2,h3,h4,h5,h6,p,div,span,label'))
+  const duplicateTitleElement = candidates.find((element) => {
+    if (element.closest('.ant-card-head')) return false
+    if (element.closest('.ant-form-item-control')) return false
+    if (element.closest('.ant-radio-wrapper')) return false
+    if (element.querySelector('input,textarea,select,button,.ant-radio,.ant-checkbox,.ant-form-item-control')) return false
+
+    const text = String(element.textContent ?? '').replace(/\s+/g, ' ').trim().toLowerCase()
+    if (!text) return false
+
+    return text === normalizedTitle || text.includes(normalizedTitle) || normalizedTitle.includes(text)
+  })
+
+  if (duplicateTitleElement) {
+    duplicateTitleElement.dataset.progressHiddenTitle = 'true'
+    duplicateTitleElement.style.display = 'none'
+  }
+}
 
 const RemoteFormHost = forwardRef(({ Component, ...props }, ref) => {
   const [submitSignal, setSubmitSignal] = useState(null)
@@ -1308,6 +1331,15 @@ const OrderProgressPage = () => {
     formTemplates[0],
   )
   const sourceComponent = getValue(currentForm?.sourceComponent, currentForm?.source_component)
+  const currentFormName = getValue(
+    currentForm?.name,
+    currentForm?.label,
+    currentForm?.title,
+    currentForm?.templateName,
+    currentForm?.template_name,
+    currentForm?.description,
+  )
+  const remoteFormContainerRef = useRef(null)
   const remoteEntry = getValue(
     sourceComponent?.microFrontendUrl,
     sourceComponent?.micro_frontend_url,
@@ -1559,6 +1591,28 @@ const OrderProgressPage = () => {
     },
   ], [order])
 
+  useEffect(() => {
+    const container = remoteFormContainerRef.current
+    if (!container || !currentFormName) return undefined
+
+    hideDuplicatedRemoteFormTitle(container, currentFormName)
+
+    const observer = new MutationObserver(() => {
+      hideDuplicatedRemoteFormTitle(container, currentFormName)
+    })
+    observer.observe(container, { childList: true, subtree: true })
+
+    return () => {
+      observer.disconnect()
+      container
+        .querySelectorAll('[data-progress-hidden-title="true"]')
+        .forEach((element) => {
+          element.style.display = ''
+          delete element.dataset.progressHiddenTitle
+        })
+    }
+  }, [currentFormName, remoteRenderKey])
+
   return (
     <>
       <Helmet>
@@ -1591,7 +1645,7 @@ const OrderProgressPage = () => {
                     <Descriptions
                       bordered
                       size="small"
-                      column={{ xs: 1, md: 2 }}
+                      column={{ xs: 1, sm: 1, md: 2, lg: 2, xl: 2, xxl: 2 }}
                       items={orderInfoItems}
                     />
                   ) : (
@@ -1603,23 +1657,7 @@ const OrderProgressPage = () => {
                   title={(
                     <Space>
                       <FormOutlined />
-                      <span>Form bắt buộc tại bước</span>
-                    </Space>
-                  )}
-                  extra={(
-                    <Space>
-                      {currentStep?.name || currentStep?.label ? <Tag color="blue">{getStepProcessTypeLabel(currentStep, processTypeLabelMap) ?? currentStep?.name}</Tag> : null}
-                      {remoteEntry && RemoteForm ? (
-                        <Button
-                          type="primary"
-                          icon={<SaveOutlined />}
-                          loading={submittingForm}
-                          disabled={loadingRemote || Boolean(remoteError)}
-                          onClick={handleSubmitCurrentForm}
-                        >
-                          Lưu form
-                        </Button>
-                      ) : null}
+                      <span>{currentFormName || 'Form bắt buộc tại bước'}</span>
                     </Space>
                   )}
                 >
@@ -1629,25 +1667,41 @@ const OrderProgressPage = () => {
                   {remoteEntry && loadingRemote && <Spin />}
                   {remoteEntry && remoteError && <RemoteFormErrorFallback message={remoteError} />}
                   {remoteEntry && RemoteForm && (
-                    <RemoteFormBoundary key={remoteRenderKey} remoteKey={remoteRenderKey}>
-                      <RemoteFormHost
-                        key={remoteRenderKey}
-                        ref={remoteFormRef}
-                        Component={RemoteForm}
-                        order={order}
-                        record={order}
-                        data={order}
-                        step={currentStep}
-                        formTemplate={currentForm}
-                        submission={currentSubmission}
-                        initialValues={currentSubmissionValues}
-                        values={currentSubmissionValues}
-                        defaultValues={currentSubmissionValues}
-                        onSubmit={handleRemoteFormSubmit}
-                        onSubmitError={handleRemoteFormSubmitError}
-                      />
-                    </RemoteFormBoundary>
+                    <div ref={remoteFormContainerRef}>
+                      <RemoteFormBoundary key={remoteRenderKey} remoteKey={remoteRenderKey}>
+                        <RemoteFormHost
+                          key={remoteRenderKey}
+                          ref={remoteFormRef}
+                          Component={RemoteForm}
+                          order={order}
+                          record={order}
+                          data={order}
+                          step={currentStep}
+                          formTemplate={currentForm}
+                          submission={currentSubmission}
+                          initialValues={currentSubmissionValues}
+                          values={currentSubmissionValues}
+                          defaultValues={currentSubmissionValues}
+                          hideTitle
+                          showTitle={false}
+                          onSubmit={handleRemoteFormSubmit}
+                          onSubmitError={handleRemoteFormSubmitError}
+                        />
+                      </RemoteFormBoundary>
+                    </div>
                   )}
+                  {remoteEntry && RemoteForm ? (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+                      <Button
+                        type="primary"
+                        loading={submittingForm}
+                        disabled={loadingRemote || Boolean(remoteError)}
+                        onClick={handleSubmitCurrentForm}
+                      >
+                        Cập nhật
+                      </Button>
+                    </div>
+                  ) : null}
                 </Card>
 
                 <Card title="Kết quả kiểm tra">

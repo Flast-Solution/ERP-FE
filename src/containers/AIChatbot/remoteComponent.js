@@ -1,15 +1,7 @@
-import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react'
 import axios from 'axios'
 import { FormInputNumber, FormRadioGroup, FormSelect, FormTextArea } from '@flast-erp/core/components'
 import { Form, Row, Col, Upload, message } from 'antd'
-
-const RESULT_GRADE_OPTIONS = [
-  { label: '5 - Xuất sắc', value: 'excellent' },
-  { label: '4 - Tốt', value: 'good' },
-  { label: '3 - Khá', value: 'rather' },
-  { label: '2 - Kém', value: 'least' },
-  { label: '1 - Rất kém', value: 'verypoor' },
-]
 
 const extractUploadItems = (response) => {
   const payload = response?.data ?? response
@@ -17,30 +9,43 @@ const extractUploadItems = (response) => {
   if (Array.isArray(payload?.data)) return payload.data
   if (Array.isArray(payload?.files)) return payload.files
   if (Array.isArray(payload?.urls)) return payload.urls
+  if (Array.isArray(payload?.fileNames)) return payload.fileNames
+  if (Array.isArray(payload?.filenames)) return payload.filenames
+  if (Array.isArray(payload?.paths)) return payload.paths
   return payload ? [payload] : []
 }
 
-const resolveUploadUrl = (item) => {
+const isAbsoluteUploadUrl = (value = '') => /^https?:\/\//i.test(String(value)) || String(value).startsWith('/api/')
+
+const resolveUploadFilename = (item) => {
   if (typeof item === 'string') return item
-  return item?.url ?? item?.fileUrl ?? item?.fileName ?? item?.path ?? item?.fullPath ?? ''
+  return item?.filename
+    ?? item?.file_name
+    ?? item?.fileName
+    ?? item?.file_name_path
+    ?? item?.path
+    ?? item?.fullPath
+    ?? item?.full_path
+    ?? item?.url
+    ?? item?.fileUrl
+    ?? item?.file_url
+    ?? ''
+}
+
+const resolveUploadUrl = (item) => {
+  const filename = resolveUploadFilename(item)
+  if (!filename) return ''
+  if (isAbsoluteUploadUrl(filename)) return filename
+  const baseUrl = String(axios.defaults.baseURL || '/api').replace(/\/$/, '')
+  return `${baseUrl}/upload/folder/view?filename=${encodeURIComponent(filename)}`
 }
 
 const toUploadFile = (item, index) => {
   if (item?.uid) return item
+  const filename = resolveUploadFilename(item)
   const url = resolveUploadUrl(item)
-  const name = item?.name
-    ?? item?.fileName?.split('/').pop()
-    ?? item?.path?.split('/').pop()
-    ?? url?.split('/').pop()
-    ?? `file-${index + 1}`
-
-  return {
-    uid: item?.id ?? url ?? `upload-${index}`,
-    name,
-    status: 'done',
-    url,
-    response: item,
-  }
+  const name = item?.name ?? filename?.split('/').pop() ?? `file-${index + 1}`
+  return { uid: item?.id ?? filename ?? url ?? `upload-${index}`, name, status: 'done', url, thumbUrl: url, response: item }
 }
 
 const fileListToValues = (event) => {
@@ -50,24 +55,14 @@ const fileListToValues = (event) => {
     .flatMap(file => extractUploadItems(file.response ?? resolveUploadUrl(file)))
 }
 
-const FormFileUpload = ({
-  name,
-  label,
-  required,
-  accept,
-  folder = 'test',
-  image = false,
-  maxSizeMB,
-}) => {
+const FormFileUpload = ({ name, label, required, accept, folder = 'test', image = false, maxSizeMB }) => {
   const form = Form.useFormInstance()
   const formValue = Form.useWatch(name, form)
-  const [fileList, setFileList] = useState([])
+  const [fileList, setFileList] = React.useState([])
 
-  useEffect(() => {
+  React.useEffect(() => {
     setFileList(current => {
-      if (current.some(file => file.status === 'uploading')) {
-        return current
-      }
+      if (current.some(file => file.status === 'uploading')) return current
       return (Array.isArray(formValue) ? formValue : (formValue ? [formValue] : [])).map(toUploadFile)
     })
   }, [formValue])
@@ -77,7 +72,7 @@ const FormFileUpload = ({
       <Form.Item label={label} required={required}>
         <Upload.Dragger
           multiple
-          accept={accept}
+          accept={accept || undefined}
           fileList={fileList}
           listType={image ? 'picture' : 'text'}
           beforeUpload={(file) => {
@@ -90,6 +85,12 @@ const FormFileUpload = ({
           onChange={({ fileList: nextFileList }) => {
             setFileList(nextFileList)
             form.setFieldValue(name, fileListToValues(nextFileList))
+          }}
+          onPreview={(file) => {
+            const url = file.url ?? file.thumbUrl ?? resolveUploadUrl(file.response)
+            if (url) {
+              window.open(url, '_blank', 'noopener,noreferrer')
+            }
           }}
           customRequest={async ({ file, onSuccess, onError }) => {
             try {
@@ -107,9 +108,7 @@ const FormFileUpload = ({
             }
           }}
         >
-          <p className="ant-upload-text">
-            {image ? 'Kéo ảnh vào đây hoặc bấm để chọn' : 'Kéo file vào đây hoặc bấm để chọn'}
-          </p>
+          <p className="ant-upload-text">{image ? 'Kéo ảnh vào đây hoặc bấm để chọn' : 'Kéo file vào đây hoặc bấm để chọn'}</p>
           <p className="ant-upload-hint">Hỗ trợ tải nhiều file cùng lúc</p>
         </Upload.Dragger>
       </Form.Item>
@@ -119,9 +118,7 @@ const FormFileUpload = ({
         getValueProps={() => ({ value: '' })}
         rules={[{
           validator: (_, value) => {
-            if (!required || (Array.isArray(value) && value.length > 0)) {
-              return Promise.resolve()
-            }
+            if (!required || (Array.isArray(value) && value.length > 0)) return Promise.resolve()
             return Promise.reject(new Error('Vui lòng tải file'))
           },
         }]}
@@ -131,6 +128,20 @@ const FormFileUpload = ({
     </>
   )
 }
+
+const UPLOAD_FIELD_NAMES = ["test_image"]
+
+const TEST_STANDARD_OPTIONS = [
+  { label: 'ISO 105-C06', value: 'ISO_105_C06' },
+  { label: 'ISO 105-X12', value: 'ISO_105_X12' },
+  { label: 'ISO 105-E04', value: 'ISO_105_E04' },
+  { label: 'ISO 105-B02', value: 'ISO_105_B02' },
+  { label: 'AATCC 61', value: 'AATCC_61' },
+  { label: 'AATCC 8', value: 'AATCC_8' },
+  { label: 'AATCC 15', value: 'AATCC_15' },
+  { label: 'TCVN 7698', value: 'TCVN_7698' },
+  { label: 'TCVN 5793', value: 'TCVN_5793' },
+]
 
 const KetQuaThuDoBenMau = forwardRef(({
   initialValues,
@@ -157,22 +168,20 @@ const KetQuaThuDoBenMau = forwardRef(({
       throw error
     }
 
-    const files = Array.isArray(values.test_image)
-      ? values.test_image
-      : (values.test_image ? [values.test_image] : [])
+    const files = UPLOAD_FIELD_NAMES.flatMap((fieldName) => {
+      const value = values[fieldName]
+      return Array.isArray(value) ? value : (value ? [value] : [])
+    })
+    const submitValues = files.length > 0 ? { ...values, files } : values
 
-    await onSubmit?.({
-      ...values,
-      test_image: files,
-      files,
-    }, {
+    await onSubmit?.(submitValues, {
       order: contextData,
       record: contextData,
       data: contextData,
       step,
       formTemplate,
     })
-    return values
+    return submitValues
   }, [contextData, form, formTemplate, onSubmit, onSubmitError, step])
 
   useImperativeHandle(ref, () => ({
@@ -203,14 +212,39 @@ const KetQuaThuDoBenMau = forwardRef(({
     <Form form={form} layout="vertical">
       <Row gutter={[16, 0]}>
         <Col span={24}>
+          {/* source: user; action: edited */}
           <FormRadioGroup
             name="result_grade"
             label="Cấp độ bền màu (1–5)"
             required
-            options={RESULT_GRADE_OPTIONS}
+            options={[
+                {
+                  "value": "excellent",
+                  "label": "5 - Xuất sắc"
+                },
+                {
+                  "value": "good",
+                  "label": "4 - Tốt"
+                },
+                {
+                  "value": "rather",
+                  "label": "3 - Khá"
+                },
+                {
+                  "value": "least",
+                  "label": "2 - Kém"
+                },
+                {
+                  "value": "verypoor",
+                  "label": "1 - Rất kém"
+                }
+              ]}
+            valueProp="value"
+            titleProp="label"
           />
         </Col>
         <Col span={24}>
+          {/* source: user; action: edited */}
           <FormInputNumber
             name="weight_gsm"
             label="Định lượng (g/m²)"
@@ -220,23 +254,28 @@ const KetQuaThuDoBenMau = forwardRef(({
           />
         </Col>
         <Col span={24}>
+          {/* source: user; action: edited */}
           <FormSelect
             name="test_standard"
             label="Tiêu chuẩn áp dụng"
             required
+            resourceData={TEST_STANDARD_OPTIONS}
+            valueProp="value"
+            titleProp="label"
             style={{ width: '100%' }}
           />
         </Col>
         <Col span={24}>
+          {/* source: user; action: edited */}
           <FormFileUpload
             name="test_image"
             label="Ảnh mẫu sau thử"
-            accept="image/*"
             folder="test"
-            image
+            maxSizeMB={5}
           />
         </Col>
         <Col span={24}>
+          {/* source: user; action: edited */}
           <FormTextArea
             name="technician_note"
             label="Ghi chú KTV"
