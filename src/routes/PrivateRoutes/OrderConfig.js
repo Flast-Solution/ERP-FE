@@ -26,7 +26,7 @@ const OrderCancelPage = React.lazy(() => import('@/pages/order/Cancel'));
 const OrderPage = React.lazy(() => import('@/pages/order'));
 const OrderProductionPage = React.lazy(() => import('@/pages/order/OrderProduction'));
 const OrderProgressPage = React.lazy(() => import('@/pages/order/Progress'));
-const ManufacturingLot = React.lazy(() => import('@/pages/order/Shipment'));
+const ManufacturingLot = React.lazy(() => import('@/pages/order/ManufacturingLotCreate'));
 
 export const OrderConfig = {
     auth: authRoles.user,
