@@ -151,11 +151,12 @@ export const validateBeforeExport = (nodes, edges, stepTypes = []) => {
 
   // 5. Mỗi node phải có label và code
   nodes.forEach((n) => {
-    if (!n.data?.label?.trim()) {
-      errors.push(`Step "${n.id}" chưa có label`)
+    const stepName = n.data?.name ?? n.data?.label
+    if (!stepName?.trim()) {
+      errors.push(`Step "${n.id}" chưa có tên bước`)
     }
     if (!n.data?.code?.trim()) {
-      errors.push(`Step "${n.data?.label || n.id}" chưa có code`)
+      errors.push(`Step "${stepName || n.id}" chưa có code`)
     }
   })
 
@@ -166,7 +167,7 @@ export const validateBeforeExport = (nodes, edges, stepTypes = []) => {
     )
     const orphans = nodes.filter((n) => !connectedIds.has(n.id))
     if (orphans.length > 0) {
-      const labels = orphans.map((n) => `"${n.data?.label || n.id}"`)
+      const labels = orphans.map((n) => `"${n.data?.name || n.data?.label || n.id}"`)
       errors.push(`Step chưa kết nối: ${labels.join(', ')}`)
     }
   }
@@ -206,7 +207,7 @@ export const validateFlow = (nodes, edges, stepTypes = []) => {
   // Warning: action có config rỗng
   const allActions = [
     ...nodes.flatMap((n) =>
-      (n.data?.actions ?? []).map((a) => ({ owner: n.data?.label || n.id, action: a }))
+      (n.data?.actions ?? []).map((a) => ({ owner: n.data?.name || n.data?.label || n.id, action: a }))
     ),
     ...edges.flatMap((e) =>
       (e.data?.actions ?? []).map((a) => ({ owner: e.data?.label || e.id, action: a }))

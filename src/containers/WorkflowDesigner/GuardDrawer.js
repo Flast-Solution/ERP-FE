@@ -150,7 +150,7 @@ const fetchTemplateFieldOptions = async (forms = []) => {
 const buildStepOptions = (nodes = []) =>
   nodes.map((node) => ({
     value: node?.data?.code || node.id,
-    label: `${node?.data?.label || node.id}${node?.data?.code ? ` (${node.data.code})` : ''}`,
+    label: `${node?.data?.name || node?.data?.label || node.id}${node?.data?.code ? ` (${node.data.code})` : ''}`,
   }))
 
 const findNodeByRef = (nodes = [], ref) => {
@@ -206,7 +206,7 @@ const buildPredecessorStepOptions = (nodes = [], edges = [], sourceStepCode) => 
     .filter((node) => allowedIds.has(node.id))
     .map((node) => ({
       value: node?.data?.code || node.id,
-      label: `${node?.data?.label || node.id}${node?.data?.code ? ` (${node.data.code})` : ''}`,
+      label: `${node?.data?.name || node?.data?.label || node.id}${node?.data?.code ? ` (${node.data.code})` : ''}`,
     }))
 }
 

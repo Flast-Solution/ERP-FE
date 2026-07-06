@@ -30,7 +30,7 @@ import {
 import { RequestUtils } from '@flast-erp/core/utils'
 import { SUCCESS_CODE } from '@/configs'
 import { enrichWorkflowForms, flowToJson, jsonToFlow } from '@/utils/workflowSerializer'
-import { getNodeTopologyType, normalizeWorkflowStepType, validateFlow } from '@/utils/workflowValidators'
+import { normalizeWorkflowStepType, validateFlow } from '@/utils/workflowValidators'
 import { createUuidV7 } from '@/utils/uuid'
 
 const { Content } = Layout
@@ -149,43 +149,7 @@ const WorkflowDesignerEditor = ({ onBack, onReloadStepTypes }) => {
   }, [buildSavePayload, setProcess])
 
   const handleSubmitFlow = useCallback(() => {
-    const { payload } = buildSavePayload()
-    console.log('[WorkflowDesigner] save body before validation', payload)
-    console.log('[WorkflowDesigner] body step type check', {
-      steps: payload.steps.map((step) => ({
-        id: step.id,
-        code: step.stepCode,
-        label: step.label,
-        type: step.type,
-      })),
-      startSteps: payload.steps.filter((step) => String(step.type).toLowerCase() === 'start'),
-      endSteps: payload.steps.filter((step) => String(step.type).toLowerCase() === 'end'),
-    })
-    console.log('[WorkflowDesigner] nodes before validation', {
-      nodes: nodes.map((node) => ({
-        id: node.id,
-        persistedId: node.data?.persistedId,
-        code: node.data?.code,
-        stepCode: node.data?.stepCode,
-        label: node.data?.label,
-        name: node.data?.name,
-        type: node.data?.type,
-        topologyType: getNodeTopologyType(node, edges),
-        normalizedType: normalizeWorkflowStepType(node.data?.type, stepTypes, node),
-        dataKeys: Object.keys(node.data ?? {}),
-      })),
-      stepTypes: stepTypes.map((stepType) => ({
-        id: stepType.id,
-        key: stepType.key,
-        label: stepType.label,
-        normalizedType: normalizeWorkflowStepType(stepType.key ?? stepType.id, stepTypes),
-      })),
-      startNodes: nodes.filter((node) => getNodeTopologyType(node, edges) === 'start'),
-      endNodes: nodes.filter((node) => getNodeTopologyType(node, edges) === 'end'),
-    })
-
     const { valid, errors, warnings } = validateFlow(nodes, edges, stepTypes)
-    console.log('[WorkflowDesigner] validation result', { valid, errors, warnings })
 
     if (!valid) {
       errors.forEach((error) => message.warning(error))
@@ -210,7 +174,7 @@ const WorkflowDesignerEditor = ({ onBack, onReloadStepTypes }) => {
     }
 
     submitFlow()
-  }, [buildSavePayload, nodes, edges, stepTypes, submitFlow])
+  }, [nodes, edges, stepTypes, submitFlow])
 
   return (
     <DesignerLayout>
