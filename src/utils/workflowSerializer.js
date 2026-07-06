@@ -497,20 +497,29 @@ const serializeTransition = (edge, index, stepCodeByNodeId = new Map()) => {
   return transition
 }
 
-const serializeGuard = (guard, index) => ({
-  ...(guard.id != null && guard.id !== '' ? { id: guard.id } : {}),
-  guardType: guard.type ?? guard.guardType ?? 'field_value',
-  config: guard.config ?? {},
-  errorMessage: guard.errorMessage ?? guard.error_message ?? guard.config?.message ?? '',
-  sortOrder: guard.sortOrder ?? guard.sort_order ?? index + 1,
-  enabled: guard.enabled ?? true,
-})
+const serializeGuard = (guard, index) => {
+  const guardType = guard.type ?? guard.guardType ?? 'field_value'
+  const errorMessage = guard.errorMessage ?? guard.error_message ?? guard.config?.message ?? ''
+  const baseConfig = guard.config ?? {}
+  const config = guardType === 'field_value'
+    ? { ...baseConfig, message: errorMessage }
+    : baseConfig
+
+  return {
+    ...(guard.id != null && guard.id !== '' ? { id: guard.id } : {}),
+    guardType,
+    config,
+    errorMessage,
+    sortOrder: guard.sortOrder ?? guard.sort_order ?? index + 1,
+    enabled: guard.enabled ?? true,
+  }
+}
 
 const deserializeGuard = (guard) => ({
   id: guard.id ?? null,
   type: guard.type ?? guard.guardType ?? guard.guard_type ?? 'field_value',
   config: guard.config ?? {},
-  errorMessage: guard.errorMessage ?? guard.error_message ?? '',
+  errorMessage: guard.errorMessage ?? guard.error_message ?? guard.config?.message ?? '',
   sortOrder: guard.sortOrder ?? guard.sort_order ?? null,
   enabled: guard.enabled ?? true,
 })
