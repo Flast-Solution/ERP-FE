@@ -99,7 +99,7 @@ class RenderJsxBoundary extends ReactComponent {
   }
 }
 
-export function RenderJsx({ code }) {
+export function RenderJsx({ code, props }) {
   const { Component, error } = useMemo(() => {
     if (!code) return { Component: null, error: null }
     try {
@@ -120,7 +120,7 @@ export function RenderJsx({ code }) {
 
   return (
     <RenderJsxBoundary key={code}>
-      <Component />
+      <Component {...props} />
     </RenderJsxBoundary>
   )
 }

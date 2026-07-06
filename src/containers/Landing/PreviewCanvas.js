@@ -8,6 +8,7 @@ import {
 } from './PreviewCanvas.style'
 import { EditableHighlight } from './EditableHighlight'
 import { RenderJsx } from './RenderJsx'
+import { DownOutlined } from '@ant-design/icons'
 import { useEffect, useState } from 'react'
 
 const BoltIcon = () => (
@@ -29,6 +30,35 @@ const PLANS = [
   ['Scale', 'Liên hệ', 'Cho doanh nghiệp'],
 ]
 
+/* Dữ liệu menu truyền vào Headers({ serviceItems }) của file .tsx fetch về */
+const SERVICE_ITEMS = [
+  {
+    key: '1',
+    label: <a style={{ fontWeight: 600, textTransform: 'uppercase' }}>Văn Phòng trọn gói</a>,
+    expandIcon: <DownOutlined style={{ fontSize: 11, marginTop: 5 }} />,
+    children: [
+      { key: '1-1', label: <a href="/van-phong-tron-goi-mpro-duy-tan" style={{ fontWeight: 600 }}>MPRO DUY TÂN</a> },
+      { key: '1-2', label: <a href="/van-phong-tron-goi-mpro-nguyen-phong-sac" style={{ fontWeight: 600 }}>MPRO NGUYỄN PHONG SẮC</a> },
+      { key: '1-3', label: <a href="/van-phong-tron-goi-mpro-pham-hung" style={{ fontWeight: 600 }}>MPRO PHẠM HÙNG 8</a> },
+      { key: '1-4', label: <a href="/van-phong-tron-goi-mpro-pham-hung-23" style={{ fontWeight: 600 }}>MPRO PHẠM HÙNG 23</a> },
+      { key: '1-5', label: <a href="/van-phong-tron-goi-mpro-kico-le-van-luong" style={{ fontWeight: 600 }}>MPRO KICO LÊ VĂN LƯƠNG</a> },
+      {
+        key: '1-6',
+        label: (
+          <a href="/van-phong-tron-goi-mpro-eco-nguyen-hoang-ton" style={{ fontWeight: 600 }}>
+            MPRO <span style={{ color: 'red' }}>ECO</span> Nguyễn Hoàng Tôn
+          </a>
+        ),
+      },
+    ],
+  },
+  { key: '2', label: <a href="/van-phong-ao" style={{ fontWeight: 600, textTransform: 'uppercase' }}>Văn Phòng Ảo</a> },
+  { key: '3', label: <a href="/cho-ngoi-lam-viec" style={{ fontWeight: 600, textTransform: 'uppercase' }}>Chỗ Ngồi Làm Việc</a> },
+  { key: '4', label: <a href="/cho-thue-phong-hop" style={{ fontWeight: 600, textTransform: 'uppercase' }}>Phòng Họp – đào tạo</a> },
+  { key: '5', label: <a href="/su-kien" style={{ fontWeight: 600, textTransform: 'uppercase' }}>Địa điểm tổ chức sự kiện</a> },
+  { key: '6', label: <a href="/dich-vu-he-sinh-thai-mpro-office" style={{ fontWeight: 600, textTransform: 'uppercase' }}>DỊCH VỤ HỆ SINH THÁI</a> },
+]
+
 export function PreviewCanvas() {
   const selected = useEditorStore((s) => s.selected)
   const edits = useEditorStore((s) => s.edits)
@@ -39,7 +69,7 @@ export function PreviewCanvas() {
 
   useEffect(() => {
     const fetchJsx = async () => {
-      const jsx = await viewjsx('test/3c1923d2-ab32-48de-aed9-fb6ea8067eba.tsx')
+      const jsx = await viewjsx('test/dcd5de0b-02f4-49ce-bd6f-139a4c423711.tsx')
       setJsxPreview(jsx)
     }
     fetchJsx()
@@ -108,7 +138,7 @@ export function PreviewCanvas() {
         </Pricing>
       </EditableHighlight>
 
-      {jsxPreview && <RenderJsx code={jsxPreview} />}
+      {jsxPreview && <RenderJsx code={jsxPreview} props={{ serviceItems: SERVICE_ITEMS }} />}
 
       <Footer>© 2026 Nimbus · Được tạo với Patch</Footer>
     </Page>
