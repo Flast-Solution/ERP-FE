@@ -94,7 +94,7 @@ const StepNode = ({ id, data, selected }) => {
           </Tooltip>
         )}
 
-        <NodeLabel>{data.label || 'Untitled'}</NodeLabel>
+        <NodeLabel>{data.name || data.label || 'Untitled'}</NodeLabel>
 
         <Tooltip title={hasOutgoingEdge ? 'Không thể xoá bước đã có đầu ra' : 'Xoá bước'}>
           <NodeDeleteButton

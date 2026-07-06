@@ -111,7 +111,7 @@ const normalizeActionType = (type) =>
 const buildStepOptions = (nodes = []) =>
   nodes.map((node) => ({
     value: node?.data?.code || node.id,
-    label: `${node?.data?.label || node.id}${node?.data?.code ? ` (${node.data.code})` : ''}`,
+    label: `${node?.data?.name || node?.data?.label || node.id}${node?.data?.code ? ` (${node.data.code})` : ''}`,
   }))
 
 const getNodeFormsByStep = (nodes = [], stepCode) => {

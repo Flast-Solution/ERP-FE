@@ -71,7 +71,7 @@ const ExistingStepItem = ({ node, stepTypes, isActive, onClick }) => {
   return (
     <StepRow $active={isActive} onClick={onClick}>
       <StepRowDot $color={color} />
-      <StepRowLabel>{node.data?.label || 'Untitled'}</StepRowLabel>
+      <StepRowLabel>{node.data?.name || node.data?.label || 'Untitled'}</StepRowLabel>
       <StepRowCode>{node.data?.code}</StepRowCode>
     </StepRow>
   )

@@ -19,6 +19,32 @@ const normalizeRolesToArray = (roles) => {
   return []
 }
 
+const firstArray = (...values) => values.find(Array.isArray) ?? []
+
+const getStepActions = (step = {}) => firstArray(
+  step.actions,
+  step.stepActions,
+  step.step_actions,
+  step.onEnterActions,
+  step.on_enter_actions,
+  step.onExitActions,
+  step.on_exit_actions,
+)
+
+const getTransitionGuards = (transition = {}) => firstArray(
+  transition.guards,
+  transition.transitionGuards,
+  transition.transition_guards,
+  transition.guardList,
+  transition.guard_list,
+)
+
+const getTransitionActions = (transition = {}) => firstArray(
+  transition.actions,
+  transition.transitionActions,
+  transition.transition_actions,
+)
+
 const serializeAllowedRoles = (roles) => {
   if (Array.isArray(roles)) return roles.filter(Boolean).join(',')
   return roles ?? ''
@@ -68,10 +94,14 @@ export const jsonToFlow = (raw) => {
 
   const nodes = (raw.steps ?? []).map((step) => {
     const stepCode = step.code ?? step.stepCode ?? step.step_code ?? ''
-    const label = step.name ?? step.displayName ?? step.display_name ?? step.stepName ?? step.step_name ?? stepCode
-    const typeValue = step.label && step.label !== label
-      ? step.label
-      : (step.type ?? 'process')
+    const name = step.name ?? step.displayName ?? step.display_name ?? step.stepName ?? step.step_name ?? stepCode
+    const typeValue = step.label
+      ?? step.processTypeCode
+      ?? step.process_type_code
+      ?? step.groupCode
+      ?? step.group_code
+      ?? step.type
+      ?? 'process'
     const nodeId = getStepNodeId(step)
 
     return {
@@ -84,14 +114,15 @@ export const jsonToFlow = (raw) => {
         persistedId: step.id ?? null,
         processId: step.processId ?? step.process_id ?? null,
         code: stepCode,
-        name: step.name ?? label,
-        label,
-        type: normalizeStepType(typeValue),
+        name,
+        label: name,
+        type: typeValue != null && typeValue !== '' ? String(typeValue) : normalizeStepType(step.type ?? 'process'),
+        typeLabel: step.typeLabel ?? step.type_label ?? step.groupName ?? step.group_name ?? '',
         description: step.description ?? '',
         sortOrder: step.sortOrder ?? step.sort_order ?? null,
         enabled: step.enabled ?? true,
         forms: normalizeStepForms(step),
-        actions: (step.actions ?? []).map(deserializeAction),
+        actions: getStepActions(step).map(deserializeAction),
       },
     }
   })
@@ -115,8 +146,8 @@ export const jsonToFlow = (raw) => {
         autoEvaluate: t.autoEvaluate ?? t.auto_evaluate ?? false,
         priority: t.priority ?? 0,
         enabled: t.enabled ?? true,
-        guards: (t.guards ?? []).map(deserializeGuard),
-        actions: (t.actions ?? []).map(deserializeAction),
+        guards: getTransitionGuards(t).map(deserializeGuard),
+        actions: getTransitionActions(t).map(deserializeAction),
       },
     }
   }).filter(edge => edge.source && edge.target)
@@ -424,10 +455,11 @@ const serializeStep = (node, index, stepTypes = [], edges = []) => {
   const persistedId = node.data?.persistedId ?? node.data?.id
   const topologyType = getNodeTopologyType(node, edges)
   const stepTypeValue = node.data?.type ?? topologyType ?? 'process'
+  const name = node.data?.name ?? node.data?.label ?? node.data?.code ?? node.id
   const step = {
     ...(persistedId != null && persistedId !== '' ? { id: persistedId } : {}),
     stepCode: node.data?.code ?? node.id,
-    name: node.data?.name ?? node.data?.label ?? node.data?.code ?? node.id,
+    name,
     label: stepTypeValue,
     type: toApiStepType(topologyType ?? node.data?.type, stepTypes, node),
     description: node.data?.description ?? '',
@@ -466,6 +498,7 @@ const serializeTransition = (edge, index, stepCodeByNodeId = new Map()) => {
 }
 
 const serializeGuard = (guard, index) => ({
+  ...(guard.id != null && guard.id !== '' ? { id: guard.id } : {}),
   guardType: guard.type ?? guard.guardType ?? 'field_value',
   config: guard.config ?? {},
   errorMessage: guard.errorMessage ?? guard.error_message ?? guard.config?.message ?? '',
@@ -474,6 +507,7 @@ const serializeGuard = (guard, index) => ({
 })
 
 const deserializeGuard = (guard) => ({
+  id: guard.id ?? null,
   type: guard.type ?? guard.guardType ?? guard.guard_type ?? 'field_value',
   config: guard.config ?? {},
   errorMessage: guard.errorMessage ?? guard.error_message ?? '',
@@ -514,6 +548,7 @@ const serializeAction = (action, index) => {
   const enabled = action.enabled ?? true
 
   return {
+    ...(action.id != null && action.id !== '' ? { id: action.id } : {}),
     trigger,
     actionType,
     config,
@@ -524,6 +559,7 @@ const serializeAction = (action, index) => {
 }
 
 const deserializeAction = (action) => ({
+  id: action.id ?? null,
   type: fromApiActionType(action.type ?? action.actionType ?? action.action_type ?? 'notification'),
   trigger: normalizeTrigger(action.trigger),
   config: action.config ?? {},
