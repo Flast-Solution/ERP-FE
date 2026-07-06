@@ -1717,12 +1717,10 @@ const OrderProgressPage = () => {
             <Col xs={24} lg={8}>
               <div
                 style={{
-                  position: 'fixed',
+                  position: 'sticky',
                   top: 96,
-                  width: '25%',
                   maxHeight: 'calc(100vh - 120px)',
                   overflowY: 'auto',
-                  paddingRight: 4,
                 }}
               >
                 <WorkflowProgressPanel
