@@ -86,41 +86,60 @@ const StepForm = ({ node }) => {
   /* actions giữ local state như guards trong TransitionForm */
   const [actions, setActions] = useState(node.data.actions ?? [])
   const [activeAction, setActiveAction] = useState(null)
+  const stepName = node.data.name ?? node.data.label ?? ''
 
   useEffect(() => {
     const nextActions = node.data.actions ?? []
     setActions(nextActions)
     setActiveAction(null)
     form.setFieldsValue({
-      label: node.data.label,
+      name: node.data.name ?? node.data.label,
       code: node.data.code,
       type: node.data.type,
     })
     /* eslint-disable-next-line */
   }, [node.id])
 
-  /* Sync field thường (label, code, type) → store */
+  /* Sync field thường (name, code, type) → store */
   const handleValuesChange = (_, allValues) => {
-    updateNodeData(node.id, { ...allValues, actions })
+    updateNodeData(node.id, {
+      ...allValues,
+      label: allValues.name,
+      actions,
+    })
   }
 
-  const handleLabelChange = (e) => {
+  const handleNameChange = (e) => {
     const currentCode = form.getFieldValue('code')
-    if (currentCode === slugifyCode(node.data.label)) {
+    if (currentCode === slugifyCode(stepName)) {
       const newCode = slugifyCode(e.target.value)
       form.setFieldValue('code', newCode)
-      updateNodeData(node.id, { ...form.getFieldsValue(), code: newCode, actions })
+      updateNodeData(node.id, {
+        ...form.getFieldsValue(),
+        name: e.target.value,
+        label: e.target.value,
+        code: newCode,
+        actions,
+      })
     }
   }
 
   const handleTypeSelect = (key) => {
+    const stepType = stepTypes.find((item) => String(item.key) === String(key))
     form.setFieldValue('type', key)
-    updateNodeData(node.id, { ...form.getFieldsValue(), type: key, actions })
+    updateNodeData(node.id, {
+      ...form.getFieldsValue(),
+      label: form.getFieldValue('name'),
+      type: key,
+      typeLabel: stepType?.label,
+      actions,
+    })
   }
 
   const syncActions = (nextActions) => {
     setActions(nextActions)
-    updateNodeData(node.id, { ...form.getFieldsValue(), actions: nextActions })
+    const values = form.getFieldsValue()
+    updateNodeData(node.id, { ...values, label: values.name, actions: nextActions })
   }
 
   const handleAddAction = (trigger) => {
@@ -166,16 +185,12 @@ const StepForm = ({ node }) => {
       data: {
         attachedForms,
         stepCode: node.data?.code,
-        stepLabel: node.data?.label,
+        stepLabel: node.data?.name ?? node.data?.label,
         onSave: (selectedForms) => {
-          console.log('[WorkflowDesigner][StepForm] attach forms to step', {
-            stepId: node.id,
-            stepCode: node.data?.code,
-            stepLabel: node.data?.label,
-            forms: selectedForms,
-          })
+          const values = form.getFieldsValue()
           updateNodeData(node.id, {
-            ...form.getFieldsValue(),
+            ...values,
+            label: values.name,
             actions,
             forms: selectedForms,
           })
@@ -202,11 +217,11 @@ const StepForm = ({ node }) => {
                 <SectionTitle style={{ marginBottom: 12 }}>Bước</SectionTitle>
 
                 <FormInput
-                  name="label"
-                  label="Tên hiển thị"
+                  name="name"
+                  label="Tên bước"
                   placeholder="vd: Độ bền màu"
                   required
-                  onChange={handleLabelChange}
+                  onChange={handleNameChange}
                 />
 
                 <FormInput
@@ -224,7 +239,7 @@ const StepForm = ({ node }) => {
                 </FieldHint>
 
                 {/* Loại bước — pill radio */}
-                <Form.Item name="type" label="Loại bước" style={{ marginBottom: 0 }}>
+                <Form.Item name="type" label="Nhóm bước" style={{ marginBottom: 0 }}>
                   <TypePillGroup>
                     {stepTypes.map((t) => (
                       <TypePillBtn
@@ -312,7 +327,8 @@ const StepForm = ({ node }) => {
                           icon={<DeleteOutlined />}
                           onClick={() => {
                             const next = (node.data.forms ?? []).filter((_, j) => j !== i)
-                            updateNodeData(node.id, { ...form.getFieldsValue(), actions, forms: next })
+                            const values = form.getFieldsValue()
+                            updateNodeData(node.id, { ...values, label: values.name, actions, forms: next })
                           }}
                         />
                       </div>

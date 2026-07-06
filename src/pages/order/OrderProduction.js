@@ -20,7 +20,7 @@ const OrderProduction = () => {
 
     const extraActions = [
         {
-            children: 'Đánh giá',
+            children: 'Tạo lô hàng',
             type: 'default',
             style: { color: '#52c41a', borderColor: '#52c41a' },
             onClick: (record) => {

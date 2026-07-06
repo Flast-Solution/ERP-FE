@@ -7,7 +7,8 @@
  */
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
-import { Button, Row, Col, Form, message } from 'antd'
+import axios from 'axios'
+import { Button, Row, Col, Form, Upload, message } from 'antd'
 import {
   PlayCircleOutlined,
   FileTextOutlined,
@@ -218,6 +219,30 @@ const getBuildComponentId = (data = {}, fallback = '') => (
   fallback
 )
 
+const isGeneratedWorkflowFormCode = (code = '') => (
+  /forwardRef\(\(\{[\s\S]*submitSignal[\s\S]*useImperativeHandle/.test(code)
+  || /const FormFileUpload =/.test(code)
+)
+
+const shouldPreferGeneratedCode = ({ initialCode = '', generatedCode = '' }) => {
+  if (!initialCode?.trim()) return true
+  if (!isGeneratedWorkflowFormCode(initialCode)) return false
+
+  const generatedHasNewUploadHelper = generatedCode.includes('resolveUploadFilename')
+    && generatedCode.includes('thumbUrl')
+    && generatedCode.includes('onPreview')
+    && generatedCode.includes('accept={accept || undefined}')
+
+  if (!generatedHasNewUploadHelper) return false
+
+  const initialHasNewUploadHelper = initialCode.includes('resolveUploadFilename')
+    && initialCode.includes('thumbUrl')
+    && initialCode.includes('onPreview')
+    && initialCode.includes('accept={accept || undefined}')
+
+  return !initialHasNewUploadHelper
+}
+
 const buildMicroFrontend = async ({ sessionId, componentId, entryFilename, jsxCode }) => {
   const response = await fetch('https://ai.flast.vn/build', {
     method : 'POST',
@@ -266,6 +291,156 @@ const createSelectApiOnData = (dataLabel, dataValue) => {
     label: getValueByDataExpression(data, dataLabel),
     value: getValueByDataExpression(data, dataValue),
   }))
+}
+
+const extractUploadItems = (response) => {
+  const payload = response?.data ?? response
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.data)) return payload.data
+  if (Array.isArray(payload?.files)) return payload.files
+  if (Array.isArray(payload?.urls)) return payload.urls
+  if (Array.isArray(payload?.fileNames)) return payload.fileNames
+  if (Array.isArray(payload?.filenames)) return payload.filenames
+  if (Array.isArray(payload?.paths)) return payload.paths
+  return payload ? [payload] : []
+}
+
+const isAbsoluteUploadUrl = (value = '') => /^https?:\/\//i.test(String(value)) || String(value).startsWith('/api/')
+
+const resolveUploadUrl = (item) => {
+  const filename = resolveUploadFilename(item)
+  if (!filename) return ''
+  if (isAbsoluteUploadUrl(filename)) return filename
+  const baseUrl = String(axios.defaults.baseURL || '/api').replace(/\/$/, '')
+  return `${baseUrl}/upload/folder/view?filename=${encodeURIComponent(filename)}`
+}
+
+const resolveUploadFilename = (item) => {
+  if (typeof item === 'string') return item
+  return item?.filename
+    ?? item?.file_name
+    ?? item?.fileName
+    ?? item?.file_name_path
+    ?? item?.path
+    ?? item?.fullPath
+    ?? item?.full_path
+    ?? item?.url
+    ?? item?.fileUrl
+    ?? item?.file_url
+    ?? ''
+}
+
+const toUploadFile = (item, index) => {
+  if (item?.uid) return item
+  const filename = resolveUploadFilename(item)
+  const url = resolveUploadUrl(item)
+  const name = item?.name
+    ?? filename?.split('/').pop()
+    ?? `file-${index + 1}`
+
+  return {
+    uid: item?.id ?? filename ?? url ?? `upload-${index}`,
+    name,
+    status: 'done',
+    url,
+    thumbUrl: url,
+    response: item,
+  }
+}
+
+const fileListToValues = (event) => {
+  const fileList = Array.isArray(event) ? event : (event?.fileList ?? [])
+  return fileList
+    .filter(file => file.status === 'done')
+    .flatMap(file => extractUploadItems(file.response ?? resolveUploadUrl(file)))
+}
+
+const FormFileUpload = ({
+  name,
+  label,
+  required,
+  accept,
+  folder = 'test',
+  image = false,
+  maxSizeMB,
+}) => {
+  const form = Form.useFormInstance()
+  const formValue = Form.useWatch(name, form)
+  const [fileList, setFileList] = useState([])
+
+  useEffect(() => {
+    setFileList(current => {
+      if (current.some(file => file.status === 'uploading')) {
+        return current
+      }
+      return (Array.isArray(formValue) ? formValue : (formValue ? [formValue] : [])).map(toUploadFile)
+    })
+  }, [formValue])
+
+  return (
+    <>
+      <Form.Item label={label} required={required}>
+        <Upload.Dragger
+          multiple
+          accept={accept || undefined}
+          fileList={fileList}
+          listType={image ? 'picture' : 'text'}
+          beforeUpload={(file) => {
+            if (maxSizeMB && file.size / 1024 / 1024 > maxSizeMB) {
+              message.error(`${file.name} vượt quá ${maxSizeMB}MB`)
+              return Upload.LIST_IGNORE
+            }
+            return true
+          }}
+          onChange={({ fileList: nextFileList }) => {
+            setFileList(nextFileList)
+            form.setFieldValue(name, fileListToValues(nextFileList))
+          }}
+          onPreview={(file) => {
+            const url = file.url ?? file.thumbUrl ?? resolveUploadUrl(file.response)
+            if (url) {
+              window.open(url, '_blank', 'noopener,noreferrer')
+            }
+          }}
+          customRequest={async ({ file, onSuccess, onError }) => {
+            try {
+              const formData = new FormData()
+              formData.append('files', file)
+              formData.append('folder', folder)
+              const response = await axios.post('/upload/folder/multiple', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+              })
+              const uploaded = extractUploadItems(response.data)
+              onSuccess(uploaded.length === 1 ? uploaded[0] : uploaded)
+            } catch (error) {
+              message.error('Upload thất bại')
+              onError(error)
+            }
+          }}
+        >
+          <p className="ant-upload-text">
+            {image ? 'Kéo ảnh vào đây hoặc bấm để chọn' : 'Kéo file vào đây hoặc bấm để chọn'}
+          </p>
+          <p className="ant-upload-hint">Hỗ trợ tải nhiều file cùng lúc</p>
+        </Upload.Dragger>
+      </Form.Item>
+      <Form.Item
+        name={name}
+        hidden
+        getValueProps={() => ({ value: '' })}
+        rules={[{
+          validator: (_, value) => {
+            if (!required || (Array.isArray(value) && value.length > 0)) {
+              return Promise.resolve()
+            }
+            return Promise.reject(new Error('Vui lòng tải file'))
+          },
+        }]}
+      >
+        <input type="hidden" />
+      </Form.Item>
+    </>
+  )
 }
 
 
@@ -442,13 +617,27 @@ const FieldPreview = ({ field }) => {
       )
 
     case 'file':
-    case 'image':
       return (
-        <FormInput
+        <FormFileUpload
           name={fieldKey}
           label={label}
           required={required}
-          placeholder={placeholder || `Kéo ${inputType === 'image' ? 'ảnh' : 'file'} vào đây...`}
+          accept={/^image\/\*$/i.test(String(config.accept ?? '').trim()) ? undefined : (config.accept ?? undefined)}
+          folder={config.folder ?? 'test'}
+          maxSizeMB={config.maxSize}
+        />
+      )
+
+    case 'image':
+      return (
+        <FormFileUpload
+          name={fieldKey}
+          label={label}
+          required={required}
+          accept={config.accept ?? 'image/*'}
+          folder={config.folder ?? 'test'}
+          image
+          maxSizeMB={config.maxSize}
         />
       )
 
@@ -642,16 +831,6 @@ const JSXCodeTab = ({
     const buildJsxCode = prepareJsxForRemoteBuild(jsxCode)
     const entryFilename = `${toComponentName(schema?.meta?.name)}.jsx`
 
-    const payload = {
-      session_id: sessionId,
-      component_id: previewComponentId,
-      files: {
-        [entryFilename]: buildJsxCode,
-      },
-      entry_filename: entryFilename,
-    }
-
-    console.log('[PreviewModal] build preview payload', payload)
     buildingComponentIdRef.current = previewComponentId
 
     if (!sessionId) {
@@ -876,7 +1055,7 @@ const PreviewModal = ({
         return
       }
 
-      await onSave?.({
+      const savePayload = {
         schema: effectiveSchema,
         jsxCode,
         syncError: '',
@@ -886,7 +1065,8 @@ const PreviewModal = ({
           url: buildResult.previewUrl,
           entryFilename,
         },
-      })
+      }
+      await onSave?.(savePayload)
     } catch (error) {
       if (!error?.formSaveHandled) {
         message.error(error.message)
@@ -903,7 +1083,13 @@ const PreviewModal = ({
     }
 
     const prevGeneratedCode = prevGeneratedCodeRef.current
-    const hasCustomCode = Boolean(initialJsxCode) && initialJsxCode !== prevGeneratedCode
+    const shouldUpgradeGeneratedCode = shouldPreferGeneratedCode({
+      initialCode: initialJsxCode,
+      generatedCode,
+    })
+    const hasCustomCode = Boolean(initialJsxCode)
+      && initialJsxCode !== prevGeneratedCode
+      && !shouldUpgradeGeneratedCode
     const nextSchemaKey = JSON.stringify(schema ?? {})
 
     if (!isDirty) {

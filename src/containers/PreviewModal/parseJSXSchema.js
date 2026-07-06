@@ -13,6 +13,7 @@ const COMPONENT_TO_INPUT = {
   FormJoditEditor: 'richtext',
   FormSelectAPI: 'select_api',
   FormAutoComplete: 'autocomplete',
+  FormFileUpload: 'file',
 }
 
 const readBalanced = (input, startIndex, openChar, closeChar) => {
@@ -354,6 +355,15 @@ const mapComponentToField = (componentName, props, span, constants = new Map()) 
 
   if (componentName === 'FormHidden') {
     inputType = 'hidden'
+  }
+
+  if (componentName === 'FormFileUpload') {
+    inputType = props.image ? 'image' : 'file'
+    config.accept = propToString(props.accept)
+    config.folder = propToString(props.folder)
+    if (props.maxSizeMB?.value != null) {
+      config.maxSize = Number(props.maxSizeMB.value)
+    }
   }
 
   if (componentName === 'FormInput') {

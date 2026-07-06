@@ -1,6 +1,6 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { Alert, Breadcrumb, Button, Card, Col, Descriptions, Empty, message, Row, Select, Space, Spin, Tag, Timeline, Typography } from 'antd'
-import { ArrowLeftOutlined, CheckCircleOutlined, ClockCircleOutlined, FormOutlined, SaveOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, CheckCircleOutlined, ClockCircleOutlined, FormOutlined } from '@ant-design/icons'
 import { Helmet } from 'react-helmet'
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
@@ -16,6 +16,7 @@ const WORKFLOW_SUBMISSION_API = '/workflow/process/submission'
 const WORKFLOW_TRANSITION_API = '/workflow/process/transition'
 const WORKFLOW_INSTANCE_BY_ENTITY_API = '/workflow/process/instance/get-entity'
 const WORKFLOW_PREVIEW_API = '/workflow/process/preview'
+const WORKFLOW_PROCESS_FIND_API = '/workflow/process/find-id'
 const PROCESS_TYPE_FIND_API = '/workflow/process/process-type-find'
 
 const resolveApiPayload = (response) => response?.data ?? response
@@ -36,6 +37,17 @@ const resolveWorkflowPreview = (response) => {
   const payload = resolveApiPayload(response)
   if (payload?.data && typeof payload.data === 'object' && !Array.isArray(payload.data)) {
     return payload.data
+  }
+  return payload
+}
+
+const resolveWorkflowProcessDetail = (response) => {
+  const payload = resolveApiPayload(response)
+  if (payload?.data && typeof payload.data === 'object' && !Array.isArray(payload.data)) {
+    return payload.data
+  }
+  if (payload?.process && typeof payload.process === 'object' && !Array.isArray(payload.process)) {
+    return payload.process
   }
   return payload
 }
@@ -83,6 +95,13 @@ const toNumberOrNull = (value) => {
 }
 
 const normalizeRemoteContainerName = (value = '') => value.replace(/[^A-Za-z0-9_$]/g, '_')
+
+const buildRemoteAlias = (...parts) => normalizeRemoteContainerName(
+  parts
+    .map(part => String(part ?? '').trim())
+    .filter(Boolean)
+    .join('__')
+)
 
 const normalizeProcessType = (item, index) => {
   const id = item?.id ?? item?.key ?? `process_type_${index + 1}`
@@ -496,7 +515,7 @@ const buildWorkflowTransitionPayload = ({
   }
 }
 
-const getRemoteConfigFromEntry = (remoteEntry, remoteComponentId) => {
+const getRemoteConfigFromEntry = (remoteEntry, remoteComponentId, remoteVersionKey) => {
   if (!remoteEntry) {
     return null
   }
@@ -511,8 +530,12 @@ const getRemoteConfigFromEntry = (remoteEntry, remoteComponentId) => {
       return null
     }
 
+    const entryGlobalName = normalizeRemoteContainerName(remoteComponentId || remoteEntryComponentId)
+    const componentId = buildRemoteAlias(entryGlobalName, remoteVersionKey)
+
     return {
-      componentId: normalizeRemoteContainerName(remoteComponentId || remoteEntryComponentId),
+      componentId,
+      entryGlobalName,
       remoteBaseUrl: url.origin,
       remoteEntryComponentId,
     }
@@ -521,13 +544,13 @@ const getRemoteConfigFromEntry = (remoteEntry, remoteComponentId) => {
   }
 }
 
-const useRemoteForm = (remoteEntry, remoteComponentId) => {
+const useRemoteForm = (remoteEntry, remoteComponentId, remoteVersionKey) => {
   const [ Component, setComponent ] = useState(null)
   const [ loading, setLoading ] = useState(false)
   const [ error, setError ] = useState('')
 
   useEffect(() => {
-    const remoteConfig = getRemoteConfigFromEntry(remoteEntry, remoteComponentId)
+    const remoteConfig = getRemoteConfigFromEntry(remoteEntry, remoteComponentId, remoteVersionKey)
     let mounted = true
 
     setComponent(null)
@@ -544,7 +567,9 @@ const useRemoteForm = (remoteEntry, remoteComponentId) => {
       remoteConfig.componentId,
       'MPage',
       remoteConfig.remoteBaseUrl,
-      remoteConfig.remoteEntryComponentId
+      remoteConfig.remoteEntryComponentId,
+      remoteConfig.entryGlobalName,
+      remoteVersionKey
     )
       .then(mod => {
         if (mounted) {
@@ -565,7 +590,7 @@ const useRemoteForm = (remoteEntry, remoteComponentId) => {
     return () => {
       mounted = false
     }
-  }, [remoteEntry, remoteComponentId])
+  }, [remoteEntry, remoteComponentId, remoteVersionKey])
 
   return { Component, loading, error }
 }
@@ -577,6 +602,29 @@ const RemoteFormErrorFallback = ({ message }) => (
     message={message}
   />
 )
+
+const hideDuplicatedRemoteFormTitle = (container, title) => {
+  const normalizedTitle = String(title ?? '').replace(/\s+/g, ' ').trim().toLowerCase()
+  if (!container || !normalizedTitle) return
+
+  const candidates = Array.from(container.querySelectorAll('h1,h2,h3,h4,h5,h6,p,div,span,label'))
+  const duplicateTitleElement = candidates.find((element) => {
+    if (element.closest('.ant-card-head')) return false
+    if (element.closest('.ant-form-item-control')) return false
+    if (element.closest('.ant-radio-wrapper')) return false
+    if (element.querySelector('input,textarea,select,button,.ant-radio,.ant-checkbox,.ant-form-item-control')) return false
+
+    const text = String(element.textContent ?? '').replace(/\s+/g, ' ').trim().toLowerCase()
+    if (!text) return false
+
+    return text === normalizedTitle || text.includes(normalizedTitle) || normalizedTitle.includes(text)
+  })
+
+  if (duplicateTitleElement) {
+    duplicateTitleElement.dataset.progressHiddenTitle = 'true'
+    duplicateTitleElement.style.display = 'none'
+  }
+}
 
 const RemoteFormHost = forwardRef(({ Component, ...props }, ref) => {
   const [submitSignal, setSubmitSignal] = useState(null)
@@ -612,7 +660,7 @@ class RemoteFormBoundary extends React.Component {
   }
 
   componentDidUpdate(prevProps) {
-    if (prevProps.remoteEntry !== this.props.remoteEntry && this.state.hasError) {
+    if (prevProps.remoteKey !== this.props.remoteKey && this.state.hasError) {
       this.setState({ hasError: false })
     }
   }
@@ -914,10 +962,19 @@ const WorkflowProgressPanel = ({
           Quy trình
         </div>
         <Title level={3} style={{ margin: 0, fontSize: 18, lineHeight: '24px' }}>
-          {getValue(workflow?.name, order?.workflowProcessName, order?.processName, order?.workflowName, 'Chưa gắn workflow')}
+          {getValue(
+            workflow?.name,
+            workflow?.processName,
+            workflow?.process_name,
+            workflow?.title,
+            order?.workflowProcessName,
+            order?.processName,
+            order?.workflowName,
+            workflow?.id ? `Quy trình #${workflow.id}` : 'Chưa gắn workflow',
+          )}
         </Title>
         <Text style={{ display: 'block', marginTop: 4, color: '#4b5563', fontSize: 13 }}>
-          {getValue(workflow?.processKey, workflow?.code, order?.workflowProcessKey, '')}
+          {getValue(workflow?.processKey, workflow?.process_key, workflow?.code, order?.workflowProcessKey, '')}
           {steps.length ? ` · ${steps.length} bước` : ''}
         </Text>
       </div>
@@ -1016,6 +1073,7 @@ const OrderProgressPage = () => {
   const [order, setOrder] = useState(location.state?.order ?? null)
   const [workflowInstance, setWorkflowInstance] = useState(location.state?.workflowInstance ?? null)
   const [workflowPreview, setWorkflowPreview] = useState(null)
+  const [workflowProcessDetail, setWorkflowProcessDetail] = useState(null)
   const [processTypes, setProcessTypes] = useState([])
   const [loadingOrder, setLoadingOrder] = useState(false)
   const [loadingPreview, setLoadingPreview] = useState(false)
@@ -1143,15 +1201,59 @@ const OrderProgressPage = () => {
     fetchWorkflowPreview()
   }, [fetchWorkflowPreview])
 
+  const previewStepProcess = workflowPreview?.stepProcesses
+  const workflowProcessId = getValue(
+    workflowPreview?.process?.id,
+    workflowPreview?.processId,
+    workflowPreview?.process_id,
+    workflowPreview?.processInstance?.processId,
+    workflowPreview?.processInstance?.process_id,
+    previewStepProcess?.processId,
+    previewStepProcess?.process_id,
+    workflowInstance?.processId,
+    workflowInstance?.process_id,
+    order?.workflowProcessId,
+    order?.workflow_process_id,
+    order?.processId,
+    order?.process_id,
+  )
+
+  useEffect(() => {
+    if (!workflowProcessId) {
+      setWorkflowProcessDetail(null)
+      return undefined
+    }
+
+    if (isSameStepRef(workflowProcessDetail?.id, workflowProcessId)) {
+      return undefined
+    }
+
+    let mounted = true
+
+    RequestUtils.Get(`${WORKFLOW_PROCESS_FIND_API}/${workflowProcessId}`, {})
+      .then((response) => {
+        if (!mounted) return
+        setWorkflowProcessDetail(resolveWorkflowProcessDetail(response))
+      })
+      .catch((error) => {
+        if (!mounted) return
+        setWorkflowProcessDetail({ id: workflowProcessId })
+        console.error('[OrderProgress] workflow process detail error', error)
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [workflowProcessId, workflowProcessDetail?.id])
+
   const workflow = useMemo(() => (
-    workflowPreview?.process
-    ?? workflowPreview
+    workflowProcessDetail
+    ?? workflowPreview?.process
     ?? order?.workflowProcess
     ?? order?.process
     ?? order?.workflow
-    ?? {}
-  ), [workflowPreview, order])
-  const previewStepProcess = workflowPreview?.stepProcesses
+    ?? (workflowProcessId ? { id: workflowProcessId } : {})
+  ), [workflowProcessDetail, workflowPreview, order, workflowProcessId])
   const processTypeLabelMap = useMemo(
     () => buildProcessTypeLabelMap(processTypes),
     [processTypes]
@@ -1229,6 +1331,15 @@ const OrderProgressPage = () => {
     formTemplates[0],
   )
   const sourceComponent = getValue(currentForm?.sourceComponent, currentForm?.source_component)
+  const currentFormName = getValue(
+    currentForm?.name,
+    currentForm?.label,
+    currentForm?.title,
+    currentForm?.templateName,
+    currentForm?.template_name,
+    currentForm?.description,
+  )
+  const remoteFormContainerRef = useRef(null)
   const remoteEntry = getValue(
     sourceComponent?.microFrontendUrl,
     sourceComponent?.micro_frontend_url,
@@ -1244,6 +1355,15 @@ const OrderProgressPage = () => {
     currentForm?.componentId,
     currentForm?.component_id,
   )
+  const remoteVersionKey = buildRemoteAlias(
+    resolveTemplateId(currentForm),
+    sourceComponent?.version,
+    sourceComponent?.updatedDate,
+    sourceComponent?.updated_date,
+    currentStep?.stepCode,
+    currentStep?.code,
+  )
+  const remoteRenderKey = buildRemoteAlias(remoteComponentId, remoteEntry, remoteVersionKey)
   const checkResults = getFirstArray(
     workflowPreview?.checkResults,
     workflowPreview?.inspectionResults,
@@ -1280,7 +1400,7 @@ const OrderProgressPage = () => {
   const submittedRefs = submissions.map((item) => getValue(item?.stepCode, item?.stepId, item?.step_id, item?.id))
   const hasCurrentSubmission = Boolean(currentSubmission)
 
-  const { Component: RemoteForm, loading: loadingRemote, error: remoteError } = useRemoteForm(remoteEntry, remoteComponentId)
+  const { Component: RemoteForm, loading: loadingRemote, error: remoteError } = useRemoteForm(remoteEntry, remoteComponentId, remoteVersionKey)
 
   const handleRemoteFormSubmit = useCallback(async (values) => {
     const payload = buildWorkflowSubmissionPayload({
@@ -1325,12 +1445,16 @@ const OrderProgressPage = () => {
       }
 
       message.success(response?.message || 'Đã lưu dữ liệu form.')
+      const preview = await fetchWorkflowPreview({ silent: true })
+      if (preview?.processInstance) {
+        setWorkflowInstance(preview.processInstance)
+      }
     } catch (error) {
       message.error(error?.message || 'Không lưu được dữ liệu form.')
     } finally {
       setSubmittingForm(false)
     }
-  }, [currentForm, currentStep, workflowPreview, workflowInstance, order, orderId, instanceId])
+  }, [currentForm, currentStep, workflowPreview, workflowInstance, order, orderId, instanceId, fetchWorkflowPreview])
 
   const handleAdvanceWorkflow = useCallback(async () => {
     if (stepTransitionOptions.length > 0 && !selectedToStepCode) {
@@ -1467,6 +1591,28 @@ const OrderProgressPage = () => {
     },
   ], [order])
 
+  useEffect(() => {
+    const container = remoteFormContainerRef.current
+    if (!container || !currentFormName) return undefined
+
+    hideDuplicatedRemoteFormTitle(container, currentFormName)
+
+    const observer = new MutationObserver(() => {
+      hideDuplicatedRemoteFormTitle(container, currentFormName)
+    })
+    observer.observe(container, { childList: true, subtree: true })
+
+    return () => {
+      observer.disconnect()
+      container
+        .querySelectorAll('[data-progress-hidden-title="true"]')
+        .forEach((element) => {
+          element.style.display = ''
+          delete element.dataset.progressHiddenTitle
+        })
+    }
+  }, [currentFormName, remoteRenderKey])
+
   return (
     <>
       <Helmet>
@@ -1499,7 +1645,7 @@ const OrderProgressPage = () => {
                     <Descriptions
                       bordered
                       size="small"
-                      column={{ xs: 1, md: 2 }}
+                      column={{ xs: 1, sm: 1, md: 2, lg: 2, xl: 2, xxl: 2 }}
                       items={orderInfoItems}
                     />
                   ) : (
@@ -1511,23 +1657,7 @@ const OrderProgressPage = () => {
                   title={(
                     <Space>
                       <FormOutlined />
-                      <span>Form bắt buộc tại bước</span>
-                    </Space>
-                  )}
-                  extra={(
-                    <Space>
-                      {currentStep?.name || currentStep?.label ? <Tag color="blue">{getStepProcessTypeLabel(currentStep, processTypeLabelMap) ?? currentStep?.name}</Tag> : null}
-                      {remoteEntry && RemoteForm ? (
-                        <Button
-                          type="primary"
-                          icon={<SaveOutlined />}
-                          loading={submittingForm}
-                          disabled={loadingRemote || Boolean(remoteError)}
-                          onClick={handleSubmitCurrentForm}
-                        >
-                          Lưu form
-                        </Button>
-                      ) : null}
+                      <span>{currentFormName || 'Form bắt buộc tại bước'}</span>
                     </Space>
                   )}
                 >
@@ -1537,24 +1667,41 @@ const OrderProgressPage = () => {
                   {remoteEntry && loadingRemote && <Spin />}
                   {remoteEntry && remoteError && <RemoteFormErrorFallback message={remoteError} />}
                   {remoteEntry && RemoteForm && (
-                    <RemoteFormBoundary remoteEntry={remoteEntry}>
-                      <RemoteFormHost
-                        ref={remoteFormRef}
-                        Component={RemoteForm}
-                        order={order}
-                        record={order}
-                        data={order}
-                        step={currentStep}
-                        formTemplate={currentForm}
-                        submission={currentSubmission}
-                        initialValues={currentSubmissionValues}
-                        values={currentSubmissionValues}
-                        defaultValues={currentSubmissionValues}
-                        onSubmit={handleRemoteFormSubmit}
-                        onSubmitError={handleRemoteFormSubmitError}
-                      />
-                    </RemoteFormBoundary>
+                    <div ref={remoteFormContainerRef}>
+                      <RemoteFormBoundary key={remoteRenderKey} remoteKey={remoteRenderKey}>
+                        <RemoteFormHost
+                          key={remoteRenderKey}
+                          ref={remoteFormRef}
+                          Component={RemoteForm}
+                          order={order}
+                          record={order}
+                          data={order}
+                          step={currentStep}
+                          formTemplate={currentForm}
+                          submission={currentSubmission}
+                          initialValues={currentSubmissionValues}
+                          values={currentSubmissionValues}
+                          defaultValues={currentSubmissionValues}
+                          hideTitle
+                          showTitle={false}
+                          onSubmit={handleRemoteFormSubmit}
+                          onSubmitError={handleRemoteFormSubmitError}
+                        />
+                      </RemoteFormBoundary>
+                    </div>
                   )}
+                  {remoteEntry && RemoteForm ? (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+                      <Button
+                        type="primary"
+                        loading={submittingForm}
+                        disabled={loadingRemote || Boolean(remoteError)}
+                        onClick={handleSubmitCurrentForm}
+                      >
+                        Cập nhật
+                      </Button>
+                    </div>
+                  ) : null}
                 </Card>
 
                 <Card title="Kết quả kiểm tra">

@@ -1,77 +1,149 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react'
-import { FormCheckbox, FormInput, FormInputNumber, FormRadioGroup, FormSelect, FormTextArea } from '@flast-erp/core/components'
-import { Form, Row, Col } from 'antd'
+import axios from 'axios'
+import { FormInputNumber, FormRadioGroup, FormSelect, FormTextArea } from '@flast-erp/core/components'
+import { Form, Row, Col, Upload, message } from 'antd'
 
-const REMOTE_DEBUG_PREFIX = '[RemoteForm][FormKetQuaKiemTraNgoaiQuan]'
-
-const DROPDOWN_OPTIONS = {
-  defect_level: [
-    { value: 'NONE', label: 'Không có lỗi' },
-    { value: 'MINOR', label: 'Nhẹ' },
-    { value: 'MAJOR', label: 'Trung bình' },
-    { value: 'CRITICAL', label: 'Nghiêm trọng' },
-  ],
-  color_uniformity: [
-    { value: 'EXCELLENT', label: 'Rất đồng đều' },
-    { value: 'GOOD', label: 'Đồng đều' },
-    { value: 'FAIR', label: 'Hơi lệch màu' },
-    { value: 'POOR', label: 'Không đồng đều' },
-  ],
-  surface_condition: [
-    { value: 'NORMAL', label: 'Bình thường' },
-    { value: 'WRINKLED', label: 'Nhăn' },
-    { value: 'PILLING', label: 'Xù lông' },
-    { value: 'DIRTY', label: 'Bám bẩn' },
-    { value: 'TORN', label: 'Rách' },
-    { value: 'HOLED', label: 'Thủng' },
-    { value: 'DEFORMED', label: 'Biến dạng' },
-  ],
-  defects: [
-    { value: 'COLOR_VARIATION', label: 'Lệch màu' },
-    { value: 'STAIN', label: 'Vết bẩn' },
-    { value: 'PIN_HOLE', label: 'Lỗ kim' },
-    { value: 'BROKEN_YARN', label: 'Đứt sợi' },
-    { value: 'PILLING', label: 'Xù lông' },
-    { value: 'WRINKLE', label: 'Nhăn' },
-    { value: 'WEAVING_DEFECT', label: 'Lỗi dệt' },
-    { value: 'DYEING_DEFECT', label: 'Lỗi nhuộm' },
-    { value: 'PRINT_DEFECT', label: 'Lỗi in' },
-    { value: 'TEAR', label: 'Rách' },
-    { value: 'HOLE', label: 'Thủng' },
-    { value: 'OTHER', label: 'Khác' },
-  ],
+const extractUploadItems = (response) => {
+  const payload = response?.data ?? response
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.data)) return payload.data
+  if (Array.isArray(payload?.files)) return payload.files
+  if (Array.isArray(payload?.urls)) return payload.urls
+  if (Array.isArray(payload?.fileNames)) return payload.fileNames
+  if (Array.isArray(payload?.filenames)) return payload.filenames
+  if (Array.isArray(payload?.paths)) return payload.paths
+  return payload ? [payload] : []
 }
 
-const DROPDOWN_NAMES = Object.keys(DROPDOWN_OPTIONS)
+const isAbsoluteUploadUrl = (value = '') => /^https?:\/\//i.test(String(value)) || String(value).startsWith('/api/')
 
-const pickDropdownValues = (values = {}) => (
-  DROPDOWN_NAMES.reduce((result, name) => {
-    result[name] = values[name] ?? null
-    return result
-  }, {})
-)
-
-const logDropdownOptions = (context = 'mount') => {
-  console.group(`${REMOTE_DEBUG_PREFIX} dropdown options (${context})`)
-  DROPDOWN_NAMES.forEach((name) => {
-    console.log(name, DROPDOWN_OPTIONS[name])
-  })
-  console.log('allDropdownOptions', DROPDOWN_OPTIONS)
-  console.groupEnd()
+const resolveUploadFilename = (item) => {
+  if (typeof item === 'string') return item
+  return item?.filename
+    ?? item?.file_name
+    ?? item?.fileName
+    ?? item?.file_name_path
+    ?? item?.path
+    ?? item?.fullPath
+    ?? item?.full_path
+    ?? item?.url
+    ?? item?.fileUrl
+    ?? item?.file_url
+    ?? ''
 }
 
-const logDropdownValues = (values, context = 'change') => {
-  const dropdownValues = pickDropdownValues(values)
-  console.group(`${REMOTE_DEBUG_PREFIX} dropdown values (${context})`)
-  DROPDOWN_NAMES.forEach((name) => {
-    console.log(name, dropdownValues[name])
-  })
-  console.log('allDropdownValues', dropdownValues)
-  console.groupEnd()
-  return dropdownValues
+const resolveUploadUrl = (item) => {
+  const filename = resolveUploadFilename(item)
+  if (!filename) return ''
+  if (isAbsoluteUploadUrl(filename)) return filename
+  const baseUrl = String(axios.defaults.baseURL || '/api').replace(/\/$/, '')
+  return `${baseUrl}/upload/folder/view?filename=${encodeURIComponent(filename)}`
 }
 
-const FormKetQuaKiemTraNgoaiQuan = forwardRef(({
+const toUploadFile = (item, index) => {
+  if (item?.uid) return item
+  const filename = resolveUploadFilename(item)
+  const url = resolveUploadUrl(item)
+  const name = item?.name ?? filename?.split('/').pop() ?? `file-${index + 1}`
+  return { uid: item?.id ?? filename ?? url ?? `upload-${index}`, name, status: 'done', url, thumbUrl: url, response: item }
+}
+
+const fileListToValues = (event) => {
+  const fileList = Array.isArray(event) ? event : (event?.fileList ?? [])
+  return fileList
+    .filter(file => file.status === 'done')
+    .flatMap(file => extractUploadItems(file.response ?? resolveUploadUrl(file)))
+}
+
+const FormFileUpload = ({ name, label, required, accept, folder = 'test', image = false, maxSizeMB }) => {
+  const form = Form.useFormInstance()
+  const formValue = Form.useWatch(name, form)
+  const [fileList, setFileList] = React.useState([])
+
+  React.useEffect(() => {
+    setFileList(current => {
+      if (current.some(file => file.status === 'uploading')) return current
+      return (Array.isArray(formValue) ? formValue : (formValue ? [formValue] : [])).map(toUploadFile)
+    })
+  }, [formValue])
+
+  return (
+    <>
+      <Form.Item label={label} required={required}>
+        <Upload.Dragger
+          multiple
+          accept={accept || undefined}
+          fileList={fileList}
+          listType={image ? 'picture' : 'text'}
+          beforeUpload={(file) => {
+            if (maxSizeMB && file.size / 1024 / 1024 > maxSizeMB) {
+              message.error(`${file.name} vượt quá ${maxSizeMB}MB`)
+              return Upload.LIST_IGNORE
+            }
+            return true
+          }}
+          onChange={({ fileList: nextFileList }) => {
+            setFileList(nextFileList)
+            form.setFieldValue(name, fileListToValues(nextFileList))
+          }}
+          onPreview={(file) => {
+            const url = file.url ?? file.thumbUrl ?? resolveUploadUrl(file.response)
+            if (url) {
+              window.open(url, '_blank', 'noopener,noreferrer')
+            }
+          }}
+          customRequest={async ({ file, onSuccess, onError }) => {
+            try {
+              const formData = new FormData()
+              formData.append('files', file)
+              formData.append('folder', folder)
+              const response = await axios.post('/upload/folder/multiple', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+              })
+              const uploaded = extractUploadItems(response.data)
+              onSuccess(uploaded.length === 1 ? uploaded[0] : uploaded)
+            } catch (error) {
+              message.error('Upload thất bại')
+              onError(error)
+            }
+          }}
+        >
+          <p className="ant-upload-text">{image ? 'Kéo ảnh vào đây hoặc bấm để chọn' : 'Kéo file vào đây hoặc bấm để chọn'}</p>
+          <p className="ant-upload-hint">Hỗ trợ tải nhiều file cùng lúc</p>
+        </Upload.Dragger>
+      </Form.Item>
+      <Form.Item
+        name={name}
+        hidden
+        getValueProps={() => ({ value: '' })}
+        rules={[{
+          validator: (_, value) => {
+            if (!required || (Array.isArray(value) && value.length > 0)) return Promise.resolve()
+            return Promise.reject(new Error('Vui lòng tải file'))
+          },
+        }]}
+      >
+        <input type="hidden" />
+      </Form.Item>
+    </>
+  )
+}
+
+const UPLOAD_FIELD_NAMES = ["test_image"]
+
+const TEST_STANDARD_OPTIONS = [
+  { label: 'ISO 105-C06', value: 'ISO_105_C06' },
+  { label: 'ISO 105-X12', value: 'ISO_105_X12' },
+  { label: 'ISO 105-E04', value: 'ISO_105_E04' },
+  { label: 'ISO 105-B02', value: 'ISO_105_B02' },
+  { label: 'AATCC 61', value: 'AATCC_61' },
+  { label: 'AATCC 8', value: 'AATCC_8' },
+  { label: 'AATCC 15', value: 'AATCC_15' },
+  { label: 'TCVN 7698', value: 'TCVN_7698' },
+  { label: 'TCVN 5793', value: 'TCVN_5793' },
+]
+
+const KetQuaThuDoBenMau = forwardRef(({
   initialValues,
   onSubmit,
   onSubmitError,
@@ -96,15 +168,20 @@ const FormKetQuaKiemTraNgoaiQuan = forwardRef(({
       throw error
     }
 
-    logDropdownValues(values, 'submit')
-    await onSubmit?.(values, {
+    const files = UPLOAD_FIELD_NAMES.flatMap((fieldName) => {
+      const value = values[fieldName]
+      return Array.isArray(value) ? value : (value ? [value] : [])
+    })
+    const submitValues = files.length > 0 ? { ...values, files } : values
+
+    await onSubmit?.(submitValues, {
       order: contextData,
       record: contextData,
       data: contextData,
       step,
       formTemplate,
     })
-    return values
+    return submitValues
   }, [contextData, form, formTemplate, onSubmit, onSubmitError, step])
 
   useImperativeHandle(ref, () => ({
@@ -112,11 +189,6 @@ const FormKetQuaKiemTraNgoaiQuan = forwardRef(({
     getValues: () => form.getFieldsValue(true),
     reset: () => form.resetFields(),
   }), [form, submit])
-
-  useEffect(() => {
-    logDropdownOptions('mount')
-    logDropdownValues(form.getFieldsValue(true), 'initial')
-  }, [form])
 
   useEffect(() => {
     if (initialValues && typeof initialValues === 'object') {
@@ -136,108 +208,77 @@ const FormKetQuaKiemTraNgoaiQuan = forwardRef(({
     submit().catch(() => undefined)
   }, [submit, submitSignal])
 
-  const handleValuesChange = useCallback((changedValues, allValues) => {
-    const changedDropdown = DROPDOWN_NAMES.filter((name) => Object.prototype.hasOwnProperty.call(changedValues, name))
-    if (!changedDropdown.length) {
-      return
-    }
-    logDropdownValues(allValues, `change:${changedDropdown.join(',')}`)
-  }, [])
-
   return (
-    <Form
-      form={form}
-      layout="vertical"
-      onValuesChange={handleValuesChange}
-    >
+    <Form form={form} layout="vertical">
       <Row gutter={[16, 0]}>
         <Col span={24}>
+          {/* source: user; action: edited */}
           <FormRadioGroup
-            name="inspection_result"
-            label="Kết quả kiểm tra ngoại quan"
+            name="result_grade"
+            label="Cấp độ bền màu (1–5)"
+            required
             options={[
-              { label: 'Đạt', value: 'PASS' },
-              { label: 'Không đạt', value: 'FAIL' },
-            ]}
+                {
+                  "value": "excellent",
+                  "label": "5 - Xuất sắc"
+                },
+                {
+                  "value": "good",
+                  "label": "4 - Tốt"
+                },
+                {
+                  "value": "rather",
+                  "label": "3 - Khá"
+                },
+                {
+                  "value": "least",
+                  "label": "2 - Kém"
+                },
+                {
+                  "value": "verypoor",
+                  "label": "1 - Rất kém"
+                }
+              ]}
             valueProp="value"
             titleProp="label"
           />
         </Col>
         <Col span={24}>
-          <FormSelect
-            name="defect_level"
-            label="Mức độ lỗi"
-            resourceData={DROPDOWN_OPTIONS.defect_level}
-            valueProp="value"
-            titleProp="label"
-            style={{ width: '100%' }}
-          />
-        </Col>
-        <Col span={24}>
-          <FormInput
-            name="sample_color"
-            label="Màu sắc mẫu"
-          />
-        </Col>
-        <Col span={24}>
-          <FormSelect
-            name="color_uniformity"
-            label="Độ đồng đều màu"
-            resourceData={DROPDOWN_OPTIONS.color_uniformity}
-            valueProp="value"
-            titleProp="label"
-            style={{ width: '100%' }}
-          />
-        </Col>
-        <Col span={24}>
-          <FormSelect
-            name="surface_condition"
-            label="Tình trạng bề mặt"
-            resourceData={DROPDOWN_OPTIONS.surface_condition}
-            valueProp="value"
-            titleProp="label"
-            style={{ width: '100%' }}
-          />
-        </Col>
-        <Col span={24}>
-          <FormCheckbox
-            name="has_defect"
-            label="Có khuyết tật"
-            valueProp="value"
-            titleProp="label"
-          />
-        </Col>
-        <Col span={24}>
-          <FormSelect
-            name="defects"
-            label="Danh sách khuyết tật"
-            mode="multiple"
-            resourceData={DROPDOWN_OPTIONS.defects}
-            valueProp="value"
-            titleProp="label"
-            style={{ width: '100%' }}
-          />
-        </Col>
-        <Col span={24}>
+          {/* source: user; action: edited */}
           <FormInputNumber
-            name="defect_count"
-            label="Số lượng lỗi"
+            name="weight_gsm"
+            label="Định lượng (g/m²)"
+            required
             min={0}
             style={{ width: '100%' }}
           />
         </Col>
         <Col span={24}>
-          <FormTextArea
-            name="defect_note"
-            label="Ghi chú lỗi"
-            rows={3}
+          {/* source: user; action: edited */}
+          <FormSelect
+            name="test_standard"
+            label="Tiêu chuẩn áp dụng"
+            required
+            resourceData={TEST_STANDARD_OPTIONS}
+            valueProp="value"
+            titleProp="label"
+            style={{ width: '100%' }}
           />
         </Col>
         <Col span={24}>
+          {/* source: user; action: edited */}
+          <FormFileUpload
+            name="test_image"
+            label="Ảnh mẫu sau thử"
+            folder="test"
+            maxSizeMB={5}
+          />
+        </Col>
+        <Col span={24}>
+          {/* source: user; action: edited */}
           <FormTextArea
             name="technician_note"
             label="Ghi chú KTV"
-            rows={3}
           />
         </Col>
       </Row>
@@ -245,6 +286,6 @@ const FormKetQuaKiemTraNgoaiQuan = forwardRef(({
   )
 })
 
-FormKetQuaKiemTraNgoaiQuan.displayName = 'FormKetQuaKiemTraNgoaiQuan'
+KetQuaThuDoBenMau.displayName = 'KetQuaThuDoBenMau'
 
-export default FormKetQuaKiemTraNgoaiQuan
+export default KetQuaThuDoBenMau

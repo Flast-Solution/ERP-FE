@@ -167,13 +167,13 @@ const TransitionForm = ({ edge }) => {
               <StepInfoCard>
                 <StepBox>
                   <StepBoxLabel>Từ bước</StepBoxLabel>
-                  <StepBoxName>{fromNode?.data?.label ?? edge.source}</StepBoxName>
+                  <StepBoxName>{fromNode?.data?.name ?? fromNode?.data?.label ?? edge.source}</StepBoxName>
                   <StepBoxCode>{fromNode?.data?.code ?? ''}</StepBoxCode>
                 </StepBox>
                 <ArrowRightOutlined style={{ color: '#8c8c8c', flexShrink: 0 }} />
                 <StepBox>
                   <StepBoxLabel>Đến bước</StepBoxLabel>
-                  <StepBoxName>{toNode?.data?.label ?? edge.target}</StepBoxName>
+                  <StepBoxName>{toNode?.data?.name ?? toNode?.data?.label ?? edge.target}</StepBoxName>
                   <StepBoxCode>{toNode?.data?.code ?? ''}</StepBoxCode>
                 </StepBox>
               </StepInfoCard>
