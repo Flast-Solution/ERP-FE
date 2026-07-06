@@ -2,70 +2,49 @@ import styled from 'styled-components'
 
 export const ProfileShell = styled.div`
   min-height: calc(100vh - 64px);
-  display: grid;
-  grid-template-columns: 260px minmax(0, 640px);
-  justify-content: center;
-  gap: 32px;
-  padding: 0 24px 56px;
+  max-width: 1220px;
+  margin: 0 auto;
+  padding: 24px 24px 56px;
   background: #fff;
 
-  @media (max-width: 900px) {
-    grid-template-columns: 1fr;
-    gap: 20px;
-    padding: 0 16px 40px;
+  @media (max-width: 640px) {
+    padding: 16px 16px 40px;
   }
 `
 
-export const ProfileNav = styled.aside`
-  border-right: 1px solid #f0f0f0;
-  padding: 42px 32px 0 0;
-
-  @media (max-width: 900px) {
-    border-right: 0;
-    border-bottom: 1px solid #f0f0f0;
-    padding: 20px 0 12px;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-  }
+export const TabBar = styled.div`
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #e8e8ef;
+  border-radius: 10px;
+  background: #f3f4f6;
+  margin-bottom: 32px;
 `
 
-export const NavGroup = styled.div`
-  margin-bottom: 44px;
-
-  @media (max-width: 900px) {
-    margin-bottom: 0;
-  }
-`
-
-export const NavGroupTitle = styled.div`
-  margin: 0 0 10px 20px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #8b8f9f;
-  text-transform: uppercase;
-  letter-spacing: 0;
-`
-
-export const NavItem = styled.div`
-  height: 40px;
-  display: flex;
+export const TabItem = styled.button`
+  height: 36px;
+  display: inline-flex;
   align-items: center;
-  gap: 14px;
-  padding: 0 22px;
+  gap: 8px;
+  padding: 0 16px;
+  border: 1px solid ${({ $active }) => ($active ? '#e8e8ef' : 'transparent')};
   border-radius: 8px;
+  background: ${({ $active }) => ($active ? '#fff' : 'transparent')};
   color: ${({ $active }) => ($active ? '#8c6dfd' : '#555a66')};
-  background: ${({ $active }) => ($active ? '#f0ebff' : 'transparent')};
   font-size: 14px;
-  font-weight: ${({ $active }) => ($active ? 700 : 500)};
+  font-weight: ${({ $active }) => ($active ? 600 : 500)};
   cursor: pointer;
+  box-shadow: ${({ $active }) => ($active ? '0 1px 3px rgba(15, 23, 42, 0.08)' : 'none')};
+  transition: color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 
-  & + & {
-    margin-top: 4px;
+  &:hover {
+    color: ${({ $active }) => ($active ? '#8c6dfd' : '#111827')};
   }
 
   .anticon {
-    font-size: 15px;
+    font-size: 14px;
   }
 `
 
@@ -118,9 +97,172 @@ export const PageTitle = styled.h1`
 `
 
 export const PageDescription = styled.p`
-  margin: 8px 0 34px;
+  margin: 8px 0 0;
   color: #7a7f93;
   font-size: 14px;
+`
+
+export const PageHeaderDivider = styled.div`
+  height: 1px;
+  background: #ececf2;
+  margin: 24px 0 0;
+`
+
+export const ProfilePanel = styled.div`
+  border: 1px solid #e8e8ef;
+  border-radius: 10px;
+  background: #fff;
+  padding: 0 40px;
+  margin-top: 28px;
+
+  @media (max-width: 640px) {
+    padding: 0 20px;
+  }
+`
+
+export const ProfileSection = styled.section`
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 48px;
+  padding: 36px 0;
+  border-bottom: 1px solid #ececf2;
+
+  &:last-of-type {
+    border-bottom: 0;
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 28px 0;
+  }
+`
+
+export const SectionAside = styled.div`
+  padding-top: 2px;
+`
+
+export const SectionTitle = styled.h2`
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+`
+
+export const SectionDescription = styled.p`
+  margin: 0;
+  color: #8b8f9f;
+  font-size: 13px;
+  line-height: 1.5;
+`
+
+export const SectionBody = styled.div`
+  min-width: 0;
+
+  .ant-form-item {
+    margin-bottom: 22px;
+  }
+
+  .ant-input,
+  .ant-input-affix-wrapper {
+    height: 36px;
+    border-radius: 7px;
+    background: #fff;
+  }
+`
+
+export const PasswordSectionBody = styled(SectionBody)`
+  .ant-input-affix-wrapper {
+    height: 36px;
+    border-radius: 7px;
+    background: #f8f8fb;
+    border-color: #e8e8ef;
+  }
+
+  .ant-input-affix-wrapper .ant-input {
+    background: transparent;
+  }
+`
+
+export const FormGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+
+  .ant-form-item.full-width {
+    grid-column: 1 / -1;
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+`
+
+export const ProfileActions = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid #ececf2;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+`
+
+export const ProfileActionsNote = styled.span`
+  color: #8b8f9f;
+  font-size: 13px;
+`
+
+export const ProfileActionsButtons = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 24px;
+
+  .ant-btn-primary {
+    min-width: 126px;
+    height: 36px;
+    border-radius: 7px;
+    background: #7c5cff;
+    box-shadow: 0 4px 10px rgba(124, 92, 255, 0.25);
+  }
+
+  @media (max-width: 640px) {
+    justify-content: flex-end;
+  }
+`
+
+export const CertificateUploadZone = styled.div`
+  grid-column: 1 / -1;
+
+  .ant-upload-wrapper {
+    display: block;
+    width: 100%;
+  }
+
+  .ant-upload {
+    width: 100%;
+  }
+
+  .ant-btn {
+    width: 100%;
+    height: 40px;
+    border: 1px dashed #c7c9d3;
+    border-radius: 7px;
+    background: #fff;
+    color: #5b6070;
+    box-shadow: none;
+
+    &:hover {
+      color: #4f46e5 !important;
+      border-color: #a99bff !important;
+      background: #fbfaff !important;
+    }
+  }
 `
 
 export const ProfileCard = styled.section`
@@ -181,7 +323,7 @@ export const LayoutCard = styled.section`
   border-radius: 12px;
   background: #f8f8fb;
   padding: 14px;
-  margin-bottom: 34px;
+  margin-bottom: 0;
 `
 
 export const LayoutCardHeader = styled.div`
@@ -226,6 +368,7 @@ export const LayoutApiCount = styled.div`
 export const LayoutApiRows = styled.div`
   display: grid;
   gap: 8px;
+  margin-bottom: 12px;
 `
 
 export const LayoutApiRow = styled.div`
@@ -346,6 +489,7 @@ export const LayoutToolbar = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-top: 4px;
 
   .ant-btn {
     height: 32px;
@@ -371,7 +515,7 @@ export const LayoutBodyCard = styled.section`
   border-radius: 10px;
   background: #f2edff;
   padding: 28px 32px;
-  margin-bottom: 32px;
+  margin-top: 28px;
 
   @media (max-width: 640px) {
     grid-template-columns: 40px minmax(0, 1fr);
@@ -526,14 +670,14 @@ export const CertificateItem = styled.div`
   display: grid;
   grid-template-columns: minmax(0, 1fr) 32px;
   gap: 12px;
-  padding: 24px;
+  padding: 16px;
   border: 1px solid #dfdfe7;
   border-radius: 7px;
   background: #f8f8fb;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
 
-  .ant-upload-wrapper {
-    grid-column: 1 / -1;
+  &:last-of-type {
+    margin-bottom: 0;
   }
 `
 
