@@ -407,7 +407,7 @@ const getCurrentStepSortOrder = (currentStep) => {
   return Number.isNaN(value) ? null : value
 }
 
-const getStepStatus = ({ step, currentStep, currentStepCode, completedRefs, submittedRefs }) => {
+const getStepStatus = ({ step, currentStep, currentStepCode, completedRefs, submittedRefs, isParallel = false }) => {
   const active = isSameStepRef(currentStep?.id, step?.id)
     || isSameStepRef(currentStep?.stepCode, step?.stepCode)
     || isSameStepRef(currentStep?.code, step?.code)
@@ -416,7 +416,10 @@ const getStepStatus = ({ step, currentStep, currentStepCode, completedRefs, subm
   const explicitCompleted = isStepInRefs(step, completedRefs) || isStepInRefs(step, submittedRefs)
   const currentSortOrder = getCurrentStepSortOrder(currentStep)
   const stepSortOrder = Number(step?.sortOrder)
-  const beforeCurrent = currentSortOrder !== null && !Number.isNaN(stepSortOrder) && stepSortOrder < currentSortOrder
+  const beforeCurrent = !isParallel
+    && currentSortOrder !== null
+    && !Number.isNaN(stepSortOrder)
+    && stepSortOrder < currentSortOrder
 
   if (active) return 'active'
   if (explicitCompleted || beforeCurrent) return 'completed'
@@ -802,7 +805,14 @@ const WorkflowStepList = ({
               }}
             >
               {group.steps.map((step, index) => {
-                const status = getStepStatus({ step, currentStep, currentStepCode, completedRefs, submittedRefs })
+                const status = getStepStatus({
+                  step,
+                  currentStep,
+                  currentStepCode,
+                  completedRefs,
+                  submittedRefs,
+                  isParallel: parallel,
+                })
                 return (
                   <div
                     key={step?.id ?? step?.stepCode ?? step?.code ?? index}
