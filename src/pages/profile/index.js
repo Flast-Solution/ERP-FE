@@ -17,7 +17,10 @@ import {
   UploadOutlined,
   UserOutlined,
 } from '@ant-design/icons'
+import { RequestUtils, jwtService } from '@flast-erp/core/utils'
+import { SUCCESS_CODE } from '@/configs'
 import useGetMe from '@/hooks/useGetMe'
+import { emitBusinessUpdated, getTokenPayload } from '@/utils/authUtils'
 import {
   ProfileShell,
   TabBar,
@@ -70,6 +73,11 @@ import {
   LayoutBodyDescription,
   LayoutBodyAction,
 } from './styles'
+
+const USER_BUSINESS_INFO_API = '/auth/user-bussiness/find-info'
+const USER_BUSINESS_SAVE_API = '/auth/user-bussiness/save-info'
+
+const resolveBusinessLogo = (logo) => resolveUploadUrl(logo)
 
 const LAYOUT_METHOD_OPTIONS = [
   { value: 'GET', label: 'GET' },
@@ -157,6 +165,24 @@ const toCertificateFile = (item, index, sourceFile = {}) => {
   }
 }
 
+const normalizeCertificatePaths = (certificate) => {
+  if (!certificate) return []
+  if (Array.isArray(certificate)) return certificate.filter(Boolean)
+  if (typeof certificate === 'string') return [certificate]
+  return []
+}
+
+const mapCertificatesFromBusinessInfo = (certificate) => {
+  const paths = normalizeCertificatePaths(certificate)
+  if (!paths.length) return []
+
+  return [{
+    id: 'certificate-loaded',
+    name: '',
+    files: paths.map((path, index) => toCertificateFile(path, index)),
+  }]
+}
+
 const ProfilePage = () => {
   const { user: profile } = useGetMe()
   const [profileForm] = Form.useForm()
@@ -169,16 +195,73 @@ const ProfilePage = () => {
   const [layoutApis, setLayoutApis] = useState([])
   const [layoutFiles, setLayoutFiles] = useState([])
   const [layoutSaving, setLayoutSaving] = useState(false)
+  const [businessInfo, setBusinessInfo] = useState(null)
 
-  const initialValues = useMemo(() => ({
-    displayName: getProfileName(profile),
-    email: getProfileEmail(profile),
-    phone: getProfilePhone(profile),
-  }), [profile])
+  const bizId = useMemo(() => (
+    profile?.bizId
+    ?? profile?.biz_id
+    ?? getTokenPayload()?.bizId
+    ?? null
+  ), [profile])
+
+  useEffect(() => {
+    if (!bizId) return undefined
+
+    let mounted = true
+    ;(async () => {
+      try {
+        const response = await RequestUtils.Get(USER_BUSINESS_INFO_API, { bizId })
+        const info = response?.data?.id != null || response?.data?.name != null
+          ? response.data
+          : (response?.data?.data ?? response?.data ?? response)
+        if (mounted && info && typeof info === 'object') {
+          setBusinessInfo(info)
+        }
+      } catch (error) {
+        console.warn('[Profile] fetch business info failed', error)
+      }
+    })()
+
+    return () => {
+      mounted = false
+    }
+  }, [bizId])
+
+  const initialValues = useMemo(() => {
+    if (businessInfo) {
+      return {
+        displayName: businessInfo.name ?? getProfileName(profile),
+        email: businessInfo.email ?? getProfileEmail(profile),
+        phone: businessInfo.hotline ?? businessInfo.phone ?? getProfilePhone(profile),
+        address: businessInfo.address ?? '',
+        code: businessInfo.code ?? '',
+      }
+    }
+
+    return {
+      displayName: getProfileName(profile),
+      email: getProfileEmail(profile),
+      phone: getProfilePhone(profile),
+      address: '',
+      code: '',
+    }
+  }, [businessInfo, profile])
 
   useEffect(() => {
     profileForm.setFieldsValue(initialValues)
   }, [initialValues, profileForm])
+
+  useEffect(() => {
+    if (!businessInfo) return
+
+    if (businessInfo.logo) {
+      setLogoFile(toCertificateFile(businessInfo.logo, 0))
+    } else {
+      setLogoFile(null)
+    }
+
+    setCertificates(mapCertificatesFromBusinessInfo(businessInfo.certificate))
+  }, [businessInfo])
 
   const handleAddCertificate = () => {
     setCertificates((items) => [
@@ -219,7 +302,9 @@ const ProfilePage = () => {
     setLogoFile(nextLogo)
   }
 
-  const logoUrl = logoFile?.url ?? (profile?.avatar ? profile.avatar : '')
+  const logoUrl = logoFile?.url
+    || resolveBusinessLogo(businessInfo?.logo ?? businessInfo?.logoUrl ?? businessInfo?.avatar)
+    || (profile?.avatar || '')
 
   const handleRemoveCertificate = (id) => {
     setCertificates((items) => items.filter((item) => item.id !== id))
@@ -263,17 +348,74 @@ const ProfilePage = () => {
 
   const handleProfileCancel = () => {
     profileForm.setFieldsValue(initialValues)
-    setLogoFile(null)
-    setCertificates([])
+    if (businessInfo?.logo) {
+      setLogoFile(toCertificateFile(businessInfo.logo, 0))
+    } else {
+      setLogoFile(null)
+    }
+    setCertificates(mapCertificatesFromBusinessInfo(businessInfo?.certificate))
   }
 
   const handleProfileSave = async () => {
+    let values
+    try {
+      values = await profileForm.validateFields()
+    } catch {
+      return
+    }
+
     try {
       setProfileSaving(true)
-      await profileForm.validateFields()
-      message.success('Đã lưu thông tin hồ sơ')
-    } catch {
-      // validation errors shown by form
+
+      const logo = logoFile
+        ? (resolveUploadFilename(logoFile.response) || businessInfo?.logo || '')
+        : (businessInfo?.logo ?? '')
+
+      const certificate = certificates
+        .flatMap((item) => (item.files ?? []))
+        .map((file) => resolveUploadFilename(file.response ?? file))
+        .filter(Boolean)
+
+      const userBusiness = {
+        ...(bizId ? { id: bizId } : {}),
+        name: values.displayName ?? '',
+        hotline: values.phone ?? '',
+        email: values.email ?? '',
+        logo,
+        meta: businessInfo?.meta ?? null,
+        address: values.address ?? '',
+        status: businessInfo?.status ?? 1,
+        code: values.code ?? businessInfo?.code ?? '',
+        certificate: certificate.length ? certificate : (businessInfo?.certificate ?? null),
+      }
+
+      const response = await RequestUtils.Post(USER_BUSINESS_SAVE_API, { userBusiness })
+
+      if (response?.errorCode && response.errorCode !== SUCCESS_CODE) {
+        message.error(response?.message || 'Không lưu được thông tin hồ sơ')
+        return
+      }
+
+      const saved = response?.data?.id != null || response?.data?.name != null
+        ? response.data
+        : (response?.data?.data ?? userBusiness)
+
+      setBusinessInfo((current) => ({ ...(current ?? {}), ...saved }))
+      if (saved.logo) {
+        setLogoFile(toCertificateFile(saved.logo, 0))
+      }
+      setCertificates(mapCertificatesFromBusinessInfo(saved.certificate))
+      message.success(response?.message || 'Đã lưu thông tin hồ sơ')
+
+      emitBusinessUpdated({ logo: saved.logo ?? logo ?? '' })
+
+      try {
+        await jwtService?.signInWithToken?.()
+      } catch (refreshError) {
+        console.warn('[Profile] refresh session failed', refreshError)
+      }
+    } catch (error) {
+      message.error(error?.message || 'Không lưu được thông tin hồ sơ')
     } finally {
       setProfileSaving(false)
     }
@@ -460,6 +602,13 @@ const ProfilePage = () => {
                 </Form.Item>
 
                 <Form.Item
+                  name="code"
+                  label={<FieldLabel>Mã đơn vị</FieldLabel>}
+                >
+                  <Input placeholder="Mã đơn vị" />
+                </Form.Item>
+
+                <Form.Item
                   name="phone"
                   label={<FieldLabel>Số điện thoại</FieldLabel>}
                   rules={[{ required: true, message: 'Vui lòng nhập số điện thoại' }]}
@@ -468,16 +617,23 @@ const ProfilePage = () => {
                 </Form.Item>
 
                 <Form.Item
-                  className="full-width"
                   name="email"
                   label={<FieldLabel>Email</FieldLabel>}
                   rules={[
                     { required: true, message: 'Vui lòng nhập email' },
                     { type: 'email', message: 'Email không hợp lệ' },
                   ]}
-                  style={{ marginBottom: 4 }}
                 >
                   <Input prefix={<MailOutlined />} placeholder="admin@flast.vn" />
+                </Form.Item>
+
+                <Form.Item
+                  className="full-width"
+                  name="address"
+                  label={<FieldLabel>Địa chỉ</FieldLabel>}
+                  style={{ marginBottom: 4 }}
+                >
+                  <Input placeholder="Địa chỉ đơn vị" />
                 </Form.Item>
               </FormGrid>
               <FieldHelp>Dùng để đăng nhập và nhận thông báo.</FieldHelp>

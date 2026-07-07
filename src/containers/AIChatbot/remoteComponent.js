@@ -1,6 +1,28 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react'
-import { FormDatePicker, FormInput, FormSelect } from '@flast-erp/core/components'
+import { FormDatePicker, FormInput, FormInputNumber, FormSelect, FormTextArea } from '@flast-erp/core/components'
 import { Form, Row, Col } from 'antd'
+
+const DATE_FIELD_NAMES = ['measurement_date']
+
+const formatDateValue = (value) => {
+  if (!value) return value
+  if (typeof value?.format === 'function') return value.format('YYYY-MM-DD')
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return value
+  const month = String(parsed.getMonth() + 1).padStart(2, '0')
+  const day = String(parsed.getDate()).padStart(2, '0')
+  return `${parsed.getFullYear()}-${month}-${day}`
+}
+
+const normalizeSubmitValues = (values = {}) => {
+  const next = { ...values }
+  DATE_FIELD_NAMES.forEach((name) => {
+    if (next[name] !== undefined) {
+      next[name] = formatDateValue(next[name])
+    }
+  })
+  return next
+}
 
 const TEST_STANDARD_OPTIONS = [
   { label: 'TCVN 8042', value: 'TCVN_8042' },
@@ -51,14 +73,16 @@ const FormDoDinhLuong = forwardRef(({
       throw error
     }
 
-    await onSubmit?.(values, {
+    const submitValues = normalizeSubmitValues(values)
+
+    await onSubmit?.(submitValues, {
       order: contextData,
       record: contextData,
       data: contextData,
       step,
       formTemplate,
     })
-    return values
+    return submitValues
   }, [contextData, form, formTemplate, onSubmit, onSubmitError, step])
 
   useImperativeHandle(ref, () => ({

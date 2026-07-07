@@ -296,20 +296,16 @@ const getGuardsForSourceStep = (stepCode, stepTransitionList = []) => {
   const normalizedStepCode = normalizeStepRef(stepCode)
   if (!normalizedStepCode) return []
 
-  return stepTransitionList.flatMap((transition) => (
-    getFirstArray(transition?.guards).map((guard) => {
-      const config = guard?.config ?? {}
-      const sourceStepCode = normalizeStepRef(
-        config.from_step ?? config.fromStep ?? config.step_code ?? config.stepCode,
-      )
+  // Chỉ lấy guard trên các transition XUẤT PHÁT từ chính bước này. Một guard có thể
+  // tham chiếu field của bước khác (config.from_step) nhưng lại nằm trên transition của
+  // bước sau (ví dụ bước tổng hợp đọc lại field của bước trước) — những guard đó thuộc
+  // về bước sau, không được kéo nhầm vào kết quả của bước hiện tại.
+  return stepTransitionList.flatMap((transition) => {
+    const transitionFrom = normalizeStepRef(transition?.fromStepCode ?? transition?.from_step_code)
+    if (transitionFrom !== normalizedStepCode) return []
 
-      if (sourceStepCode !== normalizedStepCode) {
-        return null
-      }
-
-      return { transition, guard }
-    }).filter(Boolean)
-  ))
+    return getFirstArray(transition?.guards).map((guard) => ({ transition, guard }))
+  })
 }
 
 const GUARD_OPERATOR_LABELS = {

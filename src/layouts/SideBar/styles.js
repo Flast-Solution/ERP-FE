@@ -182,6 +182,25 @@ const SideBarStyles = styled.div`
       object-fit: contain;
     }
   }
+
+  .logo {
+    img.business-logo {
+      height: 100%;
+      width: 100%;
+      max-height: 60px;
+      margin: auto;
+      padding: 6px 10px;
+      object-fit: contain;
+    }
+  }
+
+  .ant-layout-sider-collapsed {
+    .logo {
+      img.business-logo {
+        padding: 6px;
+      }
+    }
+  }
 `;
 
 export default SideBarStyles;
