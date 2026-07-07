@@ -34,12 +34,15 @@ import {
   RequestUtils
 } from '@flast-erp/core/utils';
 import OrderService from '@/services/OrderService';
-import { HASH_MODAL } from '@/configs';
+import { HASH_MODAL, SUCCESS_CODE } from '@/configs';
 import { renderArrayColor } from './utils';
 import { useNavigate  } from 'react-router-dom';
 
 const WORKFLOW_FILTER_API = '/workflow/process/filter?limit=50&offset=0'
-const ORDER_WORKFLOW_ATTACH_API = '/workflow/process/assign-order'
+const ORDER_WORKFLOW_ATTACH_API = '/workflow/process/start'
+const WORKFLOW_INSTANCE_BY_ENTITY_API = '/workflow/process/instance/get-entity'
+const WORKFLOW_PROCESS_FIND_API = '/workflow/process/find-id'
+const WORKFLOW_PREVIEW_API = '/workflow/process/preview'
 
 const resolveWorkflowList = (response) => {
   const payload = response?.data ?? response
@@ -53,6 +56,191 @@ const resolveWorkflowList = (response) => {
   ]
 
   return candidates.find(Array.isArray) ?? []
+}
+
+const resolveWorkflowInstances = (response) => {
+  const payload = response?.data ?? response
+  const candidates = [
+    payload?.data,
+    payload?.data?.embedded,
+    payload?.data?.content,
+    payload?.data?.items,
+    payload?.data?.instances,
+    payload?.data?.processInstances,
+    payload?.embedded,
+    payload?.content,
+    payload?.items,
+    payload?.instances,
+    payload?.processInstances,
+    payload,
+  ]
+
+  const arrayData = candidates.find(Array.isArray)
+  if (arrayData) {
+    return arrayData
+  }
+
+  const objectData = candidates.find(item => item && typeof item === 'object')
+  if (objectData) {
+    if (objectData.id || objectData.entityId || objectData.entity_id || objectData.processInstance) {
+      return [objectData]
+    }
+
+    const values = Object.values(objectData)
+    const objectValues = values.filter(item => item && typeof item === 'object')
+    if (objectValues.length > 0 && objectValues.length === values.length) {
+      return objectValues
+    }
+  }
+
+  return []
+}
+
+const getValue = (...values) => values.find(value => value !== undefined && value !== null && value !== '')
+
+const getFirstArray = (...values) => values.find(Array.isArray) ?? []
+
+const clonePlainData = (value) => {
+  if (value === undefined || value === null) {
+    return value
+  }
+
+  try {
+    return JSON.parse(JSON.stringify(value))
+  } catch (error) {
+    return null
+  }
+}
+
+const resolveWorkflowProcessDetail = (response) => {
+  const payload = response?.data ?? response
+  if (payload?.data && typeof payload.data === 'object' && !Array.isArray(payload.data)) {
+    return payload.data
+  }
+  if (payload?.process && typeof payload.process === 'object' && !Array.isArray(payload.process)) {
+    return payload.process
+  }
+  return payload
+}
+
+const resolveWorkflowPreview = (response) => {
+  const payload = response?.data ?? response
+  if (payload?.data && typeof payload.data === 'object' && !Array.isArray(payload.data)) {
+    return payload.data
+  }
+  return payload
+}
+
+const isSameStepRef = (left, right) => {
+  const normalizedLeft = String(left ?? '').trim()
+  const normalizedRight = String(right ?? '').trim()
+  return Boolean(normalizedLeft && normalizedRight && normalizedLeft === normalizedRight)
+}
+
+const getWorkflowInstanceEntityId = (instance) => getValue(
+  instance?.entityId,
+  instance?.entity_id,
+  instance?.processInstance?.entityId,
+  instance?.processInstance?.entity_id,
+  instance?.workflowInstance?.entityId,
+  instance?.workflowInstance?.entity_id,
+)
+
+const normalizeWorkflowInstance = (instance) => {
+  if (!instance?.processInstance) {
+    return instance
+  }
+
+  return {
+    ...instance,
+    ...instance.processInstance,
+    process: instance?.process ?? instance?.workflowProcess ?? instance?.processInstance?.process,
+  }
+}
+
+const getWorkflowInstanceProcessId = (instance) => getValue(
+  instance?.processId,
+  instance?.process_id,
+  instance?.process?.id,
+  instance?.workflowProcess?.id,
+  instance?.processInstance?.processId,
+  instance?.processInstance?.process_id,
+)
+
+const getWorkflowInstanceCurrentStepCode = (instance) => getValue(
+  instance?.currentStepCode,
+  instance?.current_step_code,
+  instance?.preview?.processInstance?.currentStepCode,
+  instance?.preview?.processInstance?.current_step_code,
+  instance?.preview?.currentStepCode,
+  instance?.preview?.current_step_code,
+  instance?.processInstance?.currentStepCode,
+  instance?.processInstance?.current_step_code,
+)
+
+const findCurrentStepInWorkflow = (record) => {
+  const instance = record?.workflowInstance
+  const workflowProcess = record?.workflowProcess ?? instance?.process ?? instance?.workflowProcess
+  const currentStepCode = getWorkflowInstanceCurrentStepCode(instance)
+  const steps = getFirstArray(
+    instance?.preview?.stepProcessList,
+    instance?.preview?.step_process_list,
+    instance?.preview?.steps,
+    instance?.preview?.stepProcesses ? [instance.preview.stepProcesses] : undefined,
+    workflowProcess?.steps,
+    workflowProcess?.stepProcessList,
+    workflowProcess?.step_process_list,
+    workflowProcess?.stepProcesses,
+    workflowProcess?.step_processes,
+    instance?.steps,
+    instance?.stepProcessList,
+    instance?.step_process_list,
+  )
+
+  return steps.find(step =>
+    step?.current
+    || step?.active
+    || isSameStepRef(step?.stepCode, currentStepCode)
+    || isSameStepRef(step?.code, currentStepCode)
+    || isSameStepRef(step?.id, currentStepCode),
+  )
+}
+
+const getWorkflowCurrentStepLabel = (record) => {
+  const instance = record?.workflowInstance
+  const currentStep = getValue(
+    instance?.preview?.currentStep,
+    instance?.preview?.current_step,
+    instance?.preview?.stepProcesses,
+    instance?.preview?.step_processes,
+    instance?.currentStep,
+    instance?.current_step,
+    findCurrentStepInWorkflow(record),
+    instance?.stepProcess,
+    instance?.step_process,
+    instance?.stepProcesses,
+    instance?.processStep,
+    instance?.process_step,
+    instance?.processInstance?.currentStep,
+    instance?.processInstance?.current_step,
+  )
+
+  return getValue(
+    currentStep?.name,
+    currentStep?.label,
+    currentStep?.stepName,
+    currentStep?.step_name,
+    instance?.currentStepName,
+    instance?.current_step_name,
+    instance?.stepName,
+    instance?.step_name,
+    instance?.currentStepLabel,
+    instance?.current_step_label,
+    instance?.processInstance?.currentStepName,
+    instance?.processInstance?.current_step_name,
+    instance?.processInstance?.currentStepLabel,
+    instance?.processInstance?.current_step_label,
+  )
 }
 
 const copyToClipboard = (text, setCopiedIndex, index) => {
@@ -116,11 +304,19 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
 
     setWorkflowAttaching(true)
     try {
-      await RequestUtils.Post(ORDER_WORKFLOW_ATTACH_API, {
-        orderId: selectedOrder.id,
+      const response = await RequestUtils.Post(ORDER_WORKFLOW_ATTACH_API, {
         processId: selectedWorkflowId,
+        entityType: 'order',
+        entityId: selectedOrder.id,
       })
-      message.success('Đã gắn workflow vào đơn hàng.')
+
+      const ok = response?.success === true || Number(response?.errorCode) === SUCCESS_CODE
+      if (!ok) {
+        message.error(response?.message || 'Gắn workflow thất bại. Vui lòng thử lại.')
+        return
+      }
+
+      message.success(response?.message || 'Đã gắn workflow vào đơn hàng.')
       closeWorkflowModal()
     } catch (error) {
       message.error('Gắn workflow thất bại. Vui lòng thử lại.')
@@ -185,7 +381,22 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
       key: 'detailstatus',
       width: 150,
       ellipsis: true,
-      render: (array, record) => renderArrayColor(array, record.detailstatus)
+      render: (array, record) => {
+        if (filter?.type !== 'order') {
+          return renderArrayColor(array, record.detailstatus)
+        }
+
+        if (!record?.workflowInstance) {
+          return <Tag>Chưa gắn workflow</Tag>
+        }
+
+        const currentStepLabel = getWorkflowCurrentStepLabel(record)
+        if (currentStepLabel) {
+          return <Tag color="blue">{currentStepLabel}</Tag>
+        }
+
+        return <Tag color="orange">Chưa xác định bước</Tag>
+      }
     },
     {
       title: 'T.G Chốt',
@@ -269,81 +480,90 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
       key: 'action',
       fixed: 'right',
       width: actionWidth,
-      render: (_, record) => (
-        <Space gap={8}>
-          <Button
-            type="primary"
-            size="small"
-            onClick={() => onClickViewDetail(record)}
-          >
-            Chi tiết
-          </Button>
-          {!hideQuoteButton && (
+      render: (_, record) => {
+        const hasWorkflowInstance = Boolean(record?.workflowInstance)
+        const workflowMenuItems = [
+          !hasWorkflowInstance && {
+            key: 'attach',
+            icon: <ApartmentOutlined />,
+            label: 'Gắn workflow',
+          },
+          {
+            key: 'progress',
+            icon: <EyeOutlined />,
+            label: 'Xem tiến trình',
+          },
+        ].filter(Boolean)
+
+        return (
+          <Space gap={8}>
             <Button
+              type="primary"
               size="small"
-              style={{ color: "#fa8c16" }}
+              onClick={() => onClickViewDetail(record)}
             >
-              Báo giá
+              Chi tiết
             </Button>
-          )}
-          <Dropdown
-            trigger={['click']}
-            menu={{
-              items: [
-                {
-                  key: 'attach',
-                  icon: <ApartmentOutlined />,
-                  label: 'Gắn workflow',
-                },
-                {
-                  key: 'progress',
-                  icon: <EyeOutlined />,
-                  label: 'Xem tiến trình',
-                },
-              ],
-              onClick: ({ key, domEvent }) => {
-                domEvent?.stopPropagation()
-                if (key === 'attach') {
-                  openWorkflowModal(record)
-                  return
-                }
-                if (key === 'progress') {
-                  navigate(`/sale/order/progress/${record.id}`, {
-                    state: { order: record },
-                  })
-                }
-              },
-            }}
-          >
-            <Tooltip title="Workflow">
+            {!hideQuoteButton && (
               <Button
                 size="small"
-                icon={<ApartmentOutlined />}
-                onClick={(event) => event.stopPropagation()}
-              />
-            </Tooltip>
-          </Dropdown>
-          { record.type === 'cohoi' &&
-            <Button
-              size="small"
-              style={{ color: "#16c5faff" }}
-              onClick={() => navigate(String('/sale/ban-hang/').concat(record.id))}
+                style={{ color: "#fa8c16" }}
+              >
+                Báo giá
+              </Button>
+            )}
+            <Dropdown
+              trigger={['click']}
+              menu={{
+                items: workflowMenuItems,
+                onClick: ({ key, domEvent }) => {
+                  domEvent?.stopPropagation()
+                  if (key === 'attach') {
+                    openWorkflowModal(record)
+                    return
+                  }
+                  if (key === 'progress') {
+                    const instanceId = record.workflowInstance?.id
+                    navigate(`/sale/order/progress/${record.id}${instanceId ? `?instanceId=${instanceId}` : ''}`, {
+                      state: {
+                        order: clonePlainData(record),
+                        workflowInstance: clonePlainData(record.workflowInstance),
+                      },
+                    })
+                  }
+                },
+              }}
             >
-              <EditFilled />
-            </Button>
-          }
-          {extraActions?.map((action, index) => (
-            <Button
-              key={index}
-              size="small"
-              {...action}
-              onClick={() => action.onClick(record)}
-            >
-              {action.children}
-            </Button>
-          ))}
-        </Space>
-      )
+              <Tooltip title="Workflow">
+                <Button
+                  size="small"
+                  icon={<ApartmentOutlined />}
+                  onClick={(event) => event.stopPropagation()}
+                />
+              </Tooltip>
+            </Dropdown>
+            { record.type === 'cohoi' &&
+              <Button
+                size="small"
+                style={{ color: "#16c5faff" }}
+                onClick={() => navigate(String('/sale/ban-hang/').concat(record.id))}
+              >
+                <EditFilled />
+              </Button>
+            }
+            {extraActions?.map((action, index) => (
+              <Button
+                key={index}
+                size="small"
+                {...action}
+                onClick={() => action.onClick(record)}
+              >
+                {action.children}
+              </Button>
+            ))}
+          </Space>
+        )
+      }
     }
   ];
 
@@ -353,8 +573,102 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
   }, []);
 
   const onData = useCallback(async (response) => {
-    return OrderService.viewInTable(response);
-  }, []);
+    const tableData = await OrderService.viewInTable(response);
+    const entityIds = (tableData?.embedded ?? [])
+      .map(item => item?.id)
+      .filter(Boolean)
+
+    if (filter?.type === 'order' && entityIds.length > 0) {
+      try {
+        const response = await RequestUtils.Post(WORKFLOW_INSTANCE_BY_ENTITY_API, {
+          entityName: 'order',
+          entityIds,
+        })
+        const instancesByEntityId = resolveWorkflowInstances(response).reduce((result, item) => {
+          const entityId = getWorkflowInstanceEntityId(item)
+          if (entityId) {
+            result.set(Number(entityId), normalizeWorkflowInstance(item))
+          }
+          return result
+        }, new Map())
+
+        const processIds = Array.from(new Set(
+          Array.from(instancesByEntityId.values())
+            .map(getWorkflowInstanceProcessId)
+            .filter(Boolean)
+            .map(Number)
+        ))
+
+        const workflowProcessesById = new Map()
+        if (processIds.length > 0) {
+          const workflowProcesses = await Promise.all(
+            processIds.map(async (processId) => {
+              try {
+                const detailResponse = await RequestUtils.Get(`${WORKFLOW_PROCESS_FIND_API}/${processId}`, {})
+                return resolveWorkflowProcessDetail(detailResponse)
+              } catch (error) {
+                return { id: processId }
+              }
+            })
+          )
+
+          workflowProcesses.forEach((process) => {
+            if (process?.id) {
+              workflowProcessesById.set(Number(process.id), process)
+            }
+          })
+        }
+
+        const workflowPreviewsByInstanceId = new Map()
+        const previewableInstances = Array.from(instancesByEntityId.values())
+          .filter(instance => instance?.id)
+
+        if (previewableInstances.length > 0) {
+          const workflowPreviews = await Promise.all(
+            previewableInstances.map(async (instance) => {
+              try {
+                const previewResponse = await RequestUtils.Get(WORKFLOW_PREVIEW_API, { instanceId: instance.id })
+                return {
+                  instanceId: Number(instance.id),
+                  preview: resolveWorkflowPreview(previewResponse),
+                }
+              } catch (error) {
+                return {
+                  instanceId: Number(instance.id),
+                  preview: null,
+                }
+              }
+            })
+          )
+
+          workflowPreviews.forEach(({ instanceId, preview }) => {
+            if (instanceId && preview) {
+              workflowPreviewsByInstanceId.set(Number(instanceId), preview)
+            }
+          })
+        }
+
+        tableData.embedded = tableData.embedded.map(item => ({
+          ...item,
+          workflowInstance: instancesByEntityId.get(Number(item.id))
+            ? {
+              ...instancesByEntityId.get(Number(item.id)),
+              preview: workflowPreviewsByInstanceId.get(Number(instancesByEntityId.get(Number(item.id))?.id)) ?? null,
+            }
+            : null,
+          workflowProcess: workflowProcessesById.get(Number(getWorkflowInstanceProcessId(instancesByEntityId.get(Number(item.id))))) ?? null,
+        }))
+      } catch (error) {
+        tableData.embedded = tableData.embedded.map(item => ({
+          ...item,
+          workflowInstance: null,
+          workflowProcess: null,
+        }))
+      }
+    }
+
+    return tableData;
+  }, [filter?.type]);
 
   return (
     <>

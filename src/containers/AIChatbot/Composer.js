@@ -214,7 +214,7 @@ const Composer = ({
             icon={<SendOutlined />}
             onClick={handleSend}
             loading={disabled && !isHumanInputMode}
-            disabled={!text.trim()}
+            disabled={isDisabled || !text.trim()}
             style={{ flexShrink: 0 }}
           />
         </ComposerActions>

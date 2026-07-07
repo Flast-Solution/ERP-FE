@@ -47,6 +47,10 @@ function h(cls, text) {
   return `<span class="tk-${cls}">${esc(text)}</span>`
 }
 
+function normalizeDataExpression(expression = '') {
+  return String(expression).trim()
+}
+
 function toComponentName(name = '') {
   const words = String(name)
     .replace(/đ/g, 'd')
@@ -84,8 +88,8 @@ const COMPONENT_MAP = {
   multi_select: 'FormSelect',
   radio       : 'FormRadioGroup',
   checkbox    : 'FormCheckbox',
-  file        : 'FormInput',
-  image       : 'FormInput',
+  file        : 'FormFileUpload',
+  image       : 'FormFileUpload',
   richtext    : 'FormJoditEditor',
   lookup      : 'FormSelectAPI',
   select_api  : 'FormSelectAPI',
@@ -148,6 +152,8 @@ function buildProps(field) {
       if (config.options?.length) {
         props.push({ key: 'resourceData', value: config.options, kind: 'json' })
       }
+      props.push({ key: 'valueProp', value: 'value', kind: 'str' })
+      props.push({ key: 'titleProp', value: 'label', kind: 'str' })
       props.push({ key: 'style', value: '{{ width: \'100%\' }}', kind: 'raw' })
       break
 
@@ -156,6 +162,8 @@ function buildProps(field) {
       if (config.options?.length) {
         props.push({ key: 'resourceData', value: config.options, kind: 'json' })
       }
+      props.push({ key: 'valueProp', value: 'value', kind: 'str' })
+      props.push({ key: 'titleProp', value: 'label', kind: 'str' })
       props.push({ key: 'style', value: '{{ width: \'100%\' }}', kind: 'raw' })
       break
 
@@ -164,21 +172,37 @@ function buildProps(field) {
       if (config.options?.length) {
         props.push({ key: 'options', value: config.options, kind: 'json' })
       }
+      props.push({ key: 'valueProp', value: 'value', kind: 'str' })
+      props.push({ key: 'titleProp', value: 'label', kind: 'str' })
       break
 
     case 'lookup':
       if (config.entity)     props.push({ key: 'entity',     value: config.entity,               kind: 'str' })
-      if (config.labelField) props.push({ key: 'labelField', value: config.labelField ?? 'name', kind: 'str' })
+      if (config.labelField) props.push({ key: 'titleProp',  value: config.labelField ?? 'name', kind: 'str' })
+      if (config.labelField) props.push({ key: 'searchKey',  value: config.labelField ?? 'name', kind: 'str' })
       props.push({ key: 'style', value: '{{ width: \'100%\' }}', kind: 'raw' })
       break
 
     case 'select_api':
-      if (config.api)        props.push({ key: 'api',        value: config.api,                               kind: 'str' })
-      if (config.entity)     props.push({ key: 'entity',     value: config.entity,                            kind: 'str' })
-      if (config.labelField) props.push({ key: 'labelField', value: config.labelField ?? 'name',              kind: 'str' })
-      props.push({ key: 'valueProp', value: config.valueProp ?? 'id', kind: 'str' })
-      props.push({ key: 'titleProp', value: config.titleProp ?? config.labelField ?? 'name', kind: 'str' })
-      props.push({ key: 'style', value: '{{ width: \'100%\' }}', kind: 'raw' })
+      {
+        const dataLabel = normalizeDataExpression(config.dataLabel)
+        const dataValue = normalizeDataExpression(config.dataValue)
+        const hasDataMapping = Boolean(dataLabel && dataValue)
+
+        if (config.api)    props.push({ key: 'apiPath', value: config.api,    kind: 'str' })
+        if (config.entity) props.push({ key: 'entity',  value: config.entity, kind: 'str' })
+        props.push({ key: 'valueProp', value: hasDataMapping ? 'value' : (config.valueProp ?? 'id'), kind: 'str' })
+        props.push({ key: 'titleProp', value: hasDataMapping ? 'label' : (config.titleProp ?? config.labelField ?? 'name'), kind: 'str' })
+        props.push({ key: 'searchKey', value: config.labelField ?? config.titleProp ?? 'name', kind: 'str' })
+        if (hasDataMapping) {
+          props.push({
+            key: 'onData',
+            value: `{(response) => (Array.isArray(response) ? response : (response?.data ?? [])).map((data) => ({ label: ${dataLabel}, value: ${dataValue} }))}`,
+            kind: 'raw',
+          })
+        }
+        props.push({ key: 'style', value: '{{ width: \'100%\' }}', kind: 'raw' })
+      }
       break
 
     case 'autocomplete':
@@ -187,6 +211,24 @@ function buildProps(field) {
       }
       props.push({ key: 'valueProp', value: config.valueProp ?? 'value', kind: 'str' })
       props.push({ key: 'titleProp', value: config.titleProp ?? 'label', kind: 'str' })
+      break
+
+    case 'file':
+      {
+        const fileAccept = String(config.accept ?? '').trim()
+        if (fileAccept && !/^image\/\*$/i.test(fileAccept)) {
+          props.push({ key: 'accept', value: fileAccept, kind: 'str' })
+        }
+      }
+      props.push({ key: 'folder', value: config.folder ?? 'test', kind: 'str' })
+      if (config.maxSize != null) props.push({ key: 'maxSizeMB', value: String(config.maxSize), kind: 'expr' })
+      break
+
+    case 'image':
+      props.push({ key: 'accept', value: config.accept ?? 'image/*', kind: 'str' })
+      props.push({ key: 'folder', value: config.folder ?? 'test', kind: 'str' })
+      props.push({ key: 'image', kind: 'bare' })
+      if (config.maxSize != null) props.push({ key: 'maxSizeMB', value: String(config.maxSize), kind: 'expr' })
       break
 
     default:
@@ -346,25 +388,180 @@ function fieldToJSXLines(field, colIndent) {
 
 function buildImports(fields) {
   const used = new Set()
+  let hasUpload = false
   const collect = (items = []) => {
     for (const item of items) {
       if (COMPONENT_MAP[item.inputType]) {
         used.add(COMPONENT_MAP[item.inputType])
+      }
+      if (item.inputType === 'file' || item.inputType === 'image') {
+        hasUpload = true
       }
       collect(item.children ?? [])
     }
   }
   collect(fields)
   used.delete('FormBlockPreview')
+  used.delete('FormFileUpload')
 
-  const lines = [`import React from 'react'`]
+  const lines = [`import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react'`]
+  if (hasUpload) {
+    lines.push(`import axios from 'axios'`)
+  }
   const coreComponents = [...used].sort()
   if (coreComponents.length > 0) {
     lines.push(`import { ${coreComponents.join(', ')} } from '@flast-erp/core/components'`)
   }
-  lines.push(`import { Form, Row, Col } from 'antd'`)
+  lines.push(`import { Form, Row, Col${hasUpload ? ', Upload, message' : ''} } from 'antd'`)
 
   return lines.join('\n')
+}
+
+function hasUploadField(fields = []) {
+  return fields.some(field => (
+    field.inputType === 'file'
+    || field.inputType === 'image'
+    || hasUploadField(field.children ?? [])
+  ))
+}
+
+function buildUploadHelper(fields) {
+  if (!hasUploadField(fields)) return ''
+
+  return [
+    `const extractUploadItems = (response) => {`,
+    `  const payload = response?.data ?? response`,
+    `  if (Array.isArray(payload)) return payload`,
+    `  if (Array.isArray(payload?.data)) return payload.data`,
+    `  if (Array.isArray(payload?.files)) return payload.files`,
+    `  if (Array.isArray(payload?.urls)) return payload.urls`,
+    `  if (Array.isArray(payload?.fileNames)) return payload.fileNames`,
+    `  if (Array.isArray(payload?.filenames)) return payload.filenames`,
+    `  if (Array.isArray(payload?.paths)) return payload.paths`,
+    `  return payload ? [payload] : []`,
+    `}`,
+    ``,
+    `const isAbsoluteUploadUrl = (value = '') => /^https?:\\/\\//i.test(String(value)) || String(value).startsWith('/api/')`,
+    ``,
+    `const resolveUploadFilename = (item) => {`,
+    `  if (typeof item === 'string') return item`,
+    `  return item?.filename`,
+    `    ?? item?.file_name`,
+    `    ?? item?.fileName`,
+    `    ?? item?.file_name_path`,
+    `    ?? item?.path`,
+    `    ?? item?.fullPath`,
+    `    ?? item?.full_path`,
+    `    ?? item?.url`,
+    `    ?? item?.fileUrl`,
+    `    ?? item?.file_url`,
+    `    ?? ''`,
+    `}`,
+    ``,
+    `const resolveUploadUrl = (item) => {`,
+    `  const filename = resolveUploadFilename(item)`,
+    `  if (!filename) return ''`,
+    `  if (isAbsoluteUploadUrl(filename)) return filename`,
+    `  const baseUrl = String(axios.defaults.baseURL || '/api').replace(/\\/$/, '')`,
+    `  return \`\${baseUrl}/upload/folder/view?filename=\${encodeURIComponent(filename)}\``,
+    `}`,
+    ``,
+    `const toUploadFile = (item, index) => {`,
+    `  if (item?.uid) return item`,
+    `  const filename = resolveUploadFilename(item)`,
+    `  const url = resolveUploadUrl(item)`,
+    `  const name = item?.name ?? filename?.split('/').pop() ?? \`file-\${index + 1}\``,
+    `  return { uid: item?.id ?? filename ?? url ?? \`upload-\${index}\`, name, status: 'done', url, thumbUrl: url, response: item }`,
+    `}`,
+    ``,
+    `const fileListToValues = (event) => {`,
+    `  const fileList = Array.isArray(event) ? event : (event?.fileList ?? [])`,
+    `  return fileList`,
+    `    .filter(file => file.status === 'done')`,
+    `    .flatMap(file => extractUploadItems(file.response ?? resolveUploadUrl(file)))`,
+    `}`,
+    ``,
+    `const FormFileUpload = ({ name, label, required, accept, folder = 'test', image = false, maxSizeMB }) => {`,
+    `  const form = Form.useFormInstance()`,
+    `  const formValue = Form.useWatch(name, form)`,
+    `  const [fileList, setFileList] = React.useState([])`,
+    ``,
+    `  React.useEffect(() => {`,
+    `    setFileList(current => {`,
+    `      if (current.some(file => file.status === 'uploading')) return current`,
+    `      return (Array.isArray(formValue) ? formValue : (formValue ? [formValue] : [])).map(toUploadFile)`,
+    `    })`,
+    `  }, [formValue])`,
+    ``,
+    `  return (`,
+    `    <>`,
+    `      <Form.Item label={label} required={required}>`,
+    `        <Upload.Dragger`,
+    `          multiple`,
+    `          accept={accept || undefined}`,
+    `          fileList={fileList}`,
+    `          listType={image ? 'picture' : 'text'}`,
+    `          beforeUpload={(file) => {`,
+    `            if (maxSizeMB && file.size / 1024 / 1024 > maxSizeMB) {`,
+    `              message.error(\`\${file.name} vượt quá \${maxSizeMB}MB\`)`,
+    `              return Upload.LIST_IGNORE`,
+    `            }`,
+    `            return true`,
+    `          }}`,
+    `          onChange={({ fileList: nextFileList }) => {`,
+    `            setFileList(nextFileList)`,
+    `            form.setFieldValue(name, fileListToValues(nextFileList))`,
+    `          }}`,
+    `          onPreview={(file) => {`,
+    `            const url = file.url ?? file.thumbUrl ?? resolveUploadUrl(file.response)`,
+    `            if (url) {`,
+    `              window.open(url, '_blank', 'noopener,noreferrer')`,
+    `            }`,
+    `          }}`,
+    `          customRequest={async ({ file, onSuccess, onError }) => {`,
+    `            try {`,
+    `              const formData = new FormData()`,
+    `              formData.append('files', file)`,
+    `              formData.append('folder', folder)`,
+    `              const response = await axios.post('/upload/folder/multiple', formData, {`,
+    `                headers: { 'Content-Type': 'multipart/form-data' },`,
+    `              })`,
+    `              const uploaded = extractUploadItems(response.data)`,
+    `              onSuccess(uploaded.length === 1 ? uploaded[0] : uploaded)`,
+    `            } catch (error) {`,
+    `              message.error('Upload thất bại')`,
+    `              onError(error)`,
+    `            }`,
+    `          }}`,
+    `        >`,
+    `          <p className="ant-upload-text">{image ? 'Kéo ảnh vào đây hoặc bấm để chọn' : 'Kéo file vào đây hoặc bấm để chọn'}</p>`,
+    `          <p className="ant-upload-hint">Hỗ trợ tải nhiều file cùng lúc</p>`,
+    `        </Upload.Dragger>`,
+    `      </Form.Item>`,
+    `      <Form.Item`,
+    `        name={name}`,
+    `        hidden`,
+    `        getValueProps={() => ({ value: '' })}`,
+    `        rules={[{`,
+    `          validator: (_, value) => {`,
+    `            if (!required || (Array.isArray(value) && value.length > 0)) return Promise.resolve()`,
+    `            return Promise.reject(new Error('Vui lòng tải file'))`,
+    `          },`,
+    `        }]}`,
+    `      >`,
+    `        <input type="hidden" />`,
+    `      </Form.Item>`,
+    `    </>`,
+    `  )`,
+    `}`,
+  ].join('\n')
+}
+
+function getUploadFieldKeys(fields = []) {
+  return fields.flatMap(field => [
+    ...(field.inputType === 'file' || field.inputType === 'image' ? [field.fieldKey].filter(Boolean) : []),
+    ...getUploadFieldKeys(field.children ?? []),
+  ])
 }
 
 function buildBlockHelper(fields) {
@@ -414,7 +611,13 @@ export function buildJSX(schema) {
     )
 
   const importsHtml = highlightNamedImport(
-    highlightNamedImport(importsPlain, '@flast-erp/core/components'),
+    highlightNamedImport(
+      importsPlain.replace(
+        /import React, \{ (.*?) \} from 'react'/g,
+        (_, names) => `${h('punct', 'import')} ${h('tag', 'React')}${h('punct', ', {')} ${names.split(',').map(part => h('tag', part.trim())).join(`${h('punct', ', ')}`)} ${h('punct', '} from')} ${h('string', "'react'")}`,
+      ),
+      '@flast-erp/core/components',
+    ),
     'antd',
   )
 
@@ -429,12 +632,91 @@ export function buildJSX(schema) {
     add('', '')
   }
 
+  const uploadHelper = buildUploadHelper(fields)
+  if (uploadHelper) {
+    uploadHelper.split('\n').forEach(line => add(line, line))
+    add('', '')
+  }
+
+  const uploadFieldKeys = getUploadFieldKeys(fields)
+  if (uploadFieldKeys.length > 0) {
+    add(`const UPLOAD_FIELD_NAMES = ${JSON.stringify(uploadFieldKeys)}`, `const UPLOAD_FIELD_NAMES = ${JSON.stringify(uploadFieldKeys)}`)
+    add('', '')
+  }
+
   /* ── Component ── */
-  add(`const ${componentName} = () => {`, `${h('punct', 'const')} ${h('tag', componentName)} ${h('punct', '= () => {')}`)
+  add(`const ${componentName} = forwardRef(({`, `${h('punct', 'const')} ${h('tag', componentName)} ${h('punct', '= forwardRef(({')}`)
+  add(`  initialValues,`, `  initialValues,`)
+  add(`  onSubmit,`, `  onSubmit,`)
+  add(`  onSubmitError,`, `  onSubmitError,`)
+  add(`  submitSignal,`, `  submitSignal,`)
+  add(`  order,`, `  order,`)
+  add(`  record,`, `  record,`)
+  add(`  data,`, `  data,`)
+  add(`  step,`, `  step,`)
+  add(`  formTemplate,`, `  formTemplate,`)
+  add(`}, ref) => {`, `}, ref) => {`)
   add("  const [form] = Form.useForm()", `  ${h('punct', 'const')} ${h('punct', '[form]')} ${h('punct', '=')} ${h('tag', 'Form')}${h('punct', '.useForm()')}`)
+  add(`  const previousSubmitSignalRef = useRef(submitSignal)`, `  const previousSubmitSignalRef = useRef(submitSignal)`)
+  add(`  const contextData = data ?? record ?? order ?? {}`, `  const contextData = data ?? record ?? order ?? {}`)
+  add('', '')
+  add(`  const submit = useCallback(async () => {`, `  const submit = useCallback(async () => {`)
+  add(`    let values`, `    let values`)
+  add(`    try {`, `    try {`)
+  add(`      values = await form.validateFields()`, `      values = await form.validateFields()`)
+  add(`    } catch (error) {`, `    } catch (error) {`)
+  add(`      error.remoteFormHandled = true`, `      error.remoteFormHandled = true`)
+  add(`      onSubmitError?.(error)`, `      onSubmitError?.(error)`)
+  add(`      throw error`, `      throw error`)
+  add(`    }`, `    }`)
+  add('', '')
+  if (uploadFieldKeys.length > 0) {
+    add(`    const files = UPLOAD_FIELD_NAMES.flatMap((fieldName) => {`, `    const files = UPLOAD_FIELD_NAMES.flatMap((fieldName) => {`)
+    add(`      const value = values[fieldName]`, `      const value = values[fieldName]`)
+    add(`      return Array.isArray(value) ? value : (value ? [value] : [])`, `      return Array.isArray(value) ? value : (value ? [value] : [])`)
+    add(`    })`, `    })`)
+    add(`    const submitValues = files.length > 0 ? { ...values, files } : values`, `    const submitValues = files.length > 0 ? { ...values, files } : values`)
+  } else {
+    add(`    const submitValues = values`, `    const submitValues = values`)
+  }
+  add('', '')
+  add(`    await onSubmit?.(submitValues, {`, `    await onSubmit?.(submitValues, {`)
+  add(`      order: contextData,`, `      order: contextData,`)
+  add(`      record: contextData,`, `      record: contextData,`)
+  add(`      data: contextData,`, `      data: contextData,`)
+  add(`      step,`, `      step,`)
+  add(`      formTemplate,`, `      formTemplate,`)
+  add(`    })`, `    })`)
+  add(`    return submitValues`, `    return submitValues`)
+  add(`  }, [contextData, form, formTemplate, onSubmit, onSubmitError, step])`, `  }, [contextData, form, formTemplate, onSubmit, onSubmitError, step])`)
+  add('', '')
+  add(`  useImperativeHandle(ref, () => ({`, `  useImperativeHandle(ref, () => ({`)
+  add(`    submit,`, `    submit,`)
+  add(`    getValues: () => form.getFieldsValue(true),`, `    getValues: () => form.getFieldsValue(true),`)
+  add(`    reset: () => form.resetFields(),`, `    reset: () => form.resetFields(),`)
+  add(`  }), [form, submit])`, `  }), [form, submit])`)
+  add('', '')
+  add(`  useEffect(() => {`, `  useEffect(() => {`)
+  add(`    if (initialValues && typeof initialValues === 'object') {`, `    if (initialValues && typeof initialValues === 'object') {`)
+  add(`      form.setFieldsValue(initialValues)`, `      form.setFieldsValue(initialValues)`)
+  add(`    }`, `    }`)
+  add(`  }, [form, initialValues])`, `  }, [form, initialValues])`)
+  add('', '')
+  add(`  useEffect(() => {`, `  useEffect(() => {`)
+  add(`    if (submitSignal === undefined || submitSignal === null) {`, `    if (submitSignal === undefined || submitSignal === null) {`)
+  add(`      previousSubmitSignalRef.current = submitSignal`, `      previousSubmitSignalRef.current = submitSignal`)
+  add(`      return`, `      return`)
+  add(`    }`, `    }`)
+  add(`    if (previousSubmitSignalRef.current === submitSignal) {`, `    if (previousSubmitSignalRef.current === submitSignal) {`)
+  add(`      return`, `      return`)
+  add(`    }`, `    }`)
+  add(`    previousSubmitSignalRef.current = submitSignal`, `    previousSubmitSignalRef.current = submitSignal`)
+  add(`    submit().catch(() => undefined)`, `    submit().catch(() => undefined)`)
+  add(`  }, [submit, submitSignal])`, `  }, [submit, submitSignal])`)
+  add('', '')
   add('  return (', `  ${h('punct', 'return (')}`)
-  add(`    <Form form={form} layout="vertical" onFinish={values => console.log(values)}>`,
-    `    ${h('tag', '<Form')} ${h('attr', 'form')}${h('punct', '={form}')} ${h('attr', 'layout')}${h('punct', '=')}${h('string', '"vertical"')} ${h('attr', 'onFinish')}${h('punct', '={values => console.log(values)}')}${h('tag', '>')}`)
+  add(`    <Form form={form} layout="vertical">`,
+    `    ${h('tag', '<Form')} ${h('attr', 'form')}${h('punct', '={form}')} ${h('attr', 'layout')}${h('punct', '=')}${h('string', '"vertical"')}${h('tag', '>')}`)
   add('      <Row gutter={[16, 0]}>', `      ${h('tag', '<Row')} ${h('attr', 'gutter')}${h('punct', '={[16, 0]}')}${h('tag', '>')}`)
 
   /* ── Fields ── */
@@ -451,7 +733,9 @@ export function buildJSX(schema) {
   add('      </Row>', `      ${h('tag', '</Row>')}`)
   add(`    </Form>`, `    ${h('tag', '</Form>')}`)
   add('  )', `  ${h('punct', ')')}`)
-  add('}', `${h('punct', '}')}`)
+  add('})', `${h('punct', '})')}`)
+  add('', '')
+  add(`${componentName}.displayName = '${componentName}'`, `${h('tag', componentName)}${h('punct', '.displayName = ')}${h('string', `'${componentName}'`)}`)
   add('', '')
   add(`export default ${componentName}`, `${h('punct', 'export default')} ${h('tag', componentName)}`)
 

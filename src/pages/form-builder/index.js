@@ -1,13 +1,14 @@
 import AIChatbot from "@/containers/AIChatbot";
 import FormBuilder from "@/containers/FormBuilder";
 import { useEffect, useState } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { message } from "antd";
 import { RequestUtils } from "@flast-erp/core/utils";
 import useFormBuilderStore from "@/store/useFormBuilderStore";
+import { parseJsxToSchema } from "@/containers/PreviewModal/parseJSXSchema";
 import styled from "styled-components";
 
-const FORM_TEMPLATE_FILTER_API = '/workflow/forms/template/filter'
+const FORM_TEMPLATE_DETAIL_API = '/workflow/forms/template/find-id'
 
 const BuilderPageShell = styled.div`
   position: relative;
@@ -26,9 +27,130 @@ const BuilderPane = styled.div`
   overflow: hidden;
 `
 
+const getTemplateSourceComponent = (template = {}) => (
+  template.sourceComponent
+  ?? template.source_component
+  ?? template.data?.sourceComponent
+  ?? template.data?.source_component
+  ?? {}
+)
+
+const getTemplateCode = (template = {}) => {
+  const sourceComponent = getTemplateSourceComponent(template)
+
+  return sourceComponent?.code
+    ?? sourceComponent?.jsx_code
+    ?? sourceComponent?.jsxCode
+    ?? template.jsx_code
+    ?? template.jsxCode
+    ?? template.code
+    ?? ''
+}
+
+const collectOptionsByFieldKey = (fields = [], map = new Map()) => {
+  fields.forEach(field => {
+    if (field?.fieldKey && Array.isArray(field?.config?.options) && field.config.options.length > 0) {
+      map.set(field.fieldKey, field.config.options)
+    }
+    if (Array.isArray(field?.children)) {
+      collectOptionsByFieldKey(field.children, map)
+    }
+  })
+  return map
+}
+
+const mergeMissingOptions = (fields = [], optionsByKey = new Map()) => fields.map(field => {
+  const children = Array.isArray(field.children)
+    ? mergeMissingOptions(field.children, optionsByKey)
+    : field.children
+  const currentOptions = field?.config?.options
+  const parsedOptions = field?.fieldKey ? optionsByKey.get(field.fieldKey) : null
+
+  if (!parsedOptions?.length || currentOptions?.length) {
+    return { ...field, children }
+  }
+
+  return {
+    ...field,
+    children,
+    config: {
+      ...(field.config ?? {}),
+      options: parsedOptions,
+    },
+  }
+})
+
+const collectFieldsByKey = (fields = [], map = new Map()) => {
+  fields.forEach(field => {
+    if (field?.fieldKey) {
+      map.set(field.fieldKey, field)
+    }
+    if (Array.isArray(field?.children)) {
+      collectFieldsByKey(field.children, map)
+    }
+  })
+  return map
+}
+
+const mergeParsedFieldsWithApiMetadata = (parsedFields = [], apiFields = []) => {
+  const apiFieldsByKey = collectFieldsByKey(apiFields)
+
+  const mergeField = (field) => {
+    const apiField = field?.fieldKey ? apiFieldsByKey.get(field.fieldKey) : null
+    const children = Array.isArray(field.children)
+      ? field.children.map(mergeField)
+      : field.children
+
+    if (!apiField) {
+      return { ...field, children }
+    }
+
+    return {
+      ...apiField,
+      ...field,
+      id: apiField.id,
+      bizId: apiField.bizId,
+      templateId: apiField.templateId,
+      parentId: apiField.parentId,
+      fieldPath: apiField.fieldPath,
+      depth: apiField.depth,
+      enabled: apiField.enabled,
+      children,
+      config: {
+        ...(apiField.config ?? {}),
+        ...(field.config ?? {}),
+      },
+    }
+  }
+
+  return parsedFields.map(mergeField)
+}
+
+const enrichTemplateFieldsFromCode = (template = {}) => {
+  const fields = Array.isArray(template.fields) ? template.fields : []
+  const code = getTemplateCode(template)
+  if (!code) {
+    return fields
+  }
+
+  try {
+    const parsed = parseJsxToSchema(code, { name: template.name ?? '' })
+    const parsedFields = parsed.fields ?? []
+    if (parsedFields.length > 0) {
+      return mergeParsedFieldsWithApiMetadata(parsedFields, fields)
+    }
+
+    const optionsByKey = collectOptionsByFieldKey(parsedFields)
+    return mergeMissingOptions(fields, optionsByKey)
+  } catch (_) {
+    return fields
+  }
+}
+
 const BuilderPage = () => {
 
   const location = useLocation()
+  const navigate = useNavigate()
   const params = useParams()
   const routeTemplateId = params.id ?? params['*']?.split('/')?.[0]
   const [chatbotOpen, setChatbotOpen] = useState(false)
@@ -40,6 +162,7 @@ const BuilderPage = () => {
   const resetBuilder = useFormBuilderStore(s => s.reset)
 
   const applyTemplate = (template, openPreview = false) => {
+    const code = getTemplateCode(template)
     setIncomingTemplate({
       meta: {
         id: template.id,
@@ -48,13 +171,12 @@ const BuilderPage = () => {
         description: template.description ?? '',
         enabled: template.enabled ?? true,
       },
-      fields: Array.isArray(template.fields) ? template.fields : [],
-      code: template.jsx_code
-        ?? template.jsxCode
-        ?? template.code
-        ?? template.sourceComponent?.jsx_code
-        ?? template.sourceComponent?.jsxCode
-        ?? '',
+      fields: enrichTemplateFieldsFromCode(template),
+      code,
+      provenance: {
+        source: 'api',
+        action: 'loaded',
+      },
       openPreview,
       nonce: Date.now(),
     })
@@ -62,6 +184,23 @@ const BuilderPage = () => {
 
   const resolveTemplateFromResponse = (response, targetId) => {
     const payload = response?.data ?? response
+    const detailCandidates = [
+      payload?.data,
+      payload?.template,
+      payload?.data?.template,
+      payload,
+    ]
+
+    const detail = detailCandidates.find(item => (
+      item
+      && !Array.isArray(item)
+      && String(item?.id ?? '') === String(targetId ?? '')
+    ))
+
+    if (detail) {
+      return detail
+    }
+
     const embedded = Array.isArray(payload?.embedded)
       ? payload.embedded
       : Array.isArray(payload?.data?.embedded)
@@ -109,13 +248,7 @@ const BuilderPage = () => {
 
     const fetchTemplate = async () => {
       try {
-        const query = new URLSearchParams({
-          limit: '10',
-          offset: '0',
-          page: '1',
-          id: String(routeTemplateId),
-        })
-        const response = await RequestUtils.Get(`${FORM_TEMPLATE_FILTER_API}?${query.toString()}`, {})
+        const response = await RequestUtils.Get(FORM_TEMPLATE_DETAIL_API, { id: routeTemplateId })
         const template = resolveTemplateFromResponse(response, routeTemplateId)
 
         if (!template) {
@@ -152,6 +285,7 @@ const BuilderPage = () => {
       : '/workflow/forms/template/save'
 
     const response = await RequestUtils.Post(endpoint, payload)
+
     const nextTemplateId =
       response?.data?.id ??
       response?.data?.templateId ??
@@ -166,19 +300,26 @@ const BuilderPage = () => {
   }
 
   const handleTemplateSaved = ({ fields, code, meta }) => {
-    console.log('[FormBuilderPage] applying AI template', {
-      fieldCount: fields?.length ?? 0,
-      fields,
-      code,
-      meta,
-    })
     setIncomingTemplate({
       fields,
       code,
       meta,
+      provenance: {
+        source: 'ai',
+        action: 'created',
+      },
       openPreview: true,
       nonce: Date.now(),
     })
+  }
+
+  const handleCancel = () => {
+    resetBuilder()
+    setIncomingTemplate(null)
+    setChatbotOpen(false)
+    setChatbotContext(null)
+    setChatbotMode('default')
+    navigate('/workflow-forms')
   }
 
   return (
@@ -188,6 +329,7 @@ const BuilderPage = () => {
           onOpenAI={openChatbot}
           onPreview={()=> {}}
           onSave={handleSave}
+          onCancel={handleCancel}
           incomingTemplate={incomingTemplate}
         />
       </BuilderPane>

@@ -13,6 +13,7 @@ const COMPONENT_TO_INPUT = {
   FormJoditEditor: 'richtext',
   FormSelectAPI: 'select_api',
   FormAutoComplete: 'autocomplete',
+  FormFileUpload: 'file',
 }
 
 const readBalanced = (input, startIndex, openChar, closeChar) => {
@@ -114,7 +115,176 @@ const propToString = (prop, fallback = '') => {
   return fallback
 }
 
-const mapComponentToField = (componentName, props, span) => {
+const parseSelectApiOnDataMapping = (prop) => {
+  const source = prop?.type === 'expr' ? prop.value : ''
+  if (!source) return null
+
+  const mappingMatch = source.match(/\{\s*label\s*:\s*([^,}]+?)\s*,\s*value\s*:\s*([^}]+?)\s*\}/)
+  if (!mappingMatch) return null
+
+  return {
+    dataLabel: mappingMatch[1].trim(),
+    dataValue: mappingMatch[2].trim(),
+  }
+}
+
+const parseLiteralValue = (value = '') => {
+  const trimmed = value.trim()
+  if ((trimmed.startsWith("'") && trimmed.endsWith("'")) || (trimmed.startsWith('"') && trimmed.endsWith('"'))) {
+    return trimmed.slice(1, -1)
+  }
+  if (trimmed === 'true') return true
+  if (trimmed === 'false') return false
+  if (trimmed === 'null') return null
+  const numberValue = Number(trimmed)
+  return Number.isNaN(numberValue) ? trimmed : numberValue
+}
+
+const parseOptionObjectLiteral = (source = '') => {
+  const option = {}
+  const propRe = /(['"]?[A-Za-z_$][\w$]*['"]?)\s*:\s*('(?:\\'|[^'])*'|"(?:\\"|[^"])*"|true|false|null|-?\d+(?:\.\d+)?)/g
+  let match = propRe.exec(source)
+
+  while (match) {
+    const key = match[1].replace(/^['"]|['"]$/g, '')
+    option[key] = parseLiteralValue(match[2])
+    match = propRe.exec(source)
+  }
+
+  return Object.keys(option).length > 0 ? option : null
+}
+
+const parseOptionArrayLiteral = (source = '') => {
+  const trimmed = source.trim()
+  if (!trimmed.startsWith('[')) {
+    return null
+  }
+
+  const options = []
+  let index = 0
+  while (index < trimmed.length) {
+    const objectStart = trimmed.indexOf('{', index)
+    if (objectStart === -1) break
+
+    try {
+      const { value, endIndex } = readBalanced(trimmed, objectStart, '{', '}')
+      const option = parseOptionObjectLiteral(value)
+      if (option) {
+        options.push(option)
+      }
+      index = endIndex + 1
+    } catch (_) {
+      break
+    }
+  }
+
+  return options.length > 0 ? options : null
+}
+
+const parseExpressionValue = (value) => {
+  try {
+    return JSON.parse(value)
+  } catch (_) {
+    return parseOptionArrayLiteral(value)
+  }
+}
+
+const parseObjectLiteralWithArrays = (source = '') => {
+  const result = {}
+  const entryRe = /([A-Za-z_$][\w$]*)\s*:\s*\[/g
+  let match
+
+  while ((match = entryRe.exec(source))) {
+    const key = match[1]
+    const bracketStart = match.index + match[0].length - 1
+    try {
+      const { value, endIndex } = readBalanced(source, bracketStart, '[', ']')
+      const arr = parseOptionArrayLiteral(`[${value}]`)
+      if (arr?.length) {
+        result[key] = arr
+      }
+      entryRe.lastIndex = endIndex + 1
+    } catch (_) {
+      // skip invalid array entry
+    }
+  }
+
+  return Object.keys(result).length > 0 ? result : null
+}
+
+const extractNamedConstants = (jsxCode = '') => {
+  const constants = new Map()
+  const constRe = /\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*/g
+  let match
+
+  while ((match = constRe.exec(jsxCode))) {
+    const name = match[1]
+    let index = match.index + match[0].length
+    while (index < jsxCode.length && /\s/.test(jsxCode[index])) {
+      index += 1
+    }
+    if (index >= jsxCode.length) {
+      continue
+    }
+
+    const char = jsxCode[index]
+    try {
+      if (char === '[') {
+        const { value, endIndex } = readBalanced(jsxCode, index, '[', ']')
+        const arr = parseOptionArrayLiteral(`[${value}]`)
+        if (arr?.length) {
+          constants.set(name, arr)
+        }
+        constRe.lastIndex = endIndex + 1
+      } else if (char === '{') {
+        const { value, endIndex } = readBalanced(jsxCode, index, '{', '}')
+        const obj = parseObjectLiteralWithArrays(value)
+        if (obj) {
+          constants.set(name, obj)
+        }
+        constRe.lastIndex = endIndex + 1
+      }
+    } catch (_) {
+      // skip invalid const declaration
+    }
+  }
+
+  return constants
+}
+
+const resolveExpressionValue = (expression, constants = new Map()) => {
+  const trimmed = String(expression ?? '').trim()
+  if (!trimmed) {
+    return null
+  }
+
+  if (/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)+$/.test(trimmed)) {
+    const parts = trimmed.split('.')
+    let value = constants.get(parts[0])
+    for (let i = 1; i < parts.length; i += 1) {
+      value = value?.[parts[i]]
+    }
+    if (Array.isArray(value)) {
+      return value
+    }
+  }
+
+  if (/^[A-Za-z_$][\w$]*$/.test(trimmed)) {
+    const value = constants.get(trimmed)
+    if (Array.isArray(value)) {
+      return value
+    }
+  }
+
+  return parseExpressionValue(trimmed)
+}
+
+const normalizeOption = (item = {}) => ({
+  value: item.value ?? item.id,
+  label: item.label ?? item.name ?? item.value ?? item.id,
+})
+
+const mapComponentToField = (componentName, props, span, constants = new Map()) => {
   let inputType = COMPONENT_TO_INPUT[componentName] ?? 'text'
   const config = {}
 
@@ -132,31 +302,35 @@ const mapComponentToField = (componentName, props, span) => {
   if (componentName === 'FormSelect') {
     inputType = propToString(props.mode) === 'multiple' ? 'multi_select' : 'select'
     if (props.resourceData?.value) {
-      try {
-        const items = JSON.parse(props.resourceData.value)
-        config.options = items.map(item => ({
-          value: item.id ?? item.value,
-          label: item.name ?? item.label ?? item.value,
-        }))
-      } catch (_) {}
+      const items = resolveExpressionValue(props.resourceData.value, constants)
+      if (Array.isArray(items)) {
+        config.options = items.map(normalizeOption)
+      }
     }
   }
 
   if (componentName === 'FormRadioGroup' || componentName === 'FormCheckbox') {
-    if (props.options?.value) {
-      try {
-        config.options = JSON.parse(props.options.value)
-      } catch (_) {}
+    const optionSource = props.options?.value ?? props.resourceData?.value
+    if (optionSource) {
+      const items = resolveExpressionValue(optionSource, constants)
+      if (Array.isArray(items)) {
+        config.options = items.map(normalizeOption)
+      }
     }
   }
 
   if (componentName === 'FormSelectAPI') {
     inputType = 'select_api'
-    config.api = propToString(props.api)
+    config.api = propToString(props.apiPath ?? props.api)
     config.entity = propToString(props.entity)
-    config.labelField = propToString(props.labelField, 'name')
+    config.labelField = propToString(props.labelField ?? props.searchKey ?? props.titleProp, 'name')
     config.valueProp = propToString(props.valueProp, 'id')
     config.titleProp = propToString(props.titleProp, config.labelField || 'name')
+    const dataMapping = parseSelectApiOnDataMapping(props.onData)
+    if (dataMapping) {
+      config.dataLabel = dataMapping.dataLabel
+      config.dataValue = dataMapping.dataValue
+    }
   }
 
   if (componentName === 'FormAutoComplete') {
@@ -164,13 +338,10 @@ const mapComponentToField = (componentName, props, span) => {
     config.valueProp = propToString(props.valueProp, 'value')
     config.titleProp = propToString(props.titleProp, 'label')
     if (props.resourceData?.value) {
-      try {
-        const items = JSON.parse(props.resourceData.value)
-        config.options = items.map(item => ({
-          value: item.id ?? item.value,
-          label: item.name ?? item.label ?? item.value,
-        }))
-      } catch (_) {}
+      const items = resolveExpressionValue(props.resourceData.value, constants)
+      if (Array.isArray(items)) {
+        config.options = items.map(normalizeOption)
+      }
     }
   }
 
@@ -184,6 +355,15 @@ const mapComponentToField = (componentName, props, span) => {
 
   if (componentName === 'FormHidden') {
     inputType = 'hidden'
+  }
+
+  if (componentName === 'FormFileUpload') {
+    inputType = props.image ? 'image' : 'file'
+    config.accept = propToString(props.accept)
+    config.folder = propToString(props.folder)
+    if (props.maxSizeMB?.value != null) {
+      config.maxSize = Number(props.maxSizeMB.value)
+    }
   }
 
   if (componentName === 'FormInput') {
@@ -200,7 +380,7 @@ const mapComponentToField = (componentName, props, span) => {
     inputType,
     isRequired: Boolean(props.required),
     isSearchable: false,
-    isIndexed: false,
+    isIndexed: true,
     sortOrder: 0,
     enabled: true,
     config,
@@ -269,11 +449,13 @@ const extractTopLevelCols = (content = '') => {
   return cols
 }
 
+const COMPONENT_OPEN_TAG_RE = /^<([A-Z][A-Za-z0-9]*(?:\.[A-Z][A-Za-z0-9]*)*)\s*([\s\S]*?)(\/?)>/
+
 const extractComponentNode = (block = '') => {
   const trimmed = block.replace(/\{\/\*[\s\S]*?\*\/\}/g, '').trim()
   if (!trimmed.startsWith('<')) return null
 
-  const openTagMatch = trimmed.match(/^<([A-Z][A-Za-z0-9]*)\s*([\s\S]*?)(\/?)>/)
+  const openTagMatch = trimmed.match(COMPONENT_OPEN_TAG_RE)
   if (!openTagMatch) return null
 
   const componentName = openTagMatch[1]
@@ -306,7 +488,7 @@ const extractComponentNode = (block = '') => {
   }
 }
 
-const parseFieldNodes = (content = '') => {
+const parseFieldNodes = (content = '', constants = new Map()) => {
   const fields = []
   const cols = extractTopLevelCols(content)
 
@@ -318,11 +500,40 @@ const parseFieldNodes = (content = '') => {
     const node = extractComponentNode(fieldBlock.content)
     if (!node) continue
 
+    if (node.componentName === 'Form.Item') {
+      const childNode = extractComponentNode(node.childrenSource.trim())
+      if (childNode?.componentName === 'Switch') {
+        const itemProps = parseProps(node.propsSource)
+        fields.push({
+          _id: nanoid(),
+          id: null,
+          fieldKey: propToString(itemProps.name),
+          label: propToString(itemProps.label),
+          inputType: 'checkbox',
+          isRequired: Boolean(itemProps.required),
+          isSearchable: false,
+          isIndexed: true,
+          sortOrder: 0,
+          enabled: true,
+          config: {},
+          colSpan: fieldBlock.span,
+          refDomain: null,
+          autoGenerate: null,
+          fieldRole: null,
+        })
+      }
+      continue
+    }
+
+    if (!COMPONENT_TO_INPUT[node.componentName] && node.componentName !== 'FormBlockPreview') {
+      continue
+    }
+
     const props = parseProps(node.propsSource)
-    const field = mapComponentToField(node.componentName, props, fieldBlock.span)
+    const field = mapComponentToField(node.componentName, props, fieldBlock.span, constants)
 
     if (node.componentName === 'FormBlockPreview') {
-      field.children = parseFieldNodes(node.childrenSource)
+      field.children = parseFieldNodes(node.childrenSource, constants)
     }
 
     fields.push(field)
@@ -367,7 +578,8 @@ const extractDirectFieldBlocks = (content = '') => {
 }
 
 export const parseJsxToSchema = (jsxCode, meta = {}) => {
-  const fields = parseFieldNodes(jsxCode)
+  const constants = extractNamedConstants(jsxCode)
+  const fields = parseFieldNodes(jsxCode, constants)
 
   if (fields.length === 0) {
     throw new Error('Khong parse duoc field nao tu JSX.')

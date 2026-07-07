@@ -96,7 +96,7 @@ const OptionsEditor = ({ options = [], onChange, disabled = false }) => {
     <>
       <OptionsList>
         {options.map((opt, index) => (
-          <OptionRow key={opt.value}>
+          <OptionRow key={index}>
             <Input
               placeholder="Nhãn"
               value={opt.label}
@@ -344,6 +344,20 @@ const ConstraintSection = ({ field, onConfigChange }) => {
                 placeholder="name"
                 value={config.titleProp ?? 'name'}
                 onChange={e => onConfigChange({ titleProp: e.target.value })}
+              />
+            </Form.Item>
+            <Form.Item label="Dữ liệu hiển thị" style={{ marginBottom: 10 }}>
+              <Input
+                placeholder="data?.valuesJson?.ten_menu"
+                value={config.dataLabel ?? ''}
+                onChange={e => onConfigChange({ dataLabel: e.target.value })}
+              />
+            </Form.Item>
+            <Form.Item label="Dữ liệu gửi đi" style={{ marginBottom: 12 }}>
+              <Input
+                placeholder="data?.valuesJson?.so_thu_tu"
+                value={config.dataValue ?? ''}
+                onChange={e => onConfigChange({ dataValue: e.target.value })}
               />
             </Form.Item>
           </>

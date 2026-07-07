@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Form, Tag, Button } from 'antd'
+import { Form, Tag, Button, message } from 'antd'
 import { DeleteOutlined, RightOutlined } from '@ant-design/icons'
 import { InAppEvent } from '@flast-erp/core/utils'
 import { HASH_POPUP } from '@/configs/constant'
@@ -7,6 +7,7 @@ import { FormInput } from '@flast-erp/core/components'
 import { useNodes, useStepTypes, useUpdateNodeData } from '@/hooks/useWorkflowStore'
 import { ACTION_TYPES } from '@/store/workflowConstants'
 import { slugifyCode } from '@/utils/workflowValidators'
+import { getFormDisplayName, normalizeAttachedForm } from '@/utils/workflowSerializer'
 import {
   Section,
   SectionDivider,
@@ -85,41 +86,60 @@ const StepForm = ({ node }) => {
   /* actions giữ local state như guards trong TransitionForm */
   const [actions, setActions] = useState(node.data.actions ?? [])
   const [activeAction, setActiveAction] = useState(null)
+  const stepName = node.data.name ?? node.data.label ?? ''
 
   useEffect(() => {
     const nextActions = node.data.actions ?? []
     setActions(nextActions)
     setActiveAction(null)
     form.setFieldsValue({
-      label: node.data.label,
+      name: node.data.name ?? node.data.label,
       code: node.data.code,
       type: node.data.type,
     })
     /* eslint-disable-next-line */
   }, [node.id])
 
-  /* Sync field thường (label, code, type) → store */
+  /* Sync field thường (name, code, type) → store */
   const handleValuesChange = (_, allValues) => {
-    updateNodeData(node.id, { ...allValues, actions })
+    updateNodeData(node.id, {
+      ...allValues,
+      label: allValues.name,
+      actions,
+    })
   }
 
-  const handleLabelChange = (e) => {
+  const handleNameChange = (e) => {
     const currentCode = form.getFieldValue('code')
-    if (currentCode === slugifyCode(node.data.label)) {
+    if (currentCode === slugifyCode(stepName)) {
       const newCode = slugifyCode(e.target.value)
       form.setFieldValue('code', newCode)
-      updateNodeData(node.id, { ...form.getFieldsValue(), code: newCode, actions })
+      updateNodeData(node.id, {
+        ...form.getFieldsValue(),
+        name: e.target.value,
+        label: e.target.value,
+        code: newCode,
+        actions,
+      })
     }
   }
 
   const handleTypeSelect = (key) => {
+    const stepType = stepTypes.find((item) => String(item.key) === String(key))
     form.setFieldValue('type', key)
-    updateNodeData(node.id, { ...form.getFieldsValue(), type: key, actions })
+    updateNodeData(node.id, {
+      ...form.getFieldsValue(),
+      label: form.getFieldValue('name'),
+      type: key,
+      typeLabel: stepType?.label,
+      actions,
+    })
   }
 
   const syncActions = (nextActions) => {
     setActions(nextActions)
-    updateNodeData(node.id, { ...form.getFieldsValue(), actions: nextActions })
+    const values = form.getFieldsValue()
+    updateNodeData(node.id, { ...values, label: values.name, actions: nextActions })
   }
 
   const handleAddAction = (trigger) => {
@@ -153,22 +173,24 @@ const StepForm = ({ node }) => {
   }
 
   const handleAttachForm = () => {
+    const attachedForms = node.data.forms ?? []
+    if (attachedForms.length > 0) {
+      message.warning('Mỗi bước chỉ được gắn 1 form. Vui lòng xóa form hiện tại trước khi gắn form mới.')
+      return
+    }
+
     InAppEvent.emit(HASH_POPUP, {
       hash: 'workflow.step.attach-form',
       title: '',
       data: {
-        attachedForms: node.data.forms ?? [],
+        attachedForms,
         stepCode: node.data?.code,
-        stepLabel: node.data?.label,
+        stepLabel: node.data?.name ?? node.data?.label,
         onSave: (selectedForms) => {
-          console.log('[WorkflowDesigner][StepForm] attach forms to step', {
-            stepId: node.id,
-            stepCode: node.data?.code,
-            stepLabel: node.data?.label,
-            forms: selectedForms,
-          })
+          const values = form.getFieldsValue()
           updateNodeData(node.id, {
-            ...form.getFieldsValue(),
+            ...values,
+            label: values.name,
             actions,
             forms: selectedForms,
           })
@@ -195,11 +217,11 @@ const StepForm = ({ node }) => {
                 <SectionTitle style={{ marginBottom: 12 }}>Bước</SectionTitle>
 
                 <FormInput
-                  name="label"
-                  label="Tên hiển thị"
+                  name="name"
+                  label="Tên bước"
                   placeholder="vd: Độ bền màu"
                   required
-                  onChange={handleLabelChange}
+                  onChange={handleNameChange}
                 />
 
                 <FormInput
@@ -217,7 +239,7 @@ const StepForm = ({ node }) => {
                 </FieldHint>
 
                 {/* Loại bước — pill radio */}
-                <Form.Item name="type" label="Loại bước" style={{ marginBottom: 0 }}>
+                <Form.Item name="type" label="Nhóm bước" style={{ marginBottom: 0 }}>
                   <TypePillGroup>
                     {stepTypes.map((t) => (
                       <TypePillBtn
@@ -269,19 +291,21 @@ const StepForm = ({ node }) => {
                 {(node.data.forms ?? []).length === 0 ? (
                   <EmptyState>Chưa có form nào được gắn.</EmptyState>
                 ) : (
-                  (node.data.forms ?? []).map((f, i) => (
-                    <FormCard key={`${node.id}-form-${i}`}>
+                  (node.data.forms ?? []).map((f, i) => {
+                    const attachedForm = normalizeAttachedForm(f)
+                    return (
+                    <FormCard key={`${node.id}-form-${attachedForm?.id ?? i}`}>
                       <FormCardInfo>
-                        <FormCardName>{f.name}</FormCardName>
+                        <FormCardName>{getFormDisplayName(attachedForm)}</FormCardName>
                         <FormCardMeta>
                           {[
-                            f.domain,
-                            f.fields?.length != null && `${f.fields.length} fields`,
+                            attachedForm?.domain,
+                            attachedForm?.fields?.length != null && `${attachedForm.fields.length} fields`,
                           ].filter(Boolean).join(' · ')}
                         </FormCardMeta>
                       </FormCardInfo>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                        {f.required && (
+                        {attachedForm?.required && (
                           <Tag
                             style={{
                               borderRadius: 20,
@@ -303,12 +327,14 @@ const StepForm = ({ node }) => {
                           icon={<DeleteOutlined />}
                           onClick={() => {
                             const next = (node.data.forms ?? []).filter((_, j) => j !== i)
-                            updateNodeData(node.id, { ...form.getFieldsValue(), actions, forms: next })
+                            const values = form.getFieldsValue()
+                            updateNodeData(node.id, { ...values, label: values.name, actions, forms: next })
                           }}
                         />
                       </div>
                     </FormCard>
-                  ))
+                    )
+                  })
                 )}
               </Section>
             </div>

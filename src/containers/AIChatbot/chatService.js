@@ -78,7 +78,8 @@ export class ChatSession {
 
   // ─── Public API ────────────────────────────────────────────────────────────
 
-  connect({ onChunk, onCore, onDone, onBuild, onError, onClose, onHistoryLoaded, onHumanInput }) {
+  connect({ onOpen, onChunk, onCore, onDone, onBuild, onError, onClose, onHistoryLoaded, onHumanInput }) {
+    this._onOpen          = onOpen
     this._onChunk         = onChunk
     this._onCore          = onCore
     this._onDone          = onDone
@@ -266,6 +267,7 @@ export class ChatSession {
 
       this._connected = true
       this._startPing()
+      this._onOpen?.()
       logSSE('connected', { sessionId: this.sessionId, url })
       this._fetchAndEmitHistory()
 

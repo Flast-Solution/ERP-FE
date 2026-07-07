@@ -7,7 +7,8 @@
  */
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
-import { Button, Row, Col, Form, message } from 'antd'
+import axios from 'axios'
+import { Button, Row, Col, Form, Upload, message } from 'antd'
 import {
   PlayCircleOutlined,
   FileTextOutlined,
@@ -96,17 +97,31 @@ const toComponentSlug = (name = '') => {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
 
-  if (!slug) return 'form-view'
-  return /^[a-z]/.test(slug) ? slug : `form-${slug}`
+  if (!slug) return 'form_view'
+  return /^[a-z]/.test(slug) ? slug : `form_${slug}`
 }
 
 const LEGACY_FORM_IMPORT_RE = /import\s+(\w+)\s+from\s+['"](?:@\/)?(?:form-flast|components\/form)\/(\w+)['"]\s*;?\s*\n?/g
 const DEEP_CORE_FORM_IMPORT_RE = /import\s+(\w+)\s+from\s+['"]@flast-erp\/core\/components\/form\/(\w+)['"]\s*;?\s*\n?/g
-const CORE_COMPONENTS_BARREL_RE = /import\s+\{([^}]+)\}\s+from\s+['"]@flast-erp\/core\/components['"]\s*;?\s*\n?/g
+const CORE_COMPONENTS_BARREL_RE = /^\s*import\s+\{([^}]+)\}\s+from\s+['"]@flast-erp\/core\/components['"]\s*;?\s*\n?/gm
+const ONE_LINE_IMPORT_RE = /^\s*import\s+[^;\n]+;?\s*$/gm
 const BUILD_WAIT_TIMEOUT_MS = 5 * 60 * 1000
+const KNOWN_CORE_FORM_COMPONENTS = [
+  'FormInput',
+  'FormInputNumber',
+  'FormTextArea',
+  'FormSelect',
+  'FormRadioGroup',
+  'FormCheckbox',
+  'FormDatePicker',
+  'FormJoditEditor',
+  'FormSelectAPI',
+  'FormAutoComplete',
+  'FormHidden',
+]
 
 const collectNamedImports = (set, importList = '') => {
   importList.split(',').forEach(part => {
@@ -120,6 +135,23 @@ const insertAfterFirstImport = (code, line) => {
   if (!match) return `${line}${code}`
   const index = match.index + match[0].length
   return `${code.slice(0, index)}${line}${code.slice(index)}`
+}
+
+const hoistOneLineImports = (code = '') => {
+  const imports = []
+  const body = String(code).replace(ONE_LINE_IMPORT_RE, match => {
+    const line = match.trim().replace(/;$/, '')
+    if (line) {
+      imports.push(line)
+    }
+    return ''
+  }).replace(/^\n+/, '')
+
+  if (!imports.length) {
+    return body
+  }
+
+  return `${[...new Set(imports)].join('\n')}\n${body}`
 }
 
 /** Chuẩn hóa import form component về barrel @flast-erp/core/components. */
@@ -138,6 +170,12 @@ const normalizeBuildJsxCode = (code = '') => {
   jsx = jsx.replace(DEEP_CORE_FORM_IMPORT_RE, (_, name) => {
     components.add(name)
     return ''
+  })
+
+  KNOWN_CORE_FORM_COMPONENTS.forEach(name => {
+    if (new RegExp(`<${name}\\b`).test(jsx)) {
+      components.add(name)
+    }
   })
 
   if (components.size > 0) {
@@ -160,7 +198,7 @@ const prepareJsxForRemoteBuild = (code = '') => {
     return `import { ${names.join(', ')} } from '@flast-erp/core/components'\n`
   })
 
-  return jsx
+  return hoistOneLineImports(jsx)
 }
 
 const getBuildPreviewUrl = (data = {}) => (
@@ -180,6 +218,30 @@ const getBuildComponentId = (data = {}, fallback = '') => (
   data?.data?.componentId ??
   fallback
 )
+
+const isGeneratedWorkflowFormCode = (code = '') => (
+  /forwardRef\(\(\{[\s\S]*submitSignal[\s\S]*useImperativeHandle/.test(code)
+  || /const FormFileUpload =/.test(code)
+)
+
+const shouldPreferGeneratedCode = ({ initialCode = '', generatedCode = '' }) => {
+  if (!initialCode?.trim()) return true
+  if (!isGeneratedWorkflowFormCode(initialCode)) return false
+
+  const generatedHasNewUploadHelper = generatedCode.includes('resolveUploadFilename')
+    && generatedCode.includes('thumbUrl')
+    && generatedCode.includes('onPreview')
+    && generatedCode.includes('accept={accept || undefined}')
+
+  if (!generatedHasNewUploadHelper) return false
+
+  const initialHasNewUploadHelper = initialCode.includes('resolveUploadFilename')
+    && initialCode.includes('thumbUrl')
+    && initialCode.includes('onPreview')
+    && initialCode.includes('accept={accept || undefined}')
+
+  return !initialHasNewUploadHelper
+}
 
 const buildMicroFrontend = async ({ sessionId, componentId, entryFilename, jsxCode }) => {
   const response = await fetch('https://ai.flast.vn/build', {
@@ -207,6 +269,178 @@ const buildMicroFrontend = async ({ sessionId, componentId, entryFilename, jsxCo
     componentId: getBuildComponentId(data, componentId),
     previewUrl: getBuildPreviewUrl(data),
   }
+}
+
+const getValueByDataExpression = (item, expression = '') => {
+  const path = String(expression)
+    .trim()
+    .replace(/^data\??\.?/, '')
+    .split(/\??\./)
+    .map(part => part.trim())
+    .filter(Boolean)
+
+  if (path.length === 0) return undefined
+
+  return path.reduce((value, key) => value?.[key], item)
+}
+
+const createSelectApiOnData = (dataLabel, dataValue) => {
+  if (!dataLabel || !dataValue) return undefined
+
+  return (response) => (Array.isArray(response) ? response : (response?.data ?? [])).map(data => ({
+    label: getValueByDataExpression(data, dataLabel),
+    value: getValueByDataExpression(data, dataValue),
+  }))
+}
+
+const extractUploadItems = (response) => {
+  const payload = response?.data ?? response
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.data)) return payload.data
+  if (Array.isArray(payload?.files)) return payload.files
+  if (Array.isArray(payload?.urls)) return payload.urls
+  if (Array.isArray(payload?.fileNames)) return payload.fileNames
+  if (Array.isArray(payload?.filenames)) return payload.filenames
+  if (Array.isArray(payload?.paths)) return payload.paths
+  return payload ? [payload] : []
+}
+
+const isAbsoluteUploadUrl = (value = '') => /^https?:\/\//i.test(String(value)) || String(value).startsWith('/api/')
+
+const resolveUploadUrl = (item) => {
+  const filename = resolveUploadFilename(item)
+  if (!filename) return ''
+  if (isAbsoluteUploadUrl(filename)) return filename
+  const baseUrl = String(axios.defaults.baseURL || '/api').replace(/\/$/, '')
+  return `${baseUrl}/upload/folder/view?filename=${encodeURIComponent(filename)}`
+}
+
+const resolveUploadFilename = (item) => {
+  if (typeof item === 'string') return item
+  return item?.filename
+    ?? item?.file_name
+    ?? item?.fileName
+    ?? item?.file_name_path
+    ?? item?.path
+    ?? item?.fullPath
+    ?? item?.full_path
+    ?? item?.url
+    ?? item?.fileUrl
+    ?? item?.file_url
+    ?? ''
+}
+
+const toUploadFile = (item, index) => {
+  if (item?.uid) return item
+  const filename = resolveUploadFilename(item)
+  const url = resolveUploadUrl(item)
+  const name = item?.name
+    ?? filename?.split('/').pop()
+    ?? `file-${index + 1}`
+
+  return {
+    uid: item?.id ?? filename ?? url ?? `upload-${index}`,
+    name,
+    status: 'done',
+    url,
+    thumbUrl: url,
+    response: item,
+  }
+}
+
+const fileListToValues = (event) => {
+  const fileList = Array.isArray(event) ? event : (event?.fileList ?? [])
+  return fileList
+    .filter(file => file.status === 'done')
+    .flatMap(file => extractUploadItems(file.response ?? resolveUploadUrl(file)))
+}
+
+const FormFileUpload = ({
+  name,
+  label,
+  required,
+  accept,
+  folder = 'test',
+  image = false,
+  maxSizeMB,
+}) => {
+  const form = Form.useFormInstance()
+  const formValue = Form.useWatch(name, form)
+  const [fileList, setFileList] = useState([])
+
+  useEffect(() => {
+    setFileList(current => {
+      if (current.some(file => file.status === 'uploading')) {
+        return current
+      }
+      return (Array.isArray(formValue) ? formValue : (formValue ? [formValue] : [])).map(toUploadFile)
+    })
+  }, [formValue])
+
+  return (
+    <>
+      <Form.Item label={label} required={required}>
+        <Upload.Dragger
+          multiple
+          accept={accept || undefined}
+          fileList={fileList}
+          listType={image ? 'picture' : 'text'}
+          beforeUpload={(file) => {
+            if (maxSizeMB && file.size / 1024 / 1024 > maxSizeMB) {
+              message.error(`${file.name} vượt quá ${maxSizeMB}MB`)
+              return Upload.LIST_IGNORE
+            }
+            return true
+          }}
+          onChange={({ fileList: nextFileList }) => {
+            setFileList(nextFileList)
+            form.setFieldValue(name, fileListToValues(nextFileList))
+          }}
+          onPreview={(file) => {
+            const url = file.url ?? file.thumbUrl ?? resolveUploadUrl(file.response)
+            if (url) {
+              window.open(url, '_blank', 'noopener,noreferrer')
+            }
+          }}
+          customRequest={async ({ file, onSuccess, onError }) => {
+            try {
+              const formData = new FormData()
+              formData.append('files', file)
+              formData.append('folder', folder)
+              const response = await axios.post('/upload/folder/multiple', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+              })
+              const uploaded = extractUploadItems(response.data)
+              onSuccess(uploaded.length === 1 ? uploaded[0] : uploaded)
+            } catch (error) {
+              message.error('Upload thất bại')
+              onError(error)
+            }
+          }}
+        >
+          <p className="ant-upload-text">
+            {image ? 'Kéo ảnh vào đây hoặc bấm để chọn' : 'Kéo file vào đây hoặc bấm để chọn'}
+          </p>
+          <p className="ant-upload-hint">Hỗ trợ tải nhiều file cùng lúc</p>
+        </Upload.Dragger>
+      </Form.Item>
+      <Form.Item
+        name={name}
+        hidden
+        getValueProps={() => ({ value: '' })}
+        rules={[{
+          validator: (_, value) => {
+            if (!required || (Array.isArray(value) && value.length > 0)) {
+              return Promise.resolve()
+            }
+            return Promise.reject(new Error('Vui lòng tải file'))
+          },
+        }]}
+      >
+        <input type="hidden" />
+      </Form.Item>
+    </>
+  )
 }
 
 
@@ -339,6 +573,8 @@ const FieldPreview = ({ field }) => {
           required={required}
           placeholder={placeholder || 'Chọn...'}
           resourceData={opts}
+          valueProp="value"
+          titleProp="label"
         />
       )
 
@@ -350,6 +586,8 @@ const FieldPreview = ({ field }) => {
           required={required}
           placeholder={placeholder || 'Chọn nhiều...'}
           resourceData={opts}
+          valueProp="value"
+          titleProp="label"
           mode="multiple"
         />
       )
@@ -361,6 +599,8 @@ const FieldPreview = ({ field }) => {
           label={label}
           required={required}
           options={config.options ?? []}
+          valueProp="value"
+          titleProp="label"
         />
       )
 
@@ -371,17 +611,33 @@ const FieldPreview = ({ field }) => {
           label={label}
           required={required}
           options={config.options ?? []}
+          valueProp="value"
+          titleProp="label"
         />
       )
 
     case 'file':
-    case 'image':
       return (
-        <FormInput
+        <FormFileUpload
           name={fieldKey}
           label={label}
           required={required}
-          placeholder={placeholder || `Kéo ${inputType === 'image' ? 'ảnh' : 'file'} vào đây...`}
+          accept={/^image\/\*$/i.test(String(config.accept ?? '').trim()) ? undefined : (config.accept ?? undefined)}
+          folder={config.folder ?? 'test'}
+          maxSizeMB={config.maxSize}
+        />
+      )
+
+    case 'image':
+      return (
+        <FormFileUpload
+          name={fieldKey}
+          label={label}
+          required={required}
+          accept={config.accept ?? 'image/*'}
+          folder={config.folder ?? 'test'}
+          image
+          maxSizeMB={config.maxSize}
         />
       )
 
@@ -402,7 +658,8 @@ const FieldPreview = ({ field }) => {
           required={required}
           placeholder={placeholder || 'Tìm kiếm...'}
           entity={config.entity ?? ''}
-          labelField={config.labelField ?? 'name'}
+          titleProp={config.labelField ?? 'name'}
+          searchKey={config.labelField ?? 'name'}
         />
       )
 
@@ -413,11 +670,12 @@ const FieldPreview = ({ field }) => {
           label={label}
           required={required}
           placeholder={placeholder || 'Tìm kiếm...'}
-          api={config.api ?? undefined}
+          apiPath={config.api ?? undefined}
           entity={config.entity ?? ''}
-          labelField={config.labelField ?? config.titleProp ?? 'name'}
-          valueProp={config.valueProp ?? 'id'}
-          titleProp={config.titleProp ?? config.labelField ?? 'name'}
+          valueProp={config.dataLabel && config.dataValue ? 'value' : (config.valueProp ?? 'id')}
+          titleProp={config.dataLabel && config.dataValue ? 'label' : (config.titleProp ?? config.labelField ?? 'name')}
+          searchKey={config.labelField ?? config.titleProp ?? 'name'}
+          onData={createSelectApiOnData(config.dataLabel, config.dataValue)}
         />
       )
 
@@ -573,16 +831,6 @@ const JSXCodeTab = ({
     const buildJsxCode = prepareJsxForRemoteBuild(jsxCode)
     const entryFilename = `${toComponentName(schema?.meta?.name)}.jsx`
 
-    const payload = {
-      session_id: sessionId,
-      component_id: previewComponentId,
-      files: {
-        [entryFilename]: buildJsxCode,
-      },
-      entry_filename: entryFilename,
-    }
-
-    console.log('[PreviewModal] build preview payload', payload)
     buildingComponentIdRef.current = previewComponentId
 
     if (!sessionId) {
@@ -771,6 +1019,7 @@ const PreviewModal = ({
   const prevGeneratedCodeRef = useRef(generatedCode)
   const lastParsedKeyRef = useRef('')
   const lastNotifiedJsxRef = useRef(initialJsxCode || generatedCode)
+  const lastSchemaKeyRef = useRef(JSON.stringify(schema ?? {}))
   const getSessionId = useChatStore(s => s.getSessionId)
   const formBuilderSessionId = useMemo(() => getSessionId('form_builder'), [getSessionId])
   const fieldKeys = useMemo(() => (liveSchema?.fields ?? []).map(field => field.fieldKey).filter(Boolean), [liveSchema])
@@ -806,7 +1055,7 @@ const PreviewModal = ({
         return
       }
 
-      onSave?.({
+      const savePayload = {
         schema: effectiveSchema,
         jsxCode,
         syncError: '',
@@ -816,9 +1065,12 @@ const PreviewModal = ({
           url: buildResult.previewUrl,
           entryFilename,
         },
-      })
+      }
+      await onSave?.(savePayload)
     } catch (error) {
-      message.error(error.message)
+      if (!error?.formSaveHandled) {
+        message.error(error.message)
+      }
     } finally {
       setSavingAfterBuild(false)
     }
@@ -826,22 +1078,39 @@ const PreviewModal = ({
 
   useEffect(() => { setActiveTab(mode) }, [mode])
   useEffect(() => {
+    if (!open) {
+      return
+    }
+
     const prevGeneratedCode = prevGeneratedCodeRef.current
-    const hasCustomCode = Boolean(initialJsxCode) && initialJsxCode !== prevGeneratedCode
+    const shouldUpgradeGeneratedCode = shouldPreferGeneratedCode({
+      initialCode: initialJsxCode,
+      generatedCode,
+    })
+    const hasCustomCode = Boolean(initialJsxCode)
+      && initialJsxCode !== prevGeneratedCode
+      && !shouldUpgradeGeneratedCode
+    const nextSchemaKey = JSON.stringify(schema ?? {})
 
     if (!isDirty) {
       const nextJsxCode = hasCustomCode ? initialJsxCode : generatedCode
       setJsxCode(current => current === nextJsxCode ? current : nextJsxCode)
-      setLiveSchema(current => current === schema ? current : schema)
+      if (lastSchemaKeyRef.current !== nextSchemaKey) {
+        lastSchemaKeyRef.current = nextSchemaKey
+        setLiveSchema(schema)
+      }
       setSyncError(current => current === '' ? current : '')
     }
 
     prevGeneratedCodeRef.current = generatedCode
-  }, [initialJsxCode, generatedCode, schema, isDirty])
+  }, [open, initialJsxCode, generatedCode, schema, isDirty])
 
   useEffect(() => {
+    if (!open) {
+      return
+    }
+
     if (!isDirty) {
-      setLiveSchema(current => current === schema ? current : schema)
       setSyncError(current => current === '' ? current : '')
       return
     }
@@ -860,15 +1129,18 @@ const PreviewModal = ({
         ? current
         : (err.message || 'Khong parse duoc JSX.'))
     }
-  }, [jsxCode, schema, isDirty])
+  }, [open, jsxCode, schema, isDirty])
 
   useEffect(() => {
+    if (!open || jsxCode === initialJsxCode) {
+      return
+    }
     if (lastNotifiedJsxRef.current === jsxCode) {
       return
     }
     lastNotifiedJsxRef.current = jsxCode
     onJsxCodeChange?.(jsxCode)
-  }, [jsxCode, onJsxCodeChange])
+  }, [open, initialJsxCode, jsxCode, onJsxCodeChange])
 
   if (!open) return null
 

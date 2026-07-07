@@ -26,6 +26,7 @@ import { GlobalOutlined, LogoutOutlined, ProfileOutlined, UserOutlined } from '@
 import { Avatar, Dropdown } from 'antd';
 import useGetMe from '@/hooks/useGetMe';
 import moment from 'moment';
+import { UserDropdownPanel } from './styles';
 
 const LANGUAGE = [
   { value: 'en', text: 'EN' },
@@ -37,6 +38,7 @@ function UserInfo() {
   const { t, i18n } = useTranslation();
   const [locale, setLocale] = useState(i18n.language);
   const { user: profile } = useGetMe();
+
   const changeLocale = useCallback(e => {
     setLocale(e);
     i18n.changeLanguage(e);
@@ -48,66 +50,55 @@ function UserInfo() {
     setLocale(i18n.language);
   }, [i18n.language]);
 
-  const getClassItemLanguage = useCallback(
-    language =>
-      locale?.includes(language)
-        ? 'localeSelect active language-item'
-        : 'localeSelect language-item',
-    [locale],
-  );
-
   const handleLogout = () => {
     localStorage.removeItem('jwt_access_token');
     window.location.href = '/login';
   };
 
-  const userDropdownItems = [
-    {
-      key: 'profile',
-      label: (
-        <div className="div-menu-item">
-          <Link to="/profile" className="link-menu-item">
-            <div className="profile-menu-item">
-              <ProfileOutlined className="icon-menu-item" />
-              <span>{t('header.profile')}</span>
-            </div>
-          </Link>
+  const dropdownContent = (
+    <UserDropdownPanel>
+      <div className="user-dropdown-section">
+        <Link to="/profile" className="user-dropdown-row">
+          <ProfileOutlined className="user-dropdown-icon" />
+          <span>{t('header.profile')}</span>
+        </Link>
+
+        <div className="user-dropdown-row user-dropdown-row-language">
+          <GlobalOutlined className="user-dropdown-icon" />
+          <span>Language</span>
         </div>
-      ),
-    },
-    {
-      key: 'language',
-      label: (
-        <div className="div-menu-item">
-          <GlobalOutlined className="icon-menu-item" />
-          {LANGUAGE.map(item => (
-            <div
-              key={item.value}
-              className={getClassItemLanguage(item.value)}
-              role="presentation"
-              onClick={() => changeLocale(item.value)}
-            >
-              {item.text}
-            </div>
-          ))}
+
+        <div className="user-dropdown-language-actions">
+          {LANGUAGE.map(item => {
+            const active = locale?.includes(item.value);
+            return (
+              <button
+                key={item.value}
+                type="button"
+                className={active ? 'active' : ''}
+                onClick={() => changeLocale(item.value)}
+              >
+                {item.text}
+              </button>
+            );
+          })}
         </div>
-      ),
-    },
-    {
-      key: 'logout',
-      onClick: handleLogout,
-      label: (
-        <div className="div-menu-item">
-          <LogoutOutlined className="icon-menu-item" />
-          {t('header.logout')}
-        </div>
-      ),
-    },
-  ];
+      </div>
+
+      <button type="button" className="user-dropdown-logout" onClick={handleLogout}>
+        <LogoutOutlined className="user-dropdown-icon" />
+        <span>{t('header.logout')}</span>
+      </button>
+    </UserDropdownPanel>
+  );
 
   return (
     <div>
-      <Dropdown menu={{ items: userDropdownItems }} trigger={['click']}>
+      <Dropdown
+        trigger={['click']}
+        placement="bottomRight"
+        dropdownRender={() => dropdownContent}
+      >
         <div className="div-user-info">
           <span className="userInfo">
             <strong>{profile?.fullName ?? 'Flast Solution'}</strong>

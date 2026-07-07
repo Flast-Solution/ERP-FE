@@ -32,6 +32,7 @@ import {
 } from '@dnd-kit/core'
 import PreviewModal from '@/containers/PreviewModal'
 
+import { SUCCESS_CODE } from '@/configs'
 import useFormBuilderStore from '@/store/useFormBuilderStore'
 import { FIELD_TYPE_MAP }  from '@/utils/fieldTypes'
 import { buildJSX } from '@/containers/PreviewModal/buildJSX'
@@ -117,6 +118,20 @@ const isAiGeneratedField = (field) => (
   (getFieldProvenance(field)?.createdBySource ?? getFieldProvenance(field)?.source) === 'ai'
 )
 
+const isStaleGeneratedUploadCode = (code = '', generatedCode = '') => (
+  /forwardRef\(\(\{[\s\S]*submitSignal[\s\S]*useImperativeHandle/.test(code)
+  && generatedCode.includes('resolveUploadFilename')
+  && generatedCode.includes('thumbUrl')
+  && generatedCode.includes('onPreview')
+  && generatedCode.includes('accept={accept || undefined}')
+  && !(
+    code.includes('resolveUploadFilename')
+    && code.includes('thumbUrl')
+    && code.includes('onPreview')
+    && code.includes('accept={accept || undefined}')
+  )
+)
+
 const FormBuilder = ({
   templateId = null,
   domain     = '',
@@ -143,6 +158,7 @@ const FormBuilder = ({
   const getParentId   = useFormBuilderStore(s => s.getParentId)
   const getFieldLocation = useFormBuilderStore(s => s.getFieldLocation)
   const toPayload     = useFormBuilderStore(s => s.toPayload)
+  const resetBuilder  = useFormBuilderStore(s => s.reset)
 
   const findFieldById = useCallback((items, targetId) => {
     for (const item of items) {
@@ -165,18 +181,19 @@ const FormBuilder = ({
     importGeneratedTemplate({
       meta  : incomingTemplate.meta,
       fields: incomingTemplate.fields,
-      provenance: {
-        source: 'ai',
-        action: 'created',
+      provenance: incomingTemplate.provenance ?? {
+        source: 'api',
+        action: 'loaded',
       },
     })
     const nextSchema = {
       meta  : { ...templateMeta, ...(incomingTemplate.meta ?? {}) },
       fields: incomingTemplate.fields ?? [],
     }
+    const generatedFallbackCode = buildJSX(nextSchema).plain
     const nextJsxCode = typeof incomingTemplate.code === 'string' && incomingTemplate.code.trim()
       ? incomingTemplate.code
-      : buildJSX(nextSchema).plain
+      : generatedFallbackCode
     setJsxCode(nextJsxCode)
     if (incomingTemplate.openPreview === true) {
       setPreviewMode('code')
@@ -322,12 +339,8 @@ const FormBuilder = ({
       const buildMeta = previewPayload?.build?.url
         ? {
           microFrontendUrl: previewPayload.build.url,
-          micro_frontend_url: previewPayload.build.url,
-          remoteEntryUrl: previewPayload.build.url,
-          remote_entry_url: previewPayload.build.url,
           componentId: previewPayload.build.componentId,
           component_id: previewPayload.build.componentId,
-          remoteEntry: previewPayload.build.url,
         }
         : {}
       const payload = {
@@ -344,12 +357,17 @@ const FormBuilder = ({
         setJsxCode(previewPayload.jsxCode)
       }
 
-      console.log('[FormBuilder] save payload', payload)
-      await onSave?.(payload)
+      const response = await onSave?.(payload)
+      const ok = response == null || response?.success === true || Number(response?.errorCode) === SUCCESS_CODE
+      if (!ok) {
+        throw new Error(response?.message || 'Lưu thất bại. Vui lòng thử lại.')
+      }
       message.success('Đã lưu form template.')
+      return response
     } catch (err) {
-      message.error('Lưu thất bại. Vui lòng thử lại.')
-      console.error(err)
+      message.error(err?.message || 'Lưu thất bại. Vui lòng thử lại.')
+      err.formSaveHandled = true
+      throw err
     } finally {
       setSaving(false)
     }
@@ -377,10 +395,25 @@ const FormBuilder = ({
       meta: templateMeta,
       fields,
     }).plain
-    setJsxCode(current => mode === 'code' && current?.trim() ? current : generatedJsxCode)
+    setJsxCode(current => {
+      if (isStaleGeneratedUploadCode(current, generatedJsxCode)) {
+        return generatedJsxCode
+      }
+      return current?.trim() ? current : generatedJsxCode
+    })
     setPreviewMode(mode)
     setPreviewOpen(true)
   }, [templateMeta, fields])
+
+  const handleCancel = useCallback(() => {
+    setPreviewOpen(false)
+    setPreviewMode('ui')
+    setJsxCode('')
+    setActiveDragId(null)
+    appliedIncomingRef.current = null
+    resetBuilder()
+    onCancel?.()
+  }, [onCancel, resetBuilder])
 
   return (
     <DndContext
@@ -431,7 +464,7 @@ const FormBuilder = ({
             <Popconfirm
               title="Hủy thay đổi?"
               description="Các thay đổi chưa lưu sẽ bị mất."
-              onConfirm={onCancel}
+              onConfirm={handleCancel}
               okText="Hủy thay đổi"
               cancelText="Tiếp tục chỉnh sửa"
               okButtonProps={{ danger: true }}
@@ -439,7 +472,7 @@ const FormBuilder = ({
             >
               <Button
                 icon={<CloseOutlined />}
-                onClick={fields.length === 0 ? onCancel : undefined}
+                onClick={fields.length === 0 ? handleCancel : undefined}
               >
                 Hủy
               </Button>
@@ -470,9 +503,9 @@ const FormBuilder = ({
         initialJsxCode={jsxCode}
         onJsxCodeChange={setJsxCode}
         onClose={() => setPreviewOpen(false)}
-        onSave={(payload) => {
-          setPreviewOpen(false); 
-          handleSave(payload);
+        onSave={async (payload) => {
+          await handleSave(payload)
+          setPreviewOpen(false)
         }}
       />
     </DndContext>

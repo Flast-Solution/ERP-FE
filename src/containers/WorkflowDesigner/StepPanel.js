@@ -1,10 +1,12 @@
 import React from 'react'
-import { Empty, Tooltip } from 'antd'
+import { Empty, Switch, Tooltip } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import {
   useNodes,
+  useProcess,
   useSelectedId,
   useSetSelected,
+  useSetProcess,
   useStepTypes,
   useSetStepTypes,
 } from '@/hooks/useWorkflowStore'
@@ -23,6 +25,10 @@ import {
   TypePillIcon,
   PaletteDivider,
   StepListWrapper,
+  WorkflowStatusRow,
+  WorkflowStatusText,
+  WorkflowStatusLabel,
+  WorkflowStatusValue,
   StepRow,
   StepRowDot,
   StepRowLabel,
@@ -65,7 +71,7 @@ const ExistingStepItem = ({ node, stepTypes, isActive, onClick }) => {
   return (
     <StepRow $active={isActive} onClick={onClick}>
       <StepRowDot $color={color} />
-      <StepRowLabel>{node.data?.label || 'Untitled'}</StepRowLabel>
+      <StepRowLabel>{node.data?.name || node.data?.label || 'Untitled'}</StepRowLabel>
       <StepRowCode>{node.data?.code}</StepRowCode>
     </StepRow>
   )
@@ -73,12 +79,15 @@ const ExistingStepItem = ({ node, stepTypes, isActive, onClick }) => {
 
 // ─── StepPanel ────────────────────────────────────────────────────────────────
 
-const StepPanel = () => {
+const StepPanel = ({ onReloadStepTypes }) => {
   const nodes = useNodes()
+  const process = useProcess()
   const selectedId = useSelectedId()
   const setSelected = useSetSelected()
+  const setProcess = useSetProcess()
   const stepTypes = useStepTypes()
   const setStepTypes = useSetStepTypes()
+  const isWorkflowActive = Number(process.status ?? 1) === 1
 
   // Mở modal cấu hình loại bước
   const handleOpenConfig = () => {
@@ -88,6 +97,7 @@ const StepPanel = () => {
       data: {
         stepTypes,
         onSave: (updatedTypes) => setStepTypes(updatedTypes),
+        onReload: onReloadStepTypes,
       },
     })
   }
@@ -154,6 +164,19 @@ const StepPanel = () => {
           ))
         )}
       </StepListWrapper>
+
+      <WorkflowStatusRow>
+        <WorkflowStatusText>
+          <WorkflowStatusLabel>Trạng thái</WorkflowStatusLabel>
+          <WorkflowStatusValue>{isWorkflowActive ? 'Đang kích hoạt' : 'Tạm ngưng'}</WorkflowStatusValue>
+        </WorkflowStatusText>
+        <Switch
+          checked={isWorkflowActive}
+          checkedChildren="Bật"
+          unCheckedChildren="Tắt"
+          onChange={(checked) => setProcess({ status: checked ? 1 : 0 })}
+        />
+      </WorkflowStatusRow>
 
     </PanelContainer>
   )

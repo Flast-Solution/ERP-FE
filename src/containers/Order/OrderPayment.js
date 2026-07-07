@@ -47,7 +47,7 @@ const VATOPTIONS = [
   { name: 'VAT 10%', value: 10 }
 ]
 
-const OrderPayment = ({ data }) => {
+const OrderPayment = ({ data, readOnly = false }) => {
 
   const [form] = Form.useForm();
   const watchedVat = Form.useWatch('vat', form);
@@ -56,9 +56,10 @@ const OrderPayment = ({ data }) => {
   const { onSave, details, customerOrder } = data;
 
   useEffect(() => {
+    if (readOnly) return;
     form.setFieldValue('vat', customerOrder.vat);
     form.setFieldValue('shippingCost', customerOrder.shippingCost);
-  }, [form, customerOrder]);
+  }, [form, customerOrder, readOnly]);
 
   const onSubmitPayment = useCallback(async (values) => {
     const { data, errorCode, message: MSG } = await RequestUtils.Post("/pay/manual", {
@@ -73,16 +74,15 @@ const OrderPayment = ({ data }) => {
 
   const subtotal = customerOrder?.subtotal || 0;
   const paid = customerOrder?.paid || 0;
-  const monneyVAT = subtotal * ((watchedVat || 0) / 100);
-  const total = (watchedShip || 0) + (subtotal + monneyVAT);
+  const vatValue = readOnly ? (customerOrder?.vat || 0) : (watchedVat || 0);
+  const shipValue = readOnly ? (customerOrder?.shippingCost || 0) : (watchedShip || 0);
+  const monneyVAT = subtotal * (vatValue / 100);
+  const total = shipValue + (subtotal + monneyVAT);
 
-  return (
-    <div style={{ padding: 15 }}>
-      <p><strong>Thông tin đơn hàng #{customerOrder?.code || ''}</strong></p>
-      <OrderTextTableOnly details={details} />
-
-      <Form form={form} layout="vertical" onFinish={onSubmitPayment}>
-        <Row style={{ marginTop: 20, padding: 15, border: '0.5px dashed #bdafaf' }}>
+  const summaryBox = (
+    <Row style={{ marginTop: 20, padding: 15, border: '0.5px dashed #bdafaf' }}>
+      {!readOnly ? (
+        <>
           <Col md={10} xs={24}>
             <FormSelect
               label="Chọn VAT"
@@ -100,72 +100,94 @@ const OrderPayment = ({ data }) => {
               name={"shippingCost"}
             />
           </Col>
+        </>
+      ) : (
+        <>
           <Col md={12} xs={12}>
-            <p>Tổng đơn: {formatMoney(subtotal)}</p>
-          </Col>
-          <Col md={12} xs={12}>
-            <p>VAT: {formatMoney(monneyVAT)}</p>
-          </Col>
-          <Col md={12} xs={12}>
-            <p>Tổng chi phí: {formatMoney(total)}</p>
+            <p>Chọn VAT: VAT {vatValue}%</p>
           </Col>
           <Col md={12} xs={12}>
-            <p>Phí vận chuyển:{formatMoney(watchedShip)}</p>
+            <p>Phí vận chuyển: {formatMoney(shipValue)}</p>
           </Col>
-          <Col md={12} xs={12}>
-            <p>Đã thanh toán: {formatMoney(paid)}</p>
-          </Col>
-          <Col md={12} xs={12}>
-            <p>Chiết khấu: {formatMoney(customerOrder?.priceOff || 0)}</p>
-          </Col>
-          <Col md={12} xs={12}>
-            <strong>Còn lại: {formatMoney(total - paid)}</strong>
-          </Col>
-        </Row>
-        <Row gutter={16} style={{ marginTop: 20 }}>
-          <Col md={12} xs={24}>
-            <FormSelect
-              required
-              name="method"
-              label="Hình thức"
-              placeholder="Hình thức thanh toán"
-              resourceData={OptionPrice}
-              valueProp="name"
-              titleProp="title"
-            />
-          </Col>
-          <Col md={12} xs={24}>
-            <FormInputNumber
-              required={false}
-              label="Số tiền"
-              min="0"
-              name="amount"
-              placeholder={"Số tiền thanh toán"}
-            />
-          </Col>
-          <Col md={12} xs={24}>
-            <FormDatePicker
-              name="date"
-              format='DD/MM/YYYY'
-              label="Ngày thanh toán"
-              placeholder={"Chọn ngày"}
-            />
-          </Col>
-          <Col md={12} xs={24}>
-            <FormAutoComplete
-              resourceData={[{ name: 'Đặt cọc' }, { name: 'Tất toán' }]}
-              valueProp='name'
-              titleProp='name'
-              label='Nội dung'
-              name='content'
-              placeholder={'Nội dung thanh toán'}
-            />
-          </Col>
-          <Col md={24} xs={24}>
-            <BtnSubmit text="Hoàn thành" />
-          </Col>
-        </Row>
-      </Form>
+        </>
+      )}
+      <Col md={12} xs={12}>
+        <p>Tổng đơn: {formatMoney(subtotal)}</p>
+      </Col>
+      <Col md={12} xs={12}>
+        <p>VAT: {formatMoney(monneyVAT)}</p>
+      </Col>
+      <Col md={12} xs={12}>
+        <p>Tổng chi phí: {formatMoney(total)}</p>
+      </Col>
+      <Col md={12} xs={12}>
+        <p>Phí vận chuyển:{formatMoney(shipValue)}</p>
+      </Col>
+      <Col md={12} xs={12}>
+        <p>Đã thanh toán: {formatMoney(paid)}</p>
+      </Col>
+      <Col md={12} xs={12}>
+        <p>Chiết khấu: {formatMoney(customerOrder?.priceOff || 0)}</p>
+      </Col>
+      <Col md={12} xs={12}>
+        <strong>Còn lại: {formatMoney(total - paid)}</strong>
+      </Col>
+    </Row>
+  );
+
+  return (
+    <div style={{ padding: 15 }}>
+      <p><strong>Thông tin đơn hàng #{customerOrder?.code || ''}</strong></p>
+      <OrderTextTableOnly details={details} />
+
+      {readOnly ? summaryBox : (
+        <Form form={form} layout="vertical" onFinish={onSubmitPayment}>
+          {summaryBox}
+          <Row gutter={16} style={{ marginTop: 20 }}>
+            <Col md={12} xs={24}>
+              <FormSelect
+                required
+                name="method"
+                label="Hình thức"
+                placeholder="Hình thức thanh toán"
+                resourceData={OptionPrice}
+                valueProp="name"
+                titleProp="title"
+              />
+            </Col>
+            <Col md={12} xs={24}>
+              <FormInputNumber
+                required={false}
+                label="Số tiền"
+                min="0"
+                name="amount"
+                placeholder={"Số tiền thanh toán"}
+              />
+            </Col>
+            <Col md={12} xs={24}>
+              <FormDatePicker
+                name="date"
+                format='DD/MM/YYYY'
+                label="Ngày thanh toán"
+                placeholder={"Chọn ngày"}
+              />
+            </Col>
+            <Col md={12} xs={24}>
+              <FormAutoComplete
+                resourceData={[{ name: 'Đặt cọc' }, { name: 'Tất toán' }]}
+                valueProp='name'
+                titleProp='name'
+                label='Nội dung'
+                name='content'
+                placeholder={'Nội dung thanh toán'}
+              />
+            </Col>
+            <Col md={24} xs={24}>
+              <BtnSubmit text="Hoàn thành" />
+            </Col>
+          </Row>
+        </Form>
+      )}
     </div>
   )
 }
