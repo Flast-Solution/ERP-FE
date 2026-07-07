@@ -57,12 +57,15 @@ import {
   RotateLeftOutlined
 } from '@ant-design/icons';
 
+import { useEffect, useState } from 'react';
+import axios from 'axios';
 import { useCollapseSidebar } from '@flast-erp/core/hooks';
+import { RequestUtils } from '@flast-erp/core/utils';
 import { useTranslation } from 'react-i18next';
 import { Link } from "react-router-dom";
 import SideBarStyles from './styles';
 import useGetMe from '@/hooks/useGetMe';
-import { isSuperAdmin } from '@/utils/authUtils';
+import { BUSINESS_UPDATED_EVENT, getTokenPayload, isSuperAdmin } from '@/utils/authUtils';
 
 function getItem(label, key, icon, children) {
   return { key, icon, children, label };
@@ -70,12 +73,58 @@ function getItem(label, key, icon, children) {
 const { Sider } = Layout;
 const iconSize = { fontSize: 18 };
 
+const USER_BUSINESS_INFO_API = '/auth/user-bussiness/find-info';
+
+const isAbsoluteUrl = (value = '') =>
+  /^https?:\/\//i.test(String(value)) || String(value).startsWith('/api/');
+
+const resolveLogoUrl = (logo) => {
+  if (!logo) return '';
+  if (isAbsoluteUrl(logo)) return logo;
+  const baseUrl = String(axios.defaults.baseURL || '/api').replace(/\/$/, '');
+  return `${baseUrl}/upload/folder/view?filename=${encodeURIComponent(logo)}`;
+};
+
 function SideBar() {
 
   const { t } = useTranslation();
   const { isCollapseSidebar: collapsed, toggleCollapse } = useCollapseSidebar();
   const { user } = useGetMe();
   const canManageBusinessUnits = isSuperAdmin(user);
+  const [businessLogo, setBusinessLogo] = useState('');
+
+  const bizId = user?.bizId ?? user?.biz_id ?? getTokenPayload()?.bizId ?? null;
+
+  useEffect(() => {
+    if (!bizId) return undefined;
+
+    let mounted = true;
+    (async () => {
+      try {
+        const response = await RequestUtils.Get(USER_BUSINESS_INFO_API, { bizId });
+        const info = response?.data?.data ?? response?.data ?? null;
+        if (mounted && info?.logo) {
+          setBusinessLogo(resolveLogoUrl(info.logo));
+        }
+      } catch (error) {
+        console.warn('[SideBar] fetch business logo failed', error);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [bizId]);
+
+  useEffect(() => {
+    const handleBusinessUpdated = (event) => {
+      const logo = event?.detail?.logo;
+      setBusinessLogo(logo ? resolveLogoUrl(logo) : '');
+    };
+
+    window.addEventListener(BUSINESS_UPDATED_EVENT, handleBusinessUpdated);
+    return () => window.removeEventListener(BUSINESS_UPDATED_EVENT, handleBusinessUpdated);
+  }, []);
 
   const items = [
     getItem(<Link to="/sale/report-common">{t('sideBar.dashboard')}</Link>, 'home', <FundViewOutlined />),
@@ -159,7 +208,13 @@ function SideBar() {
         theme="light"
       >
         <div className="logo" onClick={toggleCollapse}>
-          <img alt="" src={collapsed ? '/img-intro-login.png' : '/logo.png'} />
+          <img
+            alt=""
+            className={businessLogo ? 'business-logo' : ''}
+            src={collapsed
+              ? (businessLogo || '/img-intro-login.png')
+              : (businessLogo || '/logo.png')}
+          />
         </div>
         <Menu
           mode="inline"

@@ -38,6 +38,7 @@ function UserInfo() {
   const { t, i18n } = useTranslation();
   const [locale, setLocale] = useState(i18n.language);
   const { user: profile } = useGetMe();
+
   const changeLocale = useCallback(e => {
     setLocale(e);
     i18n.changeLanguage(e);

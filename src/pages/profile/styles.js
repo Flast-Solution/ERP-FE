@@ -599,15 +599,19 @@ export const LogoDrop = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   color: #7c8192;
   background: #fbfbfd;
 `
 
 export const LogoPreview = styled.img`
-  width: 68px;
-  height: 68px;
+  width: 100%;
+  height: 100%;
+  max-width: 68px;
+  max-height: 68px;
   border-radius: 8px;
-  object-fit: cover;
+  object-fit: contain;
+  padding: 4px;
   display: block;
 `
 
