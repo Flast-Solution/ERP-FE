@@ -16,6 +16,7 @@ const WORKFLOW_SUBMISSION_API = '/workflow/process/submission'
 const WORKFLOW_TRANSITION_API = '/workflow/process/transition'
 const WORKFLOW_INSTANCE_BY_ENTITY_API = '/workflow/process/instance/get-entity'
 const WORKFLOW_PREVIEW_API = '/workflow/process/preview'
+const FORM_TEMPLATE_DETAIL_API = '/workflow/forms/template/find-id'
 const WORKFLOW_PROCESS_FIND_API = '/workflow/process/find-id'
 const PROCESS_TYPE_FIND_API = '/workflow/process/process-type-find'
 
@@ -332,6 +333,59 @@ const formatGuardDescription = (guard, transition) => {
   return `${fieldName} ${operator} ${expectedValue}${toStepCode ? ` → ${toStepCode}` : ''}`
 }
 
+const GUARD_OPERATOR_INVERSE = {
+  eq: 'neq',
+  neq: 'eq',
+  gt: 'lte',
+  gte: 'lt',
+  lt: 'gte',
+  lte: 'gt',
+}
+
+// Guard trên nhánh "loại" (reject) mô tả điều kiện để bị loại, nên khi hiển thị
+// "Yêu cầu" (điều kiện để ĐẠT) ta phải đảo ngược lại toán tử của guard.
+const formatGuardRequirement = (guard, reject = false) => {
+  const config = guard?.config ?? {}
+  const rawOperator = config.operator ?? 'eq'
+  const operator = reject ? (GUARD_OPERATOR_INVERSE[rawOperator] ?? rawOperator) : rawOperator
+  const operatorLabel = GUARD_OPERATOR_LABELS[operator] ?? operator
+  const expected = coerceGuardValue(config.expected_value ?? config.expectedValue)
+
+  if (expected === 'true' || expected === 'false') {
+    // eq: đạt khi bằng expected; neq: đạt khi khác expected.
+    const wantTrue = operator === 'eq' ? expected === 'true' : expected === 'false'
+    return wantTrue ? 'Có' : 'Không'
+  }
+
+  if (operator === 'eq') return expected
+  return `${operatorLabel} ${expected}`.trim()
+}
+
+const REJECT_TRANSITION_KEYWORDS = [
+  'lỗi', 'loi', 'error', 'reject', 'fail', 'hỏng', 'hong',
+  'hủy', 'huy', 'defect', 'từ chối', 'tu choi', 'cancel', 'loại', 'loai',
+]
+
+const normalizeLowerText = (value) => String(value ?? '')
+  .toLowerCase()
+  .normalize('NFC')
+
+// Xác định một transition có phải nhánh "loại/không đạt" hay không dựa trên tên bước đích.
+const isRejectTransition = (transition, stepNameMap = new Map()) => {
+  const toStepRef = normalizeStepRef(transition?.toStepCode ?? transition?.to_step_code)
+  const haystack = normalizeLowerText([
+    stepNameMap.get(toStepRef),
+    transition?.toStepName,
+    transition?.to_step_name,
+    transition?.toStepCode,
+    transition?.to_step_code,
+    transition?.name,
+    transition?.label,
+  ].filter(Boolean).join(' '))
+
+  return REJECT_TRANSITION_KEYWORDS.some((keyword) => haystack.includes(keyword))
+}
+
 const getFormFields = (formTemplate) => getFirstArray(
   formTemplate?.fields,
   formTemplate?.formFields,
@@ -378,17 +432,6 @@ const buildFieldDisplayItems = (values = {}, fields = []) => {
   })
 }
 
-const resolveInspectionOutcome = (values = {}) => {
-  const raw = values.inspection_result ?? values.result ?? values.inspectionResult
-  if (raw === 'PASS' || raw === true || raw === 'true') {
-    return { isPass: true, statusName: 'Đạt' }
-  }
-  if (raw === 'FAIL' || raw === false || raw === 'false') {
-    return { isPass: false, statusName: 'Không đạt' }
-  }
-  return { isPass: null, statusName: 'Đã gửi' }
-}
-
 const resolveFormTemplateForSubmission = (submission, {
   previewStepProcess,
   formTemplates = [],
@@ -403,46 +446,178 @@ const resolveFormTemplateForSubmission = (submission, {
   return formTemplates.find((template) => isSubmissionForTemplate(submission, template)) ?? null
 }
 
+const isInspectionStep = (step) => Boolean(
+  step?.formUrl ?? step?.form_url ?? step?.formTemplate ?? step?.formTemplates,
+)
+
+const getStepTemplateId = (step) => {
+  const attachedForm = getFirstArray(step?.forms, step?.formTemplates)[0]
+  return (
+    step?.formTemplateId
+    ?? step?.form_template_id
+    ?? step?.templateId
+    ?? step?.template_id
+    ?? step?.formId
+    ?? step?.form_id
+    ?? step?.formTemplate?.id
+    ?? step?.formTemplate?.templateId
+    ?? attachedForm?.templateId
+    ?? attachedForm?.template_id
+    ?? attachedForm?.formId
+    ?? attachedForm?.id
+    ?? null
+  )
+}
+
+// Tìm form template cho 1 bước dựa trên template id trong danh sách đã nạp.
+const findTemplateByStep = (step, formTemplates = []) => {
+  const stepTemplateId = getStepTemplateId(step)
+  if (!stepTemplateId) return null
+  return formTemplates.find(
+    (template) => String(resolveTemplateId(template)) === String(stepTemplateId),
+  ) ?? null
+}
+
 const buildInspectionResults = ({
   submissions = [],
   steps = [],
   stepTransitionList = [],
   previewStepProcess,
   formTemplates = [],
-}) => (
-  submissions.map((submission) => {
-    const step = findWorkflowStep(steps, submission?.stepCode ?? submission?.step_code)
-      ?? { stepCode: submission?.stepCode ?? submission?.step_code }
+}) => {
+  const relevantSteps = steps.filter((step) => (
+    isInspectionStep(step) || Boolean(findSubmissionForStep(submissions, step))
+  ))
+
+  const orphanSubmissionSteps = submissions
+    .filter((submission) => !relevantSteps.some((step) => isSubmissionForStep(submission, step)))
+    .map((submission) => ({
+      stepCode: submission?.stepCode ?? submission?.step_code,
+      name: submission?.stepName ?? submission?.step_name,
+      sortOrder: 999,
+    }))
+
+  const displaySteps = [...relevantSteps, ...orphanSubmissionSteps]
+    .sort((a, b) => Number(a?.sortOrder ?? 0) - Number(b?.sortOrder ?? 0))
+
+  const stepNameMap = new Map(
+    steps.map((step) => [
+      normalizeStepRef(getValue(step?.stepCode, step?.code, step?.id)),
+      getStepDisplayName(step),
+    ]),
+  )
+
+  // Gom toàn bộ field của mọi template đã nạp để tra label khi bước chưa có template riêng.
+  const globalFieldMap = new Map()
+  formTemplates.forEach((template) => {
+    getFormFields(template).forEach((field) => {
+      const key = field?.fieldKey ?? field?.field_key ?? field?.name
+      if (key && !globalFieldMap.has(key)) {
+        globalFieldMap.set(key, field)
+      }
+    })
+  })
+
+  return displaySteps.map((step) => {
+    const stepCode = getValue(step?.stepCode, step?.code)
+    const submission = findSubmissionForStep(submissions, step)
+    const hasSubmission = Boolean(submission)
     const values = getSubmissionValues(submission)
-    const formTemplate = resolveFormTemplateForSubmission(submission, { previewStepProcess, formTemplates })
-    const fields = buildFieldDisplayItems(values, getFormFields(formTemplate))
-    const outcome = resolveInspectionOutcome(values)
-    const guards = getGuardsForSourceStep(submission?.stepCode ?? submission?.step_code, stepTransitionList)
-      .map(({ transition, guard }) => ({
+    // Gộp field từ mọi nguồn có thể của bước để tra label: template của submission,
+    // template gắn sẵn, template fetch theo id, và các form đính kèm (step.forms).
+    const stepFormTemplates = [
+      submission
+        ? resolveFormTemplateForSubmission(submission, { previewStepProcess, formTemplates })
+        : null,
+      step?.formTemplate,
+      findTemplateByStep(step, formTemplates),
+      ...getFirstArray(step?.forms, step?.formTemplates),
+    ].filter(Boolean)
+
+    const formTemplate = stepFormTemplates[0] ?? null
+    const stepFields = stepFormTemplates.flatMap((template) => getFormFields(template))
+    const fieldItems = buildFieldDisplayItems(values, stepFields)
+
+    const stepGuards = getGuardsForSourceStep(stepCode, stepTransitionList)
+    // Mỗi field có thể xuất hiện ở nhiều transition (nhánh đạt + nhánh loại).
+    // Ưu tiên guard nhánh "đạt" (forward) để hiển thị yêu cầu/KQ; nếu chỉ có
+    // guard nhánh "loại" thì đảo chiều kết quả cho đúng nghiệp vụ.
+    const guardByField = new Map()
+    stepGuards.forEach(({ guard, transition }) => {
+      const key = guard?.config?.field_name ?? guard?.config?.fieldName
+      if (!key) return
+      const reject = isRejectTransition(transition, stepNameMap)
+      const existing = guardByField.get(key)
+      if (!existing || (existing.reject && !reject)) {
+        guardByField.set(key, { guard, transition, reject })
+      }
+    })
+
+    const fieldItemMap = new Map(fieldItems.map((field) => [field.key, field]))
+    const templateFieldMap = new Map(
+      stepFields.map((field) => [
+        field?.fieldKey ?? field?.field_key ?? field?.name,
+        field,
+      ]),
+    )
+
+    const rows = Array.from(guardByField.entries()).map(([fieldKey, matched]) => {
+      const fieldItem = fieldItemMap.get(fieldKey)
+      const templateField = templateFieldMap.get(fieldKey) ?? globalFieldMap.get(fieldKey)
+      const rawValue = values?.[fieldKey]
+      const guardMatched = hasSubmission ? evaluateGuard(matched.guard, submissions) : null
+      const resultPass = guardMatched === null
+        ? null
+        : (matched.reject ? !guardMatched : guardMatched)
+
+      return {
+        key: fieldKey,
+        label: fieldItem?.label ?? templateField?.label ?? templateField?.title ?? fieldKey,
+        displayValue: fieldItem?.displayValue ?? formatSubmissionFieldValue(templateField, rawValue),
+        requirement: formatGuardRequirement(matched.guard, matched.reject),
+        resultPass,
+      }
+    })
+
+    const guards = stepGuards.map(({ transition, guard }) => {
+      const reject = isRejectTransition(transition, stepNameMap)
+      const matched = evaluateGuard(guard, submissions)
+      return {
         id: guard?.id,
-        passed: evaluateGuard(guard, submissions),
+        passed: reject ? !matched : matched,
+        reject,
         description: formatGuardDescription(guard, transition),
         toStepCode: transition?.toStepCode ?? transition?.to_step_code,
-      }))
+      }
+    })
+
+    // Kết quả đánh giá dựa hoàn toàn vào các guard gắn với form:
+    // mọi guard thỏa -> Đạt, còn lại -> Không đạt.
+    const allGuardsPassed = rows.length > 0
+      ? rows.every((row) => row.resultPass === true)
+      : guards.every((guard) => guard.passed)
+    const status = !hasSubmission ? 'pending' : allGuardsPassed ? 'pass' : 'fail'
+    const isPass = !hasSubmission ? null : allGuardsPassed
 
     return {
-      id: submission?.id,
-      stepCode: submission?.stepCode ?? submission?.step_code,
+      id: submission?.id ?? stepCode,
+      stepCode,
       stepName: getStepDisplayName(step),
+      standard: getValue(step?.standard, step?.standardCode, step?.standard_code, formTemplate?.standard),
       submittedAt: submission?.submittedAt ?? submission?.submitted_at,
       submittedName: submission?.submittedName ?? submission?.submitted_name,
       values,
-      fields,
+      fields: fieldItems,
+      rows,
       guards,
       submission,
-      success: outcome.isPass !== false,
-      isPass: outcome.isPass,
-      statusName: outcome.statusName,
-      name: getStepDisplayName(step),
-      description: formatTime(submission?.submittedAt ?? submission?.submitted_at) || '',
+      hasSubmission,
+      status,
+      isPass,
+      statusName: !hasSubmission ? 'Chưa có kết quả' : allGuardsPassed ? 'Đạt' : 'Không đạt',
     }
-  })
-)
+  }).filter((item) => item.guards.length > 0)
+}
 
 const getStepDisplayName = (step, fallback) => getValue(
   step?.name,
@@ -1257,105 +1432,267 @@ const WorkflowProgressPanel = ({
   )
 }
 
-const InspectionResultList = ({ data, selectedStepCode, onSelect }) => {
+const INSPECTION_STATUS_STYLES = {
+  pass: { accent: '#16a34a', pillBg: '#dcfce7', pillText: '#15803d', dot: '#16a34a', label: 'Đạt' },
+  fail: { accent: '#dc2626', pillBg: '#fee2e2', pillText: '#b91c1c', dot: '#dc2626', label: 'Không đạt' },
+  pending: { accent: '#f59e0b', pillBg: '#f1f5f9', pillText: '#64748b', dot: '#94a3b8', label: 'Chưa có kết quả' },
+}
+
+const InspectionStatusPill = ({ status, label }) => {
+  const style = INSPECTION_STATUS_STYLES[status] ?? INSPECTION_STATUS_STYLES.pending
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '3px 12px',
+        borderRadius: 999,
+        background: style.pillBg,
+        color: style.pillText,
+        fontSize: 12,
+        fontWeight: 600,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <span style={{ width: 8, height: 8, borderRadius: '50%', background: style.dot }} />
+      {label ?? style.label}
+    </span>
+  )
+}
+
+const InspectionResultDot = ({ pass }) => {
+  const color = pass === true ? '#16a34a' : pass === false ? '#dc2626' : '#cbd5e1'
+  const background = pass === true ? '#dcfce7' : pass === false ? '#fee2e2' : '#fff'
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 20,
+        height: 20,
+        borderRadius: '50%',
+        border: `2px solid ${color}`,
+        background,
+        color,
+        fontSize: 11,
+        fontWeight: 800,
+        lineHeight: 1,
+      }}
+    >
+      {pass === true ? '✓' : pass === false ? '✕' : ''}
+    </span>
+  )
+}
+
+const InspectionResultCard = ({ item, index, defaultExpanded = true, onOpenForm }) => {
+  const style = INSPECTION_STATUS_STYLES[item?.status] ?? INSPECTION_STATUS_STYLES.pending
+  const hasRows = item?.rows?.length > 0
+  const [expanded, setExpanded] = useState(defaultExpanded)
+  const toggle = () => setExpanded((value) => !value)
+
+  return (
+    <div
+      style={{
+        position: 'relative',
+        borderRadius: 12,
+        border: '1px solid #eef1f5',
+        borderLeft: `4px solid ${style.accent}`,
+        background: '#fff',
+        boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={toggle}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            toggle()
+          }
+        }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          flexWrap: 'wrap',
+          padding: '14px 18px',
+          cursor: 'pointer',
+          userSelect: 'none',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          <span
+            aria-hidden
+            style={{
+              display: 'inline-block',
+              color: '#94a3b8',
+              fontSize: 12,
+              transition: 'transform 0.15s ease',
+              transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+            }}
+          >
+            ▶
+          </span>
+          <span style={{ fontWeight: 700, fontSize: 15, color: '#111827' }}>
+            {item?.stepName ?? item?.name ?? `Kết quả ${index + 1}`}
+          </span>
+          {item?.standard && (
+            <span
+              style={{
+                padding: '2px 8px',
+                borderRadius: 6,
+                background: '#f1f5f9',
+                color: '#475569',
+                fontSize: 12,
+                fontFamily: 'monospace',
+              }}
+            >
+              {item.standard}
+            </span>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#94a3b8', fontSize: 13 }}>
+          {item?.submittedName && <span>{item.submittedName}</span>}
+          {item?.submittedName && <span>·</span>}
+          {item?.submittedAt && <span>{formatTime(item.submittedAt)}</span>}
+          {item?.submittedAt && <span>·</span>}
+          <InspectionStatusPill status={item?.status} label={item?.statusName} />
+        </div>
+      </div>
+
+      {expanded && hasRows && (
+        <div style={{ padding: '0 18px 16px' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 130px 120px 44px',
+              gap: 12,
+              padding: '10px 0',
+              borderTop: '1px solid #f1f5f9',
+              color: '#94a3b8',
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: 0.6,
+              textTransform: 'uppercase',
+            }}
+          >
+            <span>Chỉ tiêu</span>
+            <span style={{ textAlign: 'center' }}>Giá trị đo</span>
+            <span style={{ textAlign: 'right' }}>Yêu cầu</span>
+            <span style={{ textAlign: 'center' }}>KQ</span>
+          </div>
+
+          {item.rows.map((row) => (
+            <div
+              key={row.key}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 130px 120px 44px',
+                gap: 12,
+                alignItems: 'center',
+                padding: '10px 0',
+                borderTop: '1px solid #f6f8fb',
+                fontSize: 14,
+              }}
+            >
+              <span style={{ color: '#334155' }}>{row.label}</span>
+              <span style={{ textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>{row.displayValue}</span>
+              <span style={{ textAlign: 'right', color: '#64748b' }}>{row.requirement || '—'}</span>
+              <span style={{ display: 'flex', justifyContent: 'center' }}>
+                <InspectionResultDot pass={row.resultPass} />
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {expanded && !item?.hasSubmission && (
+        <div style={{ padding: '0 18px 16px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 16,
+              flexWrap: 'wrap',
+              padding: '14px 16px',
+              borderRadius: 10,
+              border: '1px dashed #e2e8f0',
+              background: '#f8fafc',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0 }}>
+              <span
+                style={{
+                  flex: '0 0 auto',
+                  width: 18,
+                  height: 18,
+                  borderRadius: '50%',
+                  border: '2px solid #cbd5e1',
+                  marginTop: 2,
+                }}
+              />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 600, color: '#334155', marginBottom: 2 }}>
+                  Chưa nhập kết quả thử
+                </div>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  KTV cần điền form <em>{item?.stepName}</em> để ghi nhận kết quả kiểm tra.
+                </Text>
+              </div>
+            </div>
+            {onOpenForm && (
+              <Button
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onOpenForm(item)
+                }}
+              >
+                Mở form nhập
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const InspectionResultList = ({ data, defaultExpanded = true, onOpenForm }) => {
   if (!data.length) {
     return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có kết quả kiểm tra" />
   }
 
   return (
-    <Space direction="vertical" size={10} style={{ width: '100%' }}>
-      {data.map((item, index) => {
-        const selected = isSameStepRef(selectedStepCode, item?.stepCode)
-        const tagColor = item?.isPass === false ? 'red' : item?.isPass === true ? 'green' : 'blue'
-
-        return (
-          <div
-            key={item?.id ?? item?.stepCode ?? index}
-            role="button"
-            tabIndex={0}
-            onClick={() => onSelect?.(item)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault()
-                onSelect?.(item)
-              }
-            }}
-            style={{
-              padding: 12,
-              border: `1px solid ${selected ? '#93c5fd' : '#eef1f5'}`,
-              borderRadius: 8,
-              background: selected ? '#eff6ff' : '#fff',
-              cursor: onSelect ? 'pointer' : 'default',
-            }}
-          >
-            <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ fontWeight: 600 }}>
-                  {item?.stepName ?? item?.name ?? `Kết quả ${index + 1}`}
-                </div>
-                <Text type="secondary">
-                  {item?.description || formatTime(item?.submittedAt) || ''}
-                  {item?.submittedName ? ` · ${item.submittedName}` : ''}
-                </Text>
-              </div>
-              <Tag color={tagColor}>
-                {item?.statusName ?? 'Đã gửi'}
-              </Tag>
-            </Space>
-
-            {item?.fields?.length > 0 && (
-              <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
-                {item.fields.map((field) => (
-                  <div
-                    key={field.key}
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'minmax(120px, 38%) 1fr',
-                      gap: 12,
-                      fontSize: 13,
-                    }}
-                  >
-                    <Text type="secondary">{field.label}</Text>
-                    <Text>{field.displayValue}</Text>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {item?.guards?.length > 0 && (
-              <div style={{ marginTop: 12 }}>
-                <Text type="secondary" style={{ display: 'block', marginBottom: 6, fontSize: 12, fontWeight: 700 }}>
-                  Điều kiện chuyển bước
-                </Text>
-                <Space direction="vertical" size={6} style={{ width: '100%' }}>
-                  {item.guards.map((guard) => (
-                    <div
-                      key={guard.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 12,
-                        padding: '8px 10px',
-                        borderRadius: 6,
-                        background: guard.passed ? '#f0fdf4' : '#fef2f2',
-                        border: `1px solid ${guard.passed ? '#bbf7d0' : '#fecaca'}`,
-                        fontSize: 12,
-                      }}
-                    >
-                      <span>{guard.description}</span>
-                      <Tag color={guard.passed ? 'green' : 'red'}>
-                        {guard.passed ? 'Thỏa' : 'Không thỏa'}
-                      </Tag>
-                    </div>
-                  ))}
-                </Space>
-              </div>
-            )}
-          </div>
-        )
-      })}
+    <Space direction="vertical" size={12} style={{ width: '100%' }}>
+      {data.map((item, index) => (
+        <InspectionResultCard
+          key={item?.id ?? item?.stepCode ?? index}
+          item={item}
+          index={index}
+          defaultExpanded={defaultExpanded}
+          onOpenForm={onOpenForm}
+        />
+      ))}
     </Space>
+  )
+}
+
+const InspectionSummary = ({ data }) => {
+  const passCount = data.filter((item) => item?.status === 'pass').length
+  const failCount = data.filter((item) => item?.status === 'fail').length
+  const pendingCount = data.filter((item) => item?.status === 'pending').length
+
+  return (
+    <Text type="secondary" style={{ fontSize: 13 }}>
+      {passCount} đạt · {failCount} không đạt · {pendingCount} chưa xong
+    </Text>
   )
 }
 
@@ -1404,6 +1741,7 @@ const OrderProgressPage = () => {
   const [transitioning, setTransitioning] = useState(false)
   const [selectedToStepCode, setSelectedToStepCode] = useState()
   const [viewingStepCode, setViewingStepCode] = useState(null)
+  const [submissionTemplates, setSubmissionTemplates] = useState({})
 
   const orderId = getValue(order?.id, params.orderId, searchParams.get('orderId'), searchParams.get('id'))
   const instanceId = getValue(
@@ -1664,7 +2002,7 @@ const OrderProgressPage = () => {
     workflowPreview?.submissions,
     order?.submissions,
   )
-  const formTemplates = getFirstArray(
+  const previewFormTemplates = getFirstArray(
     workflowPreview?.currentFormTemplates,
     workflowPreview?.formTemplates,
     currentStep?.formTemplate ? [currentStep.formTemplate] : undefined,
@@ -1675,6 +2013,66 @@ const OrderProgressPage = () => {
     order?.formTemplates,
     order?.forms,
   )
+  const formTemplates = useMemo(
+    () => [...previewFormTemplates, ...Object.values(submissionTemplates)],
+    [previewFormTemplates, submissionTemplates],
+  )
+
+  useEffect(() => {
+    const availableTemplateIds = new Set(
+      previewFormTemplates
+        .map((template) => resolveTemplateId(template))
+        .filter(Boolean)
+        .map(String),
+    )
+
+    const guardedStepTemplateIds = steps
+      .filter((step) => getGuardsForSourceStep(
+        getValue(step?.stepCode, step?.code),
+        stepTransitionList,
+      ).length > 0)
+      .map((step) => getStepTemplateId(step))
+      .filter(Boolean)
+      .map(String)
+
+    const missingIds = Array.from(new Set([
+      ...submissions
+        .map((submission) => submission?.templateId ?? submission?.template_id)
+        .filter(Boolean)
+        .map(String),
+      ...guardedStepTemplateIds,
+    ])).filter((id) => !availableTemplateIds.has(id) && !submissionTemplates[id])
+
+    if (!missingIds.length) return undefined
+
+    let mounted = true
+
+    Promise.all(missingIds.map(async (id) => {
+      try {
+        const response = await RequestUtils.Get(FORM_TEMPLATE_DETAIL_API, { id })
+        const template = response?.data ?? response
+        if (template && typeof template === 'object') {
+          return [id, template]
+        }
+      } catch (error) {
+        console.warn('[OrderProgress] fetch form template failed', id, error)
+      }
+      return null
+    })).then((entries) => {
+      if (!mounted) return
+      const validEntries = entries.filter(Boolean)
+      if (!validEntries.length) return
+      setSubmissionTemplates((prev) => ({
+        ...prev,
+        ...Object.fromEntries(validEntries),
+      }))
+    })
+
+    return () => {
+      mounted = false
+    }
+  }, [submissions, previewFormTemplates, submissionTemplates, steps, stepTransitionList])
+
   const currentForm = getValue(
     currentStep?.formTemplate,
     previewStepProcess?.formTemplate,
@@ -2067,7 +2465,6 @@ const OrderProgressPage = () => {
                   {!remoteEntry && isReviewingSubmission && displaySubmission && (
                     <InspectionResultList
                       data={inspectionResults.filter((item) => isSameStepRef(item?.stepCode, viewingStepCode))}
-                      selectedStepCode={viewingStepCode}
                     />
                   )}
                   {remoteEntry && loadingRemote && <Spin />}
@@ -2112,11 +2509,17 @@ const OrderProgressPage = () => {
                   ) : null}
                 </Card>
 
-                <Card title="Kết quả kiểm tra">
+                <Card
+                  title={(
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <span>Kết quả kiểm tra</span>
+                      <InspectionSummary data={inspectionResults} />
+                    </div>
+                  )}
+                >
                   <InspectionResultList
                     data={inspectionResults}
-                    selectedStepCode={viewingStepCode}
-                    onSelect={handleReviewInspectionResult}
+                    onOpenForm={handleReviewInspectionResult}
                   />
                 </Card>
 

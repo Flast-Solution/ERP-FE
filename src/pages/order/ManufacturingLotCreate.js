@@ -117,7 +117,7 @@ const LotConfigFields = ({ field }) => (
     </Col>
     <Col xs={24} md={8}>
       <Form.Item
-        name={[field.name, 'plannedDate']}
+        name={[field.name, 'plannedDate']}  
         label="Ngày dự kiến"
         rules={[{ required: true, message: 'Vui lòng chọn ngày dự kiến' }]}
       >
