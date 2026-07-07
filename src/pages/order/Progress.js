@@ -230,6 +230,220 @@ const getSubmissionValues = (submission) => {
   return values && typeof values === 'object' ? values : {}
 }
 
+const findSubmissionForStep = (submissions = [], step) => (
+  submissions.find((item) => isSubmissionForStep(item, step)) ?? null
+)
+
+const coerceGuardValue = (value) => {
+  if (value === true || value === 'true') return 'true'
+  if (value === false || value === 'false') return 'false'
+  if (value === null || value === undefined) return ''
+  return String(value)
+}
+
+const evaluateGuardOperator = (operator, actual, expected) => {
+  const left = coerceGuardValue(actual)
+  const right = coerceGuardValue(expected)
+
+  switch (operator) {
+    case 'neq':
+      return left !== right
+    case 'gt':
+      return Number(left) > Number(right)
+    case 'gte':
+      return Number(left) >= Number(right)
+    case 'lt':
+      return Number(left) < Number(right)
+    case 'lte':
+      return Number(left) <= Number(right)
+    case 'eq':
+    default:
+      return left === right
+  }
+}
+
+const evaluateGuard = (guard, submissions = []) => {
+  const guardType = guard?.guardType ?? guard?.guard_type ?? guard?.type ?? 'field_value'
+  const config = guard?.config ?? {}
+
+  if (guardType === 'field_value') {
+    const sourceStepCode = config.from_step ?? config.fromStep ?? config.step_code ?? config.stepCode
+    const fieldName = config.field_name ?? config.fieldName
+    const submission = findSubmissionForStep(submissions, { stepCode: sourceStepCode, code: sourceStepCode })
+    const values = getSubmissionValues(submission)
+    const actual = values?.[fieldName]
+    return evaluateGuardOperator(config.operator ?? 'eq', actual, config.expected_value ?? config.expectedValue)
+  }
+
+  if (guardType === 'step_completed') {
+    const stepCode = config.step_code ?? config.stepCode
+    return Boolean(findSubmissionForStep(submissions, { stepCode, code: stepCode }))
+  }
+
+  if (guardType === 'step_form_field') {
+    const stepCode = config.step_code ?? config.stepCode
+    const submission = findSubmissionForStep(submissions, { stepCode, code: stepCode })
+    const requirement = config.requirement ?? 'filled'
+    const hasSubmission = Boolean(submission && Object.keys(getSubmissionValues(submission)).length)
+    return requirement === 'not_filled' ? !hasSubmission : hasSubmission
+  }
+
+  return true
+}
+
+const getGuardsForSourceStep = (stepCode, stepTransitionList = []) => {
+  const normalizedStepCode = normalizeStepRef(stepCode)
+  if (!normalizedStepCode) return []
+
+  return stepTransitionList.flatMap((transition) => (
+    getFirstArray(transition?.guards).map((guard) => {
+      const config = guard?.config ?? {}
+      const sourceStepCode = normalizeStepRef(
+        config.from_step ?? config.fromStep ?? config.step_code ?? config.stepCode,
+      )
+
+      if (sourceStepCode !== normalizedStepCode) {
+        return null
+      }
+
+      return { transition, guard }
+    }).filter(Boolean)
+  ))
+}
+
+const GUARD_OPERATOR_LABELS = {
+  eq: '=',
+  neq: '≠',
+  gt: '>',
+  gte: '≥',
+  lt: '<',
+  lte: '≤',
+}
+
+const formatGuardDescription = (guard, transition) => {
+  const config = guard?.config ?? {}
+  const fieldName = config.field_name ?? config.fieldName ?? 'field'
+  const operator = GUARD_OPERATOR_LABELS[config.operator] ?? config.operator ?? '='
+  const expectedValue = config.expected_value ?? config.expectedValue ?? ''
+  const toStepCode = transition?.toStepCode ?? transition?.to_step_code ?? ''
+  const message = guard?.errorMessage ?? guard?.error_message
+
+  if (message) return message
+  return `${fieldName} ${operator} ${expectedValue}${toStepCode ? ` → ${toStepCode}` : ''}`
+}
+
+const getFormFields = (formTemplate) => getFirstArray(
+  formTemplate?.fields,
+  formTemplate?.formFields,
+  formTemplate?.form_fields,
+)
+
+const resolveFieldOptionLabel = (field, value) => {
+  const options = getFirstArray(field?.config?.options, field?.options)
+  if (!options.length) return null
+
+  const normalizedValue = coerceGuardValue(value)
+  const match = options.find((option) =>
+    coerceGuardValue(option?.value) === normalizedValue
+    || coerceGuardValue(option?.label) === normalizedValue,
+  )
+
+  return match?.label ?? null
+}
+
+const formatSubmissionFieldValue = (field, value) => {
+  if (value === undefined || value === null || value === '') return '-'
+  if (typeof value === 'boolean') return value ? 'Có' : 'Không'
+  if (Array.isArray(value)) {
+    const labels = value.map((item) => resolveFieldOptionLabel(field, item) ?? String(item))
+    return labels.join(', ')
+  }
+
+  return resolveFieldOptionLabel(field, value) ?? String(value)
+}
+
+const buildFieldDisplayItems = (values = {}, fields = []) => {
+  const fieldMap = new Map(
+    fields.map((field) => [field?.fieldKey ?? field?.field_key ?? field?.name, field]),
+  )
+
+  return Object.entries(values).map(([key, value]) => {
+    const field = fieldMap.get(key)
+    return {
+      key,
+      label: field?.label ?? field?.title ?? key,
+      value,
+      displayValue: formatSubmissionFieldValue(field, value),
+    }
+  })
+}
+
+const resolveInspectionOutcome = (values = {}) => {
+  const raw = values.inspection_result ?? values.result ?? values.inspectionResult
+  if (raw === 'PASS' || raw === true || raw === 'true') {
+    return { isPass: true, statusName: 'Đạt' }
+  }
+  if (raw === 'FAIL' || raw === false || raw === 'false') {
+    return { isPass: false, statusName: 'Không đạt' }
+  }
+  return { isPass: null, statusName: 'Đã gửi' }
+}
+
+const resolveFormTemplateForSubmission = (submission, {
+  previewStepProcess,
+  formTemplates = [],
+} = {}) => {
+  const templateId = submission?.templateId ?? submission?.template_id
+  const previewTemplate = previewStepProcess?.formTemplate
+
+  if (previewTemplate && isSubmissionForTemplate(submission, previewTemplate)) {
+    return previewTemplate
+  }
+
+  return formTemplates.find((template) => isSubmissionForTemplate(submission, template)) ?? null
+}
+
+const buildInspectionResults = ({
+  submissions = [],
+  steps = [],
+  stepTransitionList = [],
+  previewStepProcess,
+  formTemplates = [],
+}) => (
+  submissions.map((submission) => {
+    const step = findWorkflowStep(steps, submission?.stepCode ?? submission?.step_code)
+      ?? { stepCode: submission?.stepCode ?? submission?.step_code }
+    const values = getSubmissionValues(submission)
+    const formTemplate = resolveFormTemplateForSubmission(submission, { previewStepProcess, formTemplates })
+    const fields = buildFieldDisplayItems(values, getFormFields(formTemplate))
+    const outcome = resolveInspectionOutcome(values)
+    const guards = getGuardsForSourceStep(submission?.stepCode ?? submission?.step_code, stepTransitionList)
+      .map(({ transition, guard }) => ({
+        id: guard?.id,
+        passed: evaluateGuard(guard, submissions),
+        description: formatGuardDescription(guard, transition),
+        toStepCode: transition?.toStepCode ?? transition?.to_step_code,
+      }))
+
+    return {
+      id: submission?.id,
+      stepCode: submission?.stepCode ?? submission?.step_code,
+      stepName: getStepDisplayName(step),
+      submittedAt: submission?.submittedAt ?? submission?.submitted_at,
+      submittedName: submission?.submittedName ?? submission?.submitted_name,
+      values,
+      fields,
+      guards,
+      submission,
+      success: outcome.isPass !== false,
+      isPass: outcome.isPass,
+      statusName: outcome.statusName,
+      name: getStepDisplayName(step),
+      description: formatTime(submission?.submittedAt ?? submission?.submitted_at) || '',
+    }
+  })
+)
+
 const getStepDisplayName = (step, fallback) => getValue(
   step?.name,
   step?.labelName,
@@ -677,28 +891,44 @@ class RemoteFormBoundary extends React.Component {
   }
 }
 
-const WorkflowStepItem = ({ step, status, index }) => {
+const WorkflowStepItem = ({ step, status, index, submission, selected, onClick }) => {
   const isActive = status === 'active'
   const isCompleted = status === 'completed'
   const muted = status === 'pending'
+  const clickable = Boolean(submission) && Boolean(onClick)
   const boxColor = isCompleted ? '#16a34a' : isActive ? '#2563eb' : '#d1d5db'
 
   return (
     <div
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onClick={clickable ? () => onClick(step, submission) : undefined}
+      onKeyDown={clickable ? (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onClick(step, submission)
+        }
+      } : undefined}
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: 8,
         minWidth: 0,
         color: isActive ? '#1d4ed8' : muted ? '#64748b' : '#111827',
-        fontWeight: isActive ? 650 : 500,
+        fontWeight: isActive || selected ? 650 : 500,
         fontSize: 12,
         lineHeight: '18px',
+        padding: clickable ? '6px 8px' : undefined,
+        margin: clickable ? '-6px -8px' : undefined,
+        borderRadius: clickable ? 8 : undefined,
+        border: selected ? '1px solid #bfdbfe' : '1px solid transparent',
+        background: selected ? '#eff6ff' : 'transparent',
+        cursor: clickable ? 'pointer' : 'default',
       }}
     >
       <span
         aria-checked={isCompleted}
-        aria-disabled="true"
+        aria-disabled={!clickable}
         role="checkbox"
         style={{
           flex: '0 0 auto',
@@ -714,7 +944,6 @@ const WorkflowStepItem = ({ step, status, index }) => {
           fontSize: 10,
           lineHeight: '12px',
           fontWeight: 800,
-          cursor: 'not-allowed',
         }}
       >
         {isCompleted ? '✓' : null}
@@ -733,6 +962,9 @@ const WorkflowStepList = ({
   processTypeLabelMap,
   completedRefs = [],
   submittedRefs = [],
+  submissions = [],
+  selectedStepCode,
+  onStepClick,
 }) => {
   if (!steps.length) {
     return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có dữ liệu quy trình workflow" />
@@ -813,6 +1045,10 @@ const WorkflowStepList = ({
                   submittedRefs,
                   isParallel: parallel,
                 })
+                const submission = findSubmissionForStep(submissions, step)
+                const stepCode = getValue(step?.stepCode, step?.code)
+                const selected = isSameStepRef(selectedStepCode, stepCode)
+                  || isSameStepRef(selectedStepCode, step?.id)
                 return (
                   <div
                     key={step?.id ?? step?.stepCode ?? step?.code ?? index}
@@ -834,6 +1070,9 @@ const WorkflowStepList = ({
                       step={step}
                       status={status}
                       index={index + 1}
+                      submission={submission}
+                      selected={selected}
+                      onClick={onStepClick}
                     />
                   </div>
                 )
@@ -942,6 +1181,9 @@ const WorkflowProgressPanel = ({
   processTypeLabelMap,
   completedRefs,
   submittedRefs,
+  submissions,
+  selectedStepCode,
+  onStepClick,
   currentForm,
   hasCurrentSubmission,
   transitioning,
@@ -997,6 +1239,9 @@ const WorkflowProgressPanel = ({
           processTypeLabelMap={processTypeLabelMap}
           completedRefs={completedRefs}
           submittedRefs={submittedRefs}
+          submissions={submissions}
+          selectedStepCode={selectedStepCode}
+          onStepClick={onStepClick}
         />
         <WorkflowBlockingNotice currentForm={currentForm} hasCurrentSubmission={hasCurrentSubmission} />
         <WorkflowAdvanceSection
@@ -1012,36 +1257,104 @@ const WorkflowProgressPanel = ({
   )
 }
 
-const ResultList = ({ data }) => {
+const InspectionResultList = ({ data, selectedStepCode, onSelect }) => {
   if (!data.length) {
-    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có dữ liệu" />
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có kết quả kiểm tra" />
   }
 
   return (
     <Space direction="vertical" size={10} style={{ width: '100%' }}>
-      {data.map((item, index) => (
-        <div
-          key={item?.id ?? index}
-          style={{
-            padding: 12,
-            border: '1px solid #eef1f5',
-            borderRadius: 8,
-            background: '#fff',
-          }}
-        >
-          <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ fontWeight: 600 }}>
-                {item?.name ?? item?.label ?? item?.title ?? `Kết quả ${index + 1}`}
+      {data.map((item, index) => {
+        const selected = isSameStepRef(selectedStepCode, item?.stepCode)
+        const tagColor = item?.isPass === false ? 'red' : item?.isPass === true ? 'green' : 'blue'
+
+        return (
+          <div
+            key={item?.id ?? item?.stepCode ?? index}
+            role="button"
+            tabIndex={0}
+            onClick={() => onSelect?.(item)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                onSelect?.(item)
+              }
+            }}
+            style={{
+              padding: 12,
+              border: `1px solid ${selected ? '#93c5fd' : '#eef1f5'}`,
+              borderRadius: 8,
+              background: selected ? '#eff6ff' : '#fff',
+              cursor: onSelect ? 'pointer' : 'default',
+            }}
+          >
+            <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontWeight: 600 }}>
+                  {item?.stepName ?? item?.name ?? `Kết quả ${index + 1}`}
+                </div>
+                <Text type="secondary">
+                  {item?.description || formatTime(item?.submittedAt) || ''}
+                  {item?.submittedName ? ` · ${item.submittedName}` : ''}
+                </Text>
               </div>
-              <Text type="secondary">{item?.description ?? item?.note ?? item?.message ?? ''}</Text>
-            </div>
-            <Tag color={item?.success === false ? 'red' : 'green'}>
-              {item?.statusName ?? item?.status ?? item?.result ?? 'Đạt'}
-            </Tag>
-          </Space>
-        </div>
-      ))}
+              <Tag color={tagColor}>
+                {item?.statusName ?? 'Đã gửi'}
+              </Tag>
+            </Space>
+
+            {item?.fields?.length > 0 && (
+              <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
+                {item.fields.map((field) => (
+                  <div
+                    key={field.key}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'minmax(120px, 38%) 1fr',
+                      gap: 12,
+                      fontSize: 13,
+                    }}
+                  >
+                    <Text type="secondary">{field.label}</Text>
+                    <Text>{field.displayValue}</Text>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {item?.guards?.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <Text type="secondary" style={{ display: 'block', marginBottom: 6, fontSize: 12, fontWeight: 700 }}>
+                  Điều kiện chuyển bước
+                </Text>
+                <Space direction="vertical" size={6} style={{ width: '100%' }}>
+                  {item.guards.map((guard) => (
+                    <div
+                      key={guard.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 12,
+                        padding: '8px 10px',
+                        borderRadius: 6,
+                        background: guard.passed ? '#f0fdf4' : '#fef2f2',
+                        border: `1px solid ${guard.passed ? '#bbf7d0' : '#fecaca'}`,
+                        fontSize: 12,
+                      }}
+                    >
+                      <span>{guard.description}</span>
+                      <Tag color={guard.passed ? 'green' : 'red'}>
+                        {guard.passed ? 'Thỏa' : 'Không thỏa'}
+                      </Tag>
+                    </div>
+                  ))}
+                </Space>
+              </div>
+            )}
+          </div>
+        )
+      })}
     </Space>
   )
 }
@@ -1090,6 +1403,7 @@ const OrderProgressPage = () => {
   const [submittingForm, setSubmittingForm] = useState(false)
   const [transitioning, setTransitioning] = useState(false)
   const [selectedToStepCode, setSelectedToStepCode] = useState()
+  const [viewingStepCode, setViewingStepCode] = useState(null)
 
   const orderId = getValue(order?.id, params.orderId, searchParams.get('orderId'), searchParams.get('id'))
   const instanceId = getValue(
@@ -1290,6 +1604,12 @@ const OrderProgressPage = () => {
     () => buildStepTransitionOptions(stepTransitions, steps),
     [stepTransitions, steps]
   )
+  const stepTransitionList = getFirstArray(
+    workflowPreview?.stepTransitionList,
+    workflowPreview?.step_transition_list,
+    workflow?.stepTransitionList,
+    workflow?.step_transition_list,
+  )
   const currentStepCode = getValue(
     workflowInstance?.currentStepCode,
     workflowPreview?.processInstance?.currentStepCode,
@@ -1311,6 +1631,22 @@ const OrderProgressPage = () => {
     steps[0],
   )
 
+  const displayStep = useMemo(() => {
+    if (!viewingStepCode) return currentStep
+    return findWorkflowStep(steps, viewingStepCode) ?? currentStep
+  }, [viewingStepCode, currentStep, steps])
+
+  const isReviewingSubmission = Boolean(
+    viewingStepCode
+    && !isSameStepRef(viewingStepCode, currentStep?.stepCode)
+    && !isSameStepRef(viewingStepCode, currentStep?.code)
+    && !isSameStepRef(viewingStepCode, currentStep?.id),
+  )
+
+  useEffect(() => {
+    setViewingStepCode(null)
+  }, [currentStepCode, instanceId])
+
   useEffect(() => {
     if (!stepTransitionOptions.length) {
       setSelectedToStepCode(undefined)
@@ -1324,10 +1660,15 @@ const OrderProgressPage = () => {
       return stepTransitionOptions.length === 1 ? stepTransitionOptions[0].value : undefined
     })
   }, [stepTransitionOptions])
+  const submissions = getFirstArray(
+    workflowPreview?.submissions,
+    order?.submissions,
+  )
   const formTemplates = getFirstArray(
     workflowPreview?.currentFormTemplates,
     workflowPreview?.formTemplates,
     currentStep?.formTemplate ? [currentStep.formTemplate] : undefined,
+    previewStepProcess?.formTemplate ? [previewStepProcess.formTemplate] : undefined,
     currentStep?.formTemplates,
     currentStep?.forms,
     order?.currentFormTemplates,
@@ -1336,53 +1677,76 @@ const OrderProgressPage = () => {
   )
   const currentForm = getValue(
     currentStep?.formTemplate,
+    previewStepProcess?.formTemplate,
     order?.currentForm,
     order?.requiredForm,
     formTemplates[0],
   )
-  const sourceComponent = getValue(currentForm?.sourceComponent, currentForm?.source_component)
+  const displayForm = useMemo(() => {
+    if (isSameStepRef(displayStep?.stepCode, previewStepProcess?.stepCode)
+      || isSameStepRef(displayStep?.id, previewStepProcess?.id)) {
+      return previewStepProcess?.formTemplate ?? currentForm
+    }
+
+    return getValue(
+      displayStep?.formTemplate,
+      formTemplates.find((template) => isSubmissionForTemplate(
+        findSubmissionForStep(submissions, displayStep),
+        template,
+      )),
+      currentForm,
+    )
+  }, [displayStep, previewStepProcess, currentForm, formTemplates, submissions])
+  const sourceComponent = getValue(displayForm?.sourceComponent, displayForm?.source_component, currentForm?.sourceComponent, currentForm?.source_component)
   const currentFormName = getValue(
-    currentForm?.name,
-    currentForm?.label,
-    currentForm?.title,
-    currentForm?.templateName,
-    currentForm?.template_name,
-    currentForm?.description,
+    displayForm?.name,
+    displayForm?.label,
+    displayForm?.title,
+    displayForm?.templateName,
+    displayForm?.template_name,
+    displayForm?.description,
+    getStepDisplayName(displayStep),
   )
   const remoteFormContainerRef = useRef(null)
   const remoteEntry = getValue(
     sourceComponent?.microFrontendUrl,
     sourceComponent?.micro_frontend_url,
+    displayForm?.remoteEntry,
+    displayForm?.remoteEntryUrl,
+    displayForm?.microFrontendUrl,
+    displayStep?.formUrl,
+    displayStep?.form_url,
     currentForm?.remoteEntry,
     currentForm?.remoteEntryUrl,
     currentForm?.microFrontendUrl,
     currentStep?.remoteEntry,
+    currentStep?.formUrl,
     order?.remoteEntry,
   )
   const remoteComponentId = getValue(
     sourceComponent?.componentId,
     sourceComponent?.component_id,
+    displayForm?.componentId,
+    displayForm?.component_id,
     currentForm?.componentId,
     currentForm?.component_id,
   )
   const remoteVersionKey = buildRemoteAlias(
-    resolveTemplateId(currentForm),
+    resolveTemplateId(displayForm),
     sourceComponent?.version,
     sourceComponent?.updatedDate,
     sourceComponent?.updated_date,
-    currentStep?.stepCode,
-    currentStep?.code,
+    displayStep?.stepCode,
+    displayStep?.code,
   )
   const remoteRenderKey = buildRemoteAlias(remoteComponentId, remoteEntry, remoteVersionKey)
-  const checkResults = getFirstArray(
-    workflowPreview?.checkResults,
-    workflowPreview?.inspectionResults,
-    order?.checkResults,
-    order?.inspectionResults,
-    order?.workflowCheckResults,
-    currentStep?.checkResults,
-    currentStep?.results,
-  )
+  const inspectionResults = useMemo(() => buildInspectionResults({
+    submissions,
+    steps,
+    stepTransitionList,
+    previewStepProcess,
+    formTemplates,
+  }), [submissions, steps, stepTransitionList, previewStepProcess, formTemplates])
   const histories = buildWorkflowHistoryItems({
     workflowPreview,
     workflowInstance,
@@ -1390,10 +1754,6 @@ const OrderProgressPage = () => {
     workflow,
     steps,
   })
-  const submissions = getFirstArray(
-    workflowPreview?.submissions,
-    order?.submissions,
-  )
   const currentSubmission = submissions.find((item) =>
     isSubmissionForStep(item, currentStep) && isSubmissionForTemplate(item, currentForm)
   ) ?? submissions.find((item) =>
@@ -1401,6 +1761,10 @@ const OrderProgressPage = () => {
   ) ?? submissions.find((item) =>
     isSubmissionForTemplate(item, currentForm)
   )
+  const displaySubmission = useMemo(() => (
+    findSubmissionForStep(submissions, displayStep)
+  ), [submissions, displayStep])
+  const displaySubmissionValues = getSubmissionValues(displaySubmission)
   const currentSubmissionValues = getSubmissionValues(currentSubmission)
   const completedRefs = getFirstArray(
     workflowPreview?.processInstance?.completedSteps,
@@ -1568,6 +1932,21 @@ const OrderProgressPage = () => {
     }
   }, [RemoteForm, handleRemoteFormSubmitError])
 
+  const handleReviewStep = useCallback((step) => {
+    const stepCode = getValue(step?.stepCode, step?.code, step?.id)
+    if (!stepCode) return
+    setViewingStepCode(String(stepCode))
+  }, [])
+
+  const handleReviewInspectionResult = useCallback((item) => {
+    if (!item?.stepCode) return
+    setViewingStepCode(String(item.stepCode))
+  }, [])
+
+  const handleBackToCurrentStep = useCallback(() => {
+    setViewingStepCode(null)
+  }, [])
+
   const orderInfoItems = useMemo(() => [
     {
       key: 'code',
@@ -1665,14 +2044,31 @@ const OrderProgressPage = () => {
 
                 <Card
                   title={(
-                    <Space>
+                    <Space wrap>
                       <FormOutlined />
                       <span>{currentFormName || 'Form bắt buộc tại bước'}</span>
+                      {isReviewingSubmission && (
+                        <Tag color="blue">Đang xem lại</Tag>
+                      )}
                     </Space>
                   )}
+                  extra={isReviewingSubmission ? (
+                    <Button type="link" onClick={handleBackToCurrentStep}>
+                      Quay lại bước hiện tại
+                    </Button>
+                  ) : null}
                 >
-                  {!remoteEntry && (
+                  {isReviewingSubmission && !displaySubmission && (
+                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Bước này chưa có dữ liệu đã gửi" />
+                  )}
+                  {!remoteEntry && !isReviewingSubmission && (
                     <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Bước hiện tại chưa có remoteEntry form" />
+                  )}
+                  {!remoteEntry && isReviewingSubmission && displaySubmission && (
+                    <InspectionResultList
+                      data={inspectionResults.filter((item) => isSameStepRef(item?.stepCode, viewingStepCode))}
+                      selectedStepCode={viewingStepCode}
+                    />
                   )}
                   {remoteEntry && loadingRemote && <Spin />}
                   {remoteEntry && remoteError && <RemoteFormErrorFallback message={remoteError} />}
@@ -1681,26 +2077,28 @@ const OrderProgressPage = () => {
                       <RemoteFormBoundary key={remoteRenderKey} remoteKey={remoteRenderKey}>
                         <RemoteFormHost
                           key={remoteRenderKey}
-                          ref={remoteFormRef}
+                          ref={isReviewingSubmission ? undefined : remoteFormRef}
                           Component={RemoteForm}
                           order={order}
                           record={order}
                           data={order}
-                          step={currentStep}
-                          formTemplate={currentForm}
-                          submission={currentSubmission}
-                          initialValues={currentSubmissionValues}
-                          values={currentSubmissionValues}
-                          defaultValues={currentSubmissionValues}
+                          step={displayStep}
+                          formTemplate={displayForm}
+                          submission={displaySubmission}
+                          initialValues={displaySubmissionValues}
+                          values={displaySubmissionValues}
+                          defaultValues={displaySubmissionValues}
+                          readOnly={isReviewingSubmission}
+                          disabled={isReviewingSubmission}
                           hideTitle
                           showTitle={false}
-                          onSubmit={handleRemoteFormSubmit}
+                          onSubmit={isReviewingSubmission ? undefined : handleRemoteFormSubmit}
                           onSubmitError={handleRemoteFormSubmitError}
                         />
                       </RemoteFormBoundary>
                     </div>
                   )}
-                  {remoteEntry && RemoteForm ? (
+                  {remoteEntry && RemoteForm && !isReviewingSubmission ? (
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
                       <Button
                         type="primary"
@@ -1715,7 +2113,11 @@ const OrderProgressPage = () => {
                 </Card>
 
                 <Card title="Kết quả kiểm tra">
-                  <ResultList data={checkResults} />
+                  <InspectionResultList
+                    data={inspectionResults}
+                    selectedStepCode={viewingStepCode}
+                    onSelect={handleReviewInspectionResult}
+                  />
                 </Card>
 
                 <Card title="Lịch sử chuyển bước">
@@ -1742,6 +2144,9 @@ const OrderProgressPage = () => {
                   processTypeLabelMap={processTypeLabelMap}
                   completedRefs={completedRefs}
                   submittedRefs={submittedRefs}
+                  submissions={submissions}
+                  selectedStepCode={viewingStepCode}
+                  onStepClick={handleReviewStep}
                   currentForm={currentForm}
                   hasCurrentSubmission={hasCurrentSubmission}
                   transitioning={transitioning}

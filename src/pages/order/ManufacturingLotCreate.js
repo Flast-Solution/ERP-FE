@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowLeftOutlined,
+  DeleteOutlined,
   PlusOutlined,
   SaveOutlined,
 } from '@ant-design/icons';
@@ -11,7 +12,6 @@ import {
   Card,
   Col,
   DatePicker,
-  Descriptions,
   Empty,
   Form,
   Input,
@@ -20,12 +20,16 @@ import {
   Row,
   Select,
   Space,
+  Spin,
   Table,
   Tag,
   Typography,
 } from 'antd';
 import { BreadcrumbCustom } from '@flast-erp/core/components';
-import { formatMoney } from '@flast-erp/core/utils';
+import { useEffectAsync } from '@flast-erp/core/hooks';
+import { arrayNotEmpty } from '@flast-erp/core/utils';
+import OrderPayment from '@/containers/Order/OrderPayment';
+import OrderService from '@/services/OrderService';
 import styled from 'styled-components';
 
 const { Text, Title } = Typography;
@@ -42,6 +46,13 @@ const PageCard = styled(Card)`
   }
 `;
 
+const StickyAside = styled.div`
+  position: sticky;
+  top: 96px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+`;
+
 const ActionBar = styled.div`
   position: sticky;
   bottom: 0;
@@ -50,8 +61,14 @@ const ActionBar = styled.div`
   justify-content: flex-end;
   gap: 12px;
   padding: 16px 0 0;
+  margin-top: 16px;
   background: #f5f6fa;
 `;
+
+const DEFAULT_LOT_VALUES = {
+  lotType: 'PRODUCTION',
+  priority: 'NORMAL',
+};
 
 const normalizeOrderDetail = (detail = {}, index) => ({
   ...detail,
@@ -64,11 +81,66 @@ const normalizeOrderDetail = (detail = {}, index) => ({
   lotQuantity: Number(detail.quantity ?? 0),
 });
 
-const getCustomerName = (order = {}) => (
-  order.customerReceiverName
-  ?? order.customerName
-  ?? order.customer?.name
-  ?? '-'
+const LotConfigFields = ({ field }) => (
+  <Row gutter={16}>
+    <Col xs={24} md={12}>
+      <Form.Item
+        name={[field.name, 'lotName']}
+        label="Tên lô hàng"
+        rules={[{ required: true, message: 'Vui lòng nhập tên lô hàng' }]}
+      >
+        <Input placeholder="Nhập tên lô hàng" />
+      </Form.Item>
+    </Col>
+    <Col xs={24} md={12}>
+      <Form.Item
+        name={[field.name, 'lotCode']}
+        label="Mã lô hàng"
+      >
+        <Input placeholder="Tự sinh nếu để trống" />
+      </Form.Item>
+    </Col>
+    <Col xs={24} md={8}>
+      <Form.Item
+        name={[field.name, 'lotType']}
+        label="Loại lô"
+        rules={[{ required: true, message: 'Vui lòng chọn loại lô' }]}
+      >
+        <Select
+          options={[
+            { value: 'PRODUCTION', label: 'Sản xuất' },
+            { value: 'QC', label: 'Kiểm tra chất lượng' },
+            { value: 'PACKING', label: 'Đóng gói' },
+          ]}
+        />
+      </Form.Item>
+    </Col>
+    <Col xs={24} md={8}>
+      <Form.Item
+        name={[field.name, 'plannedDate']}
+        label="Ngày dự kiến"
+        rules={[{ required: true, message: 'Vui lòng chọn ngày dự kiến' }]}
+      >
+        <DatePicker style={{ width: '100%' }} format="DD-MM-YYYY" />
+      </Form.Item>
+    </Col>
+    <Col xs={24} md={8}>
+      <Form.Item name={[field.name, 'priority']} label="Độ ưu tiên">
+        <Select
+          options={[
+            { value: 'LOW', label: 'Thấp' },
+            { value: 'NORMAL', label: 'Bình thường' },
+            { value: 'HIGH', label: 'Cao' },
+          ]}
+        />
+      </Form.Item>
+    </Col>
+    <Col span={24}>
+      <Form.Item name={[field.name, 'note']} label="Ghi chú">
+        <Input.TextArea rows={3} placeholder="Nhập ghi chú cho lô hàng" />
+      </Form.Item>
+    </Col>
+  </Row>
 );
 
 const ManufacturingLotCreate = () => {
@@ -81,11 +153,30 @@ const ManufacturingLotCreate = () => {
   ), [customerOrder?.details, location.state?.orderDetails]);
   const [selectedRowKeys, setSelectedRowKeys] = useState(orderDetails.map(item => item.key));
   const [detailRows, setDetailRows] = useState(orderDetails);
+  const [paymentDetails, setPaymentDetails] = useState([]);
+  const [loadingOrderInfo, setLoadingOrderInfo] = useState(false);
 
   const selectedRows = useMemo(
     () => detailRows.filter(item => selectedRowKeys.includes(item.key)),
     [detailRows, selectedRowKeys],
   );
+
+  useEffectAsync(async () => {
+    if (!customerOrder?.id) {
+      setPaymentDetails([]);
+      return;
+    }
+
+    setLoadingOrderInfo(true);
+    try {
+      const { data } = await OrderService.getOrderOnEdit(customerOrder.id);
+      if (arrayNotEmpty(data)) {
+        setPaymentDetails(data);
+      }
+    } finally {
+      setLoadingOrderInfo(false);
+    }
+  }, [customerOrder?.id]);
 
   const updateLotQuantity = (key, lotQuantity) => {
     setDetailRows(rows => rows.map(row => (
@@ -93,29 +184,40 @@ const ManufacturingLotCreate = () => {
     )));
   };
 
+  const buildLotDetails = () => selectedRows.map(row => ({
+    orderDetailId: row.orderDetailId,
+    orderDetailCode: row.orderDetailCode,
+    productId: row.productId,
+    productCode: row.productCode,
+    productName: row.productName,
+    skuId: row.skuId,
+    quantity: row.lotQuantity,
+  }));
+
   const handleSubmit = async () => {
     const values = await form.validateFields();
+    const lots = values.lots ?? [];
+
     if (!selectedRows.length) {
       message.warning('Vui lòng chọn ít nhất 1 sản phẩm để tạo lô hàng.');
       return;
     }
 
+    if (!lots.length) {
+      message.warning('Vui lòng thêm ít nhất 1 cấu hình lô hàng.');
+      return;
+    }
+
     const payload = {
-      ...values,
       customerOrderId: customerOrder?.id,
       customerOrderCode: customerOrder?.code,
-      details: selectedRows.map(row => ({
-        orderDetailId: row.orderDetailId,
-        orderDetailCode: row.orderDetailCode,
-        productId: row.productId,
-        productCode: row.productCode,
-        productName: row.productName,
-        skuId: row.skuId,
-        quantity: row.lotQuantity,
+      lots: lots.map(lot => ({
+        ...lot,
+        details: buildLotDetails(),
       })),
     };
 
-    message.success(`Đã chuẩn bị tạo lô hàng cho ${payload.details.length} sản phẩm.`);
+    message.success(`Đã chuẩn bị tạo ${payload.lots.length} lô hàng cho ${selectedRows.length} sản phẩm.`);
   };
 
   const columns = [
@@ -180,123 +282,105 @@ const ManufacturingLotCreate = () => {
         Quay lại
       </Button>
 
-      <Space direction="vertical" size={16} style={{ width: '100%' }}>
-        <PageCard>
-          <Space direction="vertical" size={4}>
-            <Title level={3} style={{ margin: 0 }}>Tạo lô hàng</Title>
-            <Text type="secondary">
-              Chọn sản phẩm trong đơn đang sản xuất và khai báo thông tin lô hàng.
-            </Text>
-          </Space>
-        </PageCard>
+      <Space direction="vertical" size={4} style={{ width: '100%', marginBottom: 16 }}>
+        <Title level={3} style={{ margin: 0 }}>Tạo lô hàng</Title>
+        <Text type="secondary">
+          Chọn sản phẩm trong đơn đang sản xuất và khai báo thông tin lô hàng.
+        </Text>
+      </Space>
 
-        <PageCard title="Thông tin đơn hàng">
-          {customerOrder?.id || customerOrder?.code ? (
-            <Descriptions
-              bordered
-              size="small"
-              column={{ xs: 1, md: 2 }}
-              items={[
-                { key: 'code', label: 'Mã đơn', children: customerOrder?.code ?? '-' },
-                { key: 'customer', label: 'Khách hàng', children: getCustomerName(customerOrder) },
-                { key: 'phone', label: 'Số điện thoại', children: customerOrder?.customerMobilePhone ?? customerOrder?.phone ?? '-' },
-                { key: 'total', label: 'Tổng tiền', children: formatMoney(customerOrder?.total ?? 0) },
-              ]}
-            />
-          ) : (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có dữ liệu đơn hàng" />
-          )}
-        </PageCard>
+      <Form
+        form={form}
+        layout="vertical"
+        initialValues={{
+          lots: [{ ...DEFAULT_LOT_VALUES }],
+        }}
+      >
+        <Row gutter={16} align="top">
+          <Col xs={24} lg={16}>
+            <Space direction="vertical" size={16} style={{ width: '100%' }}>
+              <PageCard
+                title="Sản phẩm tạo lô"
+                extra={<Tag color="blue">{selectedRows.length} sản phẩm đã chọn</Tag>}
+              >
+                <Table
+                  rowKey="key"
+                  columns={columns}
+                  dataSource={detailRows}
+                  pagination={false}
+                  locale={{ emptyText: 'Không có sản phẩm trong đơn hàng' }}
+                  rowSelection={{
+                    selectedRowKeys,
+                    onChange: setSelectedRowKeys,
+                    type: 'checkbox',
+                  }}
+                  scroll={{ x: 760 }}
+                />
+              </PageCard>
 
-        <PageCard title="Cấu hình lô hàng">
-          <Form
-            form={form}
-            layout="vertical"
-            initialValues={{
-              lotType: 'PRODUCTION',
-              priority: 'NORMAL',
-            }}
-          >
-            <Row gutter={16}>
-              <Col xs={24} md={12}>
-                <Form.Item
-                  name="lotName"
-                  label="Tên lô hàng"
-                  rules={[{ required: true, message: 'Vui lòng nhập tên lô hàng' }]}
-                >
-                  <Input placeholder="Nhập tên lô hàng" />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={12}>
-                <Form.Item
-                  name="lotCode"
-                  label="Mã lô hàng"
-                >
-                  <Input placeholder="Tự sinh nếu để trống" />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={8}>
-                <Form.Item
-                  name="lotType"
-                  label="Loại lô"
-                  rules={[{ required: true, message: 'Vui lòng chọn loại lô' }]}
-                >
-                  <Select
-                    options={[
-                      { value: 'PRODUCTION', label: 'Sản xuất' },
-                      { value: 'QC', label: 'Kiểm tra chất lượng' },
-                      { value: 'PACKING', label: 'Đóng gói' },
-                    ]}
+              <Form.List name="lots">
+                {(fields, { add, remove }) => (
+                  <>
+                    {fields.map((field, index) => (
+                      <PageCard
+                        key={field.key}
+                        title={fields.length > 1 ? `Cấu hình lô hàng ${index + 1}` : 'Cấu hình lô hàng'}
+                        extra={fields.length > 1 ? (
+                          <Button
+                            type="text"
+                            danger
+                            icon={<DeleteOutlined />}
+                            onClick={() => remove(field.name)}
+                          >
+                            Xóa
+                          </Button>
+                        ) : null}
+                      >
+                        <LotConfigFields field={field} />
+                      </PageCard>
+                    ))}
+
+                    <Button
+                      type="dashed"
+                      block
+                      icon={<PlusOutlined />}
+                      onClick={() => add({ ...DEFAULT_LOT_VALUES })}
+                    >
+                      Thêm lô hàng
+                    </Button>
+                  </>
+                )}
+              </Form.List>
+            </Space>
+          </Col>
+
+          <Col xs={24} lg={8}>
+            <StickyAside>
+              <PageCard bodyStyle={{ padding: 0 }}>
+                {loadingOrderInfo ? (
+                  <div style={{ padding: 48, textAlign: 'center' }}>
+                    <Spin />
+                  </div>
+                ) : customerOrder?.id || customerOrder?.code ? (
+                  <OrderPayment
+                    readOnly
+                    data={{
+                      details: paymentDetails,
+                      customerOrder,
+                      onSave: () => {},
+                    }}
                   />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={8}>
-                <Form.Item
-                  name="plannedDate"
-                  label="Ngày dự kiến"
-                  rules={[{ required: true, message: 'Vui lòng chọn ngày dự kiến' }]}
-                >
-                  <DatePicker style={{ width: '100%' }} format="DD-MM-YYYY" />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={8}>
-                <Form.Item name="priority" label="Độ ưu tiên">
-                  <Select
-                    options={[
-                      { value: 'LOW', label: 'Thấp' },
-                      { value: 'NORMAL', label: 'Bình thường' },
-                      { value: 'HIGH', label: 'Cao' },
-                    ]}
+                ) : (
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description="Chưa có dữ liệu đơn hàng"
+                    style={{ padding: 24 }}
                   />
-                </Form.Item>
-              </Col>
-              <Col span={24}>
-                <Form.Item name="note" label="Ghi chú">
-                  <Input.TextArea rows={3} placeholder="Nhập ghi chú cho lô hàng" />
-                </Form.Item>
-              </Col>
-            </Row>
-          </Form>
-        </PageCard>
-
-        <PageCard
-          title="Sản phẩm tạo lô"
-          extra={<Tag color="blue">{selectedRows.length} sản phẩm đã chọn</Tag>}
-        >
-          <Table
-            rowKey="key"
-            columns={columns}
-            dataSource={detailRows}
-            pagination={false}
-            locale={{ emptyText: 'Không có sản phẩm trong đơn hàng' }}
-            rowSelection={{
-              selectedRowKeys,
-              onChange: setSelectedRowKeys,
-              type: 'checkbox',
-            }}
-            scroll={{ x: 760 }}
-          />
-        </PageCard>
+                )}
+              </PageCard>
+            </StickyAside>
+          </Col>
+        </Row>
 
         <ActionBar>
           <Button onClick={() => navigate('/sale/order-production')}>Huỷ</Button>
@@ -304,7 +388,7 @@ const ManufacturingLotCreate = () => {
             Tạo lô hàng
           </Button>
         </ActionBar>
-      </Space>
+      </Form>
     </PageShell>
   );
 };

@@ -13,22 +13,26 @@ export const ProfileShell = styled.div`
 `
 
 export const TabBar = styled.div`
-  display: inline-flex;
-  flex-wrap: wrap;
+  display: flex;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto 32px;
   gap: 4px;
   padding: 4px;
   border: 1px solid #e8e8ef;
   border-radius: 10px;
   background: #f3f4f6;
-  margin-bottom: 32px;
 `
 
 export const TabItem = styled.button`
-  height: 36px;
+  flex: 1;
+  min-width: 0;
+  height: 40px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 0 16px;
+  padding: 0 20px;
   border: 1px solid ${({ $active }) => ($active ? '#e8e8ef' : 'transparent')};
   border-radius: 8px;
   background: ${({ $active }) => ($active ? '#fff' : 'transparent')};
@@ -38,6 +42,7 @@ export const TabItem = styled.button`
   cursor: pointer;
   box-shadow: ${({ $active }) => ($active ? '0 1px 3px rgba(15, 23, 42, 0.08)' : 'none')};
   transition: color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  white-space: nowrap;
 
   &:hover {
     color: ${({ $active }) => ($active ? '#8c6dfd' : '#111827')};
@@ -45,6 +50,11 @@ export const TabItem = styled.button`
 
   .anticon {
     font-size: 14px;
+  }
+
+  @media (max-width: 640px) {
+    padding: 0 12px;
+    font-size: 13px;
   }
 `
 

@@ -217,6 +217,100 @@ export const MenuStyles = styled(Menu)`
   }
 `;
 
+export const UserDropdownPanel = styled.div`
+  width: 248px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.16);
+
+  .user-dropdown-section {
+    padding: 18px 18px 16px;
+  }
+
+  .user-dropdown-row {
+    width: 100%;
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border: 0;
+    background: transparent;
+    color: #6b7280;
+    font-size: 15px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .user-dropdown-row + .user-dropdown-row {
+    margin-top: 10px;
+  }
+
+  .user-dropdown-row:hover {
+    color: #111827;
+  }
+
+  .user-dropdown-icon {
+    flex: 0 0 auto;
+    width: 20px;
+    color: currentColor;
+    font-size: 19px;
+  }
+
+  .user-dropdown-language-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 6px 8px 0 34px;
+  }
+
+  .user-dropdown-language-actions button {
+    height: 30px;
+    border: 1px solid #d8dee9;
+    border-radius: 8px;
+    background: #fff;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  }
+
+  .user-dropdown-language-actions button.active {
+    border-color: #0f5bd8;
+    background: #0f5bd8;
+    color: #fff;
+    box-shadow: 0 6px 14px rgba(15, 91, 216, 0.24);
+  }
+
+  .user-dropdown-logout {
+    width: 100%;
+    min-height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border: 0;
+    border-top: 1px solid #e2e8f0;
+    background: #fff;
+    padding: 0 18px;
+    color: #dc2626;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .user-dropdown-logout:hover {
+    background: #fef2f2;
+  }
+
+  @media (max-width: 480px) {
+    width: min(248px, calc(100vw - 24px));
+  }
+`;
+
 export const SearchInputStyles = styled.div`
   margin-left: 15px;
   display: flex;
