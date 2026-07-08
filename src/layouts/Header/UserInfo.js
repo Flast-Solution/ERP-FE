@@ -97,7 +97,7 @@ function UserInfo() {
       <Dropdown
         trigger={['click']}
         placement="bottomRight"
-        dropdownRender={() => dropdownContent}
+        popupRender={() => dropdownContent}
       >
         <div className="div-user-info">
           <span className="userInfo">

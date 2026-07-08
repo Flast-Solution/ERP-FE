@@ -43,6 +43,7 @@ const ORDER_WORKFLOW_ATTACH_API = '/workflow/process/start'
 const WORKFLOW_INSTANCE_BY_ENTITY_API = '/workflow/process/instance/get-entity'
 const WORKFLOW_PROCESS_FIND_API = '/workflow/process/find-id'
 const WORKFLOW_PREVIEW_API = '/workflow/process/preview'
+const ORDER_LOTS_FIND_API = '/qms/warehouse-paracel/find-entity'
 
 const resolveWorkflowList = (response) => {
   const payload = response?.data ?? response
@@ -243,6 +244,32 @@ const getWorkflowCurrentStepLabel = (record) => {
   )
 }
 
+const resolveOrderLots = (response) => {
+  const payload = response?.data ?? response
+  const candidates = [
+    payload?.data,
+    payload?.data?.embedded,
+    payload?.data?.content,
+    payload?.data?.items,
+    payload?.embedded,
+    payload?.content,
+    payload?.items,
+    payload,
+  ]
+
+  const arrayData = candidates.find(Array.isArray)
+  if (arrayData) {
+    return arrayData
+  }
+
+  const objectData = candidates.find(item => item && typeof item === 'object')
+  if (objectData?.id || objectData?.code || objectData?.entityId) {
+    return [objectData]
+  }
+
+  return []
+}
+
 const copyToClipboard = (text, setCopiedIndex, index) => {
   navigator.clipboard.writeText(text).then(() => {
     setCopiedIndex(index);
@@ -251,7 +278,7 @@ const copyToClipboard = (text, setCopiedIndex, index) => {
   })
 };
 
-const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
+const ListOrder = ({ filter, hideQuoteButton, extraActions, enableLotTree = false }) => {
 
   const navigate = useNavigate();
   const [ copiedIndex, setCopiedIndex ] = useState(null);
@@ -262,6 +289,9 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
   const [ workflowKeyword, setWorkflowKeyword ] = useState('')
   const [ selectedOrder, setSelectedOrder ] = useState(null)
   const [ selectedWorkflowId, setSelectedWorkflowId ] = useState(null)
+  const [ expandedRowKeys, setExpandedRowKeys ] = useState([])
+  const [ lotsByOrderId, setLotsByOrderId ] = useState({})
+  const [ loadingLotsByOrderId, setLoadingLotsByOrderId ] = useState({})
 
   const onClickViewDetail = (customerOrder) => InAppEvent.emit(HASH_MODAL, {
     hash: "#order.tabs",
@@ -334,6 +364,119 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
       item?.code,
     ].some(value => String(value ?? '').toLowerCase().includes(normalizedWorkflowKeyword)))
     : workflows
+
+  const fetchLotsByOrder = useCallback(async (order) => {
+    const entityId = order?.id
+    if (!entityId || lotsByOrderId[entityId] || loadingLotsByOrderId[entityId]) {
+      return
+    }
+
+    setLoadingLotsByOrderId(prev => ({ ...prev, [entityId]: true }))
+    try {
+      const response = await RequestUtils.Get(ORDER_LOTS_FIND_API, {
+        entity: 'ORDER',
+        entityId,
+      })
+      setLotsByOrderId(prev => ({
+        ...prev,
+        [entityId]: resolveOrderLots(response),
+      }))
+    } catch (error) {
+      message.error('Không tải được danh sách lô của đơn hàng.')
+      setLotsByOrderId(prev => ({ ...prev, [entityId]: [] }))
+    } finally {
+      setLoadingLotsByOrderId(prev => ({ ...prev, [entityId]: false }))
+    }
+  }, [loadingLotsByOrderId, lotsByOrderId])
+
+  const lotColumns = [
+    {
+      title: 'Mã lô',
+      dataIndex: 'code',
+      key: 'code',
+      width: 180,
+      render: value => value || '-',
+    },
+    {
+      title: 'Tên lô hàng',
+      dataIndex: 'name',
+      key: 'name',
+      ellipsis: true,
+      render: value => value || '-',
+    },
+    {
+      title: 'Loại',
+      dataIndex: 'type',
+      key: 'type',
+      width: 150,
+      render: value => value || '-',
+    },
+    {
+      title: 'Số lượng',
+      dataIndex: 'total',
+      key: 'total',
+      width: 120,
+      align: 'right',
+      render: value => value ?? 0,
+    },
+    {
+      title: 'Ngày dự kiến',
+      dataIndex: 'expectedDate',
+      key: 'expectedDate',
+      width: 180,
+      render: value => formatTime(value) || '-',
+    },
+    {
+      title: 'Ưu tiên',
+      dataIndex: 'priorityLevel',
+      key: 'priorityLevel',
+      width: 130,
+      render: value => {
+        const priorityColor = {
+          HIGH: 'red',
+          NORMAL: 'blue',
+          LOW: 'default',
+        }[value] || 'default'
+        return <Tag color={priorityColor}>{value || '-'}</Tag>
+      },
+    },
+  ]
+
+  const orderLotExpandable = enableLotTree ? {
+    expandedRowKeys,
+    expandRowByClick: true,
+    onExpand: (expanded, record) => {
+      const recordId = record?.id
+      setExpandedRowKeys(prev => (
+        expanded
+          ? Array.from(new Set([...prev, recordId]))
+          : prev.filter(key => key !== recordId)
+      ))
+      if (expanded) {
+        fetchLotsByOrder(record)
+      }
+    },
+    expandedRowRender: (record) => {
+      const orderId = record?.id
+      const lots = lotsByOrderId[orderId] ?? []
+      const loading = loadingLotsByOrderId[orderId]
+
+      return (
+        <div style={{ padding: '8px 16px 8px 48px', background: '#fafafa' }}>
+          <Table
+            rowKey={(item, index) => item?.id ?? item?.code ?? `${orderId}-${index}`}
+            size="small"
+            columns={lotColumns}
+            dataSource={lots}
+            loading={loading}
+            pagination={false}
+            locale={{ emptyText: loading ? 'Đang tải danh sách lô...' : 'Chưa có lô hàng' }}
+            scroll={{ x: 900 }}
+          />
+        </div>
+      )
+    },
+  } : undefined
 
   const actionWidth = (
     filter.type === 'cohoi' ? 260 : 220
@@ -676,6 +819,7 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
         rowKey="id"
         bordered
         xScroll={1800}
+        expandable={orderLotExpandable}
         onData={onData}
         initialFilter={{ limit: 10, page: 1, ...filter }}
         filter={<Filter />}
