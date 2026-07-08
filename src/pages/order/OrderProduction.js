@@ -53,7 +53,12 @@ const OrderProduction = () => {
             <BreadcrumbCustom
                 data={[{ title: 'Trang chủ' }, { title: title }]}
             />
-            <ListOrder filter={filter} hideQuoteButton={true} extraActions={extraActions} />
+            <ListOrder
+                filter={filter}
+                hideQuoteButton={true}
+                extraActions={extraActions}
+                enableLotTree
+            />
         </>
     );
 };
