@@ -1,238 +1,256 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import {
   Button,
-  Empty,
+  Col,
   Form,
   Input,
   message,
-  Pagination,
-  Popconfirm,
-  Select,
+  Row,
   Space,
-  Table,
-  Tag,
 } from 'antd';
 import {
-  PlusOutlined,
-} from '@ant-design/icons';
-import { BreadcrumbCustom, DrawerCustom } from '@flast-erp/core/components';
+  BreadcrumbCustom,
+  DrawerCustom,
+  FormInput,
+  RestList,
+} from '@flast-erp/core/components';
+import { useGetList } from '@flast-erp/core/hooks';
+import { RequestUtils, f5List } from '@flast-erp/core/utils';
 import {
   AddRowButton,
-  ConfigCard,
-  FilterBar,
   ConfigDrawerBody,
   ConfigDrawerFooter,
-  OptionRow,
-  ListControls,
+  ConfigFormItem,
   PageShell,
 } from './styles';
 
-const DEFAULT_OPTION = { label: '', value: '' };
+const CONFIG_FETCH_API = 'erp/config/fetch';
+const CONFIG_SAVE_API = '/erp/config/save';
+
+const DEFAULT_CONFIG = {
+  name: '',
+  value: '',
+  key: '',
+  description: '',
+};
+
+const trimValue = (value) => (
+  typeof value === 'string' ? value.trim() : value
+);
+
+const normalizeConfigItem = (item = {}) => ({
+  id: item.id,
+  bizId: item.bizId,
+  createdDate: item.createdDate,
+  createdBy: item.createdBy,
+  updatedDate: item.updatedDate,
+  updatedBy: item.updatedBy,
+  key: trimValue(item.key),
+  value: trimValue(item.value),
+  name: trimValue(item.name),
+  description: trimValue(item.description),
+});
+
+const buildSavePayloadItem = (item = {}) => {
+  const payload = {
+    key: trimValue(item.key),
+    value: trimValue(item.value),
+    name: trimValue(item.name),
+    description: trimValue(item.description),
+  };
+
+  if (item.id !== undefined && item.id !== null) {
+    payload.id = item.id;
+  }
+  if (item.bizId !== undefined && item.bizId !== null) {
+    payload.bizId = item.bizId;
+  }
+
+  return payload;
+};
+
+const removeEmptyValue = (values = {}) => Object.fromEntries(
+  Object.entries(values)
+    .map(([key, value]) => [key, trimValue(value)])
+    .filter(([, value]) => value !== undefined && value !== null && value !== ''),
+);
+
+const withOffset = (values = {}) => {
+  const nextValues = removeEmptyValue(values);
+  const page = Number(nextValues.page ?? 1);
+  const limit = Number(nextValues.limit ?? 10);
+
+  return {
+    ...nextValues,
+    limit: String(limit),
+    offset: String(Math.max(((Number.isFinite(page) ? page : 1) - 1) * limit, 0)),
+    page: String(Number.isFinite(page) ? page : 1),
+  };
+};
+
+const getResponseItems = (values) => {
+  if (Array.isArray(values)) return values;
+  if (Array.isArray(values?.data)) return values.data;
+  if (Array.isArray(values?.embedded)) return values.embedded;
+  if (Array.isArray(values?.items)) return values.items;
+  if (Array.isArray(values?.content)) return values.content;
+  if (Array.isArray(values?.records)) return values.records;
+  if (Array.isArray(values?.data?.embedded)) return values.data.embedded;
+  if (Array.isArray(values?.data?.items)) return values.data.items;
+  if (Array.isArray(values?.data?.content)) return values.data.content;
+  if (Array.isArray(values?.data?.records)) return values.data.records;
+  return [];
+};
+
+const getResponsePage = (values, total) => (
+  values?.page
+  ?? values?.data?.page
+  ?? {
+    totalElements: values?.totalElements
+      ?? values?.total
+      ?? values?.data?.totalElements
+      ?? values?.data?.total
+      ?? total,
+  }
+);
+
+const GeneralConfigFilter = () => (
+  <Row gutter={16}>
+    <Col xl={6} lg={6} md={12} xs={24}>
+      <FormInput
+        name="name"
+        placeholder="Tên hiển thị"
+      />
+    </Col>
+    <Col xl={6} lg={6} md={12} xs={24}>
+      <FormInput
+        name="value"
+        placeholder="Giá trị"
+      />
+    </Col>
+    <Col xl={6} lg={6} md={12} xs={24}>
+      <FormInput
+        name="key"
+        placeholder="Key"
+      />
+    </Col>
+    <Col xl={6} lg={6} md={12} xs={24}>
+      <FormInput
+        name="description"
+        placeholder="Ghi chú"
+      />
+    </Col>
+  </Row>
+);
 
 const GeneralConfigPage = () => {
   const [form] = Form.useForm();
   const [formOpen, setFormOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [items, setItems] = useState([]);
-  const [filterDraft, setFilterDraft] = useState({ code: '', name: '' });
-  const [filter, setFilter] = useState({ code: '', name: '' });
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [editingRecord, setEditingRecord] = useState(null);
 
-  const editingItem = useMemo(
-    () => items.find(item => item.id === editingId),
-    [editingId, items],
-  );
-
-  const filteredItems = useMemo(() => {
-    const codeKeyword = String(filter.code ?? '').trim().toLowerCase();
-    const nameKeyword = String(filter.name ?? '').trim().toLowerCase();
-    return items.filter((item) => {
-      const matchedCode = !codeKeyword || String(item.code ?? '').toLowerCase().includes(codeKeyword);
-      const matchedName = !nameKeyword || String(item.name ?? '').toLowerCase().includes(nameKeyword);
-      return matchedCode && matchedName;
-    });
-  }, [filter, items]);
-
-  const pagedItems = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return filteredItems.slice(start, start + pageSize);
-  }, [filteredItems, page, pageSize]);
-
-  const rangeStart = filteredItems.length ? ((page - 1) * pageSize) + 1 : 0;
-  const rangeEnd = Math.min(page * pageSize, filteredItems.length);
-
-  const applyFilter = () => {
-    setPage(1);
-    setFilter(filterDraft);
-  };
-
-  const resetFilter = () => {
-    const nextFilter = { code: '', name: '' };
-    setPage(1);
-    setFilterDraft(nextFilter);
-    setFilter(nextFilter);
-  };
-
-  const openCreateForm = () => {
-    setEditingId(null);
+  const openCreateForm = useCallback(() => {
+    setEditingRecord(null);
     form.resetFields();
-    form.setFieldsValue({ options: [DEFAULT_OPTION] });
+    form.setFieldsValue({ configs: [DEFAULT_CONFIG] });
     setFormOpen(true);
-  };
+  }, [form]);
 
-  const openEditForm = (record) => {
-    setEditingId(record.id);
-    form.setFieldsValue({
-      code: record.code,
-      name: record.name,
-      note: record.note,
-      options: record.options?.length ? record.options : [DEFAULT_OPTION],
-    });
+  const openEditForm = useCallback((record) => {
+    const nextRecord = normalizeConfigItem(record);
+    setEditingRecord(nextRecord);
+    form.resetFields();
+    form.setFieldsValue({ configs: [nextRecord] });
     setFormOpen(true);
-  };
+  }, [form]);
 
-  const closeForm = () => {
+  const closeForm = useCallback(() => {
     setFormOpen(false);
-    setEditingId(null);
+    setEditingRecord(null);
     form.resetFields();
-  };
+  }, [form]);
 
-  const handleSave = async () => {
-    const values = await form.validateFields();
-    const normalizedOptions = (values.options ?? [])
-      .filter(item => item?.label || item?.value)
-      .map(item => ({
-        label: item.label ?? '',
-        value: item.value ?? '',
-      }));
-    const payload = {
-      ...(editingItem?.id ? { id: editingItem.id } : {}),
-      code: values.code,
-      name: values.name,
-      note: values.note,
-      status: editingItem?.status ?? 'ACTIVE',
-      options: normalizedOptions,
+  const beforeSubmitFilter = useCallback((values = {}) => withOffset(values), []);
+
+  const onData = useCallback((values) => {
+    const items = getResponseItems(values).map(normalizeConfigItem);
+    return {
+      embedded: items,
+      page: getResponsePage(values, items.length),
     };
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    const values = await form.validateFields();
+    const payload = (values.configs ?? [])
+      .map(normalizeConfigItem)
+      .map(buildSavePayloadItem)
+      .filter(item => item.key || item.value || item.name || item.description);
 
     console.log('[GeneralConfig] submit payload', payload);
 
-    if (editingItem) {
-      setItems(prevItems => prevItems.map(item => (
-        item.id === editingItem.id
-          ? { ...item, ...payload }
-          : item
-      )));
-      message.success('Đã cập nhật danh mục.');
-    } else {
-      setItems(prevItems => [
-        {
-          id: Date.now(),
-          ...payload,
-        },
-        ...prevItems,
-      ]);
-      message.success('Đã thêm danh mục.');
+    const response = await RequestUtils.Post(CONFIG_SAVE_API, payload);
+    const isSuccess = response?.success || response?.errorCode === 200;
+
+    if (isSuccess) {
+      message.success(response?.message || 'Đã lưu cấu hình.');
+      f5List(CONFIG_FETCH_API);
+      closeForm();
+      return;
     }
 
-    closeForm();
-  };
-
-  const handleDelete = (id) => {
-    setItems(prevItems => prevItems.filter(item => item.id !== id));
-    message.success('Đã xoá danh mục.');
-  };
-
-  const renderListControls = (placement = 'top') => (
-    <ListControls $placement={placement}>
-      <div className="pagination-group">
-        <span className="range-text">{rangeStart}-{rangeEnd}/{filteredItems.length}</span>
-        <Pagination
-          size="small"
-          current={page}
-          pageSize={pageSize}
-          total={filteredItems.length}
-          showSizeChanger={false}
-          onChange={(nextPage) => setPage(nextPage)}
-        />
-        <Select
-          value={pageSize}
-          onChange={(value) => {
-            setPage(1);
-            setPageSize(value);
-          }}
-          options={[
-            { value: 10, label: '10 / page' },
-            { value: 20, label: '20 / page' },
-            { value: 50, label: '50 / page' },
-          ]}
-          style={{ width: 118 }}
-        />
-      </div>
-
-      {placement === 'top' && (
-        <Button
-          danger
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={openCreateForm}
-        >
-          Tạo mới
-        </Button>
-      )}
-    </ListControls>
-  );
+    message.error(response?.message || 'Lưu cấu hình thất bại.');
+  }, [closeForm, form]);
 
   const columns = [
     {
-      title: 'Mã danh mục',
-      dataIndex: 'code',
-      width: 180,
-      render: value => <Tag color="blue">{value}</Tag>,
-    },
-    {
-      title: 'Tên danh mục',
+      title: 'Tên hiển thị',
       dataIndex: 'name',
-      render: value => <strong>{value}</strong>,
+      width: 220,
+      ellipsis: true,
+      render: (value, record) => value || record.key || '-',
     },
     {
-      title: 'Số dòng',
-      dataIndex: 'options',
-      width: 120,
-      align: 'center',
-      render: options => options?.length ?? 0,
+      title: 'Giá trị',
+      dataIndex: 'value',
+      width: 180,
+      ellipsis: true,
+      render: value => value || '-',
+    },
+    {
+      title: 'Key',
+      dataIndex: 'key',
+      width: 180,
+      ellipsis: true,
+      render: value => value || '-',
     },
     {
       title: 'Ghi chú',
-      dataIndex: 'note',
+      dataIndex: 'description',
+      ellipsis: true,
+      render: value => value || '-',
+    },
+    {
+      title: 'Ngày cập nhật',
+      dataIndex: 'updatedDate',
+      width: 170,
       ellipsis: true,
       render: value => value || '-',
     },
     {
       title: 'Thao tác',
       key: 'actions',
-      width: 140,
-      align: 'right',
-      render: (_, record) => (
-        <Space>
-          <Button
-            color="danger"
-            variant="dashed"
-            size="small"
-            onClick={() => openEditForm(record)}
-          >
-            Detail
-          </Button>
-          <Popconfirm
-            title="Xoá danh mục này?"
-            okText="Xoá"
-            cancelText="Huỷ"
-            onConfirm={() => handleDelete(record.id)}
-          >
-            <Button size="small">Xóa</Button>
-          </Popconfirm>
-        </Space>
+      width: 120,
+      fixed: 'right',
+      render: record => (
+        <Button
+          color="primary"
+          variant="dashed"
+          size="small"
+          onClick={() => openEditForm(record)}
+        >
+          Chi tiết
+        </Button>
       ),
     },
   ];
@@ -247,123 +265,93 @@ const GeneralConfigPage = () => {
         data={[{ title: 'Trang chủ' }, { title: 'Cấu hình chung' }]}
       />
 
-      <FilterBar>
-        <Input
-          value={filterDraft.code}
-          placeholder="Mã danh mục"
-          onChange={(event) => setFilterDraft(values => ({
-            ...values,
-            code: event.target.value,
-          }))}
-          onPressEnter={applyFilter}
-        />
-        <Input
-          value={filterDraft.name}
-          placeholder="Tên danh mục"
-          onChange={(event) => setFilterDraft(values => ({
-            ...values,
-            name: event.target.value,
-          }))}
-          onPressEnter={applyFilter}
-        />
-        <Button type="primary" onClick={applyFilter}>
-          Lọc
-        </Button>
-        <Button
-          className="clear-filter-button"
-          onClick={resetFilter}
-        >
-          Xoá lọc
-        </Button>
-      </FilterBar>
-
-      {renderListControls('top')}
-
-      <ConfigCard>
-        <Table
-          rowKey="id"
-          columns={columns}
-          dataSource={pagedItems}
-          pagination={false}
-          locale={{
-            emptyText: (
-              <Empty
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                description="Chưa có danh mục cấu hình"
-              />
-            ),
-          }}
-        />
-      </ConfigCard>
-
-      {renderListControls('bottom')}
+      <RestList
+        rowKey={record => record.id ?? `${record.key}-${record.name}-${record.value}`}
+        xScroll={980}
+        initialFilter={{ limit: 10, offset: '0', page: 1 }}
+        filter={<GeneralConfigFilter />}
+        beforeSubmitFilter={beforeSubmitFilter}
+        onData={onData}
+        useGetAllQuery={useGetList}
+        apiPath={CONFIG_FETCH_API}
+        customClickCreate={openCreateForm}
+        columns={columns}
+      />
 
       <DrawerCustom
         width={750}
         open={formOpen}
         onClose={closeForm}
-        title={editingItem ? 'Cập nhật danh mục' : 'Thêm danh mục'}
+        title={editingRecord ? 'Cập nhật cấu hình' : 'Thêm cấu hình'}
       >
         <ConfigDrawerBody>
           <Form
             form={form}
             layout="vertical"
-            initialValues={{ options: [DEFAULT_OPTION] }}
+            initialValues={{ configs: [DEFAULT_CONFIG] }}
           >
-            <Form.Item
-              name="code"
-              label="Mã danh mục"
-              rules={[{ required: true, message: 'Vui lòng nhập mã danh mục' }]}
-            >
-              <Input placeholder="Nhập mã danh mục" />
-            </Form.Item>
-
-            <Form.Item
-              name="name"
-              label="Tên danh mục"
-              rules={[{ required: true, message: 'Vui lòng nhập tên danh mục' }]}
-            >
-              <Input placeholder="Nhập tên danh mục" />
-            </Form.Item>
-
-            <Form.Item name="note" label="Ghi chú">
-              <Input.TextArea placeholder="Nhập ghi chú" rows={4} />
-            </Form.Item>
-
-            <Form.List name="options">
+            <Form.List name="configs">
               {(fields, { add, remove }) => (
-                <Space direction="vertical" size={12} style={{ width: '100%' }}>
-                  {fields.map((field) => {
-                    return (
-                      <OptionRow key={field.key}>
-                        <Form.Item
-                          name={[field.name, 'label']}
-                          label="Tên hiển thị"
-                          style={{ marginBottom: 0 }}
-                        >
-                          <Input placeholder="Nhập tên hiển thị" />
-                        </Form.Item>
-                        <Form.Item
-                          name={[field.name, 'value']}
-                          label="Key"
-                          style={{ marginBottom: 0 }}
-                        >
-                          <Input placeholder="Nhập key" />
-                        </Form.Item>
+                <Space direction="vertical" size={14} style={{ width: '100%' }}>
+                  {fields.map((field, index) => (
+                    <ConfigFormItem key={field.key}>
+                      <div className="config-form-item__header">
+                        <strong>Cấu hình {index + 1}</strong>
                         <Button
-                          block
                           danger
+                          size="small"
                           disabled={fields.length === 1}
                           onClick={() => remove(field.name)}
                         >
                           Xoá
                         </Button>
-                      </OptionRow>
-                    );
-                  })}
-                  <AddRowButton type="button" onClick={() => add(DEFAULT_OPTION)}>
-                    + Thêm dòng
-                  </AddRowButton>
+                      </div>
+
+                      <Row gutter={16}>
+                        <Col md={12} xs={24}>
+                          <Form.Item
+                            name={[field.name, 'name']}
+                            label="Tên hiển thị"
+                            rules={[{ required: true, message: 'Vui lòng nhập tên hiển thị' }]}
+                          >
+                            <Input placeholder="Nhập tên hiển thị" />
+                          </Form.Item>
+                        </Col>
+                        <Col md={12} xs={24}>
+                          <Form.Item
+                            name={[field.name, 'value']}
+                            label="Giá trị"
+                            rules={[{ required: true, message: 'Vui lòng nhập giá trị' }]}
+                          >
+                            <Input placeholder="Nhập giá trị" />
+                          </Form.Item>
+                        </Col>
+                        <Col md={24} xs={24}>
+                          <Form.Item
+                            name={[field.name, 'key']}
+                            label="Key"
+                            rules={[{ required: true, message: 'Vui lòng nhập key' }]}
+                          >
+                            <Input placeholder="Nhập key" />
+                          </Form.Item>
+                        </Col>
+                        <Col md={24} xs={24}>
+                          <Form.Item
+                            name={[field.name, 'description']}
+                            label="Ghi chú"
+                          >
+                            <Input.TextArea rows={3} placeholder="Nhập ghi chú" />
+                          </Form.Item>
+                        </Col>
+                      </Row>
+                    </ConfigFormItem>
+                  ))}
+
+                  {!editingRecord && (
+                    <AddRowButton type="button" onClick={() => add(DEFAULT_CONFIG)}>
+                      + Thêm
+                    </AddRowButton>
+                  )}
                 </Space>
               )}
             </Form.List>

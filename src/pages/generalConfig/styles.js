@@ -142,6 +142,21 @@ export const ConfigDrawerBody = styled.div`
   }
 `;
 
+export const ConfigFormItem = styled.div`
+  border: 1px solid #eef0f5;
+  border-radius: 8px;
+  padding: 16px 16px 0;
+  background: #fff;
+
+  .config-form-item__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+`;
+
 export const OptionRow = styled.div`
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 116px;
