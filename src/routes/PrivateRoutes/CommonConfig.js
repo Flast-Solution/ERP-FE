@@ -26,12 +26,16 @@ const HomePage = React.lazy(() => import('@/pages/newFeed'));
 const TaskPage = React.lazy(() => import('@/pages/task'));
 const TaskCalendar = React.lazy(() => import('@/pages/task/MyCalendar'));
 const ProfilePage = React.lazy(() => import('@/pages/profile'));
+const GeneralConfigPage = React.lazy(() => import('@/pages/generalConfig'));
+const ProviderPage = React.lazy(() => import('@/pages/provider'));
 
 export const CommonConfig = {
     auth: authRoles.user,
     routes: [
         { path: '/', element: <HomePage /> },
         { path: '/profile', element: <ProfilePage /> },
+        { path: '/system/general-config', element: <GeneralConfigPage /> },
+        { path: '/provider', element: <ProviderPage /> },
         { path: '/task', element: <TaskPage /> },
         { path: '/task/calendar/:id', element: <TaskCalendar /> }
     ]

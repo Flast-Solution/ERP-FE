@@ -165,6 +165,7 @@ function SideBar() {
     getItem(<Link to="/product"> Sản phẩm</Link>, 'product_list', <UngroupOutlined />),
     getItem('Sản xuất', 'san_xuat', <BuildOutlined />, [
       getItem(<Link to="/material">Nguyên V.Liệu</Link>, 'material', <DeliveredProcedureOutlined />),
+      getItem(<Link to="/provider">Nhà cung cấp</Link>, 'provider', <TeamOutlined />),
       getItem(<Link to="/material/bom">Lệnh S.Xuất</Link>, 'material.bom', <FolderOpenOutlined />),
       getItem(<Link to="/sale/order-production">ĐH đang sản xuất</Link>, 'order.production', <BuildOutlined />),
     ]),
@@ -185,6 +186,7 @@ function SideBar() {
       ...(canManageBusinessUnits
         ? [getItem(<Link to="/system/business-units">Đơn vị sử dụng</Link>, 'business_units', <BankOutlined />)]
         : []),
+      getItem(<Link to="/system/general-config">Cấu hình chung</Link>, 'general_config', <SettingOutlined />),
       getItem(<Link to="/user/group">Team</Link>, 'user_group', <TeamOutlined />),
       getItem(<Link to="/user/list-system">Tài khoản hệ thống</Link>, 'user_system', <SettingOutlined />)
     ]),
