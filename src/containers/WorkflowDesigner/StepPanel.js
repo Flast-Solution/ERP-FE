@@ -96,6 +96,7 @@ const StepPanel = ({ onReloadStepTypes }) => {
       title: 'Cấu hình loại bước',
       data: {
         stepTypes,
+        workflowType: process.flowType,
         onSave: (updatedTypes) => setStepTypes(updatedTypes),
         onReload: onReloadStepTypes,
       },

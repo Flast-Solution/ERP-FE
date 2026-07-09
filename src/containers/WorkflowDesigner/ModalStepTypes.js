@@ -74,10 +74,11 @@ const StepTypeRow = ({ field }) => {
 /**
  * Props inject bởi modal system:
  *   stepTypes  — mảng loại bước hiện tại từ store
+ *   workflowType — loại nghiệp vụ hiện tại của workflow
  *   onSave     — (updatedTypes) => void  — callback cập nhật store
  *   onReload   — () => void              — callback reload process-type-find khi đóng modal
  */
-const ModalStepTypes = ({ stepTypes = [], onSave, onReload }) => {
+const ModalStepTypes = ({ stepTypes = [], workflowType, onSave, onReload }) => {
   const [form] = Form.useForm()
   const onReloadRef = useRef(onReload)
 
@@ -119,6 +120,11 @@ const ModalStepTypes = ({ stepTypes = [], onSave, onReload }) => {
   }
 
   const onSubmit = async ({ lists }) => {
+    if (!workflowType) {
+      message.warning('Vui lòng chọn Loại nghiệp vụ trước khi lưu cấu hình loại bước.')
+      return
+    }
+
     // Convert ngược lại về format store: giữ bgColor/borderColor cũ nếu có
     // Backend sau này sẽ trả về đầy đủ — hiện tại tự derive từ color
     const updated = lists.map((item, idx) => {
@@ -139,8 +145,20 @@ const ModalStepTypes = ({ stepTypes = [], onSave, onReload }) => {
     })
 
     const changedItems = updated.filter(isChangedItem)
+    const updatedRefs = new Set(
+      updated
+        .flatMap((item) => [item.id, item.key])
+        .filter((value) => value !== undefined && value !== null && value !== '')
+        .map(String)
+    )
+    const hasRemovedItems = stepTypes.some((item) => {
+      const refs = [item.id, item.key]
+        .filter((value) => value !== undefined && value !== null && value !== '')
+        .map(String)
+      return refs.length > 0 && !refs.some((ref) => updatedRefs.has(ref))
+    })
 
-    if (changedItems.length === 0) {
+    if (changedItems.length === 0 && !hasRemovedItems) {
       message.info('Không có thay đổi để lưu.')
       onSave(updated)
       return
@@ -149,6 +167,7 @@ const ModalStepTypes = ({ stepTypes = [], onSave, onReload }) => {
     const payload = updated.map((item) => ({
         id: item.id,
         name: item.label,
+        type: workflowType,
         status: item.status,
         orderProcessType: item.order,
         colorCode: item.color,
