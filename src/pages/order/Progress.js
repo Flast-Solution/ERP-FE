@@ -1,8 +1,8 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { Alert, Breadcrumb, Button, Card, Col, Descriptions, Empty, message, Row, Select, Space, Spin, Tag, Timeline, Typography } from 'antd'
-import { ArrowLeftOutlined, CheckCircleOutlined, ClockCircleOutlined, FormOutlined } from '@ant-design/icons'
+import { CheckCircleOutlined, ClockCircleOutlined, FormOutlined } from '@ant-design/icons'
 import { Helmet } from 'react-helmet'
-import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useLocation, useParams, useSearchParams } from 'react-router-dom'
 
 import { formatMoney, formatTime, RequestUtils } from '@flast-erp/core/utils'
 import { SUCCESS_CODE } from '@/configs'
@@ -19,6 +19,16 @@ const WORKFLOW_PREVIEW_API = '/workflow/process/preview'
 const FORM_TEMPLATE_DETAIL_API = '/workflow/forms/template/find-id'
 const WORKFLOW_PROCESS_FIND_API = '/workflow/process/find-id'
 const PROCESS_TYPE_FIND_API = '/workflow/process/process-type-find'
+
+const workflowFixedPanelStyle = {
+  position: 'fixed',
+  top: 96,
+  right: 24,
+  width: 360,
+  maxHeight: 'calc(100vh - 120px)',
+  overflowY: 'auto',
+  zIndex: 10,
+}
 
 const resolveApiPayload = (response) => response?.data ?? response
 
@@ -817,11 +827,14 @@ const isParallelGroup = (group) => {
 }
 
 const normalizeSubmissionValue = (value) => {
+  if (value === undefined || value === '') {
+    return null
+  }
   if (value && typeof value === 'object' && typeof value.toISOString === 'function' && typeof value.isValid === 'function') {
     return value.isValid() ? value.toISOString() : null
   }
   if (Array.isArray(value)) {
-    return value.map(normalizeSubmissionValue)
+    return value.length ? value.map(normalizeSubmissionValue) : null
   }
   if (value && typeof value === 'object') {
     return Object.fromEntries(
@@ -830,6 +843,49 @@ const normalizeSubmissionValue = (value) => {
   }
   return value
 }
+
+const getFieldValueKey = (field) => getValue(
+  field?.fieldKey,
+  field?.field_key,
+  field?.name,
+  field?.key,
+)
+
+const collectFormFieldKeys = (fields = []) => (
+  fields.reduce((result, field) => {
+    const key = getFieldValueKey(field)
+    if (key) {
+      result.push(key)
+    }
+
+    const children = getFirstArray(
+      field?.children,
+      field?.fields,
+      field?.items,
+    )
+    if (children.length) {
+      result.push(...collectFormFieldKeys(children))
+    }
+
+    return result
+  }, [])
+)
+
+const normalizeSubmissionValues = (values = {}, currentForm) => {
+  const normalizedValues = normalizeSubmissionValue(values) ?? {}
+  const payloadValues = normalizedValues && typeof normalizedValues === 'object' && !Array.isArray(normalizedValues)
+    ? { ...normalizedValues }
+    : {}
+
+  collectFormFieldKeys(getFormFields(currentForm)).forEach((key) => {
+    if (!Object.prototype.hasOwnProperty.call(payloadValues, key)) {
+      payloadValues[key] = null
+    }
+  })
+
+  return payloadValues
+}
+
 const resolveTemplateId = (formTemplate) => {
   const value = formTemplate?.templateId
     ?? formTemplate?.formTemplateId
@@ -859,7 +915,7 @@ const buildWorkflowSubmissionPayload = ({
     entityId: toNumberOrNull(processInstance?.entityId ?? order?.entityId ?? order?.id ?? orderId),
     instanceId: toNumberOrNull(processInstance?.id ?? instanceId),
     stepCode: stepProcess?.stepCode ?? stepProcess?.code ?? processInstance?.currentStepCode ?? workflowInstance?.currentStepCode,
-    values: normalizeSubmissionValue(values),
+    values: normalizeSubmissionValues(values, currentForm),
   }
 }
 
@@ -1720,7 +1776,6 @@ const HistoryList = ({ data }) => {
 }
 
 const OrderProgressPage = () => {
-  const navigate = useNavigate()
   const location = useLocation()
   const params = useParams()
   const [searchParams] = useSearchParams()
@@ -2401,6 +2456,38 @@ const OrderProgressPage = () => {
       <Helmet>
         <title>Tiến trình workflow đơn hàng</title>
       </Helmet>
+      <style>
+        {`
+          @media (min-width: 992px) {
+            .workflow-progress-main-col {
+              flex: 0 0 calc(100% - 400px) !important;
+              max-width: calc(100% - 400px) !important;
+            }
+
+            .workflow-progress-side-col {
+              flex: 0 0 400px !important;
+              max-width: 400px !important;
+            }
+          }
+
+          @media (max-width: 991px) {
+            .workflow-progress-main-col,
+            .workflow-progress-side-col {
+              flex: 0 0 100% !important;
+              max-width: 100% !important;
+            }
+
+            .workflow-progress-fixed-panel {
+              position: static !important;
+              width: 100% !important;
+              max-width: none !important;
+              min-width: 0 !important;
+              max-height: none !important;
+              overflow-y: visible !important;
+            }
+          }
+        `}
+      </style>
       <Breadcrumb
         style={{ marginBottom: 10 }}
         items={[
@@ -2412,16 +2499,8 @@ const OrderProgressPage = () => {
 
       <Spin spinning={loadingOrder || loadingPreview}>
         <div style={{ paddingBottom: 24 }}>
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate('/sale/order')}
-            style={{ marginBottom: 16 }}
-          >
-            Quay lại danh sách
-          </Button>
-
           <Row gutter={16} align="top">
-            <Col xs={24} lg={16}>
+            <Col xs={24} lg={16} className="workflow-progress-main-col">
               <Space direction="vertical" size={16} style={{ width: '100%' }}>
                 <Card title="Thông tin đơn hàng">
                   {order ? (
@@ -2525,14 +2604,10 @@ const OrderProgressPage = () => {
               </Space>
             </Col>
 
-            <Col xs={24} lg={8}>
+            <Col xs={24} lg={8} className="workflow-progress-side-col">
               <div
-                style={{
-                  position: 'sticky',
-                  top: 96,
-                  maxHeight: 'calc(100vh - 120px)',
-                  overflowY: 'auto',
-                }}
+                className="workflow-progress-fixed-panel"
+                style={workflowFixedPanelStyle}
               >
                 <WorkflowProgressPanel
                   workflow={workflow}

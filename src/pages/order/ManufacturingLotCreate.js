@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { useLocation, useNavigate } from 'react-router-dom';
 import moment from 'moment';
@@ -32,6 +32,8 @@ import styled from 'styled-components';
 const { Text, Title } = Typography;
 
 const CREATE_WAREHOUSE_PARCEL_API = '/qms/warehouse-paracel/create';
+const PROVIDER_FETCH_API = '/provider/fetch';
+const ORDER_LOTS_FIND_API = '/qms/warehouse-paracel/find-entity';
 
 const DEFAULT_LOT_VALUES = {
   lotType: 'PRODUCTION',
@@ -297,16 +299,121 @@ const buildDetailDescription = (detail = {}) => {
     .join(' ');
 };
 
+const normalizeCompareText = value => String(value ?? '').trim().toLowerCase();
+
+const getLotDetailRef = (lot = {}) => (
+  lot.orderDetailId
+  ?? lot.order_detail_id
+  ?? lot.orderDetailCode
+  ?? lot.order_detail_code
+  ?? lot.orderDetailKey
+  ?? lot.order_detail_key
+);
+
+const lotMatchesOrderDetail = (lot = {}, detail = {}) => {
+  const lotRef = getLotDetailRef(lot);
+  const detailRefs = [
+    detail.key,
+    detail.orderDetailId,
+    detail.orderDetailCode,
+  ].map(value => String(value ?? '')).filter(Boolean);
+
+  if (lotRef && detailRefs.includes(String(lotRef))) {
+    return true;
+  }
+
+  const lotCode = normalizeCompareText(lot.code);
+  const detailCode = normalizeCompareText(detail.orderDetailCode);
+  if (lotCode && detailCode && (lotCode === detailCode || lotCode.startsWith(detailCode))) {
+    return true;
+  }
+
+  const lotName = normalizeCompareText(lot.name);
+  const productName = normalizeCompareText(detail.productName);
+  return Boolean(lotName && productName && lotName === productName);
+};
+
+const buildInitialLotValues = (lot, orderDetails = []) => {
+  if (!lot?.id && !lot?.code && !lot?.name) {
+    return { ...DEFAULT_LOT_VALUES };
+  }
+
+  const lotDetailRef = getLotDetailRef(lot);
+  const matchedDetail = orderDetails.find(detail => lotMatchesOrderDetail(lot, detail));
+
+  return {
+    id: lot.id,
+    lotName: lot.name,
+    lotCode: lot.code,
+    orderDetailKey: matchedDetail?.key ?? lotDetailRef,
+    quantity: lot.total,
+    prviderId: lot.prviderId ?? lot.providerId,
+    plannedDate: lot.expectedDate ? moment(lot.expectedDate) : undefined,
+    lotType: lot.type || DEFAULT_LOT_VALUES.lotType,
+    priority: lot.priorityLevel || DEFAULT_LOT_VALUES.priority,
+    note: lot.description,
+  };
+};
+
+const resolveProviderList = (response) => {
+  const payload = response?.data ?? response;
+  const candidates = [
+    payload?.embedded,
+    payload?.data?.embedded,
+    payload?.data?.content,
+    payload?.data?.items,
+    payload?.content,
+    payload?.items,
+    payload?.data,
+    payload,
+  ];
+
+  return candidates.find(Array.isArray) ?? [];
+};
+
+const resolveOrderLots = (response) => {
+  const payload = response?.data ?? response;
+  const candidates = [
+    payload?.data,
+    payload?.data?.embedded,
+    payload?.data?.content,
+    payload?.data?.items,
+    payload?.embedded,
+    payload?.content,
+    payload?.items,
+    payload,
+  ];
+
+  const arrayData = candidates.find(Array.isArray);
+  if (arrayData) return arrayData;
+
+  const objectData = candidates.find(item => item && typeof item === 'object');
+  if (objectData?.id || objectData?.code || objectData?.entityId) {
+    return [objectData];
+  }
+
+  return [];
+};
+
 const ManufacturingLotCreate = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [form] = Form.useForm();
   const customerOrder = location.state?.customerOrder ?? {};
+  const editingLot = location.state?.editingLot ?? null;
+  const isEditing = Boolean(editingLot?.id);
   const orderDetails = useMemo(() => (
     (location.state?.orderDetails ?? customerOrder?.details ?? []).map(normalizeOrderDetail)
   ), [customerOrder?.details, location.state?.orderDetails]);
+  const initialLotValues = useMemo(
+    () => buildInitialLotValues(editingLot, orderDetails),
+    [editingLot, orderDetails],
+  );
   const [paymentDetails, setPaymentDetails] = useState([]);
   const [loadingOrderInfo, setLoadingOrderInfo] = useState(false);
+  const [providerOptions, setProviderOptions] = useState([]);
+  const [loadingProviders, setLoadingProviders] = useState(false);
+  const [createdLots, setCreatedLots] = useState([]);
 
   useEffectAsync(async () => {
     if (!customerOrder?.id) {
@@ -325,11 +432,102 @@ const ManufacturingLotCreate = () => {
     }
   }, [customerOrder?.id]);
 
+  useEffectAsync(async () => {
+    setLoadingProviders(true);
+    try {
+      const response = await RequestUtils.Get(PROVIDER_FETCH_API, { limit: 100, offset: 0 });
+      setProviderOptions(resolveProviderList(response)
+        .map(provider => ({
+          label: provider?.name || provider?.code || `Nhà cung cấp #${provider?.id}`,
+          value: provider?.id,
+        }))
+        .filter(option => option.value !== undefined && option.value !== null));
+    } catch (error) {
+      message.error('Không tải được danh sách nhà cung cấp.');
+      setProviderOptions([]);
+    } finally {
+      setLoadingProviders(false);
+    }
+  }, []);
+
+  useEffectAsync(async () => {
+    if (!customerOrder?.id) {
+      setCreatedLots([]);
+      return;
+    }
+
+    try {
+      const response = await RequestUtils.Get(ORDER_LOTS_FIND_API, {
+        entity: 'ORDER',
+        entityId: customerOrder.id,
+      });
+      setCreatedLots(resolveOrderLots(response));
+    } catch (error) {
+      setCreatedLots([]);
+    }
+  }, [customerOrder?.id]);
+
   const displayDetails = arrayNotEmpty(paymentDetails) ? paymentDetails : orderDetails;
   const productOptions = orderDetails.map(detail => ({
     label: `${detail.productName || 'Sản phẩm'}${detail.orderDetailCode ? ` - ${detail.orderDetailCode}` : ''}`,
     value: detail.key,
   }));
+
+  const getSelectedDetail = useCallback((detailKey) => (
+    orderDetails.find(detail => String(detail.key) === String(detailKey))
+  ), [orderDetails]);
+
+  const getCreatedQuantityByDetail = useCallback((detail, currentLotId) => {
+    if (!detail) return 0;
+
+    return createdLots.reduce((sum, lot) => {
+      if (currentLotId && String(lot?.id) === String(currentLotId)) {
+        return sum;
+      }
+
+      if (!lotMatchesOrderDetail(lot, detail)) {
+        return sum;
+      }
+
+      return sum + Number(lot?.total ?? lot?.quantity ?? 0);
+    }, 0);
+  }, [createdLots]);
+
+  const getDraftQuantityByDetail = useCallback((detailKey) => {
+    const lots = form.getFieldValue('lots') ?? [];
+    return lots.reduce((sum, lot) => (
+      String(lot?.orderDetailKey ?? '') === String(detailKey ?? '')
+        ? sum + Number(lot?.quantity ?? 0)
+        : sum
+    ), 0);
+  }, [form]);
+
+  const validateLotQuantity = useCallback((fieldName) => async (_, value) => {
+    const lots = form.getFieldValue('lots') ?? [];
+    const lot = lots[fieldName] ?? {};
+    const detail = getSelectedDetail(lot.orderDetailKey);
+
+    if (!detail) {
+      return Promise.resolve();
+    }
+
+    const quantity = Number(value ?? 0);
+    const detailQuantity = Number(detail.quantity ?? 0);
+    if (quantity > detailQuantity) {
+      return Promise.reject(new Error(`Số lượng trong lô không được lớn hơn ${detailQuantity}.`));
+    }
+
+    const createdQuantity = getCreatedQuantityByDetail(detail, lot.id);
+    const draftQuantity = getDraftQuantityByDetail(lot.orderDetailKey);
+    const totalQuantity = createdQuantity + draftQuantity;
+
+    if (totalQuantity > detailQuantity) {
+      const remainingQuantity = Math.max(detailQuantity - createdQuantity, 0);
+      return Promise.reject(new Error(`Sản phẩm này còn lại ${remainingQuantity}. Tổng số lượng tạo lô không được lớn hơn ${detailQuantity}.`));
+    }
+
+    return Promise.resolve();
+  }, [form, getCreatedQuantityByDetail, getDraftQuantityByDetail, getSelectedDetail]);
 
   const subtotal = getOrderSubtotal(customerOrder, displayDetails);
   const vatPercent = Number(customerOrder?.vat ?? 0);
@@ -341,7 +539,18 @@ const ManufacturingLotCreate = () => {
   const remaining = grandTotal - paid - priceOff;
 
   const handleSubmit = async () => {
-    const values = await form.validateFields();
+    let values;
+    try {
+      values = await form.validateFields();
+    } catch (error) {
+      if (error?.errorFields?.length) {
+        message.warning('Vui lòng kiểm tra lại thông tin lô hàng.');
+        return;
+      }
+      message.error('Không kiểm tra được dữ liệu lô hàng.');
+      return;
+    }
+
     const lots = values.lots ?? [];
 
     if (!customerOrder?.id) {
@@ -354,34 +563,46 @@ const ManufacturingLotCreate = () => {
       return;
     }
 
-    const payload = lots.map(lot => ({
-      name: lot.lotName,
-      code: lot.lotCode || null,
-      entity: 'ORDER',
-      entityId: customerOrder.id,
-      type: lot.lotType || DEFAULT_LOT_VALUES.lotType,
-      total: Number(lot.quantity ?? 0),
-      expectedDate: lot.plannedDate ? moment(lot.plannedDate).format('YYYY-MM-DD HH:mm:ss') : null,
-      priorityLevel: lot.priority || DEFAULT_LOT_VALUES.priority,
-    }));
+    const payload = lots.map(lot => {
+      const selectedDetail = getSelectedDetail(lot.orderDetailKey);
+      const item = {
+        name: lot.lotName,
+        code: lot.lotCode || null,
+        entity: 'ORDER',
+        entityId: customerOrder.id,
+        orderDetailId: selectedDetail?.orderDetailId ?? null,
+        orderDetailCode: selectedDetail?.orderDetailCode ?? null,
+        type: lot.lotType || DEFAULT_LOT_VALUES.lotType,
+        total: Number(lot.quantity ?? 0),
+        prviderId: lot.prviderId ?? null,
+        expectedDate: lot.plannedDate ? moment(lot.plannedDate).format('YYYY-MM-DD HH:mm:ss') : null,
+        priorityLevel: lot.priority || DEFAULT_LOT_VALUES.priority,
+      };
+
+      if (lot.id) {
+        item.id = lot.id;
+      }
+
+      return item;
+    });
 
     try {
       const response = await RequestUtils.Post(CREATE_WAREHOUSE_PARCEL_API, payload);
       if (response?.errorCode === SUCCESS_CODE || response?.success) {
-        message.success(response?.message || `Đã tạo ${payload.length} lô hàng.`);
+        message.success(response?.message || (isEditing ? 'Đã cập nhật lô hàng.' : `Đã tạo ${payload.length} lô hàng.`));
         navigate('/sale/order-production');
         return;
       }
-      message.error(response?.message || 'Tạo lô hàng thất bại.');
+      message.error(response?.message || (isEditing ? 'Cập nhật lô hàng thất bại.' : 'Tạo lô hàng thất bại.'));
     } catch (error) {
-      message.error('Tạo lô hàng thất bại.');
+      message.error(isEditing ? 'Cập nhật lô hàng thất bại.' : 'Tạo lô hàng thất bại.');
     }
   };
 
   return (
     <PageShell>
       <Helmet>
-        <title>Tạo lô hàng</title>
+        <title>{isEditing ? 'Chỉnh sửa lô hàng' : 'Tạo lô hàng'}</title>
       </Helmet>
 
       <HeaderBlock>
@@ -389,17 +610,17 @@ const ManufacturingLotCreate = () => {
           data={[
             { title: 'Trang chủ' },
             { title: 'Quản lý lô hàng' },
-            { title: 'Tạo lô hàng' },
+            { title: isEditing ? 'Chỉnh sửa lô hàng' : 'Tạo lô hàng' },
           ]}
         />
-        <Title level={2}>Tạo lô hàng</Title>
+        <Title level={2}>{isEditing ? 'Chỉnh sửa lô hàng' : 'Tạo lô hàng'}</Title>
         <Text>Chọn sản phẩm trong đơn đang sản xuất và khai báo thông tin lô hàng.</Text>
       </HeaderBlock>
 
       <Form
         form={form}
         layout="vertical"
-        initialValues={{ lots: [{ ...DEFAULT_LOT_VALUES }] }}
+        initialValues={{ lots: [initialLotValues] }}
       >
         <MainLayout>
           <Row gutter={[32, 24]} align="top">
@@ -412,6 +633,9 @@ const ManufacturingLotCreate = () => {
                     <>
                       {fields.map((field, index) => (
                         <LotBlock key={field.key}>
+                          <Form.Item name={[field.name, 'id']} hidden>
+                            <Input />
+                          </Form.Item>
                           {fields.length > 1 ? (
                             <LotBlockHeader>
                               <span className="lot-title">Lô hàng {index + 1}</span>
@@ -450,6 +674,9 @@ const ManufacturingLotCreate = () => {
                                   options={productOptions}
                                   showSearch
                                   optionFilterProp="label"
+                                  onChange={() => {
+                                    form.validateFields([['lots', field.name, 'quantity']]).catch(() => undefined);
+                                  }}
                                 />
                               </Form.Item>
                             </Col>
@@ -457,18 +684,33 @@ const ManufacturingLotCreate = () => {
                               <Form.Item
                                 name={[field.name, 'quantity']}
                                 label="Số lượng"
-                                rules={[{ required: true, message: 'Vui lòng nhập số lượng' }]}
+                                rules={[
+                                  { required: true, message: 'Vui lòng nhập số lượng' },
+                                  { validator: validateLotQuantity(field.name) },
+                                ]}
                               >
                                 <InputNumber min={1} placeholder="Nhập số lượng" />
                               </Form.Item>
                             </Col>
-                            <Col span={24}>
+                            <Col xs={24} md={12}>
                               <Form.Item
                                 name={[field.name, 'plannedDate']}
                                 label="Ngày nhập lô"
                                 rules={[{ required: true, message: 'Vui lòng chọn ngày nhập lô' }]}
                               >
                                 <DatePicker style={{ width: '100%' }} format="MM/DD/YYYY" />
+                              </Form.Item>
+                            </Col>
+                            <Col xs={24} md={12}>
+                              <Form.Item name={[field.name, 'prviderId']} label="Nhà cung cấp">
+                                <Select
+                                  allowClear
+                                  showSearch
+                                  loading={loadingProviders}
+                                  placeholder="Chọn nhà cung cấp"
+                                  options={providerOptions}
+                                  optionFilterProp="label"
+                                />
                               </Form.Item>
                             </Col>
                             <Col span={24}>
@@ -484,6 +726,7 @@ const ManufacturingLotCreate = () => {
                         type="primary"
                         icon={<PlusOutlined />}
                         onClick={() => add({ ...DEFAULT_LOT_VALUES })}
+                        disabled={isEditing}
                       >
                         Thêm lô hàng
                       </AddLotButton>
@@ -569,7 +812,7 @@ const ManufacturingLotCreate = () => {
                       icon={<CheckCircleOutlined />}
                       onClick={handleSubmit}
                     >
-                      Hoàn thành
+                      {isEditing ? 'Cập nhật' : 'Hoàn thành'}
                     </CompleteButton>
                   </>
                 )}
