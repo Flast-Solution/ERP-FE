@@ -29,7 +29,8 @@ import {
 } from '@/containers/WorkflowDesigner/styles'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { SUCCESS_CODE } from '@/configs'
-import { enrichWorkflowForms, flowToJson, jsonToFlow } from '@/utils/workflowSerializer'
+import { enrichFlowStepTypes, enrichWorkflowForms, flowToJson, jsonToFlow } from '@/utils/workflowSerializer'
+import useWorkflowStore from '@/store/workflowStore'
 import { normalizeWorkflowStepType, validateFlow } from '@/utils/workflowValidators'
 import { createUuidV7 } from '@/utils/uuid'
 
@@ -108,7 +109,14 @@ const normalizeBusinessTypeOptions = (response) => {
 const normalizeProcessType = (item, index) => {
   const color = item?.colorCode ?? item?.color_code ?? item?.color ?? '#1677ff'
   const id = item?.id ?? item?.key ?? `process_type_${index + 1}`
-  const rawKey = item?.code ?? item?.processTypeCode ?? item?.process_type_code ?? item?.type ?? item?.key ?? id
+  // `item.type` từ API là loại nghiệp vụ workflow (ORDER, QMS, ...) — dùng chung cho mọi nhóm bước.
+  const rawKey = item?.code
+    ?? item?.processTypeCode
+    ?? item?.process_type_code
+    ?? item?.typeCode
+    ?? item?.type_code
+    ?? item?.key
+    ?? String(id)
   const label = item?.name ?? item?.label ?? `Loại bước ${index + 1}`
   const semanticType = normalizeWorkflowStepType(rawKey, [], {
     data: {
@@ -123,7 +131,8 @@ const normalizeProcessType = (item, index) => {
     id,
     key: uniqueKey,
     semanticType: canonicalTypes.includes(semanticType) ? semanticType : 'process',
-    rawKey: String(rawKey),
+    rawKey: uniqueKey,
+    workflowType: item?.type ?? item?.workflowType ?? item?.flowType ?? '',
     label,
     color,
     bgColor: hexToAlpha(color, 0.12),
@@ -336,8 +345,10 @@ const WorkflowDesignerPage = () => {
   }, [fetchBusinessTypeOptions, fetchProcessTypes, view])
 
   const loadWorkflowDetail = useCallback(async (detail) => {
-    const flow = jsonToFlow(ensureWorkflowPayload(detail))
-    const enrichedFlow = await enrichWorkflowForms(flow)
+    const stepTypes = useWorkflowStore.getState().stepTypes
+    const flow = jsonToFlow(ensureWorkflowPayload(detail), stepTypes)
+    const flowWithStepTypes = enrichFlowStepTypes(flow, stepTypes)
+    const enrichedFlow = await enrichWorkflowForms(flowWithStepTypes)
     loadFlow(enrichedFlow)
     return enrichedFlow
   }, [loadFlow])
@@ -358,6 +369,7 @@ const WorkflowDesignerPage = () => {
     const hydrateFromUrl = async () => {
       setLoadingWorkflow(true)
       try {
+        await fetchProcessTypes()
         const detail = await fetchWorkflowDetail({ id: workflowId })
         if (!mounted || requestId !== hydrateRequestRef.current) return
         await loadWorkflowDetail(detail)
@@ -380,7 +392,7 @@ const WorkflowDesignerPage = () => {
     return () => {
       mounted = false
     }
-  }, [view, action, workflowId, loadWorkflowDetail, setSearchParams])
+  }, [view, action, workflowId, fetchProcessTypes, loadWorkflowDetail, setSearchParams])
 
   const handleCreate = useCallback(() => {
     hydratedWorkflowIdRef.current = null
@@ -390,6 +402,7 @@ const WorkflowDesignerPage = () => {
 
   const handleEdit = useCallback(async (detail) => {
     try {
+      await fetchProcessTypes()
       await loadWorkflowDetail(detail)
       const id = getWorkflowIdFromPayload(detail)
       if (id != null && id !== '') {
@@ -403,7 +416,7 @@ const WorkflowDesignerPage = () => {
     } catch (error) {
       message.error(error?.message || 'Dữ liệu workflow không hợp lệ.')
     }
-  }, [loadWorkflowDetail, setSearchParams])
+  }, [fetchProcessTypes, loadWorkflowDetail, setSearchParams])
 
   const handleBack = useCallback(() => {
     hydratedWorkflowIdRef.current = null

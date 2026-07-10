@@ -1,5 +1,5 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
-import { Alert, Breadcrumb, Button, Card, Col, Descriptions, Empty, message, Row, Select, Space, Spin, Tag, Timeline, Typography } from 'antd'
+import { Alert, Breadcrumb, Button, Card, Col, Descriptions, Empty, message, Row, Select, Space, Spin, Table, Tag, Timeline, Typography } from 'antd'
 import { CheckCircleOutlined, ClockCircleOutlined, FormOutlined } from '@ant-design/icons'
 import { Helmet } from 'react-helmet'
 import { useLocation, useParams, useSearchParams } from 'react-router-dom'
@@ -19,13 +19,16 @@ const WORKFLOW_PREVIEW_API = '/workflow/process/preview'
 const FORM_TEMPLATE_DETAIL_API = '/workflow/forms/template/find-id'
 const WORKFLOW_PROCESS_FIND_API = '/workflow/process/find-id'
 const PROCESS_TYPE_FIND_API = '/workflow/process/process-type-find'
+const ORDER_LOTS_FIND_API = '/qms/warehouse-paracel/find-entity'
+const LOT_WORKFLOW_ENTITY_TYPE = 'WAREHOUSE_PARCEL'
 
 const workflowFixedPanelStyle = {
   position: 'fixed',
-  top: 96,
+  top: 116,
   right: 24,
-  width: 360,
-  maxHeight: 'calc(100vh - 120px)',
+  bottom: 0,
+  width: 384,
+  maxHeight: 'none',
   overflowY: 'auto',
   zIndex: 10,
 }
@@ -61,6 +64,30 @@ const resolveWorkflowProcessDetail = (response) => {
     return payload.process
   }
   return payload
+}
+
+const resolveOrderLots = (response) => {
+  const payload = resolveApiPayload(response)
+  const candidates = [
+    payload?.data,
+    payload?.data?.embedded,
+    payload?.data?.content,
+    payload?.data?.items,
+    payload?.embedded,
+    payload?.content,
+    payload?.items,
+    payload,
+  ]
+
+  const arrayData = candidates.find(Array.isArray)
+  if (arrayData) return arrayData
+
+  const objectData = candidates.find(item => item && typeof item === 'object')
+  if (objectData?.id || objectData?.code || objectData?.entityId) {
+    return [objectData]
+  }
+
+  return []
 }
 
 const getResponseDataArray = (response) => {
@@ -736,7 +763,6 @@ const normalizeCompletedStepHistory = (item = {}, steps = []) => {
 const buildWorkflowHistoryItems = ({
   workflowPreview,
   workflowInstance,
-  order,
   workflow,
   steps,
 }) => {
@@ -744,10 +770,6 @@ const buildWorkflowHistoryItems = ({
     workflowPreview?.histories,
     workflowPreview?.workflowHistories,
     workflowPreview?.workflowHistory,
-    order?.workflowHistories,
-    order?.workflowHistory,
-    order?.stepHistories,
-    order?.histories,
     workflow?.histories,
   )
 
@@ -773,8 +795,6 @@ const buildWorkflowHistoryItems = ({
     workflowPreview?.processInstance?.completed_steps,
     workflowInstance?.completedSteps,
     workflowInstance?.completed_steps,
-    order?.workflowInstance?.completedSteps,
-    order?.workflowInstance?.completed_steps,
   ).map((item) => normalizeCompletedStepHistory(item, steps))
 }
 
@@ -1401,7 +1421,6 @@ const WorkflowAdvanceSection = ({
 
 const WorkflowProgressPanel = ({
   workflow,
-  order,
   steps,
   currentStep,
   currentStepCode,
@@ -1423,8 +1442,8 @@ const WorkflowProgressPanel = ({
 
   return (
     <Card
-      bordered
-      bodyStyle={{ padding: 0 }}
+      variant="outlined"
+      styles={{ body: { padding: 0 } }}
       style={{ borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 4px rgba(15, 23, 42, 0.08)' }}
     >
       <div style={{ padding: '22px 20px 18px' }}>
@@ -1446,14 +1465,11 @@ const WorkflowProgressPanel = ({
             workflow?.processName,
             workflow?.process_name,
             workflow?.title,
-            order?.workflowProcessName,
-            order?.processName,
-            order?.workflowName,
             workflow?.id ? `Quy trình #${workflow.id}` : 'Chưa gắn workflow',
           )}
         </Title>
         <Text style={{ display: 'block', marginTop: 4, color: '#4b5563', fontSize: 13 }}>
-          {getValue(workflow?.processKey, workflow?.process_key, workflow?.code, order?.workflowProcessKey, '')}
+          {getValue(workflow?.processKey, workflow?.process_key, workflow?.code, '')}
           {steps.length ? ` · ${steps.length} bước` : ''}
         </Text>
       </div>
@@ -1782,7 +1798,7 @@ const OrderProgressPage = () => {
   const { user } = useGetMe()
   const remoteFormRef = useRef(null)
   const [order, setOrder] = useState(location.state?.order ?? null)
-  const [workflowInstance, setWorkflowInstance] = useState(location.state?.workflowInstance ?? null)
+  const [workflowInstance, setWorkflowInstance] = useState(null)
   const [workflowPreview, setWorkflowPreview] = useState(null)
   const [workflowProcessDetail, setWorkflowProcessDetail] = useState(null)
   const [processTypes, setProcessTypes] = useState([])
@@ -1793,17 +1809,18 @@ const OrderProgressPage = () => {
   const [selectedToStepCode, setSelectedToStepCode] = useState()
   const [viewingStepCode, setViewingStepCode] = useState(null)
   const [submissionTemplates, setSubmissionTemplates] = useState({})
+  const [lots, setLots] = useState([])
+  const [loadingLots, setLoadingLots] = useState(false)
+  const [selectedLot, setSelectedLot] = useState(null)
 
   const orderId = getValue(order?.id, params.orderId, searchParams.get('orderId'), searchParams.get('id'))
-  const instanceId = getValue(
-    workflowInstance?.id,
-    order?.workflowInstance?.id,
-    searchParams.get('instanceId'),
-  )
+  const instanceId = workflowInstance?.id
 
-  const fetchWorkflowPreview = useCallback(async ({ silent = false } = {}) => {
+  const fetchWorkflowPreview = useCallback(async ({ silent = false, keepPrevious = false } = {}) => {
     if (!instanceId) {
-      setWorkflowPreview(null)
+      if (!keepPrevious) {
+        setWorkflowPreview(null)
+      }
       return null
     }
 
@@ -1823,7 +1840,9 @@ const OrderProgressPage = () => {
 
       return preview
     } catch (error) {
-      setWorkflowPreview(null)
+      if (!keepPrevious) {
+        setWorkflowPreview(null)
+      }
       message.error(error?.message || 'Không tải được tiến trình workflow.')
       return null
     } finally {
@@ -1884,31 +1903,79 @@ const OrderProgressPage = () => {
   }, [location.state?.order, orderId])
 
   useEffect(() => {
-    if (workflowInstance?.id || !orderId) {
+    if (!orderId) {
+      setLots([])
       return undefined
     }
 
     let mounted = true
+    setLoadingLots(true)
 
-    RequestUtils.Post(WORKFLOW_INSTANCE_BY_ENTITY_API, {
-      entityName: 'order',
-      entityIds: [Number(orderId)],
+    RequestUtils.Get(ORDER_LOTS_FIND_API, {
+      entity: 'ORDER',
+      entityId: orderId,
     })
-      .then((response) => {
-        if (!mounted) return
-        const instance = resolveWorkflowInstances(response)[0] ?? null
-        if (instance) {
-          setWorkflowInstance(instance)
+      .then(async (response) => {
+        const orderLots = resolveOrderLots(response)
+        const lotIds = orderLots.map(lot => lot?.id).filter(Boolean)
+        let instancesByLotId = new Map()
+
+        if (lotIds.length > 0) {
+          try {
+            const workflowResponse = await RequestUtils.Post(WORKFLOW_INSTANCE_BY_ENTITY_API, {
+              entityName: LOT_WORKFLOW_ENTITY_TYPE,
+              entityIds: lotIds,
+            })
+
+            instancesByLotId = resolveWorkflowInstances(workflowResponse).reduce((result, instance) => {
+              const entityId = getValue(
+                instance?.entityId,
+                instance?.entity_id,
+                instance?.processInstance?.entityId,
+                instance?.processInstance?.entity_id,
+                instance?.workflowInstance?.entityId,
+                instance?.workflowInstance?.entity_id,
+              )
+              if (entityId !== undefined && entityId !== null && entityId !== '') {
+                result.set(String(entityId), instance?.processInstance ? { ...instance, ...instance.processInstance } : instance)
+              }
+              return result
+            }, new Map())
+          } catch (error) {
+            instancesByLotId = new Map()
+          }
         }
+
+        if (!mounted) return
+
+        const nextLots = orderLots.map(lot => ({
+          ...lot,
+          workflowInstance: instancesByLotId.get(String(lot?.id)) ?? lot.workflowInstance ?? null,
+        }))
+
+        setLots(nextLots)
+        const firstLot = nextLots[0] ?? null
+        setSelectedLot(firstLot)
+        setWorkflowInstance(firstLot?.workflowInstance ?? null)
+        setWorkflowPreview(null)
+        setWorkflowProcessDetail(null)
+        setViewingStepCode(null)
       })
       .catch((error) => {
-        console.error('[OrderProgress] workflow instance error', error)
+        if (!mounted) return
+        setLots([])
+        message.error(error?.message || 'Không tải được danh sách lô hàng.')
+      })
+      .finally(() => {
+        if (mounted) {
+          setLoadingLots(false)
+        }
       })
 
     return () => {
       mounted = false
     }
-  }, [orderId, workflowInstance?.id])
+  }, [orderId])
 
   useEffect(() => {
     fetchWorkflowPreview()
@@ -1925,10 +1992,6 @@ const OrderProgressPage = () => {
     previewStepProcess?.process_id,
     workflowInstance?.processId,
     workflowInstance?.process_id,
-    order?.workflowProcessId,
-    order?.workflow_process_id,
-    order?.processId,
-    order?.process_id,
   )
 
   useEffect(() => {
@@ -1962,11 +2025,8 @@ const OrderProgressPage = () => {
   const workflow = useMemo(() => (
     workflowProcessDetail
     ?? workflowPreview?.process
-    ?? order?.workflowProcess
-    ?? order?.process
-    ?? order?.workflow
     ?? (workflowProcessId ? { id: workflowProcessId } : {})
-  ), [workflowProcessDetail, workflowPreview, order, workflowProcessId])
+  ), [workflowProcessDetail, workflowPreview, workflowProcessId])
   const processTypeLabelMap = useMemo(
     () => buildProcessTypeLabelMap(processTypes),
     [processTypes]
@@ -1977,8 +2037,6 @@ const OrderProgressPage = () => {
     workflowPreview?.steps,
     previewStepProcess ? [previewStepProcess] : undefined,
     workflow?.steps,
-    order?.workflowSteps,
-    order?.steps,
   )
   const stepTransitions = getFirstArray(
     workflowPreview?.stepTransitions,
@@ -2003,7 +2061,6 @@ const OrderProgressPage = () => {
     workflowInstance?.currentStepCode,
     workflowPreview?.processInstance?.currentStepCode,
     workflowPreview?.currentStepCode,
-    order?.currentStepCode,
   )
   const currentStep = getValue(
     workflowPreview?.currentStep,
@@ -2011,12 +2068,9 @@ const OrderProgressPage = () => {
     steps.find(step =>
       step?.current
       || step?.active
-      || isSameStepRef(step?.id, order?.currentStepId)
       || isSameStepRef(step?.stepCode, currentStepCode)
       || isSameStepRef(step?.code, currentStepCode),
     ),
-    order?.currentWorkflowStep,
-    order?.currentStep,
     steps[0],
   )
 
@@ -2199,7 +2253,6 @@ const OrderProgressPage = () => {
   const histories = buildWorkflowHistoryItems({
     workflowPreview,
     workflowInstance,
-    order,
     workflow,
     steps,
   })
@@ -2218,7 +2271,6 @@ const OrderProgressPage = () => {
   const completedRefs = getFirstArray(
     workflowPreview?.processInstance?.completedSteps,
     workflowInstance?.completedSteps,
-    order?.workflowInstance?.completedSteps,
   )
   const submittedRefs = submissions.map((item) => getValue(item?.stepCode, item?.stepId, item?.step_id, item?.id))
   const hasCurrentSubmission = Boolean(currentSubmission)
@@ -2396,7 +2448,18 @@ const OrderProgressPage = () => {
     setViewingStepCode(null)
   }, [])
 
-  const orderInfoItems = useMemo(() => [
+  const handleSelectLot = useCallback((lot) => {
+    if (!lot?.workflowInstance?.id) {
+      message.warning('Lô hàng này chưa có workflow.')
+      return
+    }
+
+    setSelectedLot(lot)
+    setWorkflowInstance(lot.workflowInstance)
+    setViewingStepCode(null)
+  }, [])
+
+  const customerInfoItems = useMemo(() => [
     {
       key: 'code',
       label: 'Mã đơn',
@@ -2404,7 +2467,7 @@ const OrderProgressPage = () => {
     },
     {
       key: 'customer',
-      label: 'Khách hàng',
+      label: 'Tên khách hàng',
       children: order?.customerReceiverName ?? order?.customerName ?? order?.customer?.name ?? '-',
     },
     {
@@ -2418,9 +2481,9 @@ const OrderProgressPage = () => {
       children: order?.customerAddress ?? order?.address ?? '-',
     },
     {
-      key: 'total',
-      label: 'Tổng tiền',
-      children: formatMoney(order?.total ?? 0),
+      key: 'owner',
+      label: 'Người phụ trách',
+      children: order?.userCreateUsername ?? order?.userName ?? order?.saleName ?? '-',
     },
     {
       key: 'createdAt',
@@ -2428,6 +2491,106 @@ const OrderProgressPage = () => {
       children: formatTime(order?.createdAt ?? order?.createdDate) || '-',
     },
   ], [order])
+
+  const orderDetailRows = useMemo(() => (
+    getFirstArray(order?.details, order?.data).map((item, index) => ({
+      ...item,
+      __rowKey: [
+        'order-detail',
+        getValue(item?.id, item?.code, item?.orderDetailId, item?.orderDetailCode, item?.productId, item?.productName, item?.name, 'row'),
+        index,
+      ].join('-'),
+    }))
+  ), [order])
+  const lotRows = useMemo(() => (
+    lots.map((item, index) => ({
+      ...item,
+      __rowKey: [
+        'lot',
+        getValue(item?.id, item?.code, item?.orderDetailId, item?.orderDetailCode, item?.name, 'row'),
+        index,
+      ].join('-'),
+    }))
+  ), [lots])
+  const orderDetailColumns = [
+    {
+      title: 'STT',
+      key: 'index',
+      width: 56,
+      render: (_, __, index) => index + 1,
+    },
+    {
+      title: 'Nội dung',
+      key: 'name',
+      render: (_, record) => record?.productName ?? record?.name ?? '-',
+    },
+    {
+      title: 'SL',
+      dataIndex: 'quantity',
+      key: 'quantity',
+      width: 90,
+      align: 'right',
+      render: value => value ?? 0,
+    },
+    {
+      title: 'Thành tiền',
+      key: 'total',
+      width: 130,
+      align: 'right',
+      render: (_, record) => formatMoney(getValue(record?.totalPrice, record?.total, (Number(record?.price ?? 0) * Number(record?.quantity ?? 0)))),
+    },
+  ]
+
+  const lotColumns = [
+    {
+      title: 'STT',
+      key: 'index',
+      width: 56,
+      render: (_, __, index) => index + 1,
+    },
+    {
+      title: 'Mã lô hàng',
+      dataIndex: 'code',
+      key: 'code',
+      width: 130,
+      render: value => value || '-',
+    },
+    {
+      title: 'Mã đơn con',
+      key: 'orderDetailCode',
+      width: 150,
+      render: (_, record) => record?.orderDetailCode ?? record?.order_detail_code ?? '-',
+    },
+    {
+      title: 'Tên lô hàng',
+      dataIndex: 'name',
+      key: 'name',
+      render: value => value || '-',
+    },
+    {
+      title: 'Ngày nhập lô',
+      dataIndex: 'expectedDate',
+      key: 'expectedDate',
+      width: 140,
+      render: value => formatTime(value) || '-',
+    },
+    {
+      title: 'Số lượng',
+      dataIndex: 'total',
+      key: 'total',
+      width: 110,
+      align: 'right',
+      render: value => value ?? 0,
+    },
+    {
+      title: 'Trạng thái',
+      key: 'status',
+      width: 150,
+      render: (_, record) => record?.workflowInstance?.id
+        ? <Tag color={String(selectedLot?.id) === String(record?.id) ? 'blue' : 'green'}>Có workflow</Tag>
+        : <Tag>Chưa có workflow</Tag>,
+    },
+  ]
 
   useEffect(() => {
     const container = remoteFormContainerRef.current
@@ -2460,13 +2623,13 @@ const OrderProgressPage = () => {
         {`
           @media (min-width: 992px) {
             .workflow-progress-main-col {
-              flex: 0 0 calc(100% - 400px) !important;
-              max-width: calc(100% - 400px) !important;
+              flex: 0 0 calc(100% - 384px) !important;
+              max-width: calc(100% - 384px) !important;
             }
 
             .workflow-progress-side-col {
-              flex: 0 0 400px !important;
-              max-width: 400px !important;
+              flex: 0 0 384px !important;
+              max-width: 384px !important;
             }
           }
 
@@ -2486,6 +2649,102 @@ const OrderProgressPage = () => {
               overflow-y: visible !important;
             }
           }
+
+          .workflow-progress-layout {
+            display: flex;
+            align-items: flex-start;
+            width: 100%;
+          }
+
+          .workflow-progress-content-panel {
+            width: 100%;
+            padding: 18px 20px;
+            border: 1px solid #e5e7eb;
+            border-right: 0;
+            border-radius: 8px 0 0 8px;
+            background: #fff;
+          }
+
+          .workflow-progress-fixed-panel .ant-card {
+            width: 100%;
+            min-height: 100%;
+            height: 100%;
+            border-left: 1px solid #e5e7eb;
+            border-radius: 0 8px 8px 0 !important;
+            box-shadow: none !important;
+          }
+
+          .workflow-progress-section {
+            padding: 0;
+          }
+
+          .workflow-progress-section + .workflow-progress-section {
+            margin-top: 22px;
+            padding-top: 22px;
+            border-top: 1px solid #f0f2f5;
+          }
+
+          .workflow-progress-section-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+            color: #111827;
+            font-size: 15px;
+            font-weight: 700;
+          }
+
+          .workflow-progress-section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+          }
+
+          .workflow-progress-section-head .workflow-progress-section-title {
+            margin-bottom: 0;
+          }
+
+          .workflow-progress-content-panel .ant-card {
+            border: 0;
+            box-shadow: none;
+          }
+
+          .workflow-progress-content-panel .ant-card-head {
+            min-height: 0;
+            padding: 0;
+            border-bottom: 0;
+          }
+
+          .workflow-progress-content-panel .ant-card-body {
+            padding: 0;
+          }
+
+          .workflow-progress-content-panel .ant-table-wrapper .ant-table {
+            border-radius: 4px;
+          }
+
+          .workflow-progress-customer-info .ant-descriptions-item-container {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+          }
+
+          .workflow-progress-customer-info .ant-descriptions-item-label {
+            flex: 0 0 auto;
+            color: #6b7280;
+          }
+
+          .workflow-progress-customer-info .ant-descriptions-item-content {
+            flex: 1 1 auto;
+            justify-content: flex-end;
+            min-width: 0;
+            color: #111827;
+            font-weight: 600;
+            text-align: right;
+          }
         `}
       </style>
       <Breadcrumb
@@ -2499,38 +2758,92 @@ const OrderProgressPage = () => {
 
       <Spin spinning={loadingOrder || loadingPreview}>
         <div style={{ paddingBottom: 24 }}>
-          <Row gutter={16} align="top">
+          <Row gutter={0} align="top" className="workflow-progress-layout">
             <Col xs={24} lg={16} className="workflow-progress-main-col">
-              <Space direction="vertical" size={16} style={{ width: '100%' }}>
-                <Card title="Thông tin đơn hàng">
-                  {order ? (
-                    <Descriptions
-                      bordered
-                      size="small"
-                      column={{ xs: 1, sm: 1, md: 2, lg: 2, xl: 2, xxl: 2 }}
-                      items={orderInfoItems}
-                    />
-                  ) : (
-                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có dữ liệu đơn hàng" />
-                  )}
-                </Card>
+              <div className="workflow-progress-content-panel">
+                <div className="workflow-progress-section">
+                  <Row gutter={16}>
+                  <Col xs={24} lg={12}>
+                    <div>
+                      <div className="workflow-progress-section-title">Thông tin khách hàng</div>
+                      {order ? (
+                        <Descriptions
+                          className="workflow-progress-customer-info"
+                          size="small"
+                          column={1}
+                          items={customerInfoItems}
+                        />
+                      ) : (
+                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có dữ liệu đơn hàng" />
+                      )}
+                    </div>
+                  </Col>
+                  <Col xs={24} lg={12}>
+                    <div>
+                      <div className="workflow-progress-section-title">Thông tin đơn hàng</div>
+                      <Table
+                        rowKey="__rowKey"
+                        size="small"
+                        columns={orderDetailColumns}
+                        dataSource={orderDetailRows}
+                        pagination={false}
+                      />
+                      <div style={{ marginTop: 16 }}>
+                        <Descriptions
+                          size="small"
+                          column={1}
+                          items={[
+                            { key: 'total', label: 'Tổng chi phí', children: formatMoney(order?.total ?? 0) },
+                            { key: 'shipping', label: 'Phí vận chuyển', children: formatMoney(order?.shippingCost ?? 0) },
+                            { key: 'vat', label: 'VAT', children: formatMoney(Number(order?.total ?? 0) * (Number(order?.vat ?? 0) / 100)) },
+                            { key: 'discount', label: 'Chiết khấu', children: formatMoney(order?.priceOff ?? 0) },
+                            { key: 'paid', label: 'Đã thanh toán', children: formatMoney(order?.paid ?? 0) },
+                            { key: 'remaining', label: 'Còn lại', children: <Text strong type="success">{formatMoney(Number(order?.total ?? 0) - Number(order?.paid ?? 0))}</Text> },
+                          ]}
+                        />
+                      </div>
+                    </div>
+                  </Col>
+                  </Row>
+                </div>
 
-                <Card
-                  title={(
-                    <Space wrap>
+                <div className="workflow-progress-section">
+                  <div className="workflow-progress-section-title">Danh sách lô hàng đã tạo</div>
+                  <Table
+                    rowKey="__rowKey"
+                    size="small"
+                    loading={loadingLots}
+                    columns={lotColumns}
+                    dataSource={lotRows}
+                    pagination={false}
+                    onRow={(record) => ({
+                      onClick: () => handleSelectLot(record),
+                      style: {
+                        cursor: record?.workflowInstance?.id ? 'pointer' : 'not-allowed',
+                        background: String(selectedLot?.id) === String(record?.id) ? '#eff6ff' : undefined,
+                      },
+                    })}
+                  />
+                </div>
+
+                <div className="workflow-progress-section">
+                  <div className="workflow-progress-section-head">
+                    <div className="workflow-progress-section-title">
                       <FormOutlined />
-                      <span>{currentFormName || 'Form bắt buộc tại bước'}</span>
+                      <span>
+                        {currentFormName || 'Form bắt buộc tại bước'}
+                        {selectedLot?.code ? ` - Lô ${selectedLot.code}` : ''}
+                      </span>
                       {isReviewingSubmission && (
                         <Tag color="blue">Đang xem lại</Tag>
                       )}
-                    </Space>
-                  )}
-                  extra={isReviewingSubmission ? (
-                    <Button type="link" onClick={handleBackToCurrentStep}>
-                      Quay lại bước hiện tại
-                    </Button>
-                  ) : null}
-                >
+                    </div>
+                    {isReviewingSubmission ? (
+                      <Button type="link" onClick={handleBackToCurrentStep}>
+                        Quay lại bước hiện tại
+                      </Button>
+                    ) : null}
+                  </div>
                   {isReviewingSubmission && !displaySubmission && (
                     <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Bước này chưa có dữ liệu đã gửi" />
                   )}
@@ -2582,26 +2895,26 @@ const OrderProgressPage = () => {
                       </Button>
                     </div>
                   ) : null}
-                </Card>
+                </div>
 
-                <Card
-                  title={(
+                <div className="workflow-progress-section">
+                  <div className="workflow-progress-section-title">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                       <span>Kết quả kiểm tra</span>
                       <InspectionSummary data={inspectionResults} />
                     </div>
-                  )}
-                >
+                  </div>
                   <InspectionResultList
                     data={inspectionResults}
                     onOpenForm={handleReviewInspectionResult}
                   />
-                </Card>
+                </div>
 
-                <Card title="Lịch sử chuyển bước">
+                <div className="workflow-progress-section">
+                  <div className="workflow-progress-section-title">Lịch sử chuyển bước</div>
                   <HistoryList data={histories} />
-                </Card>
-              </Space>
+                </div>
+              </div>
             </Col>
 
             <Col xs={24} lg={8} className="workflow-progress-side-col">
@@ -2611,7 +2924,6 @@ const OrderProgressPage = () => {
               >
                 <WorkflowProgressPanel
                   workflow={workflow}
-                  order={order}
                   steps={steps}
                   currentStep={currentStep}
                   currentStepCode={currentStepCode}

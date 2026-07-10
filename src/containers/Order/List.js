@@ -304,7 +304,7 @@ const copyToClipboard = (text, setCopiedIndex, index) => {
   })
 };
 
-const ListOrder = ({ filter, hideQuoteButton, extraActions, enableLotTree = false }) => {
+const ListOrder = ({ filter, hideQuoteButton, extraActions, enableLotTree = false, disableWorkflowAttach = false }) => {
 
   const navigate = useNavigate();
   const [ copiedIndex, setCopiedIndex ] = useState(null);
@@ -551,6 +551,7 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions, enableLotTree = fals
                     navigate(`/sale/order/progress/${order.id}?instanceId=${lot.workflowInstance.id}`, {
                       state: {
                         order: clonePlainData(order),
+                        lot: clonePlainData(lot),
                         workflowInstance: clonePlainData(lot.workflowInstance),
                       },
                     })
@@ -586,7 +587,7 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions, enableLotTree = fals
       return (
         <div style={{ padding: '8px 16px 8px 48px', background: '#fafafa' }}>
           <Table
-            rowKey={(item, index) => item?.id ?? item?.code ?? `${orderId}-${index}`}
+            rowKey={(item) => item?.id ?? item?.code ?? `${orderId}-${item?.name ?? item?.createdDate ?? item?.expectedDate ?? 'lot'}`}
             size="small"
             columns={getLotColumns(record)}
             dataSource={lots}
@@ -748,12 +749,12 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions, enableLotTree = fals
       render: (_, record) => {
         const hasWorkflowInstance = Boolean(record?.workflowInstance)
         const workflowMenuItems = [
-          !hasWorkflowInstance && {
+          !disableWorkflowAttach && !hasWorkflowInstance && {
             key: 'attach',
             icon: <ApartmentOutlined />,
             label: 'Gắn workflow',
           },
-          {
+          hasWorkflowInstance && {
             key: 'progress',
             icon: <EyeOutlined />,
             label: 'Xem tiến trình',
@@ -777,36 +778,38 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions, enableLotTree = fals
                 Báo giá
               </Button>
             )}
-            <Dropdown
-              trigger={['click']}
-              menu={{
-                items: workflowMenuItems,
-                onClick: ({ key, domEvent }) => {
-                  domEvent?.stopPropagation()
-                  if (key === 'attach') {
-                    openWorkflowModal(record)
-                    return
-                  }
-                  if (key === 'progress') {
-                    const instanceId = record.workflowInstance?.id
-                    navigate(`/sale/order/progress/${record.id}${instanceId ? `?instanceId=${instanceId}` : ''}`, {
-                      state: {
-                        order: clonePlainData(record),
-                        workflowInstance: clonePlainData(record.workflowInstance),
-                      },
-                    })
-                  }
-                },
-              }}
-            >
-              <Tooltip title="Workflow">
-                <Button
-                  size="small"
-                  icon={<ApartmentOutlined />}
-                  onClick={(event) => event.stopPropagation()}
-                />
-              </Tooltip>
-            </Dropdown>
+            {workflowMenuItems.length > 0 ? (
+              <Dropdown
+                trigger={['click']}
+                menu={{
+                  items: workflowMenuItems,
+                  onClick: ({ key, domEvent }) => {
+                    domEvent?.stopPropagation()
+                    if (key === 'attach') {
+                      openWorkflowModal(record)
+                      return
+                    }
+                    if (key === 'progress') {
+                      const instanceId = record.workflowInstance?.id
+                      navigate(`/sale/order/progress/${record.id}${instanceId ? `?instanceId=${instanceId}` : ''}`, {
+                        state: {
+                          order: clonePlainData(record),
+                          workflowInstance: clonePlainData(record.workflowInstance),
+                        },
+                      })
+                    }
+                  },
+                }}
+              >
+                <Tooltip title={hasWorkflowInstance ? 'Xem tiến trình' : 'Workflow'}>
+                  <Button
+                    size="small"
+                    icon={hasWorkflowInstance ? <EyeOutlined /> : <ApartmentOutlined />}
+                    onClick={(event) => event.stopPropagation()}
+                  />
+                </Tooltip>
+              </Dropdown>
+            ) : null}
             { record.type === 'cohoi' &&
               <Button
                 size="small"

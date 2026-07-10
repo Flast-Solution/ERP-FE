@@ -6,7 +6,7 @@ import { HASH_POPUP } from '@/configs/constant'
 import { FormInput } from '@flast-erp/core/components'
 import { useNodes, useStepTypes, useUpdateNodeData } from '@/hooks/useWorkflowStore'
 import { ACTION_TYPES } from '@/store/workflowConstants'
-import { slugifyCode } from '@/utils/workflowValidators'
+import { isStepTypeMatch, resolveStepTypeConfig, slugifyCode } from '@/utils/workflowValidators'
 import { getFormDisplayName, normalizeAttachedForm } from '@/utils/workflowSerializer'
 import {
   Section,
@@ -125,12 +125,12 @@ const StepForm = ({ node }) => {
   }
 
   const handleTypeSelect = (key) => {
-    const stepType = stepTypes.find((item) => String(item.key) === String(key))
-    form.setFieldValue('type', key)
+    const stepType = resolveStepTypeConfig(stepTypes, key)
+    form.setFieldValue('type', stepType?.key ?? key)
     updateNodeData(node.id, {
       ...form.getFieldsValue(),
       label: form.getFieldValue('name'),
-      type: key,
+      type: stepType?.key ?? key,
       typeLabel: stepType?.label,
       actions,
     })
@@ -245,7 +245,7 @@ const StepForm = ({ node }) => {
                       <TypePillBtn
                         key={String(t.id ?? t.key)}
                         type="button"
-                        $active={currentType === t.key}
+                        $active={isStepTypeMatch(currentType, t)}
                         onClick={() => handleTypeSelect(t.key)}
                       >
                         {t.label}
