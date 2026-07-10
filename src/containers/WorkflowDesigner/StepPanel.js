@@ -10,6 +10,7 @@ import {
   useStepTypes,
   useSetStepTypes,
 } from '@/hooks/useWorkflowStore'
+import { resolveStepTypeConfig } from '@/utils/workflowValidators'
 import { HASH_POPUP } from '@/configs/constant'
 import { InAppEvent } from '@flast-erp/core/utils'
 import {
@@ -65,7 +66,7 @@ const TypeItem = ({ stepType }) => {
 // ─── ExistingStepItem — list row ──────────────────────────────────────────────
 
 const ExistingStepItem = ({ node, stepTypes, isActive, onClick }) => {
-  const typeConfig = stepTypes.find((t) => t.key === node.data?.type)
+  const typeConfig = resolveStepTypeConfig(stepTypes, node.data?.type)
   const color = typeConfig?.color ?? '#8c8c8c'
 
   return (

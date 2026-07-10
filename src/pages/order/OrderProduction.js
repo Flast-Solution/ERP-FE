@@ -56,8 +56,8 @@ const OrderProduction = () => {
             <ListOrder
                 filter={filter}
                 hideQuoteButton={true}
+                disableWorkflowAttach={true}
                 extraActions={extraActions}
-                enableLotTree
             />
         </>
     );

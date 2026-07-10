@@ -24,7 +24,7 @@ import {
 } from 'antd';
 import { BreadcrumbCustom } from '@flast-erp/core/components';
 import { useEffectAsync } from '@flast-erp/core/hooks';
-import { RequestUtils, arrayNotEmpty, formatMoney } from '@flast-erp/core/utils';
+import { RequestUtils, arrayNotEmpty, formatMoney, formatTime } from '@flast-erp/core/utils';
 import { SUCCESS_CODE } from '@/configs';
 import OrderService from '@/services/OrderService';
 import styled from 'styled-components';
@@ -34,6 +34,7 @@ const { Text, Title } = Typography;
 const CREATE_WAREHOUSE_PARCEL_API = '/qms/warehouse-paracel/create';
 const PROVIDER_FETCH_API = '/provider/fetch';
 const ORDER_LOTS_FIND_API = '/qms/warehouse-paracel/find-entity';
+const WORKFLOW_FILTER_API = '/workflow/process/filter?limit=50&offset=0';
 
 const DEFAULT_LOT_VALUES = {
   lotType: 'PRODUCTION',
@@ -121,6 +122,79 @@ const SectionTitle = styled.h3`
   font-size: 16px;
   font-weight: 700;
   color: #111827;
+`;
+
+const ExistingLotsPanel = styled.div`
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #e5e7eb;
+`;
+
+const ExistingLotsHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+
+  h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+  }
+
+  span {
+    font-size: 13px;
+    color: #6b7280;
+  }
+`;
+
+const ExistingLotList = styled.div`
+  display: grid;
+  gap: 10px;
+`;
+
+const ExistingLotItem = styled.button`
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid ${({ $active }) => ($active ? '#0b63ce' : '#d1d5db')};
+  border-radius: 4px;
+  background: ${({ $active }) => ($active ? '#eff6ff' : '#fff')};
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+
+  &:hover {
+    border-color: #0b63ce;
+    background: #eff6ff;
+  }
+
+  .lot-main {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #111827;
+  }
+
+  .lot-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: #6b7280;
+  }
+`;
+
+const ExistingLotsEmpty = styled.div`
+  padding: 16px;
+  border: 1px dashed #d1d5db;
+  border-radius: 4px;
+  color: #6b7280;
+  font-size: 13px;
 `;
 
 const LotBlock = styled.div`
@@ -348,6 +422,7 @@ const buildInitialLotValues = (lot, orderDetails = []) => {
     orderDetailKey: matchedDetail?.key ?? lotDetailRef,
     quantity: lot.total,
     prviderId: lot.prviderId ?? lot.providerId,
+    workflowProcessId: lot.workflowProcessId ?? lot.processId ?? lot.workflowId ?? lot.process?.id ?? lot.workflowProcess?.id,
     plannedDate: lot.expectedDate ? moment(lot.expectedDate) : undefined,
     lotType: lot.type || DEFAULT_LOT_VALUES.lotType,
     priority: lot.priorityLevel || DEFAULT_LOT_VALUES.priority,
@@ -395,11 +470,29 @@ const resolveOrderLots = (response) => {
   return [];
 };
 
+const resolveWorkflowList = (response) => {
+  const payload = response?.data ?? response;
+  const candidates = [
+    payload?.embedded,
+    payload?.data?.embedded,
+    payload?.data?.content,
+    payload?.content,
+    payload?.items,
+    payload?.data,
+    payload,
+  ];
+
+  return candidates.find(Array.isArray) ?? [];
+};
+
 const ManufacturingLotCreate = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [form] = Form.useForm();
-  const customerOrder = location.state?.customerOrder ?? {};
+  const customerOrder = useMemo(
+    () => location.state?.customerOrder ?? {},
+    [location.state?.customerOrder],
+  );
   const editingLot = location.state?.editingLot ?? null;
   const isEditing = Boolean(editingLot?.id);
   const orderDetails = useMemo(() => (
@@ -414,6 +507,10 @@ const ManufacturingLotCreate = () => {
   const [providerOptions, setProviderOptions] = useState([]);
   const [loadingProviders, setLoadingProviders] = useState(false);
   const [createdLots, setCreatedLots] = useState([]);
+  const [activeLot, setActiveLot] = useState(editingLot);
+  const [workflowLoading, setWorkflowLoading] = useState(false);
+  const [workflows, setWorkflows] = useState([]);
+  const isEditingActiveLot = Boolean(activeLot?.id);
 
   useEffectAsync(async () => {
     if (!customerOrder?.id) {
@@ -451,6 +548,19 @@ const ManufacturingLotCreate = () => {
   }, []);
 
   useEffectAsync(async () => {
+    setWorkflowLoading(true);
+    try {
+      const response = await RequestUtils.Get(WORKFLOW_FILTER_API, {});
+      setWorkflows(resolveWorkflowList(response));
+    } catch (error) {
+      message.error('Không tải được danh sách workflow.');
+      setWorkflows([]);
+    } finally {
+      setWorkflowLoading(false);
+    }
+  }, []);
+
+  useEffectAsync(async () => {
     if (!customerOrder?.id) {
       setCreatedLots([]);
       return;
@@ -461,7 +571,13 @@ const ManufacturingLotCreate = () => {
         entity: 'ORDER',
         entityId: customerOrder.id,
       });
-      setCreatedLots(resolveOrderLots(response));
+      const lots = resolveOrderLots(response);
+      const nextLots = lots;
+      setCreatedLots(nextLots);
+      setActiveLot(prev => {
+        if (!prev?.id) return prev;
+        return nextLots.find(lot => String(lot?.id) === String(prev.id)) ?? prev;
+      });
     } catch (error) {
       setCreatedLots([]);
     }
@@ -471,6 +587,10 @@ const ManufacturingLotCreate = () => {
   const productOptions = orderDetails.map(detail => ({
     label: `${detail.productName || 'Sản phẩm'}${detail.orderDetailCode ? ` - ${detail.orderDetailCode}` : ''}`,
     value: detail.key,
+  }));
+  const workflowOptions = workflows.map(workflow => ({
+    value: workflow.id,
+    label: `${workflow.name || '(Chưa đặt tên)'}${workflow.processKey ? ` - ${workflow.processKey}` : ''}`,
   }));
 
   const getSelectedDetail = useCallback((detailKey) => (
@@ -538,6 +658,21 @@ const ManufacturingLotCreate = () => {
   const grandTotal = subtotal + vatMoney + shippingCost;
   const remaining = grandTotal - paid - priceOff;
 
+  const handleSelectCreatedLot = useCallback((lot) => {
+    setActiveLot(lot);
+    form.setFieldsValue({
+      lots: [buildInitialLotValues(lot, orderDetails)],
+    });
+    form.validateFields([['lots', 0, 'quantity']]).catch(() => undefined);
+  }, [form, orderDetails]);
+
+  const handleCreateNewLot = useCallback(() => {
+    setActiveLot(null);
+    form.setFieldsValue({
+      lots: [{ ...DEFAULT_LOT_VALUES }],
+    });
+  }, [form]);
+
   const handleSubmit = async () => {
     let values;
     try {
@@ -575,6 +710,8 @@ const ManufacturingLotCreate = () => {
         type: lot.lotType || DEFAULT_LOT_VALUES.lotType,
         total: Number(lot.quantity ?? 0),
         prviderId: lot.prviderId ?? null,
+        processId: lot.workflowProcessId ?? null,
+        workflowProcessId: lot.workflowProcessId ?? null,
         expectedDate: lot.plannedDate ? moment(lot.plannedDate).format('YYYY-MM-DD HH:mm:ss') : null,
         priorityLevel: lot.priority || DEFAULT_LOT_VALUES.priority,
       };
@@ -589,13 +726,13 @@ const ManufacturingLotCreate = () => {
     try {
       const response = await RequestUtils.Post(CREATE_WAREHOUSE_PARCEL_API, payload);
       if (response?.errorCode === SUCCESS_CODE || response?.success) {
-        message.success(response?.message || (isEditing ? 'Đã cập nhật lô hàng.' : `Đã tạo ${payload.length} lô hàng.`));
+        message.success(response?.message || (isEditingActiveLot ? 'Đã cập nhật lô hàng.' : `Đã tạo ${payload.length} lô hàng.`));
         navigate('/sale/order-production');
         return;
       }
-      message.error(response?.message || (isEditing ? 'Cập nhật lô hàng thất bại.' : 'Tạo lô hàng thất bại.'));
+      message.error(response?.message || (isEditingActiveLot ? 'Cập nhật lô hàng thất bại.' : 'Tạo lô hàng thất bại.'));
     } catch (error) {
-      message.error(isEditing ? 'Cập nhật lô hàng thất bại.' : 'Tạo lô hàng thất bại.');
+      message.error(isEditingActiveLot ? 'Cập nhật lô hàng thất bại.' : 'Tạo lô hàng thất bại.');
     }
   };
 
@@ -626,8 +763,47 @@ const ManufacturingLotCreate = () => {
           <Row gutter={[32, 24]} align="top">
             <Col xs={24} lg={16}>
               <FormPanel>
-                <SectionTitle>Cấu hình lô hàng</SectionTitle>
+                <ExistingLotsPanel>
+                  <ExistingLotsHeader>
+                    <div>
+                      <h3>Danh sách lô hàng đã tạo</h3>
+                      <span>Click vào lô hàng để chỉnh sửa thông tin bên dưới.</span>
+                    </div>
+                    {isEditingActiveLot ? (
+                      <Button size="small" onClick={handleCreateNewLot}>
+                        Tạo lô mới
+                      </Button>
+                    ) : null}
+                  </ExistingLotsHeader>
 
+                  {createdLots.length > 0 ? (
+                    <ExistingLotList>
+                      {createdLots.map((lot, index) => (
+                        <ExistingLotItem
+                          key={lot?.id ?? lot?.code ?? index}
+                          type="button"
+                          $active={String(activeLot?.id ?? '') === String(lot?.id ?? '')}
+                          onClick={() => handleSelectCreatedLot(lot)}
+                        >
+                          <div className="lot-main">
+                            <span>{lot?.name || `Lô hàng ${index + 1}`}</span>
+                            <span>{lot?.code || '-'}</span>
+                          </div>
+                          <div className="lot-meta">
+                            <span>Số lượng: {lot?.total ?? lot?.quantity ?? 0}</span>
+                            <span>Loại: {lot?.type || '-'}</span>
+                            <span>Ưu tiên: {lot?.priorityLevel || '-'}</span>
+                            <span>Ngày dự kiến: {formatTime(lot?.expectedDate) || '-'}</span>
+                          </div>
+                        </ExistingLotItem>
+                      ))}
+                    </ExistingLotList>
+                  ) : (
+                    <ExistingLotsEmpty>Chưa có lô hàng nào được tạo cho đơn này.</ExistingLotsEmpty>
+                  )}
+                </ExistingLotsPanel>
+
+                <SectionTitle>Cấu hình lô hàng</SectionTitle>
                 <Form.List name="lots">
                   {(fields, { add, remove }) => (
                     <>
@@ -694,6 +870,22 @@ const ManufacturingLotCreate = () => {
                             </Col>
                             <Col xs={24} md={12}>
                               <Form.Item
+                                name={[field.name, 'workflowProcessId']}
+                                label="Workflow"
+                                rules={[{ required: true, message: 'Vui lòng chọn workflow' }]}
+                              >
+                                <Select
+                                  allowClear
+                                  showSearch
+                                  loading={workflowLoading}
+                                  placeholder="Chọn workflow"
+                                  options={workflowOptions}
+                                  optionFilterProp="label"
+                                />
+                              </Form.Item>
+                            </Col>
+                            <Col xs={24} md={12}>
+                              <Form.Item
                                 name={[field.name, 'plannedDate']}
                                 label="Ngày nhập lô"
                                 rules={[{ required: true, message: 'Vui lòng chọn ngày nhập lô' }]}
@@ -726,7 +918,7 @@ const ManufacturingLotCreate = () => {
                         type="primary"
                         icon={<PlusOutlined />}
                         onClick={() => add({ ...DEFAULT_LOT_VALUES })}
-                        disabled={isEditing}
+                        disabled={isEditingActiveLot}
                       >
                         Thêm lô hàng
                       </AddLotButton>
@@ -812,7 +1004,7 @@ const ManufacturingLotCreate = () => {
                       icon={<CheckCircleOutlined />}
                       onClick={handleSubmit}
                     >
-                      {isEditing ? 'Cập nhật' : 'Hoàn thành'}
+                      {isEditingActiveLot ? 'Cập nhật' : 'Hoàn thành'}
                     </CompleteButton>
                   </>
                 )}

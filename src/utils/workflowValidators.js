@@ -84,12 +84,42 @@ export const normalizeWorkflowStepType = (type, stepTypes = [], node = {}) => {
 
 const CANONICAL_STEP_TYPES = ['start', 'end', 'approval', 'revision', 'condition', 'process']
 
+const getStepTypeMatchCandidates = (stepType) => [
+  stepType?.key,
+  stepType?.id,
+  stepType?.rawKey,
+  stepType?.code,
+  stepType?.processTypeCode,
+  stepType?.process_type_code,
+  stepType?.typeCode,
+  stepType?.type_code,
+].filter((candidate) => candidate !== undefined && candidate !== null && candidate !== '')
+
+export const isStepTypeMatch = (typeKey, stepType) => {
+  const normalized = String(typeKey ?? '')
+  if (!normalized || !stepType) return false
+  return getStepTypeMatchCandidates(stepType).some((candidate) => String(candidate) === normalized)
+}
+
 export const resolveStepTypeConfig = (stepTypes = [], typeKey) =>
-  stepTypes.find((stepType) =>
-    String(stepType?.key ?? '') === String(typeKey ?? '')
-    || String(stepType?.id ?? '') === String(typeKey ?? '')
-    || String(stepType?.rawKey ?? '') === String(typeKey ?? '')
-  )
+  stepTypes.find((stepType) => isStepTypeMatch(typeKey, stepType))
+
+export const resolveNodeProcessTypeKey = (data = {}, stepTypes = []) => {
+  const existing = resolveStepTypeConfig(stepTypes, data?.type)
+  if (existing) return String(existing.key)
+
+  const labelHint = data?.typeLabel ?? data?.typeName ?? data?.groupName
+  if (labelHint) {
+    const byLabel = stepTypes.find((stepType) => stepType?.label === labelHint)
+    if (byLabel) return String(byLabel.key)
+  }
+
+  if (data?.type != null && data?.type !== '') {
+    return String(data.type)
+  }
+
+  return resolveFallbackProcessTypeKey(stepTypes)
+}
 
 export const getStepSemanticType = (typeKey, stepTypes = [], node = {}) => {
   const config = resolveStepTypeConfig(stepTypes, typeKey)
