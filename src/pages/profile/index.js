@@ -76,6 +76,7 @@ import {
 
 const USER_BUSINESS_INFO_API = '/auth/user-bussiness/find-info'
 const USER_BUSINESS_SAVE_API = '/auth/user-bussiness/save-info'
+const CHANGE_PASSWORD_API = '/auth/change-password'
 
 const resolveBusinessLogo = (logo) => resolveUploadUrl(logo)
 
@@ -428,11 +429,30 @@ const ProfilePage = () => {
   const handlePasswordSave = async () => {
     try {
       setPasswordSaving(true)
-      await passwordForm.validateFields()
-      message.success('Đã cập nhật mật khẩu')
+      const values = await passwordForm.validateFields()
+      const uId = profile?.id ?? profile?.userId ?? profile?.user_id ?? getTokenPayload()?.id ?? null
+
+      if (uId == null || uId === '') {
+        message.error('Không xác định được tài khoản để đổi mật khẩu')
+        return
+      }
+
+      const response = await RequestUtils.Post(CHANGE_PASSWORD_API, {
+        oldPass: values.currentPassword,
+        newPass: values.newPassword,
+        uId: Number(uId) || uId,
+      })
+
+      if (response?.errorCode && response.errorCode !== SUCCESS_CODE) {
+        message.error(response?.message || 'Đổi mật khẩu thất bại')
+        return
+      }
+
+      message.success(response?.message || 'Đã cập nhật mật khẩu')
       passwordForm.resetFields()
-    } catch {
-      // validation errors shown by form
+    } catch (error) {
+      if (error?.errorFields) return
+      message.error(error?.message || 'Đổi mật khẩu thất bại')
     } finally {
       setPasswordSaving(false)
     }

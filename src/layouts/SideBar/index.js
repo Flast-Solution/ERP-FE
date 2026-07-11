@@ -169,6 +169,10 @@ function SideBar() {
       getItem(<Link to="/material/bom">Lệnh S.Xuất</Link>, 'material.bom', <FolderOpenOutlined />),
       getItem(<Link to="/sale/order-production">ĐH đang sản xuất</Link>, 'order.production', <BuildOutlined />),
     ]),
+    getItem('Kiểm soát sản xuất', 'production_control', <AuditOutlined />, [
+      getItem(<Link to="/production-control/create-order">Tạo lệnh sản xuất</Link>, 'production_create_order', <FileWordOutlined />),
+      getItem(<Link to="/production-control/bom-confirmation">Xác nhận BOM + phân bổ vật tư</Link>, 'production_bom_confirmation', <DeploymentUnitOutlined />),
+    ]),
     getItem('Quản lý QC', 'qc_management', <AuditOutlined />, [
       getItem(<Link to="/qc/criteria">Tiêu chí</Link>, 'qc_criteria', <UnorderedListOutlined />),
       getItem(<Link to="/qc/checklist">Bộ tiêu chí</Link>, 'qc_checklist', <OrderedListOutlined />),
