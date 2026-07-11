@@ -43,6 +43,9 @@ const ORDER_WORKFLOW_ATTACH_API = '/workflow/process/start'
 const WORKFLOW_INSTANCE_BY_ENTITY_API = '/workflow/process/instance/get-entity'
 const WORKFLOW_PROCESS_FIND_API = '/workflow/process/find-id'
 const WORKFLOW_PREVIEW_API = '/workflow/process/preview'
+const ORDER_LOTS_FIND_API = '/qms/warehouse-paracel/find-entity'
+const ORDER_WORKFLOW_ENTITY_TYPE = 'order'
+const LOT_WORKFLOW_ENTITY_TYPE = 'WAREHOUSE_PARCEL'
 
 const resolveWorkflowList = (response) => {
   const payload = response?.data ?? response
@@ -243,6 +246,56 @@ const getWorkflowCurrentStepLabel = (record) => {
   )
 }
 
+const resolveOrderLots = (response) => {
+  const payload = response?.data ?? response
+  const candidates = [
+    payload?.data,
+    payload?.data?.embedded,
+    payload?.data?.content,
+    payload?.data?.items,
+    payload?.embedded,
+    payload?.content,
+    payload?.items,
+    payload,
+  ]
+
+  const arrayData = candidates.find(Array.isArray)
+  if (arrayData) {
+    return arrayData
+  }
+
+  const objectData = candidates.find(item => item && typeof item === 'object')
+  if (objectData?.id || objectData?.code || objectData?.entityId) {
+    return [objectData]
+  }
+
+  return []
+}
+
+const mapOrderDetailsForLotPage = (order) => (
+  (order?.details || []).map(detail => ({
+    orderDetailCode: detail.code,
+    orderDetailId: detail.id,
+    productId: detail.productId,
+    productCode: detail.productCode || detail.product?.code,
+    productName: detail.productName,
+    name: detail.name,
+    quantity: detail.quantity,
+    skuId: detail.skuId,
+    customerOrder: order,
+  }))
+)
+
+const getWorkflowInstanceMapByEntityId = (instances = []) => (
+  instances.reduce((result, item) => {
+    const entityId = getWorkflowInstanceEntityId(item)
+    if (entityId !== undefined && entityId !== null && entityId !== '') {
+      result.set(String(entityId), normalizeWorkflowInstance(item))
+    }
+    return result
+  }, new Map())
+)
+
 const copyToClipboard = (text, setCopiedIndex, index) => {
   navigator.clipboard.writeText(text).then(() => {
     setCopiedIndex(index);
@@ -251,7 +304,7 @@ const copyToClipboard = (text, setCopiedIndex, index) => {
   })
 };
 
-const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
+const ListOrder = ({ filter, hideQuoteButton, extraActions, enableLotTree = false, disableWorkflowAttach = false }) => {
 
   const navigate = useNavigate();
   const [ copiedIndex, setCopiedIndex ] = useState(null);
@@ -261,7 +314,11 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
   const [ workflows, setWorkflows ] = useState([])
   const [ workflowKeyword, setWorkflowKeyword ] = useState('')
   const [ selectedOrder, setSelectedOrder ] = useState(null)
+  const [ selectedWorkflowEntityType, setSelectedWorkflowEntityType ] = useState(ORDER_WORKFLOW_ENTITY_TYPE)
   const [ selectedWorkflowId, setSelectedWorkflowId ] = useState(null)
+  const [ expandedRowKeys, setExpandedRowKeys ] = useState([])
+  const [ lotsByOrderId, setLotsByOrderId ] = useState({})
+  const [ loadingLotsByOrderId, setLoadingLotsByOrderId ] = useState({})
 
   const onClickViewDetail = (customerOrder) => InAppEvent.emit(HASH_MODAL, {
     hash: "#order.tabs",
@@ -281,9 +338,10 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
     }
   }, [])
 
-  const openWorkflowModal = useCallback((order) => {
-    setSelectedOrder(order)
-    setSelectedWorkflowId(order?.workflowProcessId ?? order?.processId ?? null)
+  const openWorkflowModal = useCallback((record, entityType = ORDER_WORKFLOW_ENTITY_TYPE) => {
+    setSelectedOrder(record)
+    setSelectedWorkflowEntityType(entityType)
+    setSelectedWorkflowId(record?.workflowProcessId ?? record?.processId ?? null)
     setWorkflowKeyword('')
     setWorkflowModalOpen(true)
     fetchWorkflows()
@@ -292,6 +350,7 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
   const closeWorkflowModal = useCallback(() => {
     setWorkflowModalOpen(false)
     setSelectedOrder(null)
+    setSelectedWorkflowEntityType(ORDER_WORKFLOW_ENTITY_TYPE)
     setSelectedWorkflowId(null)
     setWorkflowKeyword('')
   }, [])
@@ -306,7 +365,7 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
     try {
       const response = await RequestUtils.Post(ORDER_WORKFLOW_ATTACH_API, {
         processId: selectedWorkflowId,
-        entityType: 'order',
+        entityType: selectedWorkflowEntityType,
         entityId: selectedOrder.id,
       })
 
@@ -316,14 +375,29 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
         return
       }
 
-      message.success(response?.message || 'Đã gắn workflow vào đơn hàng.')
+      message.success(response?.message || 'Đã gắn workflow.')
+      if (selectedWorkflowEntityType === LOT_WORKFLOW_ENTITY_TYPE) {
+        const attachedInstance = resolveWorkflowInstances(response)[0]
+          ?? normalizeWorkflowInstance(response?.data ?? response)
+        setLotsByOrderId(prev => Object.entries(prev).reduce((result, [orderId, lots]) => ({
+          ...result,
+          [orderId]: (lots ?? []).map(lot => (
+            String(lot?.id) === String(selectedOrder.id)
+              ? {
+                ...lot,
+                workflowInstance: attachedInstance?.id ? attachedInstance : lot.workflowInstance,
+              }
+              : lot
+          )),
+        }), {}))
+      }
       closeWorkflowModal()
     } catch (error) {
       message.error('Gắn workflow thất bại. Vui lòng thử lại.')
     } finally {
       setWorkflowAttaching(false)
     }
-  }, [closeWorkflowModal, selectedOrder, selectedWorkflowId])
+  }, [closeWorkflowModal, selectedOrder, selectedWorkflowEntityType, selectedWorkflowId])
 
   const normalizedWorkflowKeyword = workflowKeyword.trim().toLowerCase()
   const filteredWorkflows = normalizedWorkflowKeyword
@@ -334,6 +408,198 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
       item?.code,
     ].some(value => String(value ?? '').toLowerCase().includes(normalizedWorkflowKeyword)))
     : workflows
+
+  const fetchLotsByOrder = useCallback(async (order) => {
+    const entityId = order?.id
+    if (!entityId || lotsByOrderId[entityId] || loadingLotsByOrderId[entityId]) {
+      return
+    }
+
+    setLoadingLotsByOrderId(prev => ({ ...prev, [entityId]: true }))
+    try {
+      const response = await RequestUtils.Get(ORDER_LOTS_FIND_API, {
+        entity: 'ORDER',
+        entityId,
+      })
+      const lots = resolveOrderLots(response)
+      const lotIds = lots.map(lot => lot?.id).filter(Boolean)
+      let workflowInstancesByLotId = new Map()
+
+      if (lotIds.length > 0) {
+        try {
+          const workflowResponse = await RequestUtils.Post(WORKFLOW_INSTANCE_BY_ENTITY_API, {
+            entityName: LOT_WORKFLOW_ENTITY_TYPE,
+            entityIds: lotIds,
+          })
+          workflowInstancesByLotId = getWorkflowInstanceMapByEntityId(resolveWorkflowInstances(workflowResponse))
+        } catch (error) {
+          workflowInstancesByLotId = new Map()
+        }
+      }
+
+      setLotsByOrderId(prev => ({
+        ...prev,
+        [entityId]: lots.map(lot => ({
+          ...lot,
+          workflowInstance: workflowInstancesByLotId.get(String(lot?.id)) ?? lot.workflowInstance ?? null,
+        })),
+      }))
+    } catch (error) {
+      message.error('Không tải được danh sách lô của đơn hàng.')
+      setLotsByOrderId(prev => ({ ...prev, [entityId]: [] }))
+    } finally {
+      setLoadingLotsByOrderId(prev => ({ ...prev, [entityId]: false }))
+    }
+  }, [loadingLotsByOrderId, lotsByOrderId])
+
+  const getLotColumns = (order) => [
+    {
+      title: 'Mã lô',
+      dataIndex: 'code',
+      key: 'code',
+      width: 180,
+      render: value => value || '-',
+    },
+    {
+      title: 'Tên lô hàng',
+      dataIndex: 'name',
+      key: 'name',
+      ellipsis: true,
+      render: value => value || '-',
+    },
+    {
+      title: 'Loại',
+      dataIndex: 'type',
+      key: 'type',
+      width: 150,
+      render: value => value || '-',
+    },
+    {
+      title: 'Số lượng',
+      dataIndex: 'total',
+      key: 'total',
+      width: 120,
+      align: 'right',
+      render: value => value ?? 0,
+    },
+    {
+      title: 'Ngày dự kiến',
+      dataIndex: 'expectedDate',
+      key: 'expectedDate',
+      width: 180,
+      render: value => formatTime(value) || '-',
+    },
+    {
+      title: 'Ưu tiên',
+      dataIndex: 'priorityLevel',
+      key: 'priorityLevel',
+      width: 130,
+      render: value => {
+        const priorityColor = {
+          HIGH: 'red',
+          NORMAL: 'blue',
+          LOW: 'default',
+        }[value] || 'default'
+        return <Tag color={priorityColor}>{value || '-'}</Tag>
+      },
+    },
+    {
+      title: 'Thao tác',
+      key: 'action',
+      width: 110,
+      fixed: 'right',
+      render: (_, lot) => {
+        const hasWorkflowInstance = Boolean(lot?.workflowInstance?.id)
+
+        return (
+          <Space size={8}>
+            <Tooltip title="Chỉnh sửa lô hàng">
+              <Button
+                size="small"
+                icon={<EditFilled />}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  navigate('/sale/production/lots/create', {
+                    state: {
+                      customerOrder: order,
+                      orderDetails: mapOrderDetailsForLotPage(order),
+                      editingLot: clonePlainData(lot),
+                    },
+                  })
+                }}
+              />
+            </Tooltip>
+            {!hasWorkflowInstance ? (
+              <Tooltip title="Gắn workflow">
+                <Button
+                  size="small"
+                  icon={<ApartmentOutlined />}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    openWorkflowModal(lot, LOT_WORKFLOW_ENTITY_TYPE)
+                  }}
+                />
+              </Tooltip>
+            ) : null}
+            {hasWorkflowInstance ? (
+              <Tooltip title="Xem tiến trình">
+                <Button
+                  size="small"
+                  icon={<EyeOutlined />}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    navigate(`/sale/order/progress/${order.id}?instanceId=${lot.workflowInstance.id}`, {
+                      state: {
+                        order: clonePlainData(order),
+                        lot: clonePlainData(lot),
+                        workflowInstance: clonePlainData(lot.workflowInstance),
+                      },
+                    })
+                  }}
+                />
+              </Tooltip>
+            ) : null}
+          </Space>
+        )
+      },
+    },
+  ]
+
+  const orderLotExpandable = enableLotTree ? {
+    expandedRowKeys,
+    expandRowByClick: true,
+    onExpand: (expanded, record) => {
+      const recordId = record?.id
+      setExpandedRowKeys(prev => (
+        expanded
+          ? Array.from(new Set([...prev, recordId]))
+          : prev.filter(key => key !== recordId)
+      ))
+      if (expanded) {
+        fetchLotsByOrder(record)
+      }
+    },
+    expandedRowRender: (record) => {
+      const orderId = record?.id
+      const lots = lotsByOrderId[orderId] ?? []
+      const loading = loadingLotsByOrderId[orderId]
+
+      return (
+        <div style={{ padding: '8px 16px 8px 48px', background: '#fafafa' }}>
+          <Table
+            rowKey={(item) => item?.id ?? item?.code ?? `${orderId}-${item?.name ?? item?.createdDate ?? item?.expectedDate ?? 'lot'}`}
+            size="small"
+            columns={getLotColumns(record)}
+            dataSource={lots}
+            loading={loading}
+            pagination={false}
+            locale={{ emptyText: loading ? 'Đang tải danh sách lô...' : 'Chưa có lô hàng' }}
+            scroll={{ x: 1020 }}
+          />
+        </div>
+      )
+    },
+  } : undefined
 
   const actionWidth = (
     filter.type === 'cohoi' ? 260 : 220
@@ -483,12 +749,12 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
       render: (_, record) => {
         const hasWorkflowInstance = Boolean(record?.workflowInstance)
         const workflowMenuItems = [
-          !hasWorkflowInstance && {
+          !disableWorkflowAttach && !hasWorkflowInstance && {
             key: 'attach',
             icon: <ApartmentOutlined />,
             label: 'Gắn workflow',
           },
-          {
+          hasWorkflowInstance && {
             key: 'progress',
             icon: <EyeOutlined />,
             label: 'Xem tiến trình',
@@ -512,36 +778,38 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
                 Báo giá
               </Button>
             )}
-            <Dropdown
-              trigger={['click']}
-              menu={{
-                items: workflowMenuItems,
-                onClick: ({ key, domEvent }) => {
-                  domEvent?.stopPropagation()
-                  if (key === 'attach') {
-                    openWorkflowModal(record)
-                    return
-                  }
-                  if (key === 'progress') {
-                    const instanceId = record.workflowInstance?.id
-                    navigate(`/sale/order/progress/${record.id}${instanceId ? `?instanceId=${instanceId}` : ''}`, {
-                      state: {
-                        order: clonePlainData(record),
-                        workflowInstance: clonePlainData(record.workflowInstance),
-                      },
-                    })
-                  }
-                },
-              }}
-            >
-              <Tooltip title="Workflow">
-                <Button
-                  size="small"
-                  icon={<ApartmentOutlined />}
-                  onClick={(event) => event.stopPropagation()}
-                />
-              </Tooltip>
-            </Dropdown>
+            {workflowMenuItems.length > 0 ? (
+              <Dropdown
+                trigger={['click']}
+                menu={{
+                  items: workflowMenuItems,
+                  onClick: ({ key, domEvent }) => {
+                    domEvent?.stopPropagation()
+                    if (key === 'attach') {
+                      openWorkflowModal(record)
+                      return
+                    }
+                    if (key === 'progress') {
+                      const instanceId = record.workflowInstance?.id
+                      navigate(`/sale/order/progress/${record.id}${instanceId ? `?instanceId=${instanceId}` : ''}`, {
+                        state: {
+                          order: clonePlainData(record),
+                          workflowInstance: clonePlainData(record.workflowInstance),
+                        },
+                      })
+                    }
+                  },
+                }}
+              >
+                <Tooltip title={hasWorkflowInstance ? 'Xem tiến trình' : 'Workflow'}>
+                  <Button
+                    size="small"
+                    icon={hasWorkflowInstance ? <EyeOutlined /> : <ApartmentOutlined />}
+                    onClick={(event) => event.stopPropagation()}
+                  />
+                </Tooltip>
+              </Dropdown>
+            ) : null}
             { record.type === 'cohoi' &&
               <Button
                 size="small"
@@ -670,12 +938,16 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
     return tableData;
   }, [filter?.type]);
 
+  const workflowTargetTypeLabel = selectedWorkflowEntityType === LOT_WORKFLOW_ENTITY_TYPE ? 'lô' : 'đơn'
+  const workflowTargetCode = selectedOrder?.code || selectedOrder?.name
+
   return (
     <>
       <RestList
         rowKey="id"
         bordered
         xScroll={1800}
+        expandable={orderLotExpandable}
         onData={onData}
         initialFilter={{ limit: 10, page: 1, ...filter }}
         filter={<Filter />}
@@ -687,7 +959,7 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions }) => {
       />
 
       <Modal
-        title={`Gắn workflow${selectedOrder?.code ? ` cho đơn ${selectedOrder.code}` : ''}`}
+        title={`Gắn workflow${workflowTargetCode ? ` cho ${workflowTargetTypeLabel} ${workflowTargetCode}` : ''}`}
         open={workflowModalOpen}
         onCancel={closeWorkflowModal}
         onOk={handleAttachWorkflow}

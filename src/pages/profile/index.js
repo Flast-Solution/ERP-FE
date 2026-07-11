@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet'
 import axios from 'axios'
 import { Button, Form, Input, message, Upload } from 'antd'
@@ -17,17 +17,30 @@ import {
   UploadOutlined,
   UserOutlined,
 } from '@ant-design/icons'
+import { RequestUtils, jwtService } from '@flast-erp/core/utils'
+import { SUCCESS_CODE } from '@/configs'
 import useGetMe from '@/hooks/useGetMe'
+import { emitBusinessUpdated, getTokenPayload } from '@/utils/authUtils'
 import {
   ProfileShell,
-  ProfileNav,
-  NavGroup,
-  NavGroupTitle,
-  NavItem,
+  TabBar,
+  TabItem,
   ProfileContent,
   PageTitle,
   PageDescription,
-  ProfileCard,
+  PageHeaderDivider,
+  ProfilePanel,
+  ProfileSection,
+  SectionAside,
+  SectionTitle,
+  SectionDescription,
+  SectionBody,
+  PasswordSectionBody,
+  FormGrid,
+  ProfileActions,
+  ProfileActionsNote,
+  ProfileActionsButtons,
+  CertificateUploadZone,
   LogoRow,
   LogoDrop,
   LogoPreview,
@@ -35,44 +48,49 @@ import {
   CardDivider,
   FieldLabel,
   FieldHelp,
-  CertificateHeader,
-  CertificateIcon,
-  CertificateTitle,
-  CertificateDescription,
   CertificateItem,
   FileList,
   FilePill,
   AddCertificateButton,
-  PasswordActions,
-  PasswordCard,
-  LayoutActions,
-  LayoutApiCount,
-  LayoutApiIconButton,
-  LayoutApiKeyInput,
-  LayoutApiRow,
-  LayoutApiRows,
-  LayoutApiUrlInput,
-  LayoutBadge,
-  LayoutBodyAction,
-  LayoutBodyCard,
-  LayoutBodyDescription,
-  LayoutBodyIcon,
-  LayoutBodyTitle,
   LayoutCard,
   LayoutCardHeader,
-  LayoutFileChip,
-  LayoutFileChips,
   LayoutHeaderMeta,
-  LayoutMethodSelect,
+  LayoutBadge,
   LayoutTitle,
+  LayoutApiCount,
+  LayoutApiRows,
+  LayoutApiRow,
+  LayoutApiKeyInput,
+  LayoutMethodSelect,
+  LayoutApiUrlInput,
+  LayoutApiIconButton,
+  LayoutFileChips,
+  LayoutFileChip,
   LayoutToolbar,
+  LayoutBodyCard,
+  LayoutBodyIcon,
+  LayoutBodyTitle,
+  LayoutBodyDescription,
+  LayoutBodyAction,
 } from './styles'
+
+const USER_BUSINESS_INFO_API = '/auth/user-bussiness/find-info'
+const USER_BUSINESS_SAVE_API = '/auth/user-bussiness/save-info'
+const CHANGE_PASSWORD_API = '/auth/change-password'
+
+const resolveBusinessLogo = (logo) => resolveUploadUrl(logo)
 
 const LAYOUT_METHOD_OPTIONS = [
   { value: 'GET', label: 'GET' },
   { value: 'POST', label: 'POST' },
   { value: 'PUT', label: 'PUT' },
   { value: 'DELETE', label: 'DELETE' },
+]
+
+const PROFILE_TABS = [
+  { key: 'profile', label: 'Hồ sơ', icon: UserOutlined },
+  { key: 'password', label: 'Mật khẩu', icon: LockOutlined },
+  { key: 'layout', label: 'Bố cục trang', icon: AppstoreOutlined },
 ]
 
 const getProfileName = (profile = {}) =>
@@ -148,19 +166,103 @@ const toCertificateFile = (item, index, sourceFile = {}) => {
   }
 }
 
+const normalizeCertificatePaths = (certificate) => {
+  if (!certificate) return []
+  if (Array.isArray(certificate)) return certificate.filter(Boolean)
+  if (typeof certificate === 'string') return [certificate]
+  return []
+}
+
+const mapCertificatesFromBusinessInfo = (certificate) => {
+  const paths = normalizeCertificatePaths(certificate)
+  if (!paths.length) return []
+
+  return [{
+    id: 'certificate-loaded',
+    name: '',
+    files: paths.map((path, index) => toCertificateFile(path, index)),
+  }]
+}
+
 const ProfilePage = () => {
   const { user: profile } = useGetMe()
+  const [profileForm] = Form.useForm()
+  const [passwordForm] = Form.useForm()
   const [activeTab, setActiveTab] = useState('profile')
   const [logoFile, setLogoFile] = useState(null)
   const [certificates, setCertificates] = useState([])
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [passwordSaving, setPasswordSaving] = useState(false)
   const [layoutApis, setLayoutApis] = useState([])
   const [layoutFiles, setLayoutFiles] = useState([])
+  const [layoutSaving, setLayoutSaving] = useState(false)
+  const [businessInfo, setBusinessInfo] = useState(null)
 
-  const initialValues = useMemo(() => ({
-    displayName: getProfileName(profile),
-    email: getProfileEmail(profile),
-    phone: getProfilePhone(profile),
-  }), [profile])
+  const bizId = useMemo(() => (
+    profile?.bizId
+    ?? profile?.biz_id
+    ?? getTokenPayload()?.bizId
+    ?? null
+  ), [profile])
+
+  useEffect(() => {
+    if (!bizId) return undefined
+
+    let mounted = true
+    ;(async () => {
+      try {
+        const response = await RequestUtils.Get(USER_BUSINESS_INFO_API, { bizId })
+        const info = response?.data?.id != null || response?.data?.name != null
+          ? response.data
+          : (response?.data?.data ?? response?.data ?? response)
+        if (mounted && info && typeof info === 'object') {
+          setBusinessInfo(info)
+        }
+      } catch (error) {
+        console.warn('[Profile] fetch business info failed', error)
+      }
+    })()
+
+    return () => {
+      mounted = false
+    }
+  }, [bizId])
+
+  const initialValues = useMemo(() => {
+    if (businessInfo) {
+      return {
+        displayName: businessInfo.name ?? getProfileName(profile),
+        email: businessInfo.email ?? getProfileEmail(profile),
+        phone: businessInfo.hotline ?? businessInfo.phone ?? getProfilePhone(profile),
+        address: businessInfo.address ?? '',
+        code: businessInfo.code ?? '',
+      }
+    }
+
+    return {
+      displayName: getProfileName(profile),
+      email: getProfileEmail(profile),
+      phone: getProfilePhone(profile),
+      address: '',
+      code: '',
+    }
+  }, [businessInfo, profile])
+
+  useEffect(() => {
+    profileForm.setFieldsValue(initialValues)
+  }, [initialValues, profileForm])
+
+  useEffect(() => {
+    if (!businessInfo) return
+
+    if (businessInfo.logo) {
+      setLogoFile(toCertificateFile(businessInfo.logo, 0))
+    } else {
+      setLogoFile(null)
+    }
+
+    setCertificates(mapCertificatesFromBusinessInfo(businessInfo.certificate))
+  }, [businessInfo])
 
   const handleAddCertificate = () => {
     setCertificates((items) => [
@@ -201,7 +303,9 @@ const ProfilePage = () => {
     setLogoFile(nextLogo)
   }
 
-  const logoUrl = logoFile?.url ?? (profile?.avatar ? profile.avatar : '')
+  const logoUrl = logoFile?.url
+    || resolveBusinessLogo(businessInfo?.logo ?? businessInfo?.logoUrl ?? businessInfo?.avatar)
+    || (profile?.avatar || '')
 
   const handleRemoveCertificate = (id) => {
     setCertificates((items) => items.filter((item) => item.id !== id))
@@ -243,6 +347,117 @@ const ProfilePage = () => {
     ))
   }
 
+  const handleProfileCancel = () => {
+    profileForm.setFieldsValue(initialValues)
+    if (businessInfo?.logo) {
+      setLogoFile(toCertificateFile(businessInfo.logo, 0))
+    } else {
+      setLogoFile(null)
+    }
+    setCertificates(mapCertificatesFromBusinessInfo(businessInfo?.certificate))
+  }
+
+  const handleProfileSave = async () => {
+    let values
+    try {
+      values = await profileForm.validateFields()
+    } catch {
+      return
+    }
+
+    try {
+      setProfileSaving(true)
+
+      const logo = logoFile
+        ? (resolveUploadFilename(logoFile.response) || businessInfo?.logo || '')
+        : (businessInfo?.logo ?? '')
+
+      const certificate = certificates
+        .flatMap((item) => (item.files ?? []))
+        .map((file) => resolveUploadFilename(file.response ?? file))
+        .filter(Boolean)
+
+      const userBusiness = {
+        ...(bizId ? { id: bizId } : {}),
+        name: values.displayName ?? '',
+        hotline: values.phone ?? '',
+        email: values.email ?? '',
+        logo,
+        meta: businessInfo?.meta ?? null,
+        address: values.address ?? '',
+        status: businessInfo?.status ?? 1,
+        code: values.code ?? businessInfo?.code ?? '',
+        certificate: certificate.length ? certificate : (businessInfo?.certificate ?? null),
+      }
+
+      const response = await RequestUtils.Post(USER_BUSINESS_SAVE_API, { userBusiness })
+
+      if (response?.errorCode && response.errorCode !== SUCCESS_CODE) {
+        message.error(response?.message || 'Không lưu được thông tin hồ sơ')
+        return
+      }
+
+      const saved = response?.data?.id != null || response?.data?.name != null
+        ? response.data
+        : (response?.data?.data ?? userBusiness)
+
+      setBusinessInfo((current) => ({ ...(current ?? {}), ...saved }))
+      if (saved.logo) {
+        setLogoFile(toCertificateFile(saved.logo, 0))
+      }
+      setCertificates(mapCertificatesFromBusinessInfo(saved.certificate))
+      message.success(response?.message || 'Đã lưu thông tin hồ sơ')
+
+      emitBusinessUpdated({ logo: saved.logo ?? logo ?? '' })
+
+      try {
+        await jwtService?.signInWithToken?.()
+      } catch (refreshError) {
+        console.warn('[Profile] refresh session failed', refreshError)
+      }
+    } catch (error) {
+      message.error(error?.message || 'Không lưu được thông tin hồ sơ')
+    } finally {
+      setProfileSaving(false)
+    }
+  }
+
+  const handlePasswordCancel = () => {
+    passwordForm.resetFields()
+  }
+
+  const handlePasswordSave = async () => {
+    try {
+      setPasswordSaving(true)
+      const values = await passwordForm.validateFields()
+      const uId = profile?.id ?? profile?.userId ?? profile?.user_id ?? getTokenPayload()?.id ?? null
+
+      if (uId == null || uId === '') {
+        message.error('Không xác định được tài khoản để đổi mật khẩu')
+        return
+      }
+
+      const response = await RequestUtils.Post(CHANGE_PASSWORD_API, {
+        oldPass: values.currentPassword,
+        newPass: values.newPassword,
+        uId: Number(uId) || uId,
+      })
+
+      if (response?.errorCode && response.errorCode !== SUCCESS_CODE) {
+        message.error(response?.message || 'Đổi mật khẩu thất bại')
+        return
+      }
+
+      message.success(response?.message || 'Đã cập nhật mật khẩu')
+      passwordForm.resetFields()
+    } catch (error) {
+      if (error?.errorFields) return
+      message.error(error?.message || 'Đổi mật khẩu thất bại')
+    } finally {
+      setPasswordSaving(false)
+    }
+  }
+
   const handleLayoutApiChange = (id, field, value) => {
     setLayoutApis((items) => items.map((item) =>
       item.id === id ? { ...item, [field]: value } : item
@@ -262,20 +477,14 @@ const ProfilePage = () => {
     ])
   }
 
-  const handleCopyLayoutApi = (api) => {
-    setLayoutApis((items) => {
-      const sourceIndex = items.findIndex((item) => item.id === api.id)
-      const copiedApi = {
-        ...api,
-        id: `api-copy-${Date.now()}`,
-      }
-      if (sourceIndex < 0) return [...items, copiedApi]
-      return [
-        ...items.slice(0, sourceIndex + 1),
-        copiedApi,
-        ...items.slice(sourceIndex + 1),
-      ]
-    })
+  const handleCopyLayoutApi = async (api) => {
+    const text = `${api.method} ${api.url}`.trim()
+    try {
+      await navigator.clipboard.writeText(text)
+      message.success('Đã sao chép')
+    } catch {
+      message.error('Không thể sao chép')
+    }
   }
 
   const handleRemoveLayoutApi = (id) => {
@@ -314,253 +523,342 @@ const ProfilePage = () => {
     setLayoutFiles((items) => items.filter((file) => file.uid !== fileUid))
   }
 
+  const handleLayoutCancel = () => {
+    setLayoutApis([])
+    setLayoutFiles([])
+  }
+
+  const handleLayoutSave = async () => {
+    try {
+      setLayoutSaving(true)
+      message.success('Đã lưu cấu hình bố cục')
+    } finally {
+      setLayoutSaving(false)
+    }
+  }
+
+  const renderTabBar = () => (
+    <TabBar>
+      {PROFILE_TABS.map(({ key, label, icon: Icon }) => (
+        <TabItem
+          key={key}
+          type="button"
+          $active={activeTab === key}
+          onClick={() => setActiveTab(key)}
+        >
+          <Icon />
+          <span>{label}</span>
+        </TabItem>
+      ))}
+    </TabBar>
+  )
+
   const renderProfileContent = () => (
     <>
       <PageTitle>Hồ sơ</PageTitle>
       <PageDescription>
-        Thông tin tài khoản và logo hiển thị trên trang web của bạn.
+        Thông tin tài khoản, logo và chứng chỉ hiển thị trên trang web của bạn.
       </PageDescription>
+      <PageHeaderDivider />
+      <Form
+        form={profileForm}
+        layout="vertical"
+        requiredMark={false}
+        initialValues={initialValues}
+      >
+        <ProfilePanel>
+          <ProfileSection>
+            <SectionAside>
+              <SectionTitle>Thông tin tài khoản</SectionTitle>
+              <SectionDescription>
+                Tên, thông tin liên hệ và logo thương hiệu.
+              </SectionDescription>
+            </SectionAside>
 
-      <ProfileCard>
-        <LogoRow>
-          <LogoDrop>
-            {logoUrl ? (
-              <LogoPreview src={logoUrl} alt="Logo thương hiệu" />
-            ) : (
-              <UploadOutlined />
-            )}
-          </LogoDrop>
-          <LogoInfo>
-            <strong>Logo thương hiệu</strong>
-            <span>PNG, SVG hoặc JPG - tối đa 2MB, nền trong suốt.</span>
-            <Upload
-              accept="image/*"
-              maxCount={1}
-              showUploadList={false}
-              customRequest={handleLogoUpload}
-              onChange={handleLogoChange}
-              beforeUpload={(file) => {
-                if (!String(file.type ?? '').startsWith('image/')) {
-                  message.error('Logo chỉ hỗ trợ file ảnh')
-                  return Upload.LIST_IGNORE
-                }
-                if (file.size / 1024 / 1024 > 2) {
-                  message.error(`${file.name} vượt quá 2MB`)
-                  return Upload.LIST_IGNORE
-                }
-                return true
-              }}
-            >
-              <Button size="small" icon={<UploadOutlined />}>Tải logo</Button>
-            </Upload>
-          </LogoInfo>
-        </LogoRow>
+            <SectionBody>
+              <LogoRow>
+                <LogoDrop>
+                  {logoUrl ? (
+                    <LogoPreview src={logoUrl} alt="Logo thương hiệu" />
+                  ) : (
+                    <UploadOutlined />
+                  )}
+                </LogoDrop>
+                <LogoInfo>
+                  <strong>Logo thương hiệu</strong>
+                  <span>PNG, SVG hoặc JPG — tối đa 2MB, nền trong suốt.</span>
+                  <Upload
+                    accept="image/*"
+                    maxCount={1}
+                    showUploadList={false}
+                    customRequest={handleLogoUpload}
+                    onChange={handleLogoChange}
+                    beforeUpload={(file) => {
+                      if (!String(file.type ?? '').startsWith('image/')) {
+                        message.error('Logo chỉ hỗ trợ file ảnh')
+                        return Upload.LIST_IGNORE
+                      }
+                      if (file.size / 1024 / 1024 > 2) {
+                        message.error(`${file.name} vượt quá 2MB`)
+                        return Upload.LIST_IGNORE
+                      }
+                      return true
+                    }}
+                  >
+                    <Button icon={<UploadOutlined />}>Tải logo</Button>
+                  </Upload>
+                </LogoInfo>
+              </LogoRow>
 
-        <CardDivider />
+              <CardDivider />
 
-        <Form layout="vertical" initialValues={initialValues}>
-          <Form.Item
-            name="displayName"
-            label={<FieldLabel>Tên hiển thị</FieldLabel>}
-          >
-            <Input />
-          </Form.Item>
+              <FormGrid>
+                <Form.Item
+                  name="displayName"
+                  label={<FieldLabel>Tên hiển thị</FieldLabel>}
+                  rules={[{ required: true, message: 'Vui lòng nhập tên hiển thị' }]}
+                >
+                  <Input placeholder="Tên hiển thị" />
+                </Form.Item>
 
-          <Form.Item
-            name="email"
-            label={<FieldLabel>Email</FieldLabel>}
-            style={{ marginBottom: 4 }}
-          >
-            <Input prefix={<MailOutlined />} />
-          </Form.Item>
-          <FieldHelp>Dùng để đăng nhập và nhận thông báo.</FieldHelp>
+                <Form.Item
+                  name="code"
+                  label={<FieldLabel>Mã đơn vị</FieldLabel>}
+                >
+                  <Input placeholder="Mã đơn vị" />
+                </Form.Item>
 
-          <Form.Item
-            name="phone"
-            label={<FieldLabel>Số điện thoại</FieldLabel>}
-            style={{ marginTop: 26 }}
-          >
-            <Input prefix={<PhoneOutlined />} />
-          </Form.Item>
-        </Form>
-      </ProfileCard>
+                <Form.Item
+                  name="phone"
+                  label={<FieldLabel>Số điện thoại</FieldLabel>}
+                  rules={[{ required: true, message: 'Vui lòng nhập số điện thoại' }]}
+                >
+                  <Input prefix={<PhoneOutlined />} placeholder="0901 234 567" />
+                </Form.Item>
 
-      <ProfileCard>
-        <CertificateHeader>
-          <CertificateIcon>
-            <FileTextOutlined />
-          </CertificateIcon>
-          <div>
-            <CertificateTitle>Chứng chỉ</CertificateTitle>
-            <CertificateDescription>
-              Thêm các chứng chỉ, giấy phép - mỗi mục có tên và tệp đính kèm (PDF hoặc ảnh).
-            </CertificateDescription>
-          </div>
-        </CertificateHeader>
+                <Form.Item
+                  name="email"
+                  label={<FieldLabel>Email</FieldLabel>}
+                  rules={[
+                    { required: true, message: 'Vui lòng nhập email' },
+                    { type: 'email', message: 'Email không hợp lệ' },
+                  ]}
+                >
+                  <Input prefix={<MailOutlined />} placeholder="admin@flast.vn" />
+                </Form.Item>
 
-        {certificates.map((certificate) => (
-          <CertificateItem key={certificate.id}>
-            <Input
-              value={certificate.name}
-              placeholder="Tên chứng chỉ"
-              onChange={(event) => handleCertificateNameChange(certificate.id, event.target.value)}
-            />
-            <Button
-              type="text"
-              icon={<DeleteOutlined />}
-              onClick={() => handleRemoveCertificate(certificate.id)}
-            />
-            {(certificate.files ?? []).length > 0 && (
-              <FileList>
-                {(certificate.files ?? []).map((file) => (
-                  <FilePill key={file.uid}>
-                    <FileTextOutlined />
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => {
-                        const url = file.url ?? resolveUploadUrl(file.response)
-                        if (url) {
-                          window.open(url, '_blank', 'noopener,noreferrer')
-                        }
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key !== 'Enter') return
-                        const url = file.url ?? resolveUploadUrl(file.response)
-                        if (url) {
-                          window.open(url, '_blank', 'noopener,noreferrer')
-                        }
+                <Form.Item
+                  className="full-width"
+                  name="address"
+                  label={<FieldLabel>Địa chỉ</FieldLabel>}
+                  style={{ marginBottom: 4 }}
+                >
+                  <Input placeholder="Địa chỉ đơn vị" />
+                </Form.Item>
+              </FormGrid>
+              <FieldHelp>Dùng để đăng nhập và nhận thông báo.</FieldHelp>
+            </SectionBody>
+          </ProfileSection>
+
+          <ProfileSection>
+            <SectionAside>
+              <SectionTitle>Chứng chỉ</SectionTitle>
+              <SectionDescription>
+                Thêm các chứng chỉ, giấy phép — mỗi mục có tên và tệp đính kèm (PDF hoặc ảnh).
+              </SectionDescription>
+            </SectionAside>
+
+            <SectionBody>
+              {certificates.map((certificate) => (
+                <CertificateItem key={certificate.id}>
+                  <Input
+                    value={certificate.name}
+                    placeholder="Tên chứng chỉ"
+                    onChange={(event) => handleCertificateNameChange(certificate.id, event.target.value)}
+                  />
+                  <Button
+                    type="text"
+                    icon={<DeleteOutlined />}
+                    onClick={() => handleRemoveCertificate(certificate.id)}
+                  />
+                  {(certificate.files ?? []).length > 0 && (
+                    <FileList>
+                      {(certificate.files ?? []).map((file) => (
+                        <FilePill key={file.uid}>
+                          <FileTextOutlined />
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => {
+                              const url = file.url ?? resolveUploadUrl(file.response)
+                              if (url) {
+                                window.open(url, '_blank', 'noopener,noreferrer')
+                              }
+                            }}
+                            onKeyDown={(event) => {
+                              if (event.key !== 'Enter') return
+                              const url = file.url ?? resolveUploadUrl(file.response)
+                              if (url) {
+                                window.open(url, '_blank', 'noopener,noreferrer')
+                              }
+                            }}
+                          >
+                            {file.name}
+                          </span>
+                          <button
+                            type="button"
+                            aria-label={`Xoá ${file.name}`}
+                            onClick={() => handleRemoveCertificateFile(certificate.id, file.uid)}
+                          >
+                            ×
+                          </button>
+                        </FilePill>
+                      ))}
+                    </FileList>
+                  )}
+                  <CertificateUploadZone>
+                    <Upload
+                      multiple
+                      showUploadList={false}
+                      fileList={certificate.files ?? []}
+                      customRequest={handleCertificateUpload}
+                      onChange={({ fileList }) => {
+                        const nextFiles = fileList.flatMap((file, index) => {
+                          if (file.status === 'done') {
+                            return extractUploadItems(file.response ?? file).map((item, itemIndex) =>
+                              toCertificateFile(item, `${index}-${itemIndex}`, file)
+                            )
+                          }
+                          return [file]
+                        })
+                        handleCertificateFilesChange(certificate.id, nextFiles)
                       }}
                     >
-                      {file.name}
-                    </span>
-                    <button
-                      type="button"
-                      aria-label={`Xoá ${file.name}`}
-                      onClick={() => handleRemoveCertificateFile(certificate.id, file.uid)}
-                    >
-                      ×
-                    </button>
-                  </FilePill>
-                ))}
-              </FileList>
-            )}
-            <Upload
-              multiple
-              showUploadList={false}
-              fileList={certificate.files ?? []}
-              customRequest={handleCertificateUpload}
-              onChange={({ fileList }) => {
-                const nextFiles = fileList.flatMap((file, index) => {
-                  if (file.status === 'done') {
-                    return extractUploadItems(file.response ?? file).map((item, itemIndex) =>
-                      toCertificateFile(item, `${index}-${itemIndex}`, file)
-                    )
-                  }
-                  return [file]
-                })
-                handleCertificateFilesChange(certificate.id, nextFiles)
-              }}
-            >
-              <Button icon={<UploadOutlined />}>Tải tệp</Button>
-            </Upload>
-          </CertificateItem>
-        ))}
+                      <Button icon={<UploadOutlined />}>Tải tệp</Button>
+                    </Upload>
+                  </CertificateUploadZone>
+                </CertificateItem>
+              ))}
 
-        <AddCertificateButton type="button" onClick={handleAddCertificate}>
-          <PlusOutlined />
-          <span>Thêm chứng chỉ</span>
-        </AddCertificateButton>
-      </ProfileCard>
+              <AddCertificateButton type="button" onClick={handleAddCertificate} style={{ marginTop: 12 }}>
+                <PlusOutlined />
+                <span>Thêm chứng chỉ</span>
+              </AddCertificateButton>
+            </SectionBody>
+          </ProfileSection>
+        </ProfilePanel>
 
-      <PasswordActions>
-        <Button type="text">Huỷ</Button>
-        <Button type="primary">Cập nhật</Button>
-      </PasswordActions>
+        <ProfileActions>
+          <ProfileActionsNote>Thay đổi sẽ áp dụng ngay sau khi lưu.</ProfileActionsNote>
+          <ProfileActionsButtons>
+            <Button type="text" onClick={handleProfileCancel}>
+              Huỷ
+            </Button>
+            <Button type="primary" loading={profileSaving} onClick={handleProfileSave}>
+              Hoàn thành
+            </Button>
+          </ProfileActionsButtons>
+        </ProfileActions>
+      </Form>
     </>
   )
 
   const renderPasswordContent = () => (
     <>
-      <PageTitle>Đổi mật khẩu</PageTitle>
+      <PageTitle>Mật khẩu</PageTitle>
       <PageDescription>
-        Mật khẩu mạnh giúp bảo vệ tài khoản và các trang đã xuất bản.
+        Quản lý mật khẩu đăng nhập và bảo mật tài khoản.
       </PageDescription>
+      <PageHeaderDivider />
 
       <Form
+        form={passwordForm}
         layout="vertical"
+        requiredMark={false}
         initialValues={{
           currentPassword: '',
           newPassword: '',
           confirmPassword: '',
         }}
       >
-        <PasswordCard>
-          <Form.Item
-            name="currentPassword"
-            label={<FieldLabel>Mật khẩu hiện tại</FieldLabel>}
-            rules={[{ required: true, message: 'Vui lòng nhập mật khẩu hiện tại' }]}
-          >
-            <Input.Password placeholder="********" />
-          </Form.Item>
+        <ProfilePanel>
+          <ProfileSection>
+            <SectionAside>
+              <SectionTitle>Đổi mật khẩu</SectionTitle>
+              <SectionDescription>
+                Mật khẩu mạnh giúp bảo vệ tài khoản và các trang đã xuất bản.
+              </SectionDescription>
+            </SectionAside>
 
-          <Form.Item
-            name="newPassword"
-            label={<FieldLabel>Mật khẩu mới</FieldLabel>}
-            style={{ marginBottom: 4 }}
-            dependencies={['currentPassword']}
-            rules={[
-              { required: true, message: 'Vui lòng nhập mật khẩu mới' },
-              { min: 8, message: 'Mật khẩu mới cần ít nhất 8 ký tự' },
-              {
-                pattern: /^(?=.*[A-Za-z])(?=.*\d).+$/,
-                message: 'Mật khẩu mới cần gồm chữ và số',
-              },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value || value !== getFieldValue('currentPassword')) {
-                    return Promise.resolve()
-                  }
-                  return Promise.reject(new Error('Mật khẩu mới phải khác mật khẩu hiện tại'))
-                },
-              }),
-            ]}
-          >
-            <Input.Password placeholder="********" />
-          </Form.Item>
-          <FieldHelp>Ít nhất 8 ký tự, gồm chữ và số.</FieldHelp>
+            <PasswordSectionBody>
+              <Form.Item
+                name="currentPassword"
+                label={<FieldLabel>Mật khẩu hiện tại</FieldLabel>}
+                rules={[{ required: true, message: 'Vui lòng nhập mật khẩu hiện tại' }]}
+              >
+                <Input.Password placeholder="••••••••" />
+              </Form.Item>
 
-          <Form.Item
-            name="confirmPassword"
-            label={<FieldLabel>Xác nhận mật khẩu mới</FieldLabel>}
-            style={{ marginTop: 34, marginBottom: 0 }}
-            dependencies={['currentPassword', 'newPassword']}
-            rules={[
-              { required: true, message: 'Vui lòng xác nhận mật khẩu mới' },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value) {
-                    return Promise.resolve()
-                  }
-                  if (value !== getFieldValue('newPassword')) {
-                    return Promise.reject(new Error('Xác nhận mật khẩu mới không khớp'))
-                  }
-                  if (value === getFieldValue('currentPassword')) {
-                    return Promise.reject(new Error('Mật khẩu mới phải khác mật khẩu hiện tại'))
-                  }
-                  return Promise.resolve()
-                },
-              }),
-            ]}
-          >
-            <Input.Password placeholder="********" />
-          </Form.Item>
-        </PasswordCard>
+              <Form.Item
+                name="newPassword"
+                label={<FieldLabel>Mật khẩu mới</FieldLabel>}
+                style={{ marginBottom: 4 }}
+                dependencies={['currentPassword']}
+                rules={[
+                  { required: true, message: 'Vui lòng nhập mật khẩu mới' },
+                  { min: 8, message: 'Mật khẩu mới cần ít nhất 8 ký tự' },
+                  {
+                    pattern: /^(?=.*[A-Za-z])(?=.*\d).+$/,
+                    message: 'Mật khẩu mới cần gồm chữ và số',
+                  },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      if (!value || value !== getFieldValue('currentPassword')) {
+                        return Promise.resolve()
+                      }
+                      return Promise.reject(new Error('Mật khẩu mới phải khác mật khẩu hiện tại'))
+                    },
+                  }),
+                ]}
+              >
+                <Input.Password placeholder="••••••••" />
+              </Form.Item>
+              <FieldHelp>Ít nhất 8 ký tự, gồm chữ và số.</FieldHelp>
 
-        <PasswordActions>
-          <Button type="text">Huỷ</Button>
-          <Button type="primary" htmlType="submit">Hoàn thành</Button>
-        </PasswordActions>
+              <Form.Item
+                name="confirmPassword"
+                label={<FieldLabel>Xác nhận mật khẩu mới</FieldLabel>}
+                style={{ marginTop: 22, marginBottom: 0 }}
+                dependencies={['newPassword']}
+                rules={[
+                  { required: true, message: 'Vui lòng xác nhận mật khẩu mới' },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      if (!value || value === getFieldValue('newPassword')) {
+                        return Promise.resolve()
+                      }
+                      return Promise.reject(new Error('Xác nhận mật khẩu mới không khớp'))
+                    },
+                  }),
+                ]}
+              >
+                <Input.Password placeholder="••••••••" />
+              </Form.Item>
+            </PasswordSectionBody>
+          </ProfileSection>
+        </ProfilePanel>
+
+        <ProfileActions>
+          <ProfileActionsNote>Thay đổi sẽ áp dụng ngay sau khi lưu.</ProfileActionsNote>
+          <ProfileActionsButtons>
+            <Button type="text" onClick={handlePasswordCancel}>
+              Huỷ
+            </Button>
+            <Button type="primary" loading={passwordSaving} onClick={handlePasswordSave}>
+              Hoàn thành
+            </Button>
+          </ProfileActionsButtons>
+        </ProfileActions>
       </Form>
     </>
   )
@@ -569,92 +867,105 @@ const ProfilePage = () => {
     <>
       <PageTitle>Bố cục trang</PageTitle>
       <PageDescription>
-        Mỗi trang gồm <strong>Header</strong>, <strong>Body</strong> và <strong>Footer</strong>.
-        {' '}
-        Header và Footer dùng chung cho toàn site - cấu hình trong khối bên dưới.
-        Riêng <strong>Body</strong> được cấu hình theo từng trang trong hộp thoại cấu hình.
+        Cấu hình Header và Footer dùng chung cho toàn bộ trang web.
       </PageDescription>
+      <PageHeaderDivider />
 
-      <LayoutCard>
-        <LayoutCardHeader>
-          <LayoutHeaderMeta>
-            <LayoutBadge>#layout</LayoutBadge>
-            <LayoutTitle>Bố cục (Header + Footer)</LayoutTitle>
-          </LayoutHeaderMeta>
-          <LayoutApiCount>{layoutApis.length} API</LayoutApiCount>
-        </LayoutCardHeader>
+      <ProfilePanel>
+        <ProfileSection>
+          <SectionAside>
+            <SectionTitle>Header &amp; Footer</SectionTitle>
+            <SectionDescription>
+              Header và Footer dùng chung cho toàn site. Riêng Body được cấu hình theo từng trang trong hộp thoại cấu hình.
+            </SectionDescription>
+          </SectionAside>
 
-        <LayoutApiRows>
-          {layoutApis.map((api) => (
-            <LayoutApiRow key={api.id}>
-              <LayoutApiKeyInput
-                value={api.key}
-                onChange={(event) => handleLayoutApiChange(api.id, 'key', event.target.value)}
-              />
-              <LayoutMethodSelect
-                value={api.method}
-                onChange={(event) => handleLayoutApiChange(api.id, 'method', event.target.value)}
-              >
-                {LAYOUT_METHOD_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
+          <SectionBody>
+            <LayoutCard>
+              <LayoutCardHeader>
+                <LayoutHeaderMeta>
+                  <LayoutBadge>#layout</LayoutBadge>
+                  <LayoutTitle>Bố cục (Header + Footer)</LayoutTitle>
+                </LayoutHeaderMeta>
+                <LayoutApiCount>{layoutApis.length} API</LayoutApiCount>
+              </LayoutCardHeader>
+
+              <LayoutApiRows>
+                {layoutApis.map((api) => (
+                  <LayoutApiRow key={api.id}>
+                    <LayoutApiKeyInput
+                      value={api.key}
+                      onChange={(event) => handleLayoutApiChange(api.id, 'key', event.target.value)}
+                    />
+                    <LayoutMethodSelect
+                      value={api.method}
+                      onChange={(event) => handleLayoutApiChange(api.id, 'method', event.target.value)}
+                    >
+                      {LAYOUT_METHOD_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </LayoutMethodSelect>
+                    <LayoutApiUrlInput
+                      value={api.url}
+                      onChange={(event) => handleLayoutApiChange(api.id, 'url', event.target.value)}
+                    />
+                    <LayoutApiIconButton
+                      type="button"
+                      aria-label={`Sao chép ${api.key}`}
+                      onClick={() => handleCopyLayoutApi(api)}
+                    >
+                      <CopyOutlined />
+                    </LayoutApiIconButton>
+                    <LayoutApiIconButton
+                      type="button"
+                      aria-label={`Xoá ${api.key}`}
+                      onClick={() => handleRemoveLayoutApi(api.id)}
+                    >
+                      <DeleteOutlined />
+                    </LayoutApiIconButton>
+                  </LayoutApiRow>
                 ))}
-              </LayoutMethodSelect>
-              <LayoutApiUrlInput
-                value={api.url}
-                onChange={(event) => handleLayoutApiChange(api.id, 'url', event.target.value)}
-              />
-              <LayoutApiIconButton
-                type="button"
-                aria-label={`Sao chép ${api.key}`}
-                onClick={() => handleCopyLayoutApi(api)}
-              >
-                <CopyOutlined />
-              </LayoutApiIconButton>
-              <LayoutApiIconButton
-                type="button"
-                aria-label={`Xoá ${api.key}`}
-                onClick={() => handleRemoveLayoutApi(api.id)}
-              >
-                <DeleteOutlined />
-              </LayoutApiIconButton>
-            </LayoutApiRow>
-          ))}
-        </LayoutApiRows>
+              </LayoutApiRows>
 
-        {layoutFiles.length > 0 && (
-          <LayoutFileChips>
-            {layoutFiles.map((file) => (
-              <LayoutFileChip key={file.uid}>
-                <AppstoreOutlined />
-                <span>{file.name}</span>
-                <button
-                  type="button"
-                  aria-label={`Xoá ${file.name}`}
-                  onClick={() => handleRemoveLayoutFile(file.uid)}
+              {layoutFiles.length > 0 && (
+                <LayoutFileChips>
+                  {layoutFiles.map((file) => (
+                    <LayoutFileChip key={file.uid}>
+                      <CodeOutlined />
+                      <span>{file.name}</span>
+                      <button
+                        type="button"
+                        aria-label={`Xoá ${file.name}`}
+                        onClick={() => handleRemoveLayoutFile(file.uid)}
+                      >
+                        ×
+                      </button>
+                    </LayoutFileChip>
+                  ))}
+                </LayoutFileChips>
+              )}
+
+              <LayoutToolbar>
+                <Button icon={<PlusOutlined />} onClick={handleAddLayoutApi}>
+                  Thêm API
+                </Button>
+                <Upload
+                  multiple
+                  accept=".jsx,.js,text/javascript,application/javascript"
+                  showUploadList={false}
+                  fileList={layoutFiles}
+                  customRequest={handleLayoutCodeUpload}
+                  onChange={({ fileList }) => handleLayoutFilesChange(fileList)}
                 >
-                  ×
-                </button>
-              </LayoutFileChip>
-            ))}
-          </LayoutFileChips>
-        )}
-
-        <LayoutToolbar>
-          <Button icon={<PlusOutlined />} onClick={handleAddLayoutApi}>Thêm API</Button>
-          <Upload
-            multiple
-            accept=".jsx,.js,text/javascript,application/javascript"
-            showUploadList={false}
-            fileList={layoutFiles}
-            customRequest={handleLayoutCodeUpload}
-            onChange={({ fileList }) => handleLayoutFilesChange(fileList)}
-          >
-            <Button icon={<CodeOutlined />}>Tải code JSX</Button>
-          </Upload>
-          <Button type="primary" icon={<BuildOutlined />}>Build</Button>
-          <Button icon={<SearchOutlined />}>Tìm component</Button>
-        </LayoutToolbar>
-      </LayoutCard>
+                  <Button icon={<CodeOutlined />}>Tải code JSX</Button>
+                </Upload>
+                <Button type="primary" icon={<BuildOutlined />}>Build</Button>
+                <Button icon={<SearchOutlined />}>Tìm component</Button>
+              </LayoutToolbar>
+            </LayoutCard>
+          </SectionBody>
+        </ProfileSection>
+      </ProfilePanel>
 
       <LayoutBodyCard>
         <LayoutBodyIcon>
@@ -670,10 +981,17 @@ const ProfilePage = () => {
         <LayoutBodyAction type="button">Tới quản lý trang</LayoutBodyAction>
       </LayoutBodyCard>
 
-      <LayoutActions>
-        <Button type="text">Khôi phục</Button>
-        <Button type="primary">Hoàn thành</Button>
-      </LayoutActions>
+      <ProfileActions>
+        <ProfileActionsNote>Thay đổi sẽ áp dụng ngay sau khi lưu.</ProfileActionsNote>
+        <ProfileActionsButtons>
+          <Button type="text" onClick={handleLayoutCancel}>
+            Huỷ
+          </Button>
+          <Button type="primary" loading={layoutSaving} onClick={handleLayoutSave}>
+            Hoàn thành
+          </Button>
+        </ProfileActionsButtons>
+      </ProfileActions>
     </>
   )
 
@@ -684,36 +1002,7 @@ const ProfilePage = () => {
       </Helmet>
 
       <ProfileShell>
-        <ProfileNav>
-          <NavGroup>
-            <NavGroupTitle>Tài khoản</NavGroupTitle>
-            <NavItem
-              $active={activeTab === 'profile'}
-              onClick={() => setActiveTab('profile')}
-            >
-              <UserOutlined />
-              <span>Hồ sơ</span>
-            </NavItem>
-            <NavItem
-              $active={activeTab === 'password'}
-              onClick={() => setActiveTab('password')}
-            >
-              <LockOutlined />
-              <span>Mật khẩu</span>
-            </NavItem>
-          </NavGroup>
-
-          <NavGroup>
-            <NavGroupTitle>Trang web</NavGroupTitle>
-            <NavItem
-              $active={activeTab === 'layout'}
-              onClick={() => setActiveTab('layout')}
-            >
-              <AppstoreOutlined />
-              <span>Bố cục trang</span>
-            </NavItem>
-          </NavGroup>
-        </ProfileNav>
+        {renderTabBar()}
 
         <ProfileContent>
           {activeTab === 'password'

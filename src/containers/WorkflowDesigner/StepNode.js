@@ -3,6 +3,7 @@ import { Handle, Position } from 'reactflow'
 import { DeleteOutlined } from '@ant-design/icons'
 import { message, Tooltip } from 'antd'
 import { useDeleteNode, useEdges, useStepTypes } from '@/hooks/useWorkflowStore'
+import { resolveStepTypeConfig } from '@/utils/workflowValidators'
 import {
   NodeWrapper,
   NodeHeader,
@@ -52,7 +53,7 @@ const StepNode = ({ id, data, selected }) => {
   const deleteNode = useDeleteNode()
 
   // Tìm config nhóm từ store theo data.type
-  const typeConfig = stepTypes.find((t) => t.key === data.type)
+  const typeConfig = resolveStepTypeConfig(stepTypes, data.type)
   const hasOutgoingEdge = edges.some((edge) => edge.source === id)
 
   const footerBadges = buildFooterBadges(data)

@@ -1,6 +1,6 @@
 import React from 'react'
 import { Empty, Switch, Tooltip } from 'antd'
-import { PlusOutlined } from '@ant-design/icons'
+import { PlusOutlined, SettingOutlined } from '@ant-design/icons'
 import {
   useNodes,
   useProcess,
@@ -10,6 +10,7 @@ import {
   useStepTypes,
   useSetStepTypes,
 } from '@/hooks/useWorkflowStore'
+import { resolveStepTypeConfig } from '@/utils/workflowValidators'
 import { HASH_POPUP } from '@/configs/constant'
 import { InAppEvent } from '@flast-erp/core/utils'
 import {
@@ -65,7 +66,7 @@ const TypeItem = ({ stepType }) => {
 // ─── ExistingStepItem — list row ──────────────────────────────────────────────
 
 const ExistingStepItem = ({ node, stepTypes, isActive, onClick }) => {
-  const typeConfig = stepTypes.find((t) => t.key === node.data?.type)
+  const typeConfig = resolveStepTypeConfig(stepTypes, node.data?.type)
   const color = typeConfig?.color ?? '#8c8c8c'
 
   return (
@@ -96,8 +97,21 @@ const StepPanel = ({ onReloadStepTypes }) => {
       title: 'Cấu hình loại bước',
       data: {
         stepTypes,
+        workflowType: process.flowType,
         onSave: (updatedTypes) => setStepTypes(updatedTypes),
         onReload: onReloadStepTypes,
+      },
+    })
+  }
+
+  const handleOpenStatusConfig = () => {
+    InAppEvent.emit(HASH_POPUP, {
+      hash: 'workflow.status.config',
+      title: '',
+      data: {
+        stepTypes,
+        configurations: process.statusConfigurations ?? [],
+        onSave: (statusConfigurations) => setProcess({ statusConfigurations }),
       },
     })
   }
@@ -170,12 +184,19 @@ const StepPanel = ({ onReloadStepTypes }) => {
           <WorkflowStatusLabel>Trạng thái</WorkflowStatusLabel>
           <WorkflowStatusValue>{isWorkflowActive ? 'Đang kích hoạt' : 'Tạm ngưng'}</WorkflowStatusValue>
         </WorkflowStatusText>
-        <Switch
-          checked={isWorkflowActive}
-          checkedChildren="Bật"
-          unCheckedChildren="Tắt"
-          onChange={(checked) => setProcess({ status: checked ? 1 : 0 })}
-        />
+        <div className="workflow-status-actions">
+          <Tooltip title="Cấu hình trạng thái">
+            <button className="status-config-button" type="button" onClick={handleOpenStatusConfig}>
+              <SettingOutlined />
+            </button>
+          </Tooltip>
+          <Switch
+            checked={isWorkflowActive}
+            checkedChildren="Bật"
+            unCheckedChildren="Tắt"
+            onChange={(checked) => setProcess({ status: checked ? 1 : 0 })}
+          />
+        </div>
       </WorkflowStatusRow>
 
     </PanelContainer>

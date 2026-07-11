@@ -65,6 +65,7 @@ import { WorkflowDesignerConfig } from './WorkflowDesignerConfig';
 
 /* HR - Quản lý hành chính */
 import { HRConfig } from './HRConfig';
+import { ProductionControlConfig } from './ProductionControlConfig';
 
 const routeConfigs = [
     LoginConfig,
@@ -90,6 +91,7 @@ const routeConfigs = [
     DragDropConfig,
     WebConfig,
     HRConfig,
+    ProductionControlConfig,
     WorkflowDesignerConfig
 ];
 

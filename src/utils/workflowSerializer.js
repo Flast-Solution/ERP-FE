@@ -1,6 +1,10 @@
 import { RequestUtils } from '@flast-erp/core/utils'
 import { DEFAULT_STEP, DEFAULT_TRANSITION } from '@/store/workflowConstants'
-import { getNodeTopologyType, normalizeWorkflowStepType } from './workflowValidators'
+import {
+  getNodeTopologyType,
+  normalizeWorkflowStepType,
+  resolveNodeProcessTypeKey,
+} from './workflowValidators'
 
 const normalizeTrigger = (trigger) =>
   trigger == null || trigger === '' ? 'on_enter' : String(trigger).toLowerCase()
@@ -82,7 +86,37 @@ export const flowToJson = ({ nodes, edges, process, stepTypes = [] }) => {
  * Nhận payload từ API hoặc file JSON đã export bằng flowToJson.
  * Tự fallback nếu thiếu field.
  */
-export const jsonToFlow = (raw) => {
+const getStepProcessTypeRef = (step = {}) => (
+  step.processTypeCode
+  ?? step.process_type_code
+  ?? step.groupCode
+  ?? step.group_code
+  ?? step.processType
+  ?? step.process_type
+  ?? step.processTypeId
+  ?? step.process_type_id
+  ?? step.label
+  ?? null
+)
+
+export const enrichFlowStepTypes = (flow, stepTypes = []) => {
+  if (!flow || !Array.isArray(flow.nodes) || stepTypes.length === 0) {
+    return flow
+  }
+
+  return {
+    ...flow,
+    nodes: flow.nodes.map((node) => ({
+      ...node,
+      data: {
+        ...node.data,
+        type: resolveNodeProcessTypeKey(node.data, stepTypes),
+      },
+    })),
+  }
+}
+
+export const jsonToFlow = (raw, stepTypes = []) => {
   if (!raw || typeof raw !== 'object') {
     throw new Error('Dữ liệu không hợp lệ')
   }
@@ -95,20 +129,9 @@ export const jsonToFlow = (raw) => {
   const nodes = (raw.steps ?? []).map((step) => {
     const stepCode = step.code ?? step.stepCode ?? step.step_code ?? ''
     const name = step.name ?? step.displayName ?? step.display_name ?? step.stepName ?? step.step_name ?? stepCode
-    const typeValue = step.label
-      ?? step.processTypeCode
-      ?? step.process_type_code
-      ?? step.groupCode
-      ?? step.group_code
-      ?? step.type
-      ?? 'process'
+    const typeValue = getStepProcessTypeRef(step)
     const nodeId = getStepNodeId(step)
-
-    return {
-      id: nodeId,
-      type: 'stepNode',
-      position: step.position ?? { x: 0, y: 0 },
-      data: {
+    const nodeData = {
         ...DEFAULT_STEP,
         id: step.id ?? null,
         persistedId: step.id ?? null,
@@ -117,12 +140,21 @@ export const jsonToFlow = (raw) => {
         name,
         label: name,
         type: typeValue != null && typeValue !== '' ? String(typeValue) : normalizeStepType(step.type ?? 'process'),
-        typeLabel: step.typeLabel ?? step.type_label ?? step.groupName ?? step.group_name ?? '',
+        typeLabel: step.typeLabel ?? step.type_label ?? step.groupName ?? step.group_name ?? step.processTypeName ?? step.process_type_name ?? '',
         description: step.description ?? '',
         sortOrder: step.sortOrder ?? step.sort_order ?? null,
         enabled: step.enabled ?? true,
         forms: normalizeStepForms(step),
         actions: getStepActions(step).map(deserializeAction),
+    }
+
+    return {
+      id: nodeId,
+      type: 'stepNode',
+      position: step.position ?? { x: 0, y: 0 },
+      data: {
+        ...nodeData,
+        type: resolveNodeProcessTypeKey(nodeData, stepTypes),
       },
     }
   })
@@ -497,20 +529,29 @@ const serializeTransition = (edge, index, stepCodeByNodeId = new Map()) => {
   return transition
 }
 
-const serializeGuard = (guard, index) => ({
-  ...(guard.id != null && guard.id !== '' ? { id: guard.id } : {}),
-  guardType: guard.type ?? guard.guardType ?? 'field_value',
-  config: guard.config ?? {},
-  errorMessage: guard.errorMessage ?? guard.error_message ?? guard.config?.message ?? '',
-  sortOrder: guard.sortOrder ?? guard.sort_order ?? index + 1,
-  enabled: guard.enabled ?? true,
-})
+const serializeGuard = (guard, index) => {
+  const guardType = guard.type ?? guard.guardType ?? 'field_value'
+  const errorMessage = guard.errorMessage ?? guard.error_message ?? guard.config?.message ?? ''
+  const baseConfig = guard.config ?? {}
+  const config = guardType === 'field_value'
+    ? { ...baseConfig, message: errorMessage }
+    : baseConfig
+
+  return {
+    ...(guard.id != null && guard.id !== '' ? { id: guard.id } : {}),
+    guardType,
+    config,
+    errorMessage,
+    sortOrder: guard.sortOrder ?? guard.sort_order ?? index + 1,
+    enabled: guard.enabled ?? true,
+  }
+}
 
 const deserializeGuard = (guard) => ({
   id: guard.id ?? null,
   type: guard.type ?? guard.guardType ?? guard.guard_type ?? 'field_value',
   config: guard.config ?? {},
-  errorMessage: guard.errorMessage ?? guard.error_message ?? '',
+  errorMessage: guard.errorMessage ?? guard.error_message ?? guard.config?.message ?? '',
   sortOrder: guard.sortOrder ?? guard.sort_order ?? null,
   enabled: guard.enabled ?? true,
 })

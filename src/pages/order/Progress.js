@@ -1,8 +1,8 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
-import { Alert, Breadcrumb, Button, Card, Col, Descriptions, Empty, message, Row, Select, Space, Spin, Tag, Timeline, Typography } from 'antd'
-import { ArrowLeftOutlined, CheckCircleOutlined, ClockCircleOutlined, FormOutlined } from '@ant-design/icons'
+import { Alert, Breadcrumb, Button, Card, Col, Descriptions, Empty, message, Row, Select, Space, Spin, Table, Tag, Timeline, Typography } from 'antd'
+import { CheckCircleOutlined, ClockCircleOutlined, FormOutlined } from '@ant-design/icons'
 import { Helmet } from 'react-helmet'
-import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useLocation, useParams, useSearchParams } from 'react-router-dom'
 
 import { formatMoney, formatTime, RequestUtils } from '@flast-erp/core/utils'
 import { SUCCESS_CODE } from '@/configs'
@@ -16,8 +16,22 @@ const WORKFLOW_SUBMISSION_API = '/workflow/process/submission'
 const WORKFLOW_TRANSITION_API = '/workflow/process/transition'
 const WORKFLOW_INSTANCE_BY_ENTITY_API = '/workflow/process/instance/get-entity'
 const WORKFLOW_PREVIEW_API = '/workflow/process/preview'
+const FORM_TEMPLATE_DETAIL_API = '/workflow/forms/template/find-id'
 const WORKFLOW_PROCESS_FIND_API = '/workflow/process/find-id'
 const PROCESS_TYPE_FIND_API = '/workflow/process/process-type-find'
+const ORDER_LOTS_FIND_API = '/qms/warehouse-paracel/find-entity'
+const LOT_WORKFLOW_ENTITY_TYPE = 'WAREHOUSE_PARCEL'
+
+const workflowFixedPanelStyle = {
+  position: 'fixed',
+  top: 116,
+  right: 24,
+  bottom: 0,
+  width: 384,
+  maxHeight: 'none',
+  overflowY: 'auto',
+  zIndex: 10,
+}
 
 const resolveApiPayload = (response) => response?.data ?? response
 
@@ -50,6 +64,30 @@ const resolveWorkflowProcessDetail = (response) => {
     return payload.process
   }
   return payload
+}
+
+const resolveOrderLots = (response) => {
+  const payload = resolveApiPayload(response)
+  const candidates = [
+    payload?.data,
+    payload?.data?.embedded,
+    payload?.data?.content,
+    payload?.data?.items,
+    payload?.embedded,
+    payload?.content,
+    payload?.items,
+    payload,
+  ]
+
+  const arrayData = candidates.find(Array.isArray)
+  if (arrayData) return arrayData
+
+  const objectData = candidates.find(item => item && typeof item === 'object')
+  if (objectData?.id || objectData?.code || objectData?.entityId) {
+    return [objectData]
+  }
+
+  return []
 }
 
 const getResponseDataArray = (response) => {
@@ -230,6 +268,390 @@ const getSubmissionValues = (submission) => {
   return values && typeof values === 'object' ? values : {}
 }
 
+const findSubmissionForStep = (submissions = [], step) => (
+  submissions.find((item) => isSubmissionForStep(item, step)) ?? null
+)
+
+const coerceGuardValue = (value) => {
+  if (value === true || value === 'true') return 'true'
+  if (value === false || value === 'false') return 'false'
+  if (value === null || value === undefined) return ''
+  return String(value)
+}
+
+const evaluateGuardOperator = (operator, actual, expected) => {
+  const left = coerceGuardValue(actual)
+  const right = coerceGuardValue(expected)
+
+  switch (operator) {
+    case 'neq':
+      return left !== right
+    case 'gt':
+      return Number(left) > Number(right)
+    case 'gte':
+      return Number(left) >= Number(right)
+    case 'lt':
+      return Number(left) < Number(right)
+    case 'lte':
+      return Number(left) <= Number(right)
+    case 'eq':
+    default:
+      return left === right
+  }
+}
+
+const evaluateGuard = (guard, submissions = []) => {
+  const guardType = guard?.guardType ?? guard?.guard_type ?? guard?.type ?? 'field_value'
+  const config = guard?.config ?? {}
+
+  if (guardType === 'field_value') {
+    const sourceStepCode = config.from_step ?? config.fromStep ?? config.step_code ?? config.stepCode
+    const fieldName = config.field_name ?? config.fieldName
+    const submission = findSubmissionForStep(submissions, { stepCode: sourceStepCode, code: sourceStepCode })
+    const values = getSubmissionValues(submission)
+    const actual = values?.[fieldName]
+    return evaluateGuardOperator(config.operator ?? 'eq', actual, config.expected_value ?? config.expectedValue)
+  }
+
+  if (guardType === 'step_completed') {
+    const stepCode = config.step_code ?? config.stepCode
+    return Boolean(findSubmissionForStep(submissions, { stepCode, code: stepCode }))
+  }
+
+  if (guardType === 'step_form_field') {
+    const stepCode = config.step_code ?? config.stepCode
+    const submission = findSubmissionForStep(submissions, { stepCode, code: stepCode })
+    const requirement = config.requirement ?? 'filled'
+    const hasSubmission = Boolean(submission && Object.keys(getSubmissionValues(submission)).length)
+    return requirement === 'not_filled' ? !hasSubmission : hasSubmission
+  }
+
+  return true
+}
+
+const getGuardsForSourceStep = (stepCode, stepTransitionList = []) => {
+  const normalizedStepCode = normalizeStepRef(stepCode)
+  if (!normalizedStepCode) return []
+
+  // Chỉ lấy guard trên các transition XUẤT PHÁT từ chính bước này. Một guard có thể
+  // tham chiếu field của bước khác (config.from_step) nhưng lại nằm trên transition của
+  // bước sau (ví dụ bước tổng hợp đọc lại field của bước trước) — những guard đó thuộc
+  // về bước sau, không được kéo nhầm vào kết quả của bước hiện tại.
+  return stepTransitionList.flatMap((transition) => {
+    const transitionFrom = normalizeStepRef(transition?.fromStepCode ?? transition?.from_step_code)
+    if (transitionFrom !== normalizedStepCode) return []
+
+    return getFirstArray(transition?.guards).map((guard) => ({ transition, guard }))
+  })
+}
+
+const GUARD_OPERATOR_LABELS = {
+  eq: '=',
+  neq: '≠',
+  gt: '>',
+  gte: '≥',
+  lt: '<',
+  lte: '≤',
+}
+
+const formatGuardDescription = (guard, transition) => {
+  const config = guard?.config ?? {}
+  const fieldName = config.field_name ?? config.fieldName ?? 'field'
+  const operator = GUARD_OPERATOR_LABELS[config.operator] ?? config.operator ?? '='
+  const expectedValue = config.expected_value ?? config.expectedValue ?? ''
+  const toStepCode = transition?.toStepCode ?? transition?.to_step_code ?? ''
+  const message = guard?.errorMessage ?? guard?.error_message
+
+  if (message) return message
+  return `${fieldName} ${operator} ${expectedValue}${toStepCode ? ` → ${toStepCode}` : ''}`
+}
+
+const GUARD_OPERATOR_INVERSE = {
+  eq: 'neq',
+  neq: 'eq',
+  gt: 'lte',
+  gte: 'lt',
+  lt: 'gte',
+  lte: 'gt',
+}
+
+// Guard trên nhánh "loại" (reject) mô tả điều kiện để bị loại, nên khi hiển thị
+// "Yêu cầu" (điều kiện để ĐẠT) ta phải đảo ngược lại toán tử của guard.
+const formatGuardRequirement = (guard, reject = false) => {
+  const config = guard?.config ?? {}
+  const rawOperator = config.operator ?? 'eq'
+  const operator = reject ? (GUARD_OPERATOR_INVERSE[rawOperator] ?? rawOperator) : rawOperator
+  const operatorLabel = GUARD_OPERATOR_LABELS[operator] ?? operator
+  const expected = coerceGuardValue(config.expected_value ?? config.expectedValue)
+
+  if (expected === 'true' || expected === 'false') {
+    // eq: đạt khi bằng expected; neq: đạt khi khác expected.
+    const wantTrue = operator === 'eq' ? expected === 'true' : expected === 'false'
+    return wantTrue ? 'Có' : 'Không'
+  }
+
+  if (operator === 'eq') return expected
+  return `${operatorLabel} ${expected}`.trim()
+}
+
+const REJECT_TRANSITION_KEYWORDS = [
+  'lỗi', 'loi', 'error', 'reject', 'fail', 'hỏng', 'hong',
+  'hủy', 'huy', 'defect', 'từ chối', 'tu choi', 'cancel', 'loại', 'loai',
+]
+
+const normalizeLowerText = (value) => String(value ?? '')
+  .toLowerCase()
+  .normalize('NFC')
+
+// Xác định một transition có phải nhánh "loại/không đạt" hay không dựa trên tên bước đích.
+const isRejectTransition = (transition, stepNameMap = new Map()) => {
+  const toStepRef = normalizeStepRef(transition?.toStepCode ?? transition?.to_step_code)
+  const haystack = normalizeLowerText([
+    stepNameMap.get(toStepRef),
+    transition?.toStepName,
+    transition?.to_step_name,
+    transition?.toStepCode,
+    transition?.to_step_code,
+    transition?.name,
+    transition?.label,
+  ].filter(Boolean).join(' '))
+
+  return REJECT_TRANSITION_KEYWORDS.some((keyword) => haystack.includes(keyword))
+}
+
+const getFormFields = (formTemplate) => getFirstArray(
+  formTemplate?.fields,
+  formTemplate?.formFields,
+  formTemplate?.form_fields,
+)
+
+const resolveFieldOptionLabel = (field, value) => {
+  const options = getFirstArray(field?.config?.options, field?.options)
+  if (!options.length) return null
+
+  const normalizedValue = coerceGuardValue(value)
+  const match = options.find((option) =>
+    coerceGuardValue(option?.value) === normalizedValue
+    || coerceGuardValue(option?.label) === normalizedValue,
+  )
+
+  return match?.label ?? null
+}
+
+const formatSubmissionFieldValue = (field, value) => {
+  if (value === undefined || value === null || value === '') return '-'
+  if (typeof value === 'boolean') return value ? 'Có' : 'Không'
+  if (Array.isArray(value)) {
+    const labels = value.map((item) => resolveFieldOptionLabel(field, item) ?? String(item))
+    return labels.join(', ')
+  }
+
+  return resolveFieldOptionLabel(field, value) ?? String(value)
+}
+
+const buildFieldDisplayItems = (values = {}, fields = []) => {
+  const fieldMap = new Map(
+    fields.map((field) => [field?.fieldKey ?? field?.field_key ?? field?.name, field]),
+  )
+
+  return Object.entries(values).map(([key, value]) => {
+    const field = fieldMap.get(key)
+    return {
+      key,
+      label: field?.label ?? field?.title ?? key,
+      value,
+      displayValue: formatSubmissionFieldValue(field, value),
+    }
+  })
+}
+
+const resolveFormTemplateForSubmission = (submission, {
+  previewStepProcess,
+  formTemplates = [],
+} = {}) => {
+  const templateId = submission?.templateId ?? submission?.template_id
+  const previewTemplate = previewStepProcess?.formTemplate
+
+  if (previewTemplate && isSubmissionForTemplate(submission, previewTemplate)) {
+    return previewTemplate
+  }
+
+  return formTemplates.find((template) => isSubmissionForTemplate(submission, template)) ?? null
+}
+
+const isInspectionStep = (step) => Boolean(
+  step?.formUrl ?? step?.form_url ?? step?.formTemplate ?? step?.formTemplates,
+)
+
+const getStepTemplateId = (step) => {
+  const attachedForm = getFirstArray(step?.forms, step?.formTemplates)[0]
+  return (
+    step?.formTemplateId
+    ?? step?.form_template_id
+    ?? step?.templateId
+    ?? step?.template_id
+    ?? step?.formId
+    ?? step?.form_id
+    ?? step?.formTemplate?.id
+    ?? step?.formTemplate?.templateId
+    ?? attachedForm?.templateId
+    ?? attachedForm?.template_id
+    ?? attachedForm?.formId
+    ?? attachedForm?.id
+    ?? null
+  )
+}
+
+// Tìm form template cho 1 bước dựa trên template id trong danh sách đã nạp.
+const findTemplateByStep = (step, formTemplates = []) => {
+  const stepTemplateId = getStepTemplateId(step)
+  if (!stepTemplateId) return null
+  return formTemplates.find(
+    (template) => String(resolveTemplateId(template)) === String(stepTemplateId),
+  ) ?? null
+}
+
+const buildInspectionResults = ({
+  submissions = [],
+  steps = [],
+  stepTransitionList = [],
+  previewStepProcess,
+  formTemplates = [],
+}) => {
+  const relevantSteps = steps.filter((step) => (
+    isInspectionStep(step) || Boolean(findSubmissionForStep(submissions, step))
+  ))
+
+  const orphanSubmissionSteps = submissions
+    .filter((submission) => !relevantSteps.some((step) => isSubmissionForStep(submission, step)))
+    .map((submission) => ({
+      stepCode: submission?.stepCode ?? submission?.step_code,
+      name: submission?.stepName ?? submission?.step_name,
+      sortOrder: 999,
+    }))
+
+  const displaySteps = [...relevantSteps, ...orphanSubmissionSteps]
+    .sort((a, b) => Number(a?.sortOrder ?? 0) - Number(b?.sortOrder ?? 0))
+
+  const stepNameMap = new Map(
+    steps.map((step) => [
+      normalizeStepRef(getValue(step?.stepCode, step?.code, step?.id)),
+      getStepDisplayName(step),
+    ]),
+  )
+
+  // Gom toàn bộ field của mọi template đã nạp để tra label khi bước chưa có template riêng.
+  const globalFieldMap = new Map()
+  formTemplates.forEach((template) => {
+    getFormFields(template).forEach((field) => {
+      const key = field?.fieldKey ?? field?.field_key ?? field?.name
+      if (key && !globalFieldMap.has(key)) {
+        globalFieldMap.set(key, field)
+      }
+    })
+  })
+
+  return displaySteps.map((step) => {
+    const stepCode = getValue(step?.stepCode, step?.code)
+    const submission = findSubmissionForStep(submissions, step)
+    const hasSubmission = Boolean(submission)
+    const values = getSubmissionValues(submission)
+    // Gộp field từ mọi nguồn có thể của bước để tra label: template của submission,
+    // template gắn sẵn, template fetch theo id, và các form đính kèm (step.forms).
+    const stepFormTemplates = [
+      submission
+        ? resolveFormTemplateForSubmission(submission, { previewStepProcess, formTemplates })
+        : null,
+      step?.formTemplate,
+      findTemplateByStep(step, formTemplates),
+      ...getFirstArray(step?.forms, step?.formTemplates),
+    ].filter(Boolean)
+
+    const formTemplate = stepFormTemplates[0] ?? null
+    const stepFields = stepFormTemplates.flatMap((template) => getFormFields(template))
+    const fieldItems = buildFieldDisplayItems(values, stepFields)
+
+    const stepGuards = getGuardsForSourceStep(stepCode, stepTransitionList)
+    // Mỗi field có thể xuất hiện ở nhiều transition (nhánh đạt + nhánh loại).
+    // Ưu tiên guard nhánh "đạt" (forward) để hiển thị yêu cầu/KQ; nếu chỉ có
+    // guard nhánh "loại" thì đảo chiều kết quả cho đúng nghiệp vụ.
+    const guardByField = new Map()
+    stepGuards.forEach(({ guard, transition }) => {
+      const key = guard?.config?.field_name ?? guard?.config?.fieldName
+      if (!key) return
+      const reject = isRejectTransition(transition, stepNameMap)
+      const existing = guardByField.get(key)
+      if (!existing || (existing.reject && !reject)) {
+        guardByField.set(key, { guard, transition, reject })
+      }
+    })
+
+    const fieldItemMap = new Map(fieldItems.map((field) => [field.key, field]))
+    const templateFieldMap = new Map(
+      stepFields.map((field) => [
+        field?.fieldKey ?? field?.field_key ?? field?.name,
+        field,
+      ]),
+    )
+
+    const rows = Array.from(guardByField.entries()).map(([fieldKey, matched]) => {
+      const fieldItem = fieldItemMap.get(fieldKey)
+      const templateField = templateFieldMap.get(fieldKey) ?? globalFieldMap.get(fieldKey)
+      const rawValue = values?.[fieldKey]
+      const guardMatched = hasSubmission ? evaluateGuard(matched.guard, submissions) : null
+      const resultPass = guardMatched === null
+        ? null
+        : (matched.reject ? !guardMatched : guardMatched)
+
+      return {
+        key: fieldKey,
+        label: fieldItem?.label ?? templateField?.label ?? templateField?.title ?? fieldKey,
+        displayValue: fieldItem?.displayValue ?? formatSubmissionFieldValue(templateField, rawValue),
+        requirement: formatGuardRequirement(matched.guard, matched.reject),
+        resultPass,
+      }
+    })
+
+    const guards = stepGuards.map(({ transition, guard }) => {
+      const reject = isRejectTransition(transition, stepNameMap)
+      const matched = evaluateGuard(guard, submissions)
+      return {
+        id: guard?.id,
+        passed: reject ? !matched : matched,
+        reject,
+        description: formatGuardDescription(guard, transition),
+        toStepCode: transition?.toStepCode ?? transition?.to_step_code,
+      }
+    })
+
+    // Kết quả đánh giá dựa hoàn toàn vào các guard gắn với form:
+    // mọi guard thỏa -> Đạt, còn lại -> Không đạt.
+    const allGuardsPassed = rows.length > 0
+      ? rows.every((row) => row.resultPass === true)
+      : guards.every((guard) => guard.passed)
+    const status = !hasSubmission ? 'pending' : allGuardsPassed ? 'pass' : 'fail'
+    const isPass = !hasSubmission ? null : allGuardsPassed
+
+    return {
+      id: submission?.id ?? stepCode,
+      stepCode,
+      stepName: getStepDisplayName(step),
+      standard: getValue(step?.standard, step?.standardCode, step?.standard_code, formTemplate?.standard),
+      submittedAt: submission?.submittedAt ?? submission?.submitted_at,
+      submittedName: submission?.submittedName ?? submission?.submitted_name,
+      values,
+      fields: fieldItems,
+      rows,
+      guards,
+      submission,
+      hasSubmission,
+      status,
+      isPass,
+      statusName: !hasSubmission ? 'Chưa có kết quả' : allGuardsPassed ? 'Đạt' : 'Không đạt',
+    }
+  }).filter((item) => item.guards.length > 0)
+}
+
 const getStepDisplayName = (step, fallback) => getValue(
   step?.name,
   step?.labelName,
@@ -341,7 +763,6 @@ const normalizeCompletedStepHistory = (item = {}, steps = []) => {
 const buildWorkflowHistoryItems = ({
   workflowPreview,
   workflowInstance,
-  order,
   workflow,
   steps,
 }) => {
@@ -349,10 +770,6 @@ const buildWorkflowHistoryItems = ({
     workflowPreview?.histories,
     workflowPreview?.workflowHistories,
     workflowPreview?.workflowHistory,
-    order?.workflowHistories,
-    order?.workflowHistory,
-    order?.stepHistories,
-    order?.histories,
     workflow?.histories,
   )
 
@@ -378,8 +795,6 @@ const buildWorkflowHistoryItems = ({
     workflowPreview?.processInstance?.completed_steps,
     workflowInstance?.completedSteps,
     workflowInstance?.completed_steps,
-    order?.workflowInstance?.completedSteps,
-    order?.workflowInstance?.completed_steps,
   ).map((item) => normalizeCompletedStepHistory(item, steps))
 }
 
@@ -407,7 +822,7 @@ const getCurrentStepSortOrder = (currentStep) => {
   return Number.isNaN(value) ? null : value
 }
 
-const getStepStatus = ({ step, currentStep, currentStepCode, completedRefs, submittedRefs }) => {
+const getStepStatus = ({ step, currentStep, currentStepCode, completedRefs, submittedRefs, isParallel = false }) => {
   const active = isSameStepRef(currentStep?.id, step?.id)
     || isSameStepRef(currentStep?.stepCode, step?.stepCode)
     || isSameStepRef(currentStep?.code, step?.code)
@@ -416,7 +831,10 @@ const getStepStatus = ({ step, currentStep, currentStepCode, completedRefs, subm
   const explicitCompleted = isStepInRefs(step, completedRefs) || isStepInRefs(step, submittedRefs)
   const currentSortOrder = getCurrentStepSortOrder(currentStep)
   const stepSortOrder = Number(step?.sortOrder)
-  const beforeCurrent = currentSortOrder !== null && !Number.isNaN(stepSortOrder) && stepSortOrder < currentSortOrder
+  const beforeCurrent = !isParallel
+    && currentSortOrder !== null
+    && !Number.isNaN(stepSortOrder)
+    && stepSortOrder < currentSortOrder
 
   if (active) return 'active'
   if (explicitCompleted || beforeCurrent) return 'completed'
@@ -429,11 +847,14 @@ const isParallelGroup = (group) => {
 }
 
 const normalizeSubmissionValue = (value) => {
+  if (value === undefined || value === '') {
+    return null
+  }
   if (value && typeof value === 'object' && typeof value.toISOString === 'function' && typeof value.isValid === 'function') {
     return value.isValid() ? value.toISOString() : null
   }
   if (Array.isArray(value)) {
-    return value.map(normalizeSubmissionValue)
+    return value.length ? value.map(normalizeSubmissionValue) : null
   }
   if (value && typeof value === 'object') {
     return Object.fromEntries(
@@ -442,6 +863,49 @@ const normalizeSubmissionValue = (value) => {
   }
   return value
 }
+
+const getFieldValueKey = (field) => getValue(
+  field?.fieldKey,
+  field?.field_key,
+  field?.name,
+  field?.key,
+)
+
+const collectFormFieldKeys = (fields = []) => (
+  fields.reduce((result, field) => {
+    const key = getFieldValueKey(field)
+    if (key) {
+      result.push(key)
+    }
+
+    const children = getFirstArray(
+      field?.children,
+      field?.fields,
+      field?.items,
+    )
+    if (children.length) {
+      result.push(...collectFormFieldKeys(children))
+    }
+
+    return result
+  }, [])
+)
+
+const normalizeSubmissionValues = (values = {}, currentForm) => {
+  const normalizedValues = normalizeSubmissionValue(values) ?? {}
+  const payloadValues = normalizedValues && typeof normalizedValues === 'object' && !Array.isArray(normalizedValues)
+    ? { ...normalizedValues }
+    : {}
+
+  collectFormFieldKeys(getFormFields(currentForm)).forEach((key) => {
+    if (!Object.prototype.hasOwnProperty.call(payloadValues, key)) {
+      payloadValues[key] = null
+    }
+  })
+
+  return payloadValues
+}
+
 const resolveTemplateId = (formTemplate) => {
   const value = formTemplate?.templateId
     ?? formTemplate?.formTemplateId
@@ -471,7 +935,7 @@ const buildWorkflowSubmissionPayload = ({
     entityId: toNumberOrNull(processInstance?.entityId ?? order?.entityId ?? order?.id ?? orderId),
     instanceId: toNumberOrNull(processInstance?.id ?? instanceId),
     stepCode: stepProcess?.stepCode ?? stepProcess?.code ?? processInstance?.currentStepCode ?? workflowInstance?.currentStepCode,
-    values: normalizeSubmissionValue(values),
+    values: normalizeSubmissionValues(values, currentForm),
   }
 }
 
@@ -674,28 +1138,44 @@ class RemoteFormBoundary extends React.Component {
   }
 }
 
-const WorkflowStepItem = ({ step, status, index }) => {
+const WorkflowStepItem = ({ step, status, index, submission, selected, onClick }) => {
   const isActive = status === 'active'
   const isCompleted = status === 'completed'
   const muted = status === 'pending'
+  const clickable = Boolean(submission) && Boolean(onClick)
   const boxColor = isCompleted ? '#16a34a' : isActive ? '#2563eb' : '#d1d5db'
 
   return (
     <div
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onClick={clickable ? () => onClick(step, submission) : undefined}
+      onKeyDown={clickable ? (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onClick(step, submission)
+        }
+      } : undefined}
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: 8,
         minWidth: 0,
         color: isActive ? '#1d4ed8' : muted ? '#64748b' : '#111827',
-        fontWeight: isActive ? 650 : 500,
+        fontWeight: isActive || selected ? 650 : 500,
         fontSize: 12,
         lineHeight: '18px',
+        padding: clickable ? '6px 8px' : undefined,
+        margin: clickable ? '-6px -8px' : undefined,
+        borderRadius: clickable ? 8 : undefined,
+        border: selected ? '1px solid #bfdbfe' : '1px solid transparent',
+        background: selected ? '#eff6ff' : 'transparent',
+        cursor: clickable ? 'pointer' : 'default',
       }}
     >
       <span
         aria-checked={isCompleted}
-        aria-disabled="true"
+        aria-disabled={!clickable}
         role="checkbox"
         style={{
           flex: '0 0 auto',
@@ -711,7 +1191,6 @@ const WorkflowStepItem = ({ step, status, index }) => {
           fontSize: 10,
           lineHeight: '12px',
           fontWeight: 800,
-          cursor: 'not-allowed',
         }}
       >
         {isCompleted ? '✓' : null}
@@ -730,6 +1209,9 @@ const WorkflowStepList = ({
   processTypeLabelMap,
   completedRefs = [],
   submittedRefs = [],
+  submissions = [],
+  selectedStepCode,
+  onStepClick,
 }) => {
   if (!steps.length) {
     return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có dữ liệu quy trình workflow" />
@@ -802,7 +1284,18 @@ const WorkflowStepList = ({
               }}
             >
               {group.steps.map((step, index) => {
-                const status = getStepStatus({ step, currentStep, currentStepCode, completedRefs, submittedRefs })
+                const status = getStepStatus({
+                  step,
+                  currentStep,
+                  currentStepCode,
+                  completedRefs,
+                  submittedRefs,
+                  isParallel: parallel,
+                })
+                const submission = findSubmissionForStep(submissions, step)
+                const stepCode = getValue(step?.stepCode, step?.code)
+                const selected = isSameStepRef(selectedStepCode, stepCode)
+                  || isSameStepRef(selectedStepCode, step?.id)
                 return (
                   <div
                     key={step?.id ?? step?.stepCode ?? step?.code ?? index}
@@ -824,6 +1317,9 @@ const WorkflowStepList = ({
                       step={step}
                       status={status}
                       index={index + 1}
+                      submission={submission}
+                      selected={selected}
+                      onClick={onStepClick}
                     />
                   </div>
                 )
@@ -925,13 +1421,15 @@ const WorkflowAdvanceSection = ({
 
 const WorkflowProgressPanel = ({
   workflow,
-  order,
   steps,
   currentStep,
   currentStepCode,
   processTypeLabelMap,
   completedRefs,
   submittedRefs,
+  submissions,
+  selectedStepCode,
+  onStepClick,
   currentForm,
   hasCurrentSubmission,
   transitioning,
@@ -944,8 +1442,8 @@ const WorkflowProgressPanel = ({
 
   return (
     <Card
-      bordered
-      bodyStyle={{ padding: 0 }}
+      variant="outlined"
+      styles={{ body: { padding: 0 } }}
       style={{ borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 4px rgba(15, 23, 42, 0.08)' }}
     >
       <div style={{ padding: '22px 20px 18px' }}>
@@ -967,14 +1465,11 @@ const WorkflowProgressPanel = ({
             workflow?.processName,
             workflow?.process_name,
             workflow?.title,
-            order?.workflowProcessName,
-            order?.processName,
-            order?.workflowName,
             workflow?.id ? `Quy trình #${workflow.id}` : 'Chưa gắn workflow',
           )}
         </Title>
         <Text style={{ display: 'block', marginTop: 4, color: '#4b5563', fontSize: 13 }}>
-          {getValue(workflow?.processKey, workflow?.process_key, workflow?.code, order?.workflowProcessKey, '')}
+          {getValue(workflow?.processKey, workflow?.process_key, workflow?.code, '')}
           {steps.length ? ` · ${steps.length} bước` : ''}
         </Text>
       </div>
@@ -987,6 +1482,9 @@ const WorkflowProgressPanel = ({
           processTypeLabelMap={processTypeLabelMap}
           completedRefs={completedRefs}
           submittedRefs={submittedRefs}
+          submissions={submissions}
+          selectedStepCode={selectedStepCode}
+          onStepClick={onStepClick}
         />
         <WorkflowBlockingNotice currentForm={currentForm} hasCurrentSubmission={hasCurrentSubmission} />
         <WorkflowAdvanceSection
@@ -1002,37 +1500,267 @@ const WorkflowProgressPanel = ({
   )
 }
 
-const ResultList = ({ data }) => {
+const INSPECTION_STATUS_STYLES = {
+  pass: { accent: '#16a34a', pillBg: '#dcfce7', pillText: '#15803d', dot: '#16a34a', label: 'Đạt' },
+  fail: { accent: '#dc2626', pillBg: '#fee2e2', pillText: '#b91c1c', dot: '#dc2626', label: 'Không đạt' },
+  pending: { accent: '#f59e0b', pillBg: '#f1f5f9', pillText: '#64748b', dot: '#94a3b8', label: 'Chưa có kết quả' },
+}
+
+const InspectionStatusPill = ({ status, label }) => {
+  const style = INSPECTION_STATUS_STYLES[status] ?? INSPECTION_STATUS_STYLES.pending
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '3px 12px',
+        borderRadius: 999,
+        background: style.pillBg,
+        color: style.pillText,
+        fontSize: 12,
+        fontWeight: 600,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <span style={{ width: 8, height: 8, borderRadius: '50%', background: style.dot }} />
+      {label ?? style.label}
+    </span>
+  )
+}
+
+const InspectionResultDot = ({ pass }) => {
+  const color = pass === true ? '#16a34a' : pass === false ? '#dc2626' : '#cbd5e1'
+  const background = pass === true ? '#dcfce7' : pass === false ? '#fee2e2' : '#fff'
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 20,
+        height: 20,
+        borderRadius: '50%',
+        border: `2px solid ${color}`,
+        background,
+        color,
+        fontSize: 11,
+        fontWeight: 800,
+        lineHeight: 1,
+      }}
+    >
+      {pass === true ? '✓' : pass === false ? '✕' : ''}
+    </span>
+  )
+}
+
+const InspectionResultCard = ({ item, index, defaultExpanded = true, onOpenForm }) => {
+  const style = INSPECTION_STATUS_STYLES[item?.status] ?? INSPECTION_STATUS_STYLES.pending
+  const hasRows = item?.rows?.length > 0
+  const [expanded, setExpanded] = useState(defaultExpanded)
+  const toggle = () => setExpanded((value) => !value)
+
+  return (
+    <div
+      style={{
+        position: 'relative',
+        borderRadius: 12,
+        border: '1px solid #eef1f5',
+        borderLeft: `4px solid ${style.accent}`,
+        background: '#fff',
+        boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={toggle}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            toggle()
+          }
+        }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          flexWrap: 'wrap',
+          padding: '14px 18px',
+          cursor: 'pointer',
+          userSelect: 'none',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          <span
+            aria-hidden
+            style={{
+              display: 'inline-block',
+              color: '#94a3b8',
+              fontSize: 12,
+              transition: 'transform 0.15s ease',
+              transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+            }}
+          >
+            ▶
+          </span>
+          <span style={{ fontWeight: 700, fontSize: 15, color: '#111827' }}>
+            {item?.stepName ?? item?.name ?? `Kết quả ${index + 1}`}
+          </span>
+          {item?.standard && (
+            <span
+              style={{
+                padding: '2px 8px',
+                borderRadius: 6,
+                background: '#f1f5f9',
+                color: '#475569',
+                fontSize: 12,
+                fontFamily: 'monospace',
+              }}
+            >
+              {item.standard}
+            </span>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#94a3b8', fontSize: 13 }}>
+          {item?.submittedName && <span>{item.submittedName}</span>}
+          {item?.submittedName && <span>·</span>}
+          {item?.submittedAt && <span>{formatTime(item.submittedAt)}</span>}
+          {item?.submittedAt && <span>·</span>}
+          <InspectionStatusPill status={item?.status} label={item?.statusName} />
+        </div>
+      </div>
+
+      {expanded && hasRows && (
+        <div style={{ padding: '0 18px 16px' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 130px 120px 44px',
+              gap: 12,
+              padding: '10px 0',
+              borderTop: '1px solid #f1f5f9',
+              color: '#94a3b8',
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: 0.6,
+              textTransform: 'uppercase',
+            }}
+          >
+            <span>Chỉ tiêu</span>
+            <span style={{ textAlign: 'center' }}>Giá trị đo</span>
+            <span style={{ textAlign: 'right' }}>Yêu cầu</span>
+            <span style={{ textAlign: 'center' }}>KQ</span>
+          </div>
+
+          {item.rows.map((row) => (
+            <div
+              key={row.key}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 130px 120px 44px',
+                gap: 12,
+                alignItems: 'center',
+                padding: '10px 0',
+                borderTop: '1px solid #f6f8fb',
+                fontSize: 14,
+              }}
+            >
+              <span style={{ color: '#334155' }}>{row.label}</span>
+              <span style={{ textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>{row.displayValue}</span>
+              <span style={{ textAlign: 'right', color: '#64748b' }}>{row.requirement || '—'}</span>
+              <span style={{ display: 'flex', justifyContent: 'center' }}>
+                <InspectionResultDot pass={row.resultPass} />
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {expanded && !item?.hasSubmission && (
+        <div style={{ padding: '0 18px 16px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 16,
+              flexWrap: 'wrap',
+              padding: '14px 16px',
+              borderRadius: 10,
+              border: '1px dashed #e2e8f0',
+              background: '#f8fafc',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0 }}>
+              <span
+                style={{
+                  flex: '0 0 auto',
+                  width: 18,
+                  height: 18,
+                  borderRadius: '50%',
+                  border: '2px solid #cbd5e1',
+                  marginTop: 2,
+                }}
+              />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 600, color: '#334155', marginBottom: 2 }}>
+                  Chưa nhập kết quả thử
+                </div>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  KTV cần điền form <em>{item?.stepName}</em> để ghi nhận kết quả kiểm tra.
+                </Text>
+              </div>
+            </div>
+            {onOpenForm && (
+              <Button
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onOpenForm(item)
+                }}
+              >
+                Mở form nhập
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const InspectionResultList = ({ data, defaultExpanded = true, onOpenForm }) => {
   if (!data.length) {
-    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có dữ liệu" />
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có kết quả kiểm tra" />
   }
 
   return (
-    <Space direction="vertical" size={10} style={{ width: '100%' }}>
+    <Space direction="vertical" size={12} style={{ width: '100%' }}>
       {data.map((item, index) => (
-        <div
-          key={item?.id ?? index}
-          style={{
-            padding: 12,
-            border: '1px solid #eef1f5',
-            borderRadius: 8,
-            background: '#fff',
-          }}
-        >
-          <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ fontWeight: 600 }}>
-                {item?.name ?? item?.label ?? item?.title ?? `Kết quả ${index + 1}`}
-              </div>
-              <Text type="secondary">{item?.description ?? item?.note ?? item?.message ?? ''}</Text>
-            </div>
-            <Tag color={item?.success === false ? 'red' : 'green'}>
-              {item?.statusName ?? item?.status ?? item?.result ?? 'Đạt'}
-            </Tag>
-          </Space>
-        </div>
+        <InspectionResultCard
+          key={item?.id ?? item?.stepCode ?? index}
+          item={item}
+          index={index}
+          defaultExpanded={defaultExpanded}
+          onOpenForm={onOpenForm}
+        />
       ))}
     </Space>
+  )
+}
+
+const InspectionSummary = ({ data }) => {
+  const passCount = data.filter((item) => item?.status === 'pass').length
+  const failCount = data.filter((item) => item?.status === 'fail').length
+  const pendingCount = data.filter((item) => item?.status === 'pending').length
+
+  return (
+    <Text type="secondary" style={{ fontSize: 13 }}>
+      {passCount} đạt · {failCount} không đạt · {pendingCount} chưa xong
+    </Text>
   )
 }
 
@@ -1064,14 +1792,13 @@ const HistoryList = ({ data }) => {
 }
 
 const OrderProgressPage = () => {
-  const navigate = useNavigate()
   const location = useLocation()
   const params = useParams()
   const [searchParams] = useSearchParams()
   const { user } = useGetMe()
   const remoteFormRef = useRef(null)
   const [order, setOrder] = useState(location.state?.order ?? null)
-  const [workflowInstance, setWorkflowInstance] = useState(location.state?.workflowInstance ?? null)
+  const [workflowInstance, setWorkflowInstance] = useState(null)
   const [workflowPreview, setWorkflowPreview] = useState(null)
   const [workflowProcessDetail, setWorkflowProcessDetail] = useState(null)
   const [processTypes, setProcessTypes] = useState([])
@@ -1080,17 +1807,20 @@ const OrderProgressPage = () => {
   const [submittingForm, setSubmittingForm] = useState(false)
   const [transitioning, setTransitioning] = useState(false)
   const [selectedToStepCode, setSelectedToStepCode] = useState()
+  const [viewingStepCode, setViewingStepCode] = useState(null)
+  const [submissionTemplates, setSubmissionTemplates] = useState({})
+  const [lots, setLots] = useState([])
+  const [loadingLots, setLoadingLots] = useState(false)
+  const [selectedLot, setSelectedLot] = useState(null)
 
   const orderId = getValue(order?.id, params.orderId, searchParams.get('orderId'), searchParams.get('id'))
-  const instanceId = getValue(
-    workflowInstance?.id,
-    order?.workflowInstance?.id,
-    searchParams.get('instanceId'),
-  )
+  const instanceId = workflowInstance?.id
 
-  const fetchWorkflowPreview = useCallback(async ({ silent = false } = {}) => {
+  const fetchWorkflowPreview = useCallback(async ({ silent = false, keepPrevious = false } = {}) => {
     if (!instanceId) {
-      setWorkflowPreview(null)
+      if (!keepPrevious) {
+        setWorkflowPreview(null)
+      }
       return null
     }
 
@@ -1110,7 +1840,9 @@ const OrderProgressPage = () => {
 
       return preview
     } catch (error) {
-      setWorkflowPreview(null)
+      if (!keepPrevious) {
+        setWorkflowPreview(null)
+      }
       message.error(error?.message || 'Không tải được tiến trình workflow.')
       return null
     } finally {
@@ -1171,31 +1903,79 @@ const OrderProgressPage = () => {
   }, [location.state?.order, orderId])
 
   useEffect(() => {
-    if (workflowInstance?.id || !orderId) {
+    if (!orderId) {
+      setLots([])
       return undefined
     }
 
     let mounted = true
+    setLoadingLots(true)
 
-    RequestUtils.Post(WORKFLOW_INSTANCE_BY_ENTITY_API, {
-      entityName: 'order',
-      entityIds: [Number(orderId)],
+    RequestUtils.Get(ORDER_LOTS_FIND_API, {
+      entity: 'ORDER',
+      entityId: orderId,
     })
-      .then((response) => {
-        if (!mounted) return
-        const instance = resolveWorkflowInstances(response)[0] ?? null
-        if (instance) {
-          setWorkflowInstance(instance)
+      .then(async (response) => {
+        const orderLots = resolveOrderLots(response)
+        const lotIds = orderLots.map(lot => lot?.id).filter(Boolean)
+        let instancesByLotId = new Map()
+
+        if (lotIds.length > 0) {
+          try {
+            const workflowResponse = await RequestUtils.Post(WORKFLOW_INSTANCE_BY_ENTITY_API, {
+              entityName: LOT_WORKFLOW_ENTITY_TYPE,
+              entityIds: lotIds,
+            })
+
+            instancesByLotId = resolveWorkflowInstances(workflowResponse).reduce((result, instance) => {
+              const entityId = getValue(
+                instance?.entityId,
+                instance?.entity_id,
+                instance?.processInstance?.entityId,
+                instance?.processInstance?.entity_id,
+                instance?.workflowInstance?.entityId,
+                instance?.workflowInstance?.entity_id,
+              )
+              if (entityId !== undefined && entityId !== null && entityId !== '') {
+                result.set(String(entityId), instance?.processInstance ? { ...instance, ...instance.processInstance } : instance)
+              }
+              return result
+            }, new Map())
+          } catch (error) {
+            instancesByLotId = new Map()
+          }
         }
+
+        if (!mounted) return
+
+        const nextLots = orderLots.map(lot => ({
+          ...lot,
+          workflowInstance: instancesByLotId.get(String(lot?.id)) ?? lot.workflowInstance ?? null,
+        }))
+
+        setLots(nextLots)
+        const firstLot = nextLots[0] ?? null
+        setSelectedLot(firstLot)
+        setWorkflowInstance(firstLot?.workflowInstance ?? null)
+        setWorkflowPreview(null)
+        setWorkflowProcessDetail(null)
+        setViewingStepCode(null)
       })
       .catch((error) => {
-        console.error('[OrderProgress] workflow instance error', error)
+        if (!mounted) return
+        setLots([])
+        message.error(error?.message || 'Không tải được danh sách lô hàng.')
+      })
+      .finally(() => {
+        if (mounted) {
+          setLoadingLots(false)
+        }
       })
 
     return () => {
       mounted = false
     }
-  }, [orderId, workflowInstance?.id])
+  }, [orderId])
 
   useEffect(() => {
     fetchWorkflowPreview()
@@ -1212,10 +1992,6 @@ const OrderProgressPage = () => {
     previewStepProcess?.process_id,
     workflowInstance?.processId,
     workflowInstance?.process_id,
-    order?.workflowProcessId,
-    order?.workflow_process_id,
-    order?.processId,
-    order?.process_id,
   )
 
   useEffect(() => {
@@ -1249,11 +2025,8 @@ const OrderProgressPage = () => {
   const workflow = useMemo(() => (
     workflowProcessDetail
     ?? workflowPreview?.process
-    ?? order?.workflowProcess
-    ?? order?.process
-    ?? order?.workflow
     ?? (workflowProcessId ? { id: workflowProcessId } : {})
-  ), [workflowProcessDetail, workflowPreview, order, workflowProcessId])
+  ), [workflowProcessDetail, workflowPreview, workflowProcessId])
   const processTypeLabelMap = useMemo(
     () => buildProcessTypeLabelMap(processTypes),
     [processTypes]
@@ -1264,8 +2037,6 @@ const OrderProgressPage = () => {
     workflowPreview?.steps,
     previewStepProcess ? [previewStepProcess] : undefined,
     workflow?.steps,
-    order?.workflowSteps,
-    order?.steps,
   )
   const stepTransitions = getFirstArray(
     workflowPreview?.stepTransitions,
@@ -1280,11 +2051,16 @@ const OrderProgressPage = () => {
     () => buildStepTransitionOptions(stepTransitions, steps),
     [stepTransitions, steps]
   )
+  const stepTransitionList = getFirstArray(
+    workflowPreview?.stepTransitionList,
+    workflowPreview?.step_transition_list,
+    workflow?.stepTransitionList,
+    workflow?.step_transition_list,
+  )
   const currentStepCode = getValue(
     workflowInstance?.currentStepCode,
     workflowPreview?.processInstance?.currentStepCode,
     workflowPreview?.currentStepCode,
-    order?.currentStepCode,
   )
   const currentStep = getValue(
     workflowPreview?.currentStep,
@@ -1292,14 +2068,27 @@ const OrderProgressPage = () => {
     steps.find(step =>
       step?.current
       || step?.active
-      || isSameStepRef(step?.id, order?.currentStepId)
       || isSameStepRef(step?.stepCode, currentStepCode)
       || isSameStepRef(step?.code, currentStepCode),
     ),
-    order?.currentWorkflowStep,
-    order?.currentStep,
     steps[0],
   )
+
+  const displayStep = useMemo(() => {
+    if (!viewingStepCode) return currentStep
+    return findWorkflowStep(steps, viewingStepCode) ?? currentStep
+  }, [viewingStepCode, currentStep, steps])
+
+  const isReviewingSubmission = Boolean(
+    viewingStepCode
+    && !isSameStepRef(viewingStepCode, currentStep?.stepCode)
+    && !isSameStepRef(viewingStepCode, currentStep?.code)
+    && !isSameStepRef(viewingStepCode, currentStep?.id),
+  )
+
+  useEffect(() => {
+    setViewingStepCode(null)
+  }, [currentStepCode, instanceId])
 
   useEffect(() => {
     if (!stepTransitionOptions.length) {
@@ -1314,76 +2103,159 @@ const OrderProgressPage = () => {
       return stepTransitionOptions.length === 1 ? stepTransitionOptions[0].value : undefined
     })
   }, [stepTransitionOptions])
-  const formTemplates = getFirstArray(
+  const submissions = getFirstArray(
+    workflowPreview?.submissions,
+    order?.submissions,
+  )
+  const previewFormTemplates = getFirstArray(
     workflowPreview?.currentFormTemplates,
     workflowPreview?.formTemplates,
     currentStep?.formTemplate ? [currentStep.formTemplate] : undefined,
+    previewStepProcess?.formTemplate ? [previewStepProcess.formTemplate] : undefined,
     currentStep?.formTemplates,
     currentStep?.forms,
     order?.currentFormTemplates,
     order?.formTemplates,
     order?.forms,
   )
+  const formTemplates = useMemo(
+    () => [...previewFormTemplates, ...Object.values(submissionTemplates)],
+    [previewFormTemplates, submissionTemplates],
+  )
+
+  useEffect(() => {
+    const availableTemplateIds = new Set(
+      previewFormTemplates
+        .map((template) => resolveTemplateId(template))
+        .filter(Boolean)
+        .map(String),
+    )
+
+    const guardedStepTemplateIds = steps
+      .filter((step) => getGuardsForSourceStep(
+        getValue(step?.stepCode, step?.code),
+        stepTransitionList,
+      ).length > 0)
+      .map((step) => getStepTemplateId(step))
+      .filter(Boolean)
+      .map(String)
+
+    const missingIds = Array.from(new Set([
+      ...submissions
+        .map((submission) => submission?.templateId ?? submission?.template_id)
+        .filter(Boolean)
+        .map(String),
+      ...guardedStepTemplateIds,
+    ])).filter((id) => !availableTemplateIds.has(id) && !submissionTemplates[id])
+
+    if (!missingIds.length) return undefined
+
+    let mounted = true
+
+    Promise.all(missingIds.map(async (id) => {
+      try {
+        const response = await RequestUtils.Get(FORM_TEMPLATE_DETAIL_API, { id })
+        const template = response?.data ?? response
+        if (template && typeof template === 'object') {
+          return [id, template]
+        }
+      } catch (error) {
+        console.warn('[OrderProgress] fetch form template failed', id, error)
+      }
+      return null
+    })).then((entries) => {
+      if (!mounted) return
+      const validEntries = entries.filter(Boolean)
+      if (!validEntries.length) return
+      setSubmissionTemplates((prev) => ({
+        ...prev,
+        ...Object.fromEntries(validEntries),
+      }))
+    })
+
+    return () => {
+      mounted = false
+    }
+  }, [submissions, previewFormTemplates, submissionTemplates, steps, stepTransitionList])
+
   const currentForm = getValue(
     currentStep?.formTemplate,
+    previewStepProcess?.formTemplate,
     order?.currentForm,
     order?.requiredForm,
     formTemplates[0],
   )
-  const sourceComponent = getValue(currentForm?.sourceComponent, currentForm?.source_component)
+  const displayForm = useMemo(() => {
+    if (isSameStepRef(displayStep?.stepCode, previewStepProcess?.stepCode)
+      || isSameStepRef(displayStep?.id, previewStepProcess?.id)) {
+      return previewStepProcess?.formTemplate ?? currentForm
+    }
+
+    return getValue(
+      displayStep?.formTemplate,
+      formTemplates.find((template) => isSubmissionForTemplate(
+        findSubmissionForStep(submissions, displayStep),
+        template,
+      )),
+      currentForm,
+    )
+  }, [displayStep, previewStepProcess, currentForm, formTemplates, submissions])
+  const sourceComponent = getValue(displayForm?.sourceComponent, displayForm?.source_component, currentForm?.sourceComponent, currentForm?.source_component)
   const currentFormName = getValue(
-    currentForm?.name,
-    currentForm?.label,
-    currentForm?.title,
-    currentForm?.templateName,
-    currentForm?.template_name,
-    currentForm?.description,
+    displayForm?.name,
+    displayForm?.label,
+    displayForm?.title,
+    displayForm?.templateName,
+    displayForm?.template_name,
+    displayForm?.description,
+    getStepDisplayName(displayStep),
   )
   const remoteFormContainerRef = useRef(null)
   const remoteEntry = getValue(
     sourceComponent?.microFrontendUrl,
     sourceComponent?.micro_frontend_url,
+    displayForm?.remoteEntry,
+    displayForm?.remoteEntryUrl,
+    displayForm?.microFrontendUrl,
+    displayStep?.formUrl,
+    displayStep?.form_url,
     currentForm?.remoteEntry,
     currentForm?.remoteEntryUrl,
     currentForm?.microFrontendUrl,
     currentStep?.remoteEntry,
+    currentStep?.formUrl,
     order?.remoteEntry,
   )
   const remoteComponentId = getValue(
     sourceComponent?.componentId,
     sourceComponent?.component_id,
+    displayForm?.componentId,
+    displayForm?.component_id,
     currentForm?.componentId,
     currentForm?.component_id,
   )
   const remoteVersionKey = buildRemoteAlias(
-    resolveTemplateId(currentForm),
+    resolveTemplateId(displayForm),
     sourceComponent?.version,
     sourceComponent?.updatedDate,
     sourceComponent?.updated_date,
-    currentStep?.stepCode,
-    currentStep?.code,
+    displayStep?.stepCode,
+    displayStep?.code,
   )
   const remoteRenderKey = buildRemoteAlias(remoteComponentId, remoteEntry, remoteVersionKey)
-  const checkResults = getFirstArray(
-    workflowPreview?.checkResults,
-    workflowPreview?.inspectionResults,
-    order?.checkResults,
-    order?.inspectionResults,
-    order?.workflowCheckResults,
-    currentStep?.checkResults,
-    currentStep?.results,
-  )
+  const inspectionResults = useMemo(() => buildInspectionResults({
+    submissions,
+    steps,
+    stepTransitionList,
+    previewStepProcess,
+    formTemplates,
+  }), [submissions, steps, stepTransitionList, previewStepProcess, formTemplates])
   const histories = buildWorkflowHistoryItems({
     workflowPreview,
     workflowInstance,
-    order,
     workflow,
     steps,
   })
-  const submissions = getFirstArray(
-    workflowPreview?.submissions,
-    order?.submissions,
-  )
   const currentSubmission = submissions.find((item) =>
     isSubmissionForStep(item, currentStep) && isSubmissionForTemplate(item, currentForm)
   ) ?? submissions.find((item) =>
@@ -1391,11 +2263,14 @@ const OrderProgressPage = () => {
   ) ?? submissions.find((item) =>
     isSubmissionForTemplate(item, currentForm)
   )
+  const displaySubmission = useMemo(() => (
+    findSubmissionForStep(submissions, displayStep)
+  ), [submissions, displayStep])
+  const displaySubmissionValues = getSubmissionValues(displaySubmission)
   const currentSubmissionValues = getSubmissionValues(currentSubmission)
   const completedRefs = getFirstArray(
     workflowPreview?.processInstance?.completedSteps,
     workflowInstance?.completedSteps,
-    order?.workflowInstance?.completedSteps,
   )
   const submittedRefs = submissions.map((item) => getValue(item?.stepCode, item?.stepId, item?.step_id, item?.id))
   const hasCurrentSubmission = Boolean(currentSubmission)
@@ -1558,7 +2433,33 @@ const OrderProgressPage = () => {
     }
   }, [RemoteForm, handleRemoteFormSubmitError])
 
-  const orderInfoItems = useMemo(() => [
+  const handleReviewStep = useCallback((step) => {
+    const stepCode = getValue(step?.stepCode, step?.code, step?.id)
+    if (!stepCode) return
+    setViewingStepCode(String(stepCode))
+  }, [])
+
+  const handleReviewInspectionResult = useCallback((item) => {
+    if (!item?.stepCode) return
+    setViewingStepCode(String(item.stepCode))
+  }, [])
+
+  const handleBackToCurrentStep = useCallback(() => {
+    setViewingStepCode(null)
+  }, [])
+
+  const handleSelectLot = useCallback((lot) => {
+    if (!lot?.workflowInstance?.id) {
+      message.warning('Lô hàng này chưa có workflow.')
+      return
+    }
+
+    setSelectedLot(lot)
+    setWorkflowInstance(lot.workflowInstance)
+    setViewingStepCode(null)
+  }, [])
+
+  const customerInfoItems = useMemo(() => [
     {
       key: 'code',
       label: 'Mã đơn',
@@ -1566,7 +2467,7 @@ const OrderProgressPage = () => {
     },
     {
       key: 'customer',
-      label: 'Khách hàng',
+      label: 'Tên khách hàng',
       children: order?.customerReceiverName ?? order?.customerName ?? order?.customer?.name ?? '-',
     },
     {
@@ -1580,9 +2481,9 @@ const OrderProgressPage = () => {
       children: order?.customerAddress ?? order?.address ?? '-',
     },
     {
-      key: 'total',
-      label: 'Tổng tiền',
-      children: formatMoney(order?.total ?? 0),
+      key: 'owner',
+      label: 'Người phụ trách',
+      children: order?.userCreateUsername ?? order?.userName ?? order?.saleName ?? '-',
     },
     {
       key: 'createdAt',
@@ -1590,6 +2491,106 @@ const OrderProgressPage = () => {
       children: formatTime(order?.createdAt ?? order?.createdDate) || '-',
     },
   ], [order])
+
+  const orderDetailRows = useMemo(() => (
+    getFirstArray(order?.details, order?.data).map((item, index) => ({
+      ...item,
+      __rowKey: [
+        'order-detail',
+        getValue(item?.id, item?.code, item?.orderDetailId, item?.orderDetailCode, item?.productId, item?.productName, item?.name, 'row'),
+        index,
+      ].join('-'),
+    }))
+  ), [order])
+  const lotRows = useMemo(() => (
+    lots.map((item, index) => ({
+      ...item,
+      __rowKey: [
+        'lot',
+        getValue(item?.id, item?.code, item?.orderDetailId, item?.orderDetailCode, item?.name, 'row'),
+        index,
+      ].join('-'),
+    }))
+  ), [lots])
+  const orderDetailColumns = [
+    {
+      title: 'STT',
+      key: 'index',
+      width: 56,
+      render: (_, __, index) => index + 1,
+    },
+    {
+      title: 'Nội dung',
+      key: 'name',
+      render: (_, record) => record?.productName ?? record?.name ?? '-',
+    },
+    {
+      title: 'SL',
+      dataIndex: 'quantity',
+      key: 'quantity',
+      width: 90,
+      align: 'right',
+      render: value => value ?? 0,
+    },
+    {
+      title: 'Thành tiền',
+      key: 'total',
+      width: 130,
+      align: 'right',
+      render: (_, record) => formatMoney(getValue(record?.totalPrice, record?.total, (Number(record?.price ?? 0) * Number(record?.quantity ?? 0)))),
+    },
+  ]
+
+  const lotColumns = [
+    {
+      title: 'STT',
+      key: 'index',
+      width: 56,
+      render: (_, __, index) => index + 1,
+    },
+    {
+      title: 'Mã lô hàng',
+      dataIndex: 'code',
+      key: 'code',
+      width: 130,
+      render: value => value || '-',
+    },
+    {
+      title: 'Mã đơn con',
+      key: 'orderDetailCode',
+      width: 150,
+      render: (_, record) => record?.orderDetailCode ?? record?.order_detail_code ?? '-',
+    },
+    {
+      title: 'Tên lô hàng',
+      dataIndex: 'name',
+      key: 'name',
+      render: value => value || '-',
+    },
+    {
+      title: 'Ngày nhập lô',
+      dataIndex: 'expectedDate',
+      key: 'expectedDate',
+      width: 140,
+      render: value => formatTime(value) || '-',
+    },
+    {
+      title: 'Số lượng',
+      dataIndex: 'total',
+      key: 'total',
+      width: 110,
+      align: 'right',
+      render: value => value ?? 0,
+    },
+    {
+      title: 'Trạng thái',
+      key: 'status',
+      width: 150,
+      render: (_, record) => record?.workflowInstance?.id
+        ? <Tag color={String(selectedLot?.id) === String(record?.id) ? 'blue' : 'green'}>Có workflow</Tag>
+        : <Tag>Chưa có workflow</Tag>,
+    },
+  ]
 
   useEffect(() => {
     const container = remoteFormContainerRef.current
@@ -1618,6 +2619,134 @@ const OrderProgressPage = () => {
       <Helmet>
         <title>Tiến trình workflow đơn hàng</title>
       </Helmet>
+      <style>
+        {`
+          @media (min-width: 992px) {
+            .workflow-progress-main-col {
+              flex: 0 0 calc(100% - 384px) !important;
+              max-width: calc(100% - 384px) !important;
+            }
+
+            .workflow-progress-side-col {
+              flex: 0 0 384px !important;
+              max-width: 384px !important;
+            }
+          }
+
+          @media (max-width: 991px) {
+            .workflow-progress-main-col,
+            .workflow-progress-side-col {
+              flex: 0 0 100% !important;
+              max-width: 100% !important;
+            }
+
+            .workflow-progress-fixed-panel {
+              position: static !important;
+              width: 100% !important;
+              max-width: none !important;
+              min-width: 0 !important;
+              max-height: none !important;
+              overflow-y: visible !important;
+            }
+          }
+
+          .workflow-progress-layout {
+            display: flex;
+            align-items: flex-start;
+            width: 100%;
+          }
+
+          .workflow-progress-content-panel {
+            width: 100%;
+            padding: 18px 20px;
+            border: 1px solid #e5e7eb;
+            border-right: 0;
+            border-radius: 8px 0 0 8px;
+            background: #fff;
+          }
+
+          .workflow-progress-fixed-panel .ant-card {
+            width: 100%;
+            min-height: 100%;
+            height: 100%;
+            border-left: 1px solid #e5e7eb;
+            border-radius: 0 8px 8px 0 !important;
+            box-shadow: none !important;
+          }
+
+          .workflow-progress-section {
+            padding: 0;
+          }
+
+          .workflow-progress-section + .workflow-progress-section {
+            margin-top: 22px;
+            padding-top: 22px;
+            border-top: 1px solid #f0f2f5;
+          }
+
+          .workflow-progress-section-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+            color: #111827;
+            font-size: 15px;
+            font-weight: 700;
+          }
+
+          .workflow-progress-section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+          }
+
+          .workflow-progress-section-head .workflow-progress-section-title {
+            margin-bottom: 0;
+          }
+
+          .workflow-progress-content-panel .ant-card {
+            border: 0;
+            box-shadow: none;
+          }
+
+          .workflow-progress-content-panel .ant-card-head {
+            min-height: 0;
+            padding: 0;
+            border-bottom: 0;
+          }
+
+          .workflow-progress-content-panel .ant-card-body {
+            padding: 0;
+          }
+
+          .workflow-progress-content-panel .ant-table-wrapper .ant-table {
+            border-radius: 4px;
+          }
+
+          .workflow-progress-customer-info .ant-descriptions-item-container {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+          }
+
+          .workflow-progress-customer-info .ant-descriptions-item-label {
+            flex: 0 0 auto;
+            color: #6b7280;
+          }
+
+          .workflow-progress-customer-info .ant-descriptions-item-content {
+            flex: 1 1 auto;
+            justify-content: flex-end;
+            min-width: 0;
+            color: #111827;
+            font-weight: 600;
+            text-align: right;
+          }
+        `}
+      </style>
       <Breadcrumb
         style={{ marginBottom: 10 }}
         items={[
@@ -1629,40 +2758,102 @@ const OrderProgressPage = () => {
 
       <Spin spinning={loadingOrder || loadingPreview}>
         <div style={{ paddingBottom: 24 }}>
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate('/sale/order')}
-            style={{ marginBottom: 16 }}
-          >
-            Quay lại danh sách
-          </Button>
+          <Row gutter={0} align="top" className="workflow-progress-layout">
+            <Col xs={24} lg={16} className="workflow-progress-main-col">
+              <div className="workflow-progress-content-panel">
+                <div className="workflow-progress-section">
+                  <Row gutter={16}>
+                  <Col xs={24} lg={12}>
+                    <div>
+                      <div className="workflow-progress-section-title">Thông tin khách hàng</div>
+                      {order ? (
+                        <Descriptions
+                          className="workflow-progress-customer-info"
+                          size="small"
+                          column={1}
+                          items={customerInfoItems}
+                        />
+                      ) : (
+                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có dữ liệu đơn hàng" />
+                      )}
+                    </div>
+                  </Col>
+                  <Col xs={24} lg={12}>
+                    <div>
+                      <div className="workflow-progress-section-title">Thông tin đơn hàng</div>
+                      <Table
+                        rowKey="__rowKey"
+                        size="small"
+                        columns={orderDetailColumns}
+                        dataSource={orderDetailRows}
+                        pagination={false}
+                      />
+                      <div style={{ marginTop: 16 }}>
+                        <Descriptions
+                          size="small"
+                          column={1}
+                          items={[
+                            { key: 'total', label: 'Tổng chi phí', children: formatMoney(order?.total ?? 0) },
+                            { key: 'shipping', label: 'Phí vận chuyển', children: formatMoney(order?.shippingCost ?? 0) },
+                            { key: 'vat', label: 'VAT', children: formatMoney(Number(order?.total ?? 0) * (Number(order?.vat ?? 0) / 100)) },
+                            { key: 'discount', label: 'Chiết khấu', children: formatMoney(order?.priceOff ?? 0) },
+                            { key: 'paid', label: 'Đã thanh toán', children: formatMoney(order?.paid ?? 0) },
+                            { key: 'remaining', label: 'Còn lại', children: <Text strong type="success">{formatMoney(Number(order?.total ?? 0) - Number(order?.paid ?? 0))}</Text> },
+                          ]}
+                        />
+                      </div>
+                    </div>
+                  </Col>
+                  </Row>
+                </div>
 
-          <Row gutter={16} align="top">
-            <Col xs={24} lg={16}>
-              <Space direction="vertical" size={16} style={{ width: '100%' }}>
-                <Card title="Thông tin đơn hàng">
-                  {order ? (
-                    <Descriptions
-                      bordered
-                      size="small"
-                      column={{ xs: 1, sm: 1, md: 2, lg: 2, xl: 2, xxl: 2 }}
-                      items={orderInfoItems}
-                    />
-                  ) : (
-                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có dữ liệu đơn hàng" />
-                  )}
-                </Card>
+                <div className="workflow-progress-section">
+                  <div className="workflow-progress-section-title">Danh sách lô hàng đã tạo</div>
+                  <Table
+                    rowKey="__rowKey"
+                    size="small"
+                    loading={loadingLots}
+                    columns={lotColumns}
+                    dataSource={lotRows}
+                    pagination={false}
+                    onRow={(record) => ({
+                      onClick: () => handleSelectLot(record),
+                      style: {
+                        cursor: record?.workflowInstance?.id ? 'pointer' : 'not-allowed',
+                        background: String(selectedLot?.id) === String(record?.id) ? '#eff6ff' : undefined,
+                      },
+                    })}
+                  />
+                </div>
 
-                <Card
-                  title={(
-                    <Space>
+                <div className="workflow-progress-section">
+                  <div className="workflow-progress-section-head">
+                    <div className="workflow-progress-section-title">
                       <FormOutlined />
-                      <span>{currentFormName || 'Form bắt buộc tại bước'}</span>
-                    </Space>
+                      <span>
+                        {currentFormName || 'Form bắt buộc tại bước'}
+                        {selectedLot?.code ? ` - Lô ${selectedLot.code}` : ''}
+                      </span>
+                      {isReviewingSubmission && (
+                        <Tag color="blue">Đang xem lại</Tag>
+                      )}
+                    </div>
+                    {isReviewingSubmission ? (
+                      <Button type="link" onClick={handleBackToCurrentStep}>
+                        Quay lại bước hiện tại
+                      </Button>
+                    ) : null}
+                  </div>
+                  {isReviewingSubmission && !displaySubmission && (
+                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Bước này chưa có dữ liệu đã gửi" />
                   )}
-                >
-                  {!remoteEntry && (
+                  {!remoteEntry && !isReviewingSubmission && (
                     <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Bước hiện tại chưa có remoteEntry form" />
+                  )}
+                  {!remoteEntry && isReviewingSubmission && displaySubmission && (
+                    <InspectionResultList
+                      data={inspectionResults.filter((item) => isSameStepRef(item?.stepCode, viewingStepCode))}
+                    />
                   )}
                   {remoteEntry && loadingRemote && <Spin />}
                   {remoteEntry && remoteError && <RemoteFormErrorFallback message={remoteError} />}
@@ -1671,26 +2862,28 @@ const OrderProgressPage = () => {
                       <RemoteFormBoundary key={remoteRenderKey} remoteKey={remoteRenderKey}>
                         <RemoteFormHost
                           key={remoteRenderKey}
-                          ref={remoteFormRef}
+                          ref={isReviewingSubmission ? undefined : remoteFormRef}
                           Component={RemoteForm}
                           order={order}
                           record={order}
                           data={order}
-                          step={currentStep}
-                          formTemplate={currentForm}
-                          submission={currentSubmission}
-                          initialValues={currentSubmissionValues}
-                          values={currentSubmissionValues}
-                          defaultValues={currentSubmissionValues}
+                          step={displayStep}
+                          formTemplate={displayForm}
+                          submission={displaySubmission}
+                          initialValues={displaySubmissionValues}
+                          values={displaySubmissionValues}
+                          defaultValues={displaySubmissionValues}
+                          readOnly={isReviewingSubmission}
+                          disabled={isReviewingSubmission}
                           hideTitle
                           showTitle={false}
-                          onSubmit={handleRemoteFormSubmit}
+                          onSubmit={isReviewingSubmission ? undefined : handleRemoteFormSubmit}
                           onSubmitError={handleRemoteFormSubmitError}
                         />
                       </RemoteFormBoundary>
                     </div>
                   )}
-                  {remoteEntry && RemoteForm ? (
+                  {remoteEntry && RemoteForm && !isReviewingSubmission ? (
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
                       <Button
                         type="primary"
@@ -1702,38 +2895,44 @@ const OrderProgressPage = () => {
                       </Button>
                     </div>
                   ) : null}
-                </Card>
+                </div>
 
-                <Card title="Kết quả kiểm tra">
-                  <ResultList data={checkResults} />
-                </Card>
+                <div className="workflow-progress-section">
+                  <div className="workflow-progress-section-title">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <span>Kết quả kiểm tra</span>
+                      <InspectionSummary data={inspectionResults} />
+                    </div>
+                  </div>
+                  <InspectionResultList
+                    data={inspectionResults}
+                    onOpenForm={handleReviewInspectionResult}
+                  />
+                </div>
 
-                <Card title="Lịch sử chuyển bước">
+                <div className="workflow-progress-section">
+                  <div className="workflow-progress-section-title">Lịch sử chuyển bước</div>
                   <HistoryList data={histories} />
-                </Card>
-              </Space>
+                </div>
+              </div>
             </Col>
 
-            <Col xs={24} lg={8}>
+            <Col xs={24} lg={8} className="workflow-progress-side-col">
               <div
-                style={{
-                  position: 'fixed',
-                  top: 96,
-                  width: '25%',
-                  maxHeight: 'calc(100vh - 120px)',
-                  overflowY: 'auto',
-                  paddingRight: 4,
-                }}
+                className="workflow-progress-fixed-panel"
+                style={workflowFixedPanelStyle}
               >
                 <WorkflowProgressPanel
                   workflow={workflow}
-                  order={order}
                   steps={steps}
                   currentStep={currentStep}
                   currentStepCode={currentStepCode}
                   processTypeLabelMap={processTypeLabelMap}
                   completedRefs={completedRefs}
                   submittedRefs={submittedRefs}
+                  submissions={submissions}
+                  selectedStepCode={viewingStepCode}
+                  onStepClick={handleReviewStep}
                   currentForm={currentForm}
                   hasCurrentSubmission={hasCurrentSubmission}
                   transitioning={transitioning}

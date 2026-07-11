@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react'
-import { Button, Form, Input, InputNumber, Select, Switch } from 'antd'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { Button, Checkbox, Form, Input, InputNumber, Select, Switch } from 'antd'
 import { CloseOutlined } from '@ant-design/icons'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { PanelBody, SectionLabel } from './styles'
@@ -140,10 +140,62 @@ const normalizeFieldOption = (field = {}) => {
   if (value == null || value === '') return null
 
   return {
+    ...field,
     value: String(value),
     label: `${label ?? value}${type ? ` (${type})` : ''}`,
+    rawLabel: label ?? value,
+    inputType: type,
   }
 }
+
+const getFieldInputType = (field) => String(
+  field?.inputType
+  ?? field?.input_type
+  ?? field?.type
+  ?? '',
+).toLowerCase()
+
+const normalizeFieldConfigOptions = (field) => {
+  const options = field?.config?.options ?? field?.options ?? field?.resourceData ?? field?.resource_data ?? []
+  if (!Array.isArray(options)) return []
+
+  return options
+    .map((option) => {
+      if (option && typeof option === 'object') {
+        const value = option.value ?? option.key ?? option.id ?? option.code ?? option.label
+        const label = option.label ?? option.name ?? option.title ?? option.text ?? value
+        if (value === undefined || value === null || value === '') return null
+        return { value, label: String(label) }
+      }
+
+      if (option === undefined || option === null || option === '') return null
+      return { value: option, label: String(option) }
+    })
+    .filter(Boolean)
+}
+
+const isNumberFieldType = (type) => [
+  'number',
+  'input_number',
+  'inputnumber',
+  'decimal',
+  'integer',
+  'float',
+  'double',
+].includes(type)
+
+const isBooleanFieldType = (type) => [
+  'checkbox',
+  'switch',
+  'boolean',
+].includes(type)
+
+const isMultiValueFieldType = (type) => [
+  'multi_select',
+  'multiselect',
+  'multiple_select',
+  'checkbox_group',
+].includes(type)
 
 const getFormId = (form = {}) =>
   form.templateId ?? form.template_id ?? form.formId ?? form.form_id ?? form.id
@@ -369,6 +421,8 @@ const WebhookConfig = () => (
 const SetFieldConfig = ({
   fieldOptions,
   fieldsLoading,
+  selectedField,
+  onFieldChange,
   onTargetStepChange,
   stepOptions,
 }) => (
@@ -403,9 +457,75 @@ const SetFieldConfig = ({
         allowClear
         loading={fieldsLoading}
         disabled={fieldsLoading || fieldOptions.length === 0}
+        onChange={onFieldChange}
       />
     </Form.Item>
 
+    <SetFieldValueInput field={selectedField} />
+    <FieldHelp>Có thể là hằng (true, 3.5) hoặc expression {'{{values.field_key}}'}.</FieldHelp>
+  </>
+)
+
+const SetFieldValueInput = ({ field }) => {
+  const type = getFieldInputType(field)
+  const options = normalizeFieldConfigOptions(field)
+
+  if (options.length > 0) {
+    return (
+      <Form.Item
+        name={['config', 'value']}
+        label="Giá trị"
+        rules={[{ required: true, message: 'Chọn giá trị' }]}
+      >
+        <Select
+          mode={isMultiValueFieldType(type) ? 'multiple' : undefined}
+          showSearch
+          allowClear
+          options={options}
+          optionFilterProp="label"
+          placeholder={`— Chọn ${field?.rawLabel ?? 'giá trị'} —`}
+        />
+      </Form.Item>
+    )
+  }
+
+  if (isBooleanFieldType(type)) {
+    return (
+      <Form.Item
+        name={['config', 'value']}
+        label="Giá trị"
+        valuePropName="checked"
+      >
+        <Checkbox>Đánh dấu</Checkbox>
+      </Form.Item>
+    )
+  }
+
+  if (isNumberFieldType(type)) {
+    return (
+      <Form.Item
+        name={['config', 'value']}
+        label="Giá trị"
+        rules={[{ required: true, message: 'Nhập giá trị' }]}
+      >
+        <InputNumber style={{ width: '100%' }} placeholder="Nhập số" />
+      </Form.Item>
+    )
+  }
+
+  if (type === 'textarea' || type === 'text_area') {
+    return (
+      <Form.Item
+        name={['config', 'value']}
+        label="Giá trị"
+        rules={[{ required: true, message: 'Nhập giá trị' }]}
+      >
+        <TextArea rows={3} placeholder="Nhập giá trị hoặc {{values.field_key}}" />
+      </Form.Item>
+    )
+  }
+
+  return (
     <Form.Item
       name={['config', 'value']}
       label="Giá trị"
@@ -413,9 +533,8 @@ const SetFieldConfig = ({
     >
       <Input placeholder="true · KD-{{sample.id}} · {{values.wash_grade}}" />
     </Form.Item>
-    <FieldHelp>Có thể là hằng (true, 3.5) hoặc expression {'{{values.field_key}}'}.</FieldHelp>
-  </>
-)
+  )
+}
 
 const EmailOrSmsConfig = ({ type }) => (
   <>
@@ -510,33 +629,19 @@ const ActionDrawer = ({
   const actionConfig = ACTION_TYPE_DEFS[actionType]
   const trigger = initialValue?.trigger ?? 'on_enter'
   const stepOptions = buildStepOptions(nodes)
+  const selectedFieldName = Form.useWatch(['config', 'field_name'], localForm)
+  const selectedField = useMemo(
+    () => fieldOptions.find((field) => String(field.value) === String(selectedFieldName)) ?? null,
+    [fieldOptions, selectedFieldName],
+  )
 
-  useEffect(() => {
-    const nextType = normalizeActionType(initialValue?.type)
-    setActionType(nextType)
-    setFieldOptions([])
-    localForm.setFieldsValue({
-      type: nextType,
-      trigger,
-      config: {
-        ...getDefaultConfig(nextType),
-        ...(initialValue?.config ?? {}),
-      },
-    })
-  }, [initialValue, localForm, trigger])
-
-  const handleTypeChange = (nextType) => {
-    setActionType(nextType)
-    setFieldOptions([])
-    localForm.setFieldsValue({
-      type: nextType,
-      trigger,
-      config: getDefaultConfig(nextType),
-    })
-  }
-
-  const handleTargetStepChange = async (stepCode) => {
-    localForm.setFieldValue(['config', 'field_name'], undefined)
+  const handleTargetStepChange = useCallback(async (stepCode, options = {}) => {
+    if (!options.keepFieldValue) {
+      localForm.setFieldValue(['config', 'field_name'], undefined)
+    }
+    if (!options.keepValue) {
+      localForm.setFieldValue(['config', 'value'], undefined)
+    }
     setFieldOptions([])
 
     if (!stepCode) return
@@ -551,6 +656,39 @@ const ActionDrawer = ({
     } finally {
       setFieldsLoading(false)
     }
+  }, [localForm, nodes])
+
+  useEffect(() => {
+    const nextType = normalizeActionType(initialValue?.type)
+    setActionType(nextType)
+    setFieldOptions([])
+    localForm.setFieldsValue({
+      type: nextType,
+      trigger,
+      config: {
+        ...getDefaultConfig(nextType),
+        ...(initialValue?.config ?? {}),
+      },
+    })
+
+    const targetStep = initialValue?.config?.target_step
+    if (nextType === 'set_field' && targetStep) {
+      handleTargetStepChange(targetStep, { keepFieldValue: true, keepValue: true })
+    }
+  }, [handleTargetStepChange, initialValue, localForm, trigger])
+
+  const handleTypeChange = (nextType) => {
+    setActionType(nextType)
+    setFieldOptions([])
+    localForm.setFieldsValue({
+      type: nextType,
+      trigger,
+      config: getDefaultConfig(nextType),
+    })
+  }
+
+  const handleTargetFieldChange = () => {
+    localForm.setFieldValue(['config', 'value'], undefined)
   }
 
   const handleConfirm = () => {
@@ -574,6 +712,8 @@ const ActionDrawer = ({
         <SetFieldConfig
           fieldOptions={fieldOptions}
           fieldsLoading={fieldsLoading}
+          selectedField={selectedField}
+          onFieldChange={handleTargetFieldChange}
           onTargetStepChange={handleTargetStepChange}
           stepOptions={stepOptions}
         />

@@ -114,6 +114,12 @@ const SHARED_DEPS = {
     lib: () => FlastErpCore,
     shareConfig: { singleton: true, requiredVersion: "^1.0.23" },
   },
+  "@flast-erp/core/components": {
+    version: "1.0.23",
+    scope: "default",
+    lib: () => FlastErpCore,
+    shareConfig: { singleton: true, requiredVersion: "^1.0.23" },
+  },
 }
 
 function ensureInit() {

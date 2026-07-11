@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet'
 import { Breadcrumb, Layout, Input, Button, Modal, message, Select, Space, Spin } from 'antd'
 import {
@@ -29,18 +29,15 @@ import {
 } from '@/containers/WorkflowDesigner/styles'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { SUCCESS_CODE } from '@/configs'
-import { enrichWorkflowForms, flowToJson, jsonToFlow } from '@/utils/workflowSerializer'
+import { enrichFlowStepTypes, enrichWorkflowForms, flowToJson, jsonToFlow } from '@/utils/workflowSerializer'
+import useWorkflowStore from '@/store/workflowStore'
 import { normalizeWorkflowStepType, validateFlow } from '@/utils/workflowValidators'
 import { createUuidV7 } from '@/utils/uuid'
 
 const { Content } = Layout
 const PROCESS_TYPE_FIND_API = '/workflow/process/process-type-find'
-const BUSINESS_TYPE_OPTIONS = [
-  { label: 'Đơn hàng', value: 'ORDER' },
-  { label: 'Hành Chính', value: 'ADMINISTRATION' },
-  { label: 'Lead', value: 'LEAD' },
-  { label: 'Kho', value: 'WAREHOUSE' },
-]
+const CONFIG_FETCH_API = '/erp/config/fetch'
+const WORKFLOW_TYPE_CONFIG_KEY = 'TYPE_WORKFLOW'
 
 const DesignerTopBar = styled.div`
   padding: 8px 16px;
@@ -75,10 +72,51 @@ const getResponseDataArray = (response) => {
   return candidates.find(Array.isArray) ?? []
 }
 
+const parseConfigValueArray = (value) => {
+  if (Array.isArray(value)) return value
+  if (typeof value !== 'string') return []
+
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed : []
+  } catch (error) {
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+  }
+}
+
+const normalizeBusinessTypeOptions = (response) => {
+  const configItem = getResponseDataArray(response)
+    .find((item) => item?.key === WORKFLOW_TYPE_CONFIG_KEY) ?? getResponseDataArray(response)[0]
+
+  return parseConfigValueArray(configItem?.value)
+    .map((item) => {
+      if (item && typeof item === 'object') {
+        const value = item.key ?? item.code ?? item.id ?? item.value ?? item.name ?? item.label
+        const label = item.value ?? item.label ?? item.name ?? item.title ?? value
+        if (value === undefined || value === null || value === '') return null
+        return { value: String(value), label: String(label) }
+      }
+
+      if (item === undefined || item === null || item === '') return null
+      return { value: String(item), label: String(item) }
+    })
+    .filter(Boolean)
+}
+
 const normalizeProcessType = (item, index) => {
   const color = item?.colorCode ?? item?.color_code ?? item?.color ?? '#1677ff'
   const id = item?.id ?? item?.key ?? `process_type_${index + 1}`
-  const rawKey = item?.code ?? item?.processTypeCode ?? item?.process_type_code ?? item?.type ?? item?.key ?? id
+  // `item.type` từ API là loại nghiệp vụ workflow (ORDER, QMS, ...) — dùng chung cho mọi nhóm bước.
+  const rawKey = item?.code
+    ?? item?.processTypeCode
+    ?? item?.process_type_code
+    ?? item?.typeCode
+    ?? item?.type_code
+    ?? item?.key
+    ?? String(id)
   const label = item?.name ?? item?.label ?? `Loại bước ${index + 1}`
   const semanticType = normalizeWorkflowStepType(rawKey, [], {
     data: {
@@ -93,7 +131,8 @@ const normalizeProcessType = (item, index) => {
     id,
     key: uniqueKey,
     semanticType: canonicalTypes.includes(semanticType) ? semanticType : 'process',
-    rawKey: String(rawKey),
+    rawKey: uniqueKey,
+    workflowType: item?.type ?? item?.workflowType ?? item?.flowType ?? '',
     label,
     color,
     bgColor: hexToAlpha(color, 0.12),
@@ -103,13 +142,20 @@ const normalizeProcessType = (item, index) => {
   }
 }
 
-const WorkflowDesignerEditor = ({ onBack, onReloadStepTypes }) => {
+const WorkflowDesignerEditor = ({ businessTypeOptions = [], businessTypeLoading, onBack, onReloadStepTypes }) => {
   const process = useProcess()
   const nodes = useNodes()
   const edges = useEdges()
   const stepTypes = useStepTypes()
   const setProcess = useSetProcess()
   const [submitting, setSubmitting] = useState(false)
+  const displayBusinessTypeOptions = useMemo(() => {
+    if (!process.flowType) return businessTypeOptions
+    const hasCurrentValue = businessTypeOptions.some((item) => String(item.value) === String(process.flowType))
+    return hasCurrentValue
+      ? businessTypeOptions
+      : [{ value: process.flowType, label: process.flowType }, ...businessTypeOptions]
+  }, [businessTypeOptions, process.flowType])
 
   const buildSavePayload = useCallback(() => {
     const isNewProcess = !process.id && !process.processKey
@@ -202,9 +248,10 @@ const WorkflowDesignerEditor = ({ onBack, onReloadStepTypes }) => {
           <Select
             allowClear
             value={process.flowType ?? undefined}
-            options={BUSINESS_TYPE_OPTIONS}
+            options={displayBusinessTypeOptions}
             onChange={(value) => setProcess({ flowType: value })}
             placeholder="Loại nghiệp vụ"
+            loading={businessTypeLoading}
             style={{ width: 180 }}
           />
           <Space style={{ marginLeft: 'auto' }}>
@@ -243,11 +290,31 @@ const WorkflowDesignerPage = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [listVersion, setListVersion] = useState(0)
   const [loadingWorkflow, setLoadingWorkflow] = useState(false)
+  const [businessTypeOptions, setBusinessTypeOptions] = useState([])
+  const [businessTypeLoading, setBusinessTypeLoading] = useState(false)
   const hydratedWorkflowIdRef = useRef(null)
   const hydrateRequestRef = useRef(0)
   const view = searchParams.get('mode') === 'designer' ? 'designer' : 'list'
   const action = searchParams.get('action')
   const workflowId = searchParams.get('id')
+
+  const fetchBusinessTypeOptions = useCallback(async () => {
+    setBusinessTypeLoading(true)
+    try {
+      const response = await RequestUtils.Get(CONFIG_FETCH_API, {
+        limit: 10,
+        offset: 0,
+        page: 1,
+        key: WORKFLOW_TYPE_CONFIG_KEY,
+      })
+      setBusinessTypeOptions(normalizeBusinessTypeOptions(response))
+    } catch (error) {
+      setBusinessTypeOptions([])
+      message.warning('Không tải được cấu hình loại nghiệp vụ.')
+    } finally {
+      setBusinessTypeLoading(false)
+    }
+  }, [])
 
   const fetchProcessTypes = useCallback(async () => {
     try {
@@ -273,12 +340,15 @@ const WorkflowDesignerPage = () => {
   useEffect(() => {
     if (view === 'designer') {
       fetchProcessTypes()
+      fetchBusinessTypeOptions()
     }
-  }, [fetchProcessTypes, view])
+  }, [fetchBusinessTypeOptions, fetchProcessTypes, view])
 
   const loadWorkflowDetail = useCallback(async (detail) => {
-    const flow = jsonToFlow(ensureWorkflowPayload(detail))
-    const enrichedFlow = await enrichWorkflowForms(flow)
+    const stepTypes = useWorkflowStore.getState().stepTypes
+    const flow = jsonToFlow(ensureWorkflowPayload(detail), stepTypes)
+    const flowWithStepTypes = enrichFlowStepTypes(flow, stepTypes)
+    const enrichedFlow = await enrichWorkflowForms(flowWithStepTypes)
     loadFlow(enrichedFlow)
     return enrichedFlow
   }, [loadFlow])
@@ -299,6 +369,7 @@ const WorkflowDesignerPage = () => {
     const hydrateFromUrl = async () => {
       setLoadingWorkflow(true)
       try {
+        await fetchProcessTypes()
         const detail = await fetchWorkflowDetail({ id: workflowId })
         if (!mounted || requestId !== hydrateRequestRef.current) return
         await loadWorkflowDetail(detail)
@@ -321,7 +392,7 @@ const WorkflowDesignerPage = () => {
     return () => {
       mounted = false
     }
-  }, [view, action, workflowId, loadWorkflowDetail, setSearchParams])
+  }, [view, action, workflowId, fetchProcessTypes, loadWorkflowDetail, setSearchParams])
 
   const handleCreate = useCallback(() => {
     hydratedWorkflowIdRef.current = null
@@ -331,6 +402,7 @@ const WorkflowDesignerPage = () => {
 
   const handleEdit = useCallback(async (detail) => {
     try {
+      await fetchProcessTypes()
       await loadWorkflowDetail(detail)
       const id = getWorkflowIdFromPayload(detail)
       if (id != null && id !== '') {
@@ -344,7 +416,7 @@ const WorkflowDesignerPage = () => {
     } catch (error) {
       message.error(error?.message || 'Dữ liệu workflow không hợp lệ.')
     }
-  }, [loadWorkflowDetail, setSearchParams])
+  }, [fetchProcessTypes, loadWorkflowDetail, setSearchParams])
 
   const handleBack = useCallback(() => {
     hydratedWorkflowIdRef.current = null
@@ -361,7 +433,14 @@ const WorkflowDesignerPage = () => {
       )
     }
 
-    return <WorkflowDesignerEditor onBack={handleBack} onReloadStepTypes={fetchProcessTypes} />
+    return (
+      <WorkflowDesignerEditor
+        businessTypeOptions={businessTypeOptions}
+        businessTypeLoading={businessTypeLoading}
+        onBack={handleBack}
+        onReloadStepTypes={fetchProcessTypes}
+      />
+    )
   }
 
   return (
