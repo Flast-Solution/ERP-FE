@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Form, message } from 'antd';
-import { SaveOutlined } from '@ant-design/icons';
+import { DeleteOutlined, SaveOutlined } from '@ant-design/icons';
 import {
   CustomButton,
+  CustomButtonIcon,
+  FormDatePicker,
   FormInput,
   FormSelect,
 } from '@flast-erp/core/components';
@@ -12,6 +14,7 @@ const CreateOrder = ({
   initialValues,
   waitingOrders = [],
   waitingOrderLoading = false,
+  onSearchWaitingOrders,
   onLoadMoreWaitingOrders,
   onNext,
   onCancel,
@@ -23,11 +26,15 @@ const CreateOrder = ({
   useEffect(() => {
     if (!initialValues?.salesOrderId) return
     const order = waitingOrders.find(item => String(item.id) === String(initialValues.salesOrderId))
-    if (order) setSelectedOrder(order)
-  }, [initialValues?.salesOrderId, waitingOrders])
+    if (order) {
+      setSelectedOrder(initialValues?.orderDetails
+        ? { ...order, details: initialValues.orderDetails }
+        : order)
+    }
+  }, [initialValues?.salesOrderId, initialValues?.orderDetails, waitingOrders])
   const handleSubmit = (values) => {
     if (onNext) {
-      onNext(values)
+      onNext({ ...values, orderDetails: selectedOrder?.details ?? [] })
       return
     }
     notify('Đã tạo lệnh sản xuất')
@@ -53,11 +60,15 @@ const CreateOrder = ({
               valueProp="id"
               titleProp="code"
               loading={waitingOrderLoading}
+              showSearch
+              filterOption={false}
+              onSearch={onSearchWaitingOrders}
               formatText={(code, item) => [code, item?.customerReceiverName].filter(Boolean).join(' · ')}
               onChange={(value) => {
                 const selectedOrder = waitingOrders.find(item => String(item.id) === String(value))
                 setSelectedOrder(selectedOrder ?? null)
                 form.setFieldValue('customerName', selectedOrder?.customerReceiverName)
+                form.setFieldValue('productDetails', undefined)
               }}
               onPopupScroll={(event) => {
                 const target = event.currentTarget
@@ -77,14 +88,39 @@ const CreateOrder = ({
           ) : selectedOrder.details.map((product, productIndex) => (
             <div className="product-block" key={product.id ?? productIndex}>
               <div className="product-block__title">
-                <span>{product.productName || product.name || `Sản phẩm ${productIndex + 1}`}</span>
-                {product.code && <span className="product-block__code">{product.code}</span>}
+                <div>
+                  <span>{product.productName || product.name || `Sản phẩm ${productIndex + 1}`}</span>
+                  {product.code && <span className="product-block__code">{product.code}</span>}
+                </div>
+                <CustomButtonIcon
+                  title="Xóa sản phẩm"
+                  icon={<DeleteOutlined />}
+                  buttonProps={{ danger: true, size: 'small' }}
+                  handleClick={() => setSelectedOrder(current => ({
+                    ...current,
+                    details: current.details.filter((_, index) => index !== productIndex),
+                  }))}
+                />
               </div>
               <div className="grid">
+                <FormInput
+                  required
+                  name={['productDetails', String(product.id ?? productIndex), 'quantity']}
+                  label="Số lượng sản xuất"
+                  placeholder="Nhập số lượng sản xuất"
+                  initialValue={product.quantity}
+                />
+                <FormDatePicker
+                  required
+                  name={['productDetails', String(product.id ?? productIndex), 'deadline']}
+                  label="Deadline giao hàng"
+                  placeholder="Chọn deadline giao hàng"
+                  format="DD/MM/YYYY"
+                />
                 {(product.skuDetails ?? []).map((attribute, attributeIndex) => (
                   <FormInput
                     key={`${product.id ?? productIndex}-${attributeIndex}`}
-                    name={['productDetails', productIndex, 'skuDetails', attributeIndex]}
+                    name={['productDetails', String(product.id ?? productIndex), 'skuDetails', attributeIndex]}
                     label={attribute.text}
                     initialValue={(attribute.values ?? []).map(value => value.text).filter(Boolean).join(', ')}
                     readOnly
