@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Form, message, Table } from 'antd';
-import { DeleteOutlined, PlusOutlined, RightOutlined, SaveOutlined } from '@ant-design/icons';
+import { DeleteOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons';
 import {
   CustomButton,
   CustomButtonIcon,
@@ -9,7 +9,7 @@ import {
 } from '@flast-erp/core/components';
 import ProductionPage from './styles';
 
-const BomConfirmation = () => {
+const BomConfirmation = ({ productionOrder, onConfirm, onCancel, onBack }) => {
   const [rows, setRows] = useState([]);
   const remove = id => setRows(value => value.filter(row => row.id !== id));
   const add = () => setRows(value => [...value,{id:Date.now(),name:'',lot:'',qty:''}]);
@@ -41,14 +41,20 @@ const BomConfirmation = () => {
       render: (_, row) => <CustomButtonIcon title="Xóa dòng" icon={<DeleteOutlined />} handleClick={() => remove(row.id)} />,
     },
   ];
+  const handleSubmit = (values) => {
+    if (onConfirm) {
+      onConfirm({ productionOrder, materialConfirmation: values })
+      return
+    }
+    message.success('Đã xác nhận và phân bổ vật tư')
+  }
 
   return <ProductionPage>
     <div className="production-card">
       <header className="page-head">
-        <div className="crumb"><span>Kiểm soát sản xuất</span><RightOutlined /><span className="current">Xác nhận BOM + phân bổ vật tư</span></div>
         <div className="head-row"><div><h1>Xác nhận BOM + phân bổ vật tư</h1><div className="subtitle">WF2 Sản xuất · ISO 9001:2015 §8.5</div></div></div>
       </header>
-      <Form layout="vertical" onFinish={() => message.success('Đã xác nhận và phân bổ vật tư')}>
+      <Form layout="vertical" onFinish={handleSubmit}>
       <div className="body">
         <section className="section">
           <div className="section-head"><span className="section-no">1</span><h2>Phiên bản BOM</h2></div>
@@ -69,7 +75,7 @@ const BomConfirmation = () => {
         </section>
         <section className="section"><div className="grid"><FormSelect required name="confirmedBy" label="Người xác nhận" placeholder="Chọn người xác nhận" resourceData={[]} /></div></section>
       </div>
-      <footer className="foot"><span className="foot-note">BOM phải được duyệt để submit. Tồn kho thiếu cần Production Manager phê duyệt.</span><div className="actions"><CustomButton title="Lưu nháp" variant="outlined" color="default" inRigth={false} onClick={()=>message.success('Đã lưu nháp')} /><CustomButton title="Xác nhận & phân bổ" type="primary" htmlType="submit" icon={<SaveOutlined />} inRigth={false} /></div></footer>
+      <footer className="foot"><span className="foot-note">Bước 2/2 · Hủy bước này sẽ hủy toàn bộ lệnh sản xuất vừa nhập.</span><div className="actions"><CustomButton title="Quay lại" variant="text" color="default" inRigth={false} onClick={onBack} /><CustomButton title="Hủy lệnh" danger variant="outlined" color="danger" inRigth={false} onClick={onCancel} /><CustomButton title="Xác nhận & tạo lệnh" type="primary" htmlType="submit" icon={<SaveOutlined />} inRigth={false} /></div></footer>
       </Form>
     </div>
   </ProductionPage>;

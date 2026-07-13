@@ -1,6 +1,6 @@
 import React from 'react';
 import { Form, message } from 'antd';
-import { RightOutlined, SaveOutlined } from '@ant-design/icons';
+import { SaveOutlined } from '@ant-design/icons';
 import {
   CustomButton,
   FormDatePicker,
@@ -17,16 +17,22 @@ const PRIORITIES = [
   { value: 'low', name: 'Thấp' },
 ];
 
-const CreateOrder = () => {
+const CreateOrder = ({ initialValues, onNext, onCancel }) => {
   const notify = (text) => message.success(text);
+  const handleSubmit = (values) => {
+    if (onNext) {
+      onNext(values)
+      return
+    }
+    notify('Đã tạo lệnh sản xuất')
+  }
 
   return <ProductionPage>
     <div className="production-card">
       <header className="page-head">
-        <div className="crumb"><span>Kiểm soát sản xuất</span><RightOutlined /><span className="current">Tạo lệnh sản xuất</span></div>
         <div className="head-row"><div><h1>Tạo lệnh sản xuất</h1><div className="subtitle">WF2 Sản xuất · ISO 9001:2015 §8.5</div></div></div>
       </header>
-      <Form layout="vertical" onFinish={() => notify('Đã tạo lệnh sản xuất')}>
+      <Form layout="vertical" initialValues={initialValues} onFinish={handleSubmit}>
       <div className="body">
         <section className="section">
           <div className="section-head"><span className="section-no">1</span><h2>Đơn hàng khách</h2></div>
@@ -51,7 +57,7 @@ const CreateOrder = () => {
           </div>
         </section>
       </div>
-      <footer className="foot"><span className="foot-note">Trường bắt buộc đánh dấu *. Submit sẽ tạo lệnh SX và chuyển sang xác nhận BOM.</span><div className="actions"><CustomButton title="Lưu nháp" variant="outlined" color="default" inRigth={false} onClick={()=>notify('Đã lưu nháp')} /><CustomButton title="Tạo lệnh SX" type="primary" htmlType="submit" icon={<SaveOutlined />} inRigth={false} /></div></footer>
+      <footer className="foot"><span className="foot-note">Bước 1/2 · Sau khi tiếp tục, bạn cần xác nhận BOM và phân bổ vật tư.</span><div className="actions"><CustomButton title="Hủy" variant="outlined" color="default" inRigth={false} onClick={onCancel} /><CustomButton title="Tiếp tục xác nhận vật tư" type="primary" htmlType="submit" icon={<SaveOutlined />} inRigth={false} /></div></footer>
       </Form>
     </div>
   </ProductionPage>;

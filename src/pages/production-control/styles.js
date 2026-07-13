@@ -6,14 +6,15 @@ const ProductionPage = styled.div`
   --muted: #64748b;
   color: #172033;
   font-size: 14px;
-  max-width: 1420px;
+  max-width: none;
   margin: 0 auto;
 
   .production-card {
+    min-height: 100vh;
     background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, .05);
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
     overflow: hidden;
   }
   .page-head { padding: 20px 24px; background: #fbfcfe; border-bottom: 1px solid var(--border); }
