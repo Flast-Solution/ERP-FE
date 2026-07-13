@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet'
 import { Modal, Table, message } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
@@ -25,40 +25,64 @@ const ProductionOrderList = () => {
   const [waitingOrderTotal, setWaitingOrderTotal] = useState(0)
   const [waitingOrderLoading, setWaitingOrderLoading] = useState(false)
   const waitingOrderLoadingRef = useRef(false)
+  const waitingOrderRequestIdRef = useRef(0)
+  const waitingOrderSearchRef = useRef('')
+  const waitingOrderSearchTimerRef = useRef(null)
 
-  const fetchWaitingOrders = async ({ page = 1, reset = false } = {}) => {
-    if (waitingOrderLoadingRef.current) return
+  const fetchWaitingOrders = async ({ page = 1, reset = false, force = false } = {}) => {
+    if (waitingOrderLoadingRef.current && !force) return
 
+    const requestId = ++waitingOrderRequestIdRef.current
     waitingOrderLoadingRef.current = true
     setWaitingOrderLoading(true)
     try {
       const response = await RequestUtils.Get('/erp/order/fetch', {
         limit: 10,
         page,
-        type: 'cohoi',
-        code: 'OVGY1326FJM',
+        type: 'ODER',
+        ...(waitingOrderSearchRef.current ? { code: waitingOrderSearchRef.current } : {}),
       })
       const embedded = response?.data?.embedded ?? []
       const totalElements = Number(response?.data?.page?.totalElements ?? embedded.length)
+      if (requestId !== waitingOrderRequestIdRef.current) return
       setWaitingOrders(current => reset ? embedded : [
         ...current,
         ...embedded.filter(item => !current.some(existing => String(existing.id) === String(item.id))),
       ])
       setWaitingOrderTotal(totalElements)
     } finally {
-      waitingOrderLoadingRef.current = false
-      setWaitingOrderLoading(false)
+      if (requestId === waitingOrderRequestIdRef.current) {
+        waitingOrderLoadingRef.current = false
+        setWaitingOrderLoading(false)
+      }
     }
   }
 
   const openFlow = () => {
+    waitingOrderSearchRef.current = ''
     setWaitingOrders([])
     setWaitingOrderTotal(0)
-    fetchWaitingOrders({ page: 1, reset: true }).catch(() => undefined)
+    fetchWaitingOrders({ page: 1, reset: true, force: true }).catch(() => undefined)
     setPendingOrder(null)
     setStep(1)
     setOpen(true)
   }
+
+  const searchWaitingOrders = (code) => {
+    if (waitingOrderSearchTimerRef.current) {
+      clearTimeout(waitingOrderSearchTimerRef.current)
+    }
+    waitingOrderSearchTimerRef.current = setTimeout(() => {
+      waitingOrderSearchRef.current = String(code ?? '').trim()
+      fetchWaitingOrders({ page: 1, reset: true, force: true }).catch(() => undefined)
+    }, 300)
+  }
+
+  useEffect(() => () => {
+    if (waitingOrderSearchTimerRef.current) {
+      clearTimeout(waitingOrderSearchTimerRef.current)
+    }
+  }, [])
 
   const closeFlow = () => {
     setOpen(false)
@@ -119,6 +143,7 @@ const ProductionOrderList = () => {
             initialValues={pendingOrder}
             waitingOrders={waitingOrders}
             waitingOrderLoading={waitingOrderLoading}
+            onSearchWaitingOrders={searchWaitingOrders}
             onLoadMoreWaitingOrders={() => {
               if (waitingOrders.length < waitingOrderTotal) {
                 fetchWaitingOrders({ page: Math.floor(waitingOrders.length / 10) + 1 }).catch(() => undefined)
