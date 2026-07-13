@@ -107,6 +107,25 @@ export const ActionItem = styled.div`
     background: #f5faff;
     border-color: #91caff;
   }
+
+  > div:first-child {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .action-item-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .action-item-actions .ant-btn {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+  }
 `
 
 export const ActionItemLabel = styled.div`

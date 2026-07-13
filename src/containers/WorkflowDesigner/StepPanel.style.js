@@ -134,6 +134,32 @@ export const WorkflowStatusRow = styled.div`
   border-radius: 8px;
   background: #fafafa;
   flex-shrink: 0;
+
+  .workflow-status-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .status-config-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: #8c8c8c;
+    cursor: pointer;
+  }
+
+  .status-config-button:hover {
+    color: #1677ff;
+    background: #e6f4ff;
+  }
 `
 
 export const WorkflowStatusText = styled.div`

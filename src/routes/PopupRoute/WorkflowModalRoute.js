@@ -13,6 +13,11 @@ const WorkflowModalRoute = [
     path: 'workflow.step.attach-form',
     Component: React.lazy(() => import('@/containers/WorkflowDesigner/ModalAttachForm')),
     modalOptions: { title: '', width: 680 },
+  },
+  {
+    path: 'workflow.status.config',
+    Component: React.lazy(() => import('@/containers/WorkflowDesigner/ModalStatusConfig')),
+    modalOptions: { title: '', width: 680 },
   }
 ]
 

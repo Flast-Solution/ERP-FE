@@ -56,17 +56,19 @@ const ActionSection = ({ title, trigger, actions, onAdd, onOpen, onRemove }) => 
                 </ActionItemLabel>
                 <ActionItemMeta>{trigger}</ActionItemMeta>
               </div>
-              <Button
-                type="text"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  onRemove(globalIdx)
-                }}
-              />
-              <RightOutlined style={{ fontSize: 11, color: '#bfbfbf' }} />
+              <div className="action-item-actions">
+                <Button
+                  type="text"
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onRemove(globalIdx)
+                  }}
+                />
+                <RightOutlined style={{ fontSize: 11, color: '#bfbfbf' }} />
+              </div>
             </ActionItem>
           )
         })

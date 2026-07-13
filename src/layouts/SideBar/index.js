@@ -34,7 +34,7 @@ import {
   ScheduleOutlined,
   AppstoreOutlined,
   AuditOutlined,
-  OpenAIOutlined,
+  // OpenAIOutlined,
   TeamOutlined,
   SettingOutlined,
   UserOutlined,
@@ -143,14 +143,16 @@ function SideBar() {
     getItem('Qui trình', 'business_flow', <DollarCircleFilled />, [
       getItem(<Link to="/workflow-designer">Tạo nghiệp vụ</Link>, 'business_create', <UnorderedListOutlined />),
       getItem(<Link to="/workflow-forms">Danh sách form</Link>, 'workflow_form_list', <UnorderedListOutlined />),
-      getItem(<Link to="/workflow-form">Tạo Form nhập</Link>, 'workflow_form', <UnorderedListOutlined />),
+      // Tạm ẩn: trong danh sách form đã có nút tạo mới.
+      // getItem(<Link to="/workflow-form">Tạo Form nhập</Link>, 'workflow_form', <UnorderedListOutlined />),
       getItem(<Link to="/sale/drag-drop-order">Quy trình đơn</Link>, 'business_order', <ForkOutlined />),
     ]),
     getItem('Kế toán', 'need_solve', <DollarCircleFilled />, [
       getItem(<Link to="/ke-toan/confirm">Duyệt tiền</Link>, 'list_order_update', <UnorderedListOutlined />),
       getItem(<Link to="/ke-toan/cong-no">Công nợ</Link>, 'can_giai_quyet', <BankOutlined />)
     ]),
-    getItem(<Link to="/ai-agent">Trợ lý Ai</Link>, 'ai-agent', <OpenAIOutlined />),
+    // Tạm ẩn menu Trợ lý AI.
+    // getItem(<Link to="/ai-agent">Trợ lý Ai</Link>, 'ai-agent', <OpenAIOutlined />),
     getItem('Khách hàng', 'client', <WalletOutlined />, [
       getItem(<Link to="/sale/m-customer">Khách lẻ</Link>, 'customer', <GroupOutlined />),
       getItem(<Link to="/customer/enterprise">Doanh nghiệp</Link>, 'enterprice', <GroupOutlined />)
@@ -169,11 +171,12 @@ function SideBar() {
       getItem(<Link to="/material/bom">Lệnh S.Xuất</Link>, 'material.bom', <FolderOpenOutlined />),
       getItem(<Link to="/sale/order-production">ĐH đang sản xuất</Link>, 'order.production', <BuildOutlined />),
     ]),
-    getItem('Quản lý QC', 'qc_management', <AuditOutlined />, [
-      getItem(<Link to="/qc/criteria">Tiêu chí</Link>, 'qc_criteria', <UnorderedListOutlined />),
-      getItem(<Link to="/qc/checklist">Bộ tiêu chí</Link>, 'qc_checklist', <OrderedListOutlined />),
-      getItem(<Link to="/qc/defect">Danh sách lỗi</Link>, 'qc_defect', <DeleteOutlined />)
-    ]),
+    // Tạm ẩn menu Quản lý QC.
+    // getItem('Quản lý QC', 'qc_management', <AuditOutlined />, [
+    //   getItem(<Link to="/qc/criteria">Tiêu chí</Link>, 'qc_criteria', <UnorderedListOutlined />),
+    //   getItem(<Link to="/qc/checklist">Bộ tiêu chí</Link>, 'qc_checklist', <OrderedListOutlined />),
+    //   getItem(<Link to="/qc/defect">Danh sách lỗi</Link>, 'qc_defect', <DeleteOutlined />)
+    // ]),
     getItem('Web', 'web', <FileWordOutlined />, [
       getItem(<Link to="/category/san-pham">D.Mục sản phẩm</Link>, 'cate-san-pham', <span> - </span>),
       getItem(<Link to="/category/tin-tuc">D.Mục tin tức</Link>, 'cate-tin-tuc', <span> - </span>),

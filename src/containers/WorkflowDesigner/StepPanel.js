@@ -1,6 +1,6 @@
 import React from 'react'
 import { Empty, Switch, Tooltip } from 'antd'
-import { PlusOutlined } from '@ant-design/icons'
+import { PlusOutlined, SettingOutlined } from '@ant-design/icons'
 import {
   useNodes,
   useProcess,
@@ -104,6 +104,18 @@ const StepPanel = ({ onReloadStepTypes }) => {
     })
   }
 
+  const handleOpenStatusConfig = () => {
+    InAppEvent.emit(HASH_POPUP, {
+      hash: 'workflow.status.config',
+      title: '',
+      data: {
+        stepTypes,
+        configurations: process.statusConfigurations ?? [],
+        onSave: (statusConfigurations) => setProcess({ statusConfigurations }),
+      },
+    })
+  }
+
   return (
     <PanelContainer>
 
@@ -172,12 +184,19 @@ const StepPanel = ({ onReloadStepTypes }) => {
           <WorkflowStatusLabel>Trạng thái</WorkflowStatusLabel>
           <WorkflowStatusValue>{isWorkflowActive ? 'Đang kích hoạt' : 'Tạm ngưng'}</WorkflowStatusValue>
         </WorkflowStatusText>
-        <Switch
-          checked={isWorkflowActive}
-          checkedChildren="Bật"
-          unCheckedChildren="Tắt"
-          onChange={(checked) => setProcess({ status: checked ? 1 : 0 })}
-        />
+        <div className="workflow-status-actions">
+          <Tooltip title="Cấu hình trạng thái">
+            <button className="status-config-button" type="button" onClick={handleOpenStatusConfig}>
+              <SettingOutlined />
+            </button>
+          </Tooltip>
+          <Switch
+            checked={isWorkflowActive}
+            checkedChildren="Bật"
+            unCheckedChildren="Tắt"
+            onChange={(checked) => setProcess({ status: checked ? 1 : 0 })}
+          />
+        </div>
       </WorkflowStatusRow>
 
     </PanelContainer>
