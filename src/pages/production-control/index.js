@@ -1,8 +1,9 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { Helmet } from 'react-helmet'
 import { Modal, Table, message } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import { BreadcrumbCustom, CustomButton } from '@flast-erp/core/components'
+import { RequestUtils } from '@flast-erp/core/utils'
 import CreateOrder from './CreateOrder'
 import BomConfirmation from './BomConfirmation'
 
@@ -20,8 +21,40 @@ const ProductionOrderList = () => {
   const [step, setStep] = useState(1)
   const [pendingOrder, setPendingOrder] = useState(null)
   const [orders, setOrders] = useState([])
+  const [waitingOrders, setWaitingOrders] = useState([])
+  const [waitingOrderTotal, setWaitingOrderTotal] = useState(0)
+  const [waitingOrderLoading, setWaitingOrderLoading] = useState(false)
+  const waitingOrderLoadingRef = useRef(false)
+
+  const fetchWaitingOrders = async ({ page = 1, reset = false } = {}) => {
+    if (waitingOrderLoadingRef.current) return
+
+    waitingOrderLoadingRef.current = true
+    setWaitingOrderLoading(true)
+    try {
+      const response = await RequestUtils.Get('/erp/order/fetch', {
+        limit: 10,
+        page,
+        type: 'cohoi',
+        code: 'OVGY1326FJM',
+      })
+      const embedded = response?.data?.embedded ?? []
+      const totalElements = Number(response?.data?.page?.totalElements ?? embedded.length)
+      setWaitingOrders(current => reset ? embedded : [
+        ...current,
+        ...embedded.filter(item => !current.some(existing => String(existing.id) === String(item.id))),
+      ])
+      setWaitingOrderTotal(totalElements)
+    } finally {
+      waitingOrderLoadingRef.current = false
+      setWaitingOrderLoading(false)
+    }
+  }
 
   const openFlow = () => {
+    setWaitingOrders([])
+    setWaitingOrderTotal(0)
+    fetchWaitingOrders({ page: 1, reset: true }).catch(() => undefined)
     setPendingOrder(null)
     setStep(1)
     setOpen(true)
@@ -84,6 +117,13 @@ const ProductionOrderList = () => {
         {step === 1 ? (
           <CreateOrder
             initialValues={pendingOrder}
+            waitingOrders={waitingOrders}
+            waitingOrderLoading={waitingOrderLoading}
+            onLoadMoreWaitingOrders={() => {
+              if (waitingOrders.length < waitingOrderTotal) {
+                fetchWaitingOrders({ page: Math.floor(waitingOrders.length / 10) + 1 }).catch(() => undefined)
+              }
+            }}
             onCancel={closeFlow}
             onNext={(values) => {
               setPendingOrder(values)

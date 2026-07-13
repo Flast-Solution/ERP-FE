@@ -34,6 +34,11 @@ const ProductionPage = styled.div`
   h2 { margin: 0; font-size: 18px; font-weight: 700; }
   .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
   .grid > .ant-form-item { margin-bottom: 0; min-width: 0; }
+  .product-block { padding: 14px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 8px; background: #fafafa; }
+  .product-block__title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; font-size: 14px; font-weight: 600; color: #262626; }
+  .product-block__code { font-size: 12px; font-family: monospace; font-weight: 400; color: #8c8c8c; }
+  .product-block .ant-input[readonly] { color: #595959; background: #f5f5f5; cursor: default; }
+  .empty-products { padding: 24px 16px; border: 1px dashed var(--border); border-radius: 8px; text-align: center; color: #8c8c8c; background: #fafafa; }
   .field.full { grid-column: 1 / -1; }
   label { display: block; font-size: 14px; font-weight: 600; }
   .req { color: #dc2626; margin: 0 4px; }
