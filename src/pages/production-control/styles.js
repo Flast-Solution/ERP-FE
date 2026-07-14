@@ -6,14 +6,15 @@ const ProductionPage = styled.div`
   --muted: #64748b;
   color: #172033;
   font-size: 14px;
-  max-width: 1420px;
+  max-width: none;
   margin: 0 auto;
 
   .production-card {
+    min-height: 100vh;
     background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, .05);
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
     overflow: hidden;
   }
   .page-head { padding: 20px 24px; background: #fbfcfe; border-bottom: 1px solid var(--border); }
@@ -33,12 +34,25 @@ const ProductionPage = styled.div`
   h2 { margin: 0; font-size: 18px; font-weight: 700; }
   .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
   .grid > .ant-form-item { margin-bottom: 0; min-width: 0; }
+  .product-block { padding: 14px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 8px; background: #fafafa; }
+  .product-block__title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; font-size: 14px; font-weight: 600; color: #262626; }
+  .product-block__title > div:first-child { min-width: 0; }
+  .product-block__code { margin-left: 8px; font-size: 12px; font-family: monospace; font-weight: 400; color: #8c8c8c; }
+  .product-block .ant-input[readonly] { color: #595959; background: #f5f5f5; cursor: default; }
+  .empty-products { padding: 24px 16px; border: 1px dashed var(--border); border-radius: 8px; text-align: center; color: #8c8c8c; background: #fafafa; }
   .field.full { grid-column: 1 / -1; }
   label { display: block; font-size: 14px; font-weight: 600; }
   .req { color: #dc2626; margin: 0 4px; }
   .readonly { min-height: 44px; border: 1px dashed #d7dee8; background: #f8fafc; border-radius: 8px; padding: 0 14px; display: flex; align-items: center; justify-content: space-between; font-size: 16px; }
   .auto { color: #7c8594; font-size: 12px; text-transform: uppercase; }
   .ant-input, .ant-select-selector, .ant-picker { border-radius: 6px !important; font-size: 14px !important; }
+  .ant-input-disabled, .ant-input[disabled] {
+    color: #475569 !important;
+    -webkit-text-fill-color: #475569;
+    background: #f5f7fa !important;
+    border-color: #d7dee8 !important;
+    opacity: 1;
+  }
   textarea.ant-input { min-height: 72px !important; resize: vertical; }
   .radio-group { display: flex; gap: 8px; }
   .radio-group .ant-radio-wrapper { border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; margin: 0; }

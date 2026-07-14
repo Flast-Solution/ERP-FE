@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Col, Form, Row, Typography, message } from 'antd'
 import { DeleteOutlined, PlusCircleOutlined, SaveOutlined } from '@ant-design/icons'
 import {
@@ -8,9 +8,12 @@ import {
   FormRadioGroup,
   FormSelect,
 } from '@flast-erp/core/components'
+import { RequestUtils } from '@flast-erp/core/utils'
 import styled from 'styled-components'
+import { SUCCESS_CODE } from '@/configs'
 
 const { Text, Title } = Typography
+const UPDATE_LIST_STATUS_API = '/process/update-list-status'
 
 const SCOPE_OPTIONS = [
   { value: 'current', name: 'Một trong các Workflow' },
@@ -47,7 +50,7 @@ const StatusConfigRow = ({ field, index, stepOptions, remove }) => (
     <FormSelect
       required
       mode="multiple"
-      name={[field.name, 'stepTypeIds']}
+      name={[field.name, 'stepProcessIds']}
       label="Chọn nhóm công việc"
       placeholder="Chọn nhóm công việc"
       resourceData={stepOptions}
@@ -73,23 +76,87 @@ const StatusConfigRow = ({ field, index, stepOptions, remove }) => (
   </div>
 )
 
-const ModalStatusConfig = ({ stepTypes = [], configurations = [], onSave, closeModal }) => {
+const toApiId = (value) => {
+  const numericValue = Number(value)
+  return Number.isSafeInteger(numericValue) ? numericValue : value
+}
+
+export const buildStatusConfigPayload = ({ processId, flowType, configurations = [] }) => ({
+  processId: toApiId(processId),
+  flowType,
+  items: configurations.map((item) => ({
+    listStepProcessId: (item.stepProcessIds ?? item.stepTypeIds ?? item.listStepProcessId ?? []).map(toApiId),
+    text: item.statusName?.trim(),
+  })),
+})
+
+const ModalStatusConfig = ({
+  processId,
+  flowType,
+  workflowSteps = [],
+  configurations = [],
+  onSave,
+  closeModal,
+}) => {
   const [form] = Form.useForm()
-  const stepOptions = stepTypes.map((item) => ({
-    value: item.id ?? item.key,
-    name: item.label,
-  }))
+  const [submitting, setSubmitting] = useState(false)
+  const stepOptions = workflowSteps
+    .map((step) => ({
+      value: step.id,
+      name: step.code && step.name !== step.code
+        ? `${step.name} (${step.code})`
+        : (step.name ?? step.code),
+    }))
+    .filter((item) => item.value != null && item.value !== '')
 
   useEffect(() => {
     form.setFieldsValue({
-      configurations: configurations.length > 0 ? configurations : [{ scope: 'current' }],
+      configurations: configurations.length > 0
+        ? configurations.map((item) => ({
+            ...item,
+            stepProcessIds: item.stepProcessIds ?? item.stepTypeIds ?? item.listStepProcessId ?? [],
+            statusName: item.statusName ?? item.text ?? '',
+          }))
+        : [{ scope: 'current' }],
     })
   }, [configurations, form])
 
-  const handleSubmit = ({ configurations: values = [] }) => {
-    onSave?.(values)
-    message.success('Đã lưu cấu hình trạng thái.')
-    closeModal?.()
+  const handleSubmit = async ({ configurations: values = [] }) => {
+    if (processId == null || processId === '') {
+      message.warning('Vui lòng lưu workflow trước khi cấu hình trạng thái đơn hàng.')
+      return
+    }
+
+    if (!flowType) {
+      message.warning('Vui lòng chọn loại nghiệp vụ trước khi cấu hình trạng thái đơn hàng.')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const payload = buildStatusConfigPayload({
+        processId,
+        flowType,
+        configurations: values,
+      })
+      const response = await RequestUtils.Post(UPDATE_LIST_STATUS_API, payload)
+      const hasErrorCode = response?.errorCode != null
+      const isFailed = response?.success === false
+        || (hasErrorCode && Number(response.errorCode) !== SUCCESS_CODE)
+
+      if (isFailed) {
+        message.error(response?.message || 'Không lưu được cấu hình trạng thái.')
+        return
+      }
+
+      onSave?.(values)
+      message.success(response?.message || 'Đã lưu cấu hình trạng thái.')
+      closeModal?.()
+    } catch (error) {
+      message.error(error?.response?.data?.message || error?.message || 'Không lưu được cấu hình trạng thái.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -119,8 +186,8 @@ const ModalStatusConfig = ({ stepTypes = [], configurations = [], onSave, closeM
           )}
         </Form.List>
         <Row className="modal-actions" gutter={8}>
-          <Col><CustomButton title="Hủy bỏ" variant="text" color="default" inRigth={false} onClick={closeModal} /></Col>
-          <Col><CustomButton title="Lưu cấu hình" type="primary" htmlType="submit" icon={<SaveOutlined />} inRigth={false} /></Col>
+          <Col><CustomButton title="Hủy bỏ" variant="text" color="default" inRigth={false} disabled={submitting} onClick={closeModal} /></Col>
+          <Col><CustomButton title="Lưu cấu hình" type="primary" htmlType="submit" icon={<SaveOutlined />} inRigth={false} loading={submitting} disabled={submitting} /></Col>
         </Row>
       </Form>
     </StatusConfigStyles>

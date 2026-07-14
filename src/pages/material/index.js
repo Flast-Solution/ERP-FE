@@ -19,16 +19,15 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useCallback, useState } from 'react';
-import { Button, Space, Popconfirm, Form, message, Row, Col } from 'antd';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Button, Space, Popconfirm, Form, message, Row, Col, Select, Spin } from 'antd';
 import { Helmet } from 'react-helmet';
 import { 
 	BreadcrumbCustom,
 	RestList,
 	FormInfiniteStock,
 	FormInputNumber,
-	FormTextArea,
-	FormInput
+	FormTextArea
 } from '@flast-erp/core/components';
 import Filter from './Filter';
 import { useGetList } from "@flast-erp/core/hooks";
@@ -37,6 +36,126 @@ import { HASH_POPUP } from '@/configs/constant';
 import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import { DeleteOutlined } from '@ant-design/icons';
 import { SUCCESS_CODE } from '@/configs';
+
+const PROVIDER_FETCH_API = '/provider/fetch';
+const PROVIDER_PAGE_SIZE = 10;
+
+const getProviderItems = (response) => {
+	const payload = response?.data ?? response;
+	const candidates = [
+		payload?.embedded,
+		payload?.content,
+		payload?.items,
+		payload?.data?.embedded,
+		payload?.data?.content,
+		payload?.data?.items,
+		payload?.data,
+		payload,
+	];
+
+	return candidates.find(Array.isArray) ?? [];
+};
+
+const mergeProviders = (current = [], incoming = []) => {
+	const providers = new Map();
+	[...current, ...incoming].forEach((provider) => {
+		const key = provider?.id ?? `${provider?.code ?? ''}:${provider?.name ?? ''}`;
+		if (key !== ':') providers.set(String(key), provider);
+	});
+	return Array.from(providers.values());
+};
+
+const fetchProviderOptions = async (page, searchText) => {
+	const baseParams = { limit: PROVIDER_PAGE_SIZE, page };
+	const keyword = searchText.trim();
+	const responses = keyword
+		? await Promise.all([
+			RequestUtils.Get(PROVIDER_FETCH_API, { ...baseParams, name: keyword }),
+			RequestUtils.Get(PROVIDER_FETCH_API, { ...baseParams, code: keyword }),
+		])
+		: [await RequestUtils.Get(PROVIDER_FETCH_API, baseParams)];
+	const providerLists = responses.map(getProviderItems);
+
+	return {
+		items: providerLists.reduce((result, items) => mergeProviders(result, items), []),
+		hasMore: providerLists.some(items => items.length >= PROVIDER_PAGE_SIZE),
+	};
+};
+
+const ProviderSelect = () => {
+	const [providers, setProviders] = useState([]);
+	const [loading, setLoading] = useState(false);
+	const [initialized, setInitialized] = useState(false);
+	const [searchText, setSearchText] = useState('');
+	const [query, setQuery] = useState('');
+	const [page, setPage] = useState(1);
+	const [hasMore, setHasMore] = useState(true);
+	const requestIdRef = useRef(0);
+	const queryRef = useRef('');
+
+	useEffect(() => {
+		const timeoutId = setTimeout(() => setQuery(searchText.trim()), 400);
+		return () => clearTimeout(timeoutId);
+	}, [searchText]);
+
+	const loadProviders = useCallback(async ({ nextPage, keyword, append }) => {
+		const requestId = ++requestIdRef.current;
+		setLoading(true);
+		try {
+			const result = await fetchProviderOptions(nextPage, keyword);
+			if (requestId !== requestIdRef.current || keyword !== queryRef.current) return;
+
+			setProviders(current => append ? mergeProviders(current, result.items) : result.items);
+			setPage(nextPage);
+			setHasMore(result.hasMore);
+		} catch (error) {
+			if (requestId === requestIdRef.current) {
+				message.error(error?.message || 'Không tải được danh sách nhà cung cấp.');
+			}
+		} finally {
+			if (requestId === requestIdRef.current) setLoading(false);
+		}
+	}, []);
+
+	useEffect(() => {
+		queryRef.current = query;
+		if (!initialized) return;
+		loadProviders({ nextPage: 1, keyword: query, append: false });
+	}, [initialized, loadProviders, query]);
+
+	const handlePopupScroll = (event) => {
+		const target = event.currentTarget;
+		const isAtBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 8;
+		if (isAtBottom && !loading && hasMore) {
+			loadProviders({ nextPage: page + 1, keyword: queryRef.current, append: true });
+		}
+	};
+
+	return (
+		<Form.Item
+			label="Nhà cung cấp"
+			name="source"
+			rules={[{ required: true, message: 'Nhà cung cấp không được để trống' }]}
+		>
+			<Select
+				allowClear
+				showSearch
+				filterOption={false}
+				placeholder="Chọn hoặc tìm nhà cung cấp"
+				onDropdownVisibleChange={(open) => {
+					if (open) setInitialized(true);
+				}}
+				onSearch={setSearchText}
+				onPopupScroll={handlePopupScroll}
+				notFoundContent={loading ? <Spin size="small" /> : 'Không có nhà cung cấp'}
+				options={providers.map(provider => ({
+					value: provider.name,
+					label: [provider.name, provider.code].filter(Boolean).join(' — '),
+				}))}
+			/>
+		</Form.Item>
+	);
+};
 
 const PopconfirmImport = ({ form, record }) => {
   return (
@@ -56,12 +175,7 @@ const PopconfirmImport = ({ form, record }) => {
 				min={1}
 				initialValue={1}
 			/>
-			<FormInput 
-				label="Nhà cung cấp"
-				placeholder="Nhập nhà cung cấp"
-				required
-				name={"source"}
-			/>
+			<ProviderSelect />
 			{record.unitType === 'DIMENSION' ? (
 				<Row gutter={16}>
 					<Col md={12} xs={24}>
@@ -69,7 +183,6 @@ const PopconfirmImport = ({ form, record }) => {
 							style={{ width: '100%' }}
 							name={'height'}
 							label="Dài (cm)"
-							required
 							placeholder={"Nhập chiều dài"}
 						/>
 					</Col>
@@ -78,7 +191,6 @@ const PopconfirmImport = ({ form, record }) => {
 							style={{ width: '100%' }}
 							name={'width'}
 							label="Rộng (cm)"
-							required
 							placeholder={"Nhập chiều rộng"}
 						/>
 					</Col>

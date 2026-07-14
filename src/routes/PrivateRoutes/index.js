@@ -62,16 +62,17 @@ import { DragDropConfig } from './DragDropOrderConfig';
 /* Web */
 import { WebConfig } from './WebConfig';
 import { WorkflowDesignerConfig } from './WorkflowDesignerConfig';
+import { ProductionControlConfig } from './ProductionControlConfig';
 
 /* HR - Quản lý hành chính */
 import { HRConfig } from './HRConfig';
-import { ProductionControlConfig } from './ProductionControlConfig';
 
 const routeConfigs = [
     LoginConfig,
     KpiConfig,
     ProductConfig,
     MaterialConfig,
+    ProductionControlConfig,
     CommonConfig,
     LeadConfig,
     Lead3DayConfig,
@@ -91,7 +92,6 @@ const routeConfigs = [
     DragDropConfig,
     WebConfig,
     HRConfig,
-    ProductionControlConfig,
     WorkflowDesignerConfig
 ];
 
