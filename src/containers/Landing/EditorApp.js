@@ -3,7 +3,6 @@ import { ConfigProvider, App, theme } from 'antd'
 import { useEditorStore } from '@/store/editorStore'
 import { EditorChrome } from './EditorChrome'
 import { PreviewCanvas } from './PreviewCanvas'
-import { ApiConfigModal } from './ApiConfigModal'
 import { Root, Stage, Frame, Coach, CoachSpark, Toast } from './EditorApp.style'
 import { t } from '@/css/landing'
 import { EditPromptBar } from './EditPromptBar'
@@ -11,16 +10,16 @@ import { EditPromptBar } from './EditPromptBar'
 const antdTheme = {
   algorithm: theme.darkAlgorithm,
   token: {
-    colorPrimary:  t.violet500,
-    colorBgBase:   t.surfaceCard,
+    colorPrimary: t.violet500,
+    colorBgBase: t.surfaceCard,
     colorTextBase: t.textPrimary,
-    borderRadius:  6,
-    fontFamily:    t.fontSans,
+    borderRadius: 6,
+    fontFamily: t.fontSans,
   }
 }
 
 function EditorContent() {
-  
+
   const selected = useEditorStore((s) => s.selected)
   const value = useEditorStore((s) => s.value)
   const busy = useEditorStore((s) => s.busy)
@@ -81,8 +80,6 @@ function EditorContent() {
       )}
 
       {toast && <Toast>{toast}</Toast>}
-
-      <ApiConfigModal />
     </Root>
   )
 }

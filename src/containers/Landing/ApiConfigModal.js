@@ -64,13 +64,58 @@ const TABS = [
 
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
 
-export function ApiConfigModal({ onBuild }) {
+/**
+ * @typedef {Object} PageApiConfig
+ * @property {string} id
+ * @property {string} key
+ * @property {string} url
+ * @property {'GET'|'POST'|'PUT'|'DELETE'} method
+ * @property {unknown} body
+ * @property {string|null} enpoint
+ */
+
+/**
+ * @typedef {Object} PageConfigSection
+ * @property {string} titles
+ * @property {string} tag
+ * @property {PageApiConfig[]} apis
+ * @property {string[]} urlJsx
+ * @property {string|null} urlBuild
+ */
+
+/**
+ * @typedef {Object} PageSeoConfig
+ * @property {string|null} metaCard
+ * @property {string|null} seoTitle
+ * @property {string|null} seoDescription
+ */
+
+/**
+ * @typedef {Object} PageBreadcrumb
+ * @property {string} page
+ * @property {string} url
+ */
+
+/**
+ * @typedef {Object} PageConfig
+ * @property {number} id
+ * @property {number} bizId
+ * @property {string} name
+ * @property {string} slug
+ * @property {string} title
+ * @property {PageConfigSection[]} configs
+ * @property {PageSeoConfig[]} seos
+ * @property {PageBreadcrumb[]} breadcrumds
+ */
+
+export function ApiConfigModal({ onBuild, config, onReload }) {
 
   const open = useEditorStore((s) => s.configOpen)
   const setConfigOpen = useEditorStore((s) => s.setConfigOpen)
   const apiConfig = useEditorStore((s) => s.apiConfig)
   const seoConfig = useEditorStore((s) => s.seoConfig)
-  const crumbConfig = useEditorStore((s) => s.crumbConfig) 
+  const crumbConfig = useEditorStore((s) => s.crumbConfig)
+  const jsxConfig = useEditorStore((s) => s.jsxConfig)
   const saveConfig = useEditorStore((s) => s.saveConfig)
   const saveSeo = useEditorStore((s) => s.saveSeo)
   const saveCrumb = useEditorStore((s) => s.saveCrumb)
@@ -83,20 +128,27 @@ export function ApiConfigModal({ onBuild }) {
   const [crumbDraft, setCrumbDraft] = useState(crumbConfig)
   const [codeDraft, setCodeDraft] = useState({})
   const [copiedId, setCopiedId] = useState(null)
-  const [uploadingId, setUploadingId] = useState(null) // component đang upload
 
   const fileInputs = useRef({})
-
   /* Đồng bộ draft với cấu hình đã lưu mỗi khi mở modal */
   useEffect(() => {
     if (!open) return
     setDraft(apiConfig)
     setSeoDraft(seoConfig)
     setCrumbDraft(crumbConfig)
-    setCodeDraft({})
+    setCodeDraft(jsxConfig)
     setTab('api')
     setCopiedId(null)
-  }, [open, apiConfig, seoConfig, crumbConfig])
+  }, [open, apiConfig, seoConfig, crumbConfig, jsxConfig])
+
+  /* Nhận cấu hình fetch từ PreviewCanvas (props) — bind vào form khi có dữ liệu mới */
+  useEffect(() => {
+    if (!config) return
+    setDraft(config.apiConfig)
+    setCodeDraft(config.jsxConfig)
+    setCrumbDraft(config.crumbConfig)
+    setSeoDraft(config.seoConfig)
+  }, [config])
 
   /* API */
   const addApi = (componentId) => {
@@ -125,14 +177,14 @@ export function ApiConfigModal({ onBuild }) {
 
   const copyApi = (api) => {
     const json = JSON.stringify({ key: api.key, method: api.method, url: api.url }, null, 2)
-    navigator.clipboard?.writeText(json).catch(() => {})
+    navigator.clipboard?.writeText(json).catch(() => { })
     setCopiedId(api.id)
     setTimeout(() => setCopiedId((c) => (c === api.id ? null : c)), 1400)
   }
 
   /* Code JSX (đầu vào cho Build) */
   const pickCode = (cid) => {
-    fileInputs.current[cid]?.click(); 
+    fileInputs.current[cid]?.click();
   }
   const onCodeFiles = async (cid, e) => {
 
@@ -156,7 +208,6 @@ export function ApiConfigModal({ onBuild }) {
 
     if (selected.length === 0) return
 
-    setUploadingId(cid)
     try {
       const uploaded = await uploadJsxFiles(cid, selected);
       setCodeDraft((draft) => {
@@ -166,7 +217,6 @@ export function ApiConfigModal({ onBuild }) {
     } catch {
       // toast lỗi đã hiển thị trong store
     } finally {
-      setUploadingId(null)
     }
   }
 
@@ -232,6 +282,7 @@ export function ApiConfigModal({ onBuild }) {
 
     try {
       await publishConfigPage()
+      await onReload?.()
       setConfigOpen(false)
     } catch {
       // toast lỗi đã có ở store, không đóng modal để user sửa lại

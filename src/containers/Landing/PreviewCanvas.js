@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { useEditorStore } from '@/store/editorStore'
 import {
   Page, Nav, Brand, BrandLogo, NavLinks, CtaSm,
@@ -8,8 +9,10 @@ import {
 } from './PreviewCanvas.style'
 import { EditableHighlight } from './EditableHighlight'
 import { RenderJsx } from './RenderJsx'
-import { DownOutlined } from '@ant-design/icons'
-import { useEffect, useState } from 'react'
+import { ApiConfigModal } from './ApiConfigModal'
+import { useCallback, useEffect, useState } from 'react'
+
+const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
 
 const BoltIcon = () => (
   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
@@ -30,50 +33,111 @@ const PLANS = [
   ['Scale', 'Liên hệ', 'Cho doanh nghiệp'],
 ]
 
-/* Dữ liệu menu truyền vào Headers({ serviceItems }) của file .tsx fetch về */
-const SERVICE_ITEMS = [
-  {
-    key: '1',
-    label: <a style={{ fontWeight: 600, textTransform: 'uppercase' }}>Văn Phòng trọn gói</a>,
-    expandIcon: <DownOutlined style={{ fontSize: 11, marginTop: 5 }} />,
-    children: [
-      { key: '1-1', label: <a href="/van-phong-tron-goi-mpro-duy-tan" style={{ fontWeight: 600 }}>MPRO DUY TÂN</a> },
-      { key: '1-2', label: <a href="/van-phong-tron-goi-mpro-nguyen-phong-sac" style={{ fontWeight: 600 }}>MPRO NGUYỄN PHONG SẮC</a> },
-      { key: '1-3', label: <a href="/van-phong-tron-goi-mpro-pham-hung" style={{ fontWeight: 600 }}>MPRO PHẠM HÙNG 8</a> },
-      { key: '1-4', label: <a href="/van-phong-tron-goi-mpro-pham-hung-23" style={{ fontWeight: 600 }}>MPRO PHẠM HÙNG 23</a> },
-      { key: '1-5', label: <a href="/van-phong-tron-goi-mpro-kico-le-van-luong" style={{ fontWeight: 600 }}>MPRO KICO LÊ VĂN LƯƠNG</a> },
-      {
-        key: '1-6',
-        label: (
-          <a href="/van-phong-tron-goi-mpro-eco-nguyen-hoang-ton" style={{ fontWeight: 600 }}>
-            MPRO <span style={{ color: 'red' }}>ECO</span> Nguyễn Hoàng Tôn
-          </a>
-        ),
-      },
-    ],
-  },
-  { key: '2', label: <a href="/van-phong-ao" style={{ fontWeight: 600, textTransform: 'uppercase' }}>Văn Phòng Ảo</a> },
-  { key: '3', label: <a href="/cho-ngoi-lam-viec" style={{ fontWeight: 600, textTransform: 'uppercase' }}>Chỗ Ngồi Làm Việc</a> },
-  { key: '4', label: <a href="/cho-thue-phong-hop" style={{ fontWeight: 600, textTransform: 'uppercase' }}>Phòng Họp – đào tạo</a> },
-  { key: '5', label: <a href="/su-kien" style={{ fontWeight: 600, textTransform: 'uppercase' }}>Địa điểm tổ chức sự kiện</a> },
-  { key: '6', label: <a href="/dich-vu-he-sinh-thai-mpro-office" style={{ fontWeight: 600, textTransform: 'uppercase' }}>DỊCH VỤ HỆ SINH THÁI</a> },
-]
-
 export function PreviewCanvas() {
   const selected = useEditorStore((s) => s.selected)
   const edits = useEditorStore((s) => s.edits)
   const openEdit = useEditorStore((s) => s.openEdit)
   const e = edits || {}
   const viewjsx = useEditorStore((s) => s.viewJsxFile)
-  const [jsxPreview, setJsxPreview] = useState('')
+
+  const getConfig = useEditorStore((s) => s.getConfig)
+  const setApiConfig = useEditorStore((s) => s.setApiConfig)
+  const setSeoConfig = useEditorStore((s) => s.setSeoConfig)
+  const setCrumbConfig = useEditorStore((s) => s.setCrumbConfig)
+  const setJsxConfig = useEditorStore((s) => s.setJsxConfig)
+  const setPageMeta = useEditorStore((s) => s.setPageMeta)
+  const [pageConfig, setPageConfig] = useState(null)
+  const [jsxSources, setJsxSources] = useState({})
+  const [apiData, setApiData] = useState({})
+
+  const loadConfig = useCallback(async () => {
+    try {
+      const data = await getConfig('home')
+      if (!data) return
+
+      setPageMeta({ id: data.id, bizId: data.bizId, name: data.name, slug: data.slug, title: data.title })
+
+      const nextApiConfig = {}
+      const nextJsxConfig = {}
+        ; (data.configs || []).forEach(({ tag, apis, urlJsx }) => {
+          nextApiConfig[tag] = (apis || []).map((api) => ({
+            id: api.id || uid(),
+            key: api.key || '',
+            method: api.method || 'GET',
+            url: api.url || '',
+          }))
+
+          nextJsxConfig[tag] = (urlJsx || []).map((path) => ({
+            id: uid(),
+            name: path.split('/').pop(),
+            path,
+          }))
+        })
+
+      const nextCrumbConfig = (data.breadcrumds || []).map(({ page, url }) => ({
+        id: uid(),
+        text: page,
+        url,
+      }))
+
+      const nextSeoConfig = (data.seos || []).flatMap((seo) =>
+        Object.entries(seo)
+          .filter(([, value]) => value != null && value !== '')
+          .map(([name, value]) => ({ id: uid(), name, value }))
+      )
+
+      setApiConfig(nextApiConfig)
+      setJsxConfig(nextJsxConfig)
+      setCrumbConfig(nextCrumbConfig)
+      setSeoConfig(nextSeoConfig)
+
+      setPageConfig({
+        apiConfig: nextApiConfig,
+        jsxConfig: nextJsxConfig,
+        crumbConfig: nextCrumbConfig,
+        seoConfig: nextSeoConfig,
+      })
+
+      const tags = Object.keys(nextJsxConfig)
+
+      tags.forEach((tag) => {
+        ; (nextJsxConfig[tag] || []).forEach((f) => {
+          viewjsx(f.path)
+            .then((code) => {
+              setJsxSources((prev) => ({
+                ...prev,
+                [tag]: [...(prev[tag] || []), { path: f.path, code }],
+              }))
+            })
+            .catch((err) => {
+              console.error(`[PreviewCanvas] viewJsxFile lỗi (tag=${tag}, path=${f.path}):`, err)
+            })
+        });
+
+        (nextApiConfig[tag] || [])
+          .filter((api) => api.url)
+          .forEach((api) => {
+            axios({ method: api.method || 'GET', url: api.url })
+              .then((res) => {
+                setApiData((prev) => ({
+                  ...prev,
+                  [tag]: { ...(prev[tag] || {}), [api.key]: res.data },
+                }))
+              })
+              .catch((err) => {
+                console.error(`[PreviewCanvas] Gọi API lỗi (tag=${tag}, key=${api.key}):`, err)
+              })
+          })
+      })
+    } catch (err) {
+      console.error('[PreviewCanvas] getConfig lỗi:', err)
+    }
+  }, [getConfig, viewjsx, setApiConfig, setJsxConfig, setCrumbConfig, setSeoConfig, setPageMeta])
 
   useEffect(() => {
-    const fetchJsx = async () => {
-      const jsx = await viewjsx('test/dcd5de0b-02f4-49ce-bd6f-139a4c423711.tsx')
-      setJsxPreview(jsx)
-    }
-    fetchJsx()
-  }, [viewjsx])
+    loadConfig()
+  }, [loadConfig])
+
   return (
     <Page className="patch-light">
       <EditableHighlight elementId="nav" selected={selected === 'nav'} onEdit={openEdit}>
@@ -138,9 +202,15 @@ export function PreviewCanvas() {
         </Pricing>
       </EditableHighlight>
 
-      {jsxPreview && <RenderJsx code={jsxPreview} props={{ serviceItems: SERVICE_ITEMS }} />}
+      {Object.entries(jsxSources).map(([tag, files]) =>
+        files.map((f) => (
+          <RenderJsx key={f.path} code={f.code} props={apiData[tag]} />
+        ))
+      )}
 
       <Footer>© 2026 Nimbus · Được tạo với Patch</Footer>
+
+      <ApiConfigModal config={pageConfig} onReload={loadConfig} />
     </Page>
   )
 }

@@ -56,7 +56,9 @@ export const useEditorStore = create((set, get) => ({
   apiConfig: DEFAULT_API,
   seoConfig: DEFAULT_SEO,
   crumbConfig: DEFAULT_CRUMBS,
-  jsxConfig: {}, 
+  jsxConfig: {},
+  /* Metadata trang (id/bizId/name/slug/title) — nạp từ getConfig, dùng khi publishConfigPage */
+  pageMeta: { id: null, bizId: 1, name: 'Trang chủ', slug: 'Trang chủ', title: '' },
 
   get apiCount() {
     return countApis(get().apiConfig)
@@ -138,7 +140,14 @@ export const useEditorStore = create((set, get) => ({
 
   saveCrumb: (crumbs) => set({ crumbConfig: crumbs }),
 
-  saveJsxConfig: (jsxConfig) => set({ jsxConfig }),  
+  saveJsxConfig: (jsxConfig) => set({ jsxConfig }),
+
+  /* Nạp dữ liệu vào state — không có side-effect (toast/đóng modal) như save*, dùng khi hydrate từ getConfig */
+  setApiConfig: (config) => set({ apiConfig: config }),
+  setSeoConfig: (seo) => set({ seoConfig: seo }),
+  setCrumbConfig: (crumbs) => set({ crumbConfig: crumbs }),
+  setJsxConfig: (jsxConfig) => set({ jsxConfig }),
+  setPageMeta: (meta) => set((s) => ({ pageMeta: { ...s.pageMeta, ...meta } })),
 
   /* Nội bộ */
   _showToast: (message) => {
@@ -146,7 +155,7 @@ export const useEditorStore = create((set, get) => ({
     set({ toast: message })
     toastTimer = setTimeout(() => set({ toast: null }), TOAST_MS)
   },
-    /* Upload nhiều file JSX cho 1 component, trả về danh sách path server */
+  /* Upload nhiều file JSX cho 1 component, trả về danh sách path server */
   uploadJsxFiles: async (componentId, files) => {
     const formData = new FormData()
     files.forEach((file) => formData.append('files', file))
@@ -197,32 +206,39 @@ export const useEditorStore = create((set, get) => ({
   },
 
   publishConfigPage: async () => {
-    const { apiConfig, jsxConfig, seoConfig, crumbConfig } = get()
+    const { apiConfig, jsxConfig, seoConfig, crumbConfig, pageMeta } = get()
     const configs = Object.entries(apiConfig).map(([tag, apis]) => ({
       titles: tag,
       tag,
       apis: (apis || []).map(({ key, method, url }) => ({ key, method, url })),
-      urlJsx: (jsxConfig[tag] || [])[0]?.path || '',
+      urlJsx: (jsxConfig[tag] || []).map((f) => f.path),
     }))
-    
+
     set({ busy: true })
     try {
       const bodys = {
-        bizId: 1,
-        name: "Trang chủ",
-        slug: "Trang chủ",
-        title: "Trang chủ - Website Bán Hàng",
+        bizId: pageMeta.bizId,
+        name: pageMeta.name,
+        slug: "home",
+        title: pageMeta.title,
         configs,
         seos: seoConfig,
         breadcrumds: crumbConfig.map(({ text, url }) => ({ page: text, url })),
       }
-      const { data, errorCode, message: errMsg } = await RequestUtils.Post('/api/web-page-view/create', bodys)
+      const isUpdate = Boolean(pageMeta.id)
+      const endpoint = isUpdate
+        ? `/web-page-view/update/${pageMeta.id}`
+        : '/web-page-view/create'
+      const { data, errorCode, message: errMsg } = await RequestUtils.Post(endpoint, bodys)
 
-      if (errorCode) {
+      if (errorCode != 200) {
         throw new Error(errMsg || `Lưu trang thất bại (mã lỗi: ${errorCode})`)
       }
 
-      get()._showToast('Đã lưu trang thành công')
+      get()._showToast(errMsg)
+      if (!isUpdate && data?.id) {
+        get().setPageMeta({ id: data.id })
+      }
       return data
     } catch (err) {
       console.error(err)
@@ -233,4 +249,13 @@ export const useEditorStore = create((set, get) => ({
     }
   },
 
+  getConfig: async (slug) => {
+    const { data, errorCode, message: errMsg } = await RequestUtils.Get(
+      `/web-page-view/find/slug/${slug}`
+    )
+    if (errorCode !== 200) {
+      throw new Error(errMsg || `Không đọc được file (mã lỗi: ${errorCode})`)
+    }
+    return data
+  },
 }))
