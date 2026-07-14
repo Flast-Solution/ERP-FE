@@ -46,6 +46,13 @@ const ProductionPage = styled.div`
   .readonly { min-height: 44px; border: 1px dashed #d7dee8; background: #f8fafc; border-radius: 8px; padding: 0 14px; display: flex; align-items: center; justify-content: space-between; font-size: 16px; }
   .auto { color: #7c8594; font-size: 12px; text-transform: uppercase; }
   .ant-input, .ant-select-selector, .ant-picker { border-radius: 6px !important; font-size: 14px !important; }
+  .ant-input-disabled, .ant-input[disabled] {
+    color: #475569 !important;
+    -webkit-text-fill-color: #475569;
+    background: #f5f7fa !important;
+    border-color: #d7dee8 !important;
+    opacity: 1;
+  }
   textarea.ant-input { min-height: 72px !important; resize: vertical; }
   .radio-group { display: flex; gap: 8px; }
   .radio-group .ant-radio-wrapper { border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; margin: 0; }
