@@ -9,6 +9,7 @@ import {
   FormSelect,
 } from '@flast-erp/core/components';
 import ProductionPage from './styles';
+import { createSnowflakeId } from '@/utils/snowflake';
 
 const CreateOrder = ({
   initialValues,
@@ -21,6 +22,9 @@ const CreateOrder = ({
 }) => {
   const [form] = Form.useForm();
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [productionOrderCode] = useState(() => (
+    initialValues?.productionOrderCode || `LSX-${createSnowflakeId()}`
+  ));
   const notify = (text) => message.success(text);
 
   useEffect(() => {
@@ -45,12 +49,21 @@ const CreateOrder = ({
       <header className="page-head">
         <div className="head-row"><div><h1>Tạo lệnh sản xuất</h1><div className="subtitle">WF2 Sản xuất · ISO 9001:2015 §8.5</div></div></div>
       </header>
-      <Form form={form} layout="vertical" initialValues={initialValues} onFinish={handleSubmit}>
+      <Form
+        form={form}
+        layout="vertical"
+        initialValues={{ ...initialValues, productionOrderCode }}
+        onFinish={handleSubmit}
+      >
       <div className="body">
         <section className="section">
           <div className="section-head"><span className="section-no">1</span><h2>Đơn hàng khách</h2></div>
           <div className="grid">
-            <FormInput name="productionOrderCode" label="Mã lệnh SX" placeholder="Nhập mã lệnh sản xuất" />
+            <FormInput
+              name="productionOrderCode"
+              label="Mã lệnh SX"
+              readOnly
+            />
             <FormSelect
               required
               name="salesOrderId"
@@ -77,8 +90,8 @@ const CreateOrder = ({
                 }
               }}
             />
-            <FormInput name="customerName" label="Khách hàng" placeholder="Nhập khách hàng" />
-            <FormInput name="fabricType" label="Loại vải" placeholder="Nhập loại vải" />
+            <FormInput name="customerName" label="Khách hàng" disabled />
+            <FormInput name="fabricType" label="Loại vải" disabled />
           </div>
         </section>
         <section className="section">

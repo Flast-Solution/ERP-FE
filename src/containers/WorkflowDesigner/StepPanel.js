@@ -105,11 +105,21 @@ const StepPanel = ({ onReloadStepTypes }) => {
   }
 
   const handleOpenStatusConfig = () => {
+    const workflowSteps = nodes
+      .map((node) => ({
+        id: node.data?.persistedId ?? node.data?.id,
+        name: node.data?.name ?? node.data?.label ?? node.data?.code,
+        code: node.data?.code,
+      }))
+      .filter((step) => step.id != null && step.id !== '')
+
     InAppEvent.emit(HASH_POPUP, {
       hash: 'workflow.status.config',
       title: '',
       data: {
-        stepTypes,
+        processId: process.id,
+        flowType: process.flowType,
+        workflowSteps,
         configurations: process.statusConfigurations ?? [],
         onSave: (statusConfigurations) => setProcess({ statusConfigurations }),
       },
