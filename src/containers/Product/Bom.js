@@ -142,7 +142,7 @@ const formatUpdatedAt = (value) => {
 }
 
 const StatusTag = ({ active }) => (
-  <Tag color={active ? 'success' : 'default'}>{active ? 'Active' : 'Disable'}</Tag>
+  <Tag color={active ? 'success' : 'default'}>{active ? 'Sử dụng' : 'Không sử dụng'}</Tag>
 )
 
 const ProductBomContainer = ({ closeModal, data }) => {
@@ -379,7 +379,7 @@ const ProductBomContainer = ({ closeModal, data }) => {
           </Col>
           <Col md={12} xs={24}>
             <Form.Item name="status" label="Trạng thái" valuePropName="checked">
-              <Switch checkedChildren="Active" unCheckedChildren="Disable" />
+              <Switch checkedChildren="Sử dụng" unCheckedChildren="Không sử dụng" />
             </Form.Item>
           </Col>
         </Row>
