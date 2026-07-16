@@ -32,10 +32,10 @@ export const useWorkflowRemoteForm = ({
   const remoteComponentId = sourceComponent?.componentId
 
   const remoteVersionKey = buildRemoteAlias(
+    displayStep?.id,
     displayForm?.id,
     sourceComponent?.version,
     sourceComponent?.updatedDate,
-    displayStep?.stepCode,
   )
 
   const remoteRenderKey = buildRemoteAlias(remoteComponentId, remoteEntry, remoteVersionKey)

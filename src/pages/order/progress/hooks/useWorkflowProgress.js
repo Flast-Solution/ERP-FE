@@ -11,12 +11,12 @@ import {
 } from '../constants'
 import {
   buildProcessTypeLabelMap,
+  buildProcessTypeMetaMap,
   buildStepTransitionOptions,
   buildWorkflowHistoryItems,
   buildWorkflowTransitionPayload,
   findWorkflowStep,
   isSameStepRef,
-  resolveWorkflowProcessDetail,
 } from '../workflowHelpers'
 
 export const useWorkflowProgress = ({
@@ -28,6 +28,7 @@ export const useWorkflowProgress = ({
 }) => {
   const [workflowPreview, setWorkflowPreview] = useState(null)
   const [workflowProcessDetail, setWorkflowProcessDetail] = useState(null)
+  const [workflowProcessSteps, setWorkflowProcessSteps] = useState([])
   const [processTypes, setProcessTypes] = useState([])
   const [loadingPreview, setLoadingPreview] = useState(false)
   const [transitioning, setTransitioning] = useState(false)
@@ -101,6 +102,7 @@ export const useWorkflowProgress = ({
   useEffect(() => {
     if (!workflowProcessId) {
       setWorkflowProcessDetail(null)
+      setWorkflowProcessSteps([])
       return undefined
     }
 
@@ -113,11 +115,14 @@ export const useWorkflowProgress = ({
     RequestUtils.Get(`${WORKFLOW_PROCESS_FIND_API}/${workflowProcessId}`, {})
       .then((response) => {
         if (!mounted) return
-        setWorkflowProcessDetail(resolveWorkflowProcessDetail(response))
+        const detail = response?.data
+        setWorkflowProcessDetail(detail?.process ?? detail ?? { id: workflowProcessId })
+        setWorkflowProcessSteps(Array.isArray(detail?.steps) ? detail.steps : [])
       })
       .catch((error) => {
         if (!mounted) return
         setWorkflowProcessDetail({ id: workflowProcessId })
+        setWorkflowProcessSteps([])
         console.error('[OrderProgress] workflow process detail error', error)
       })
 
@@ -136,11 +141,28 @@ export const useWorkflowProgress = ({
     [processTypes],
   )
 
-  const steps = useMemo(() => (
-    Array.isArray(workflowPreview?.stepProcessList)
+  const processTypeMetaMap = useMemo(
+    () => buildProcessTypeMetaMap(processTypes),
+    [processTypes],
+  )
+
+  const steps = useMemo(() => {
+    const previewSteps = Array.isArray(workflowPreview?.stepProcessList)
       ? workflowPreview.stepProcessList
       : []
-  ), [workflowPreview?.stepProcessList])
+    const definitionStepMap = new Map(
+      workflowProcessSteps.map((step) => [String(step?.stepCode), step]),
+    )
+
+    return previewSteps.map((step) => {
+      const definitionStep = definitionStepMap.get(String(step?.stepCode))
+      return {
+        ...definitionStep,
+        ...step,
+        formTemplate: step?.formTemplate ?? definitionStep?.formTemplate ?? null,
+      }
+    })
+  }, [workflowPreview?.stepProcessList, workflowProcessSteps])
 
   const stepTransitions = useMemo(() => (
     Array.isArray(workflowPreview?.stepTransitions)
@@ -294,6 +316,7 @@ export const useWorkflowProgress = ({
     stepTransitionList,
     histories,
     processTypeLabelMap,
+    processTypeMetaMap,
     stepTransitionOptions,
     selectedToStepCode,
     setSelectedToStepCode,

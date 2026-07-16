@@ -33,7 +33,8 @@ export const getRemoteConfigFromEntry = (remoteEntry, remoteComponentId, remoteV
 }
 
 export const useRemoteForm = (remoteEntry, remoteComponentId, remoteVersionKey) => {
-  const [ Component, setComponent ] = useState(null)
+  const remoteRequestKey = buildRemoteAlias(remoteEntry, remoteComponentId, remoteVersionKey)
+  const [ loadedRemote, setLoadedRemote ] = useState({ key: null, Component: null })
   const [ loading, setLoading ] = useState(false)
   const [ error, setError ] = useState('')
 
@@ -41,7 +42,7 @@ export const useRemoteForm = (remoteEntry, remoteComponentId, remoteVersionKey) 
     const remoteConfig = getRemoteConfigFromEntry(remoteEntry, remoteComponentId, remoteVersionKey)
     let mounted = true
 
-    setComponent(null)
+    setLoadedRemote({ key: null, Component: null })
     setError('')
 
     if (!remoteConfig) {
@@ -60,13 +61,22 @@ export const useRemoteForm = (remoteEntry, remoteComponentId, remoteVersionKey) 
       remoteVersionKey
     )
       .then(mod => {
+        const RemoteComponent = mod?.default ?? mod
+        if (typeof RemoteComponent !== 'function' && typeof RemoteComponent !== 'object') {
+          throw new Error('Remote module không export component hợp lệ.')
+        }
+
         if (mounted) {
-          setComponent(() => mod.default ?? mod)
+          setLoadedRemote({
+            key: remoteRequestKey,
+            Component: RemoteComponent,
+          })
         }
       })
-      .catch(() => {
+      .catch((loadError) => {
         if (mounted) {
-          setError('Không tải được remote component của form bước hiện tại.')
+          setLoadedRemote({ key: null, Component: null })
+          setError(loadError?.message || 'Không tải được remote component của form bước hiện tại.')
         }
       })
       .finally(() => {
@@ -78,9 +88,13 @@ export const useRemoteForm = (remoteEntry, remoteComponentId, remoteVersionKey) 
     return () => {
       mounted = false
     }
-  }, [remoteEntry, remoteComponentId, remoteVersionKey])
+  }, [remoteEntry, remoteComponentId, remoteVersionKey, remoteRequestKey])
 
-  return { Component, loading, error }
+  return {
+    Component: loadedRemote.key === remoteRequestKey ? loadedRemote.Component : null,
+    loading,
+    error,
+  }
 }
 
 export const RemoteFormErrorFallback = ({ message }) => (
@@ -114,14 +128,18 @@ export const hideDuplicatedRemoteFormTitle = (container, title) => {
   }
 }
 
-export const RemoteFormHost = forwardRef(({ Component, ...props }, ref) => {
+export const RemoteFormHost = forwardRef(({ Component, allowSubmit = true, ...props }, ref) => {
   const [submitSignal, setSubmitSignal] = useState(null)
 
-  useImperativeHandle(ref, () => ({
-    submit: async () => {
-      setSubmitSignal((signal) => (signal ?? 0) + 1)
-    },
-  }), [])
+  useImperativeHandle(ref, () => (
+    allowSubmit
+      ? {
+          submit: async () => {
+            setSubmitSignal((signal) => (signal ?? 0) + 1)
+          },
+        }
+      : {}
+  ), [allowSubmit])
 
   if (!Component) {
     return null
@@ -130,7 +148,7 @@ export const RemoteFormHost = forwardRef(({ Component, ...props }, ref) => {
   return (
     <Component
       {...props}
-      submitSignal={submitSignal}
+      submitSignal={allowSubmit ? submitSignal : undefined}
     />
   )
 })

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Button, Empty, Space, Typography } from 'antd'
-import { formatTime } from '@flast-erp/core/utils'
+import dayjs from 'dayjs'
 
 const { Text } = Typography
 
@@ -60,6 +60,7 @@ const InspectionResultDot = ({ pass }) => {
 
 const InspectionResultCard = ({ item, index, defaultExpanded = true, onOpenForm }) => {
   const style = INSPECTION_STATUS_STYLES[item?.status] ?? INSPECTION_STATUS_STYLES.pending
+  const accentColor = item?.processTypeColor || style.accent
   const hasRows = item?.rows?.length > 0
   const [expanded, setExpanded] = useState(defaultExpanded)
   const toggle = () => setExpanded((value) => !value)
@@ -70,7 +71,7 @@ const InspectionResultCard = ({ item, index, defaultExpanded = true, onOpenForm 
         position: 'relative',
         borderRadius: 12,
         border: '1px solid #eef1f5',
-        borderLeft: `4px solid ${style.accent}`,
+        borderLeft: `4px solid ${accentColor}`,
         background: '#fff',
         boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
         overflow: 'hidden',
@@ -98,18 +99,6 @@ const InspectionResultCard = ({ item, index, defaultExpanded = true, onOpenForm 
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-          <span
-            aria-hidden
-            style={{
-              display: 'inline-block',
-              color: '#94a3b8',
-              fontSize: 12,
-              transition: 'transform 0.15s ease',
-              transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
-            }}
-          >
-            ▶
-          </span>
           <span style={{ fontWeight: 700, fontSize: 15, color: '#111827' }}>
             {item?.stepName ?? item?.name ?? `Kết quả ${index + 1}`}
           </span>
@@ -130,11 +119,26 @@ const InspectionResultCard = ({ item, index, defaultExpanded = true, onOpenForm 
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#94a3b8', fontSize: 13 }}>
-          {item?.submittedName && <span>{item.submittedName}</span>}
+          {item?.submittedName && <span>KTV. {item.submittedName}</span>}
           {item?.submittedName && <span>·</span>}
-          {item?.submittedAt && <span>{formatTime(item.submittedAt)}</span>}
-          {item?.submittedAt && <span>·</span>}
+          {item?.executionState !== 'current' && item?.submittedAt && (
+            <span>{dayjs(item.submittedAt).format('DD/MM HH:mm')}</span>
+          )}
+          {item?.executionState !== 'current' && item?.submittedAt && <span>·</span>}
+          {item?.executionLabel && <span>{item.executionLabel}</span>}
           <InspectionStatusPill status={item?.status} label={item?.statusName} />
+          <span
+            aria-hidden
+            style={{
+              display: 'inline-block',
+              color: '#64748b',
+              fontSize: 12,
+              transition: 'transform 0.15s ease',
+              transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+            }}
+          >
+            ▼
+          </span>
         </div>
       </div>
 
@@ -215,11 +219,11 @@ const InspectionResultCard = ({ item, index, defaultExpanded = true, onOpenForm 
                   Chưa nhập kết quả thử
                 </div>
                 <Text type="secondary" style={{ fontSize: 13 }}>
-                  KTV cần điền form <em>{item?.stepName}</em> để ghi nhận kết quả kiểm tra.
+                  KTV cần điền form <em>{item?.formName ?? item?.stepName}</em> để ghi nhận kết quả kiểm tra.
                 </Text>
               </div>
             </div>
-            {onOpenForm && (
+            {onOpenForm && item?.canOpenForm && (
               <Button
                 onClick={(event) => {
                   event.stopPropagation()
@@ -248,7 +252,7 @@ export const InspectionResultList = ({ data, defaultExpanded = true, onOpenForm 
           key={item?.id ?? item?.stepCode ?? index}
           item={item}
           index={index}
-          defaultExpanded={defaultExpanded}
+          defaultExpanded={item?.defaultExpanded ?? defaultExpanded}
           onOpenForm={onOpenForm}
         />
       ))}

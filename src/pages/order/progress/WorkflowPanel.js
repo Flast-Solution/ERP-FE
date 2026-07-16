@@ -283,7 +283,7 @@ const WorkflowAdvanceSection = ({
         borderColor: disabled ? '#a5b4fc' : '#4f46e5',
       }}
     >
-      Đã xong test này
+      Hoàn thành
     </Button>
   </div>
 )

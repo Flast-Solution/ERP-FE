@@ -12,6 +12,7 @@ export const useWorkflowSubmissions = ({
   currentStep,
   displayStep,
   stepTransitionList,
+  processTypeMetaMap,
 }) => {
   const [submissionTemplates, setSubmissionTemplates] = useState({})
 
@@ -39,6 +40,10 @@ export const useWorkflowSubmissions = ({
     const missingIds = Array.from(new Set([
       ...submissions
         .map((submission) => submission?.templateId)
+        .filter(Boolean)
+        .map(String),
+      ...steps
+        .map((step) => step?.formTemplate?.id)
         .filter(Boolean)
         .map(String),
     ])).filter((id) => !availableTemplateIds.has(id) && !submissionTemplates[id])
@@ -71,7 +76,7 @@ export const useWorkflowSubmissions = ({
     return () => {
       mounted = false
     }
-  }, [submissions, previewFormTemplates, submissionTemplates])
+  }, [submissions, steps, previewFormTemplates, submissionTemplates])
 
   const currentForm = currentStep?.formTemplate ?? null
 
@@ -92,7 +97,17 @@ export const useWorkflowSubmissions = ({
     stepTransitionList,
     previewStepProcess: currentStep,
     formTemplates,
-  }), [submissions, steps, stepTransitionList, currentStep, formTemplates])
+    completedStepCodes: workflowPreview?.processInstance?.completedSteps,
+    processTypeMetaMap,
+  }), [
+    submissions,
+    steps,
+    stepTransitionList,
+    currentStep,
+    formTemplates,
+    workflowPreview?.processInstance?.completedSteps,
+    processTypeMetaMap,
+  ])
 
   const currentSubmission = currentStep?.stepCode && currentForm?.id
     ? submissions.find((item) => (

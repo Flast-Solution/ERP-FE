@@ -29,6 +29,7 @@ const OrderProgressPage = () => {
     currentStep: workflowState.currentStep,
     displayStep: workflowState.displayStep,
     stepTransitionList: workflowState.stepTransitionList,
+    processTypeMetaMap: workflowState.processTypeMetaMap,
   })
 
   const formState = useWorkflowRemoteForm({

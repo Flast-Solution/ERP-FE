@@ -13,7 +13,7 @@ import styled from 'styled-components'
 import { SUCCESS_CODE } from '@/configs'
 
 const { Text, Title } = Typography
-const UPDATE_LIST_STATUS_API = '/process/update-list-status'
+const UPDATE_LIST_STATUS_API = '/workflow/process/update-list-status'
 
 const SCOPE_OPTIONS = [
   { value: 'current', name: 'Một trong các Workflow' },
