@@ -1,5 +1,6 @@
 import React from 'react'
 import { Descriptions, Table, Typography } from 'antd'
+import { ShoppingCartOutlined } from '@ant-design/icons'
 
 import { formatMoney } from '@flast-erp/core/utils'
 
@@ -39,7 +40,10 @@ const OrderInfoSection = ({ order }) => {
 
   return (
     <div>
-      <div className="workflow-progress-section-title">Thông tin đơn hàng</div>
+      <div className="workflow-progress-section-title">
+        <ShoppingCartOutlined className="workflow-progress-section-icon" />
+        <span>Thông tin đơn hàng</span>
+      </div>
       <Table
         rowKey="detailId"
         size="small"

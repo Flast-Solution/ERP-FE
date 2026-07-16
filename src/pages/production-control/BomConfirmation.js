@@ -61,7 +61,7 @@ const mapBomMaterialRows = (bom = {}) => (
   })
 );
 
-const BomConfirmation = ({ productionOrder, onConfirm, onCancel, onBack }) => {
+const BomConfirmation = ({ productionOrder, mode = 'create', submitting = false, onConfirm, onCancel, onBack }) => {
   const [form] = Form.useForm();
   const [allocationForm] = Form.useForm();
   const [bomRows, setBomRows] = useState([]);
@@ -77,6 +77,7 @@ const BomConfirmation = ({ productionOrder, onConfirm, onCancel, onBack }) => {
   const [userLoading, setUserLoading] = useState(false);
   const userLoadingRef = useRef(false);
   const allocationSequenceRef = useRef(0);
+  const restoredOutboundsRef = useRef(false);
   const selectedProductId = Form.useWatch('bomId', form);
   const selectedAllocationProductMaterialId = Form.useWatch('productMaterialId', allocationForm);
   const selectedAllocationInventoryId = Form.useWatch('inventoryId', allocationForm);
@@ -244,7 +245,12 @@ const BomConfirmation = ({ productionOrder, onConfirm, onCancel, onBack }) => {
 
   const handleProductChange = (productId) => {
     const productBoms = bomVersions.filter(bom => String(bom.productId) === String(productId));
-    const defaultBom = productBoms.find(bom => Number(bom.status) === 1) ?? productBoms[0];
+    const savedBomProductId = (productionOrder?.manufactureDetails ?? [])
+      .find(detail => String(detail.productId) === String(productId))
+      ?.bomProductId;
+    const defaultBom = productBoms.find(bom => String(bom.bomProductId) === String(savedBomProductId))
+      ?? productBoms.find(bom => Number(bom.status) === 1)
+      ?? productBoms[0];
     selectBomVersion(defaultBom);
   };
 
@@ -316,7 +322,12 @@ const BomConfirmation = ({ productionOrder, onConfirm, onCancel, onBack }) => {
       setBomVersions(nextBomVersions);
       const firstProduct = products[0];
       const firstProductBoms = nextBomVersions.filter(bom => String(bom.productId) === String(firstProduct.id));
-      const defaultBom = firstProductBoms.find(bom => Number(bom.status) === 1) ?? firstProductBoms[0];
+      const savedBomProductId = (productionOrder?.manufactureDetails ?? [])
+        .find(detail => String(detail.productId) === String(firstProduct.id))
+        ?.bomProductId;
+      const defaultBom = firstProductBoms.find(bom => String(bom.bomProductId) === String(savedBomProductId))
+        ?? firstProductBoms.find(bom => Number(bom.status) === 1)
+        ?? firstProductBoms[0];
       form.setFieldValue('bomId', firstProduct.id);
       selectBomVersion(defaultBom);
       setBomLoading(false);
@@ -334,7 +345,47 @@ const BomConfirmation = ({ productionOrder, onConfirm, onCancel, onBack }) => {
     return () => {
       mounted = false;
     };
-  }, [form, productionOrder?.productDetails, products, selectBomVersion]);
+  }, [form, productionOrder?.manufactureDetails, productionOrder?.productDetails, products, selectBomVersion]);
+
+  useEffect(() => {
+    if (mode !== 'edit' || restoredOutboundsRef.current || bomRows.length === 0) return;
+
+    const outbounds = productionOrder?.outbound ?? [];
+    if (outbounds.length === 0) {
+      restoredOutboundsRef.current = true;
+      return;
+    }
+    const inventoryDataReady = outbounds.every(outbound => (
+      inventoriesByMaterialId.has(String(outbound.materialId))
+    ));
+    if (!inventoryDataReady) return;
+
+    const restoredAllocations = outbounds.map((outbound, index) => {
+      const bomRow = bomRows.find(row => String(row.materialId) === String(outbound.materialId));
+      const inventory = (inventoriesByMaterialId.get(String(outbound.materialId)) ?? []).find(item => (
+        String(item.warehouseId) === String(outbound.warehouseId)
+        && Number(item.width ?? 0) === Number(outbound.width ?? 0)
+        && Number(item.height ?? 0) === Number(outbound.height ?? 0)
+      ));
+
+      return {
+        id: `outbound-${outbound.id ?? index}`,
+        outboundId: outbound.id,
+        productMaterialId: bomRow?.productMaterialId ?? null,
+        materialId: outbound.materialId,
+        materialName: bomRow?.name ?? `Vật tư #${outbound.materialId}`,
+        inventoryId: inventory?.id ?? null,
+        warehouseId: outbound.warehouseId,
+        availableQuantity: Number(inventory?.quantity ?? outbound.quantity ?? 0),
+        width: Number(outbound.width ?? inventory?.width ?? 0),
+        height: Number(outbound.height ?? inventory?.height ?? 0),
+        quantity: Number(outbound.quantity ?? 0),
+      };
+    });
+
+    setAllocations(restoredAllocations);
+    restoredOutboundsRef.current = true;
+  }, [bomRows, inventoriesByMaterialId, mode, productionOrder?.outbound]);
 
   const materialColumns = [
     { title: 'Sản phẩm', dataIndex: 'productName' },
@@ -356,7 +407,7 @@ const BomConfirmation = ({ productionOrder, onConfirm, onCancel, onBack }) => {
     {
       title: 'Mã tồn kho',
       dataIndex: 'inventoryId',
-      render: value => `#${value}`,
+      render: value => value == null ? '-' : `#${value}`,
     },
     {
       title: 'Tồn kho',
@@ -450,6 +501,8 @@ const BomConfirmation = ({ productionOrder, onConfirm, onCancel, onBack }) => {
         inventoryId: inventory.id,
         warehouseId: inventory.warehouseId,
         availableQuantity: Number(inventory.quantity ?? 0),
+        width: Number(inventory.width ?? 0),
+        height: Number(inventory.height ?? 0),
         quantity,
       }];
     });
@@ -469,6 +522,7 @@ const BomConfirmation = ({ productionOrder, onConfirm, onCancel, onBack }) => {
     }
 
     const exceededInventory = allocations.find((allocation) => {
+      if (allocation.inventoryId == null) return false;
       const allocatedQuantity = allocations
         .filter(item => item.inventoryId === allocation.inventoryId)
         .reduce((total, item) => total + item.quantity, 0);
@@ -487,6 +541,8 @@ const BomConfirmation = ({ productionOrder, onConfirm, onCancel, onBack }) => {
         materialId: allocation.materialId,
         productMaterialId: allocation.productMaterialId,
         quantity: allocation.quantity,
+        width: allocation.width,
+        height: allocation.height,
       })),
     };
     if (onConfirm) {
@@ -578,7 +634,7 @@ const BomConfirmation = ({ productionOrder, onConfirm, onCancel, onBack }) => {
           </div>
         </section>
       </div>
-      <footer className="foot"><span className="foot-note">Bước 2/2 · Hủy bước này sẽ hủy toàn bộ lệnh sản xuất vừa nhập.</span><div className="actions"><CustomButton title="Quay lại" variant="text" color="default" inRigth={false} onClick={onBack} /><CustomButton title="Hủy lệnh" danger variant="outlined" color="danger" inRigth={false} onClick={onCancel} /><CustomButton title="Xác nhận & tạo lệnh" type="primary" htmlType="submit" icon={<SaveOutlined />} inRigth={false} /></div></footer>
+      <footer className="foot"><span className="foot-note">Bước 2/2 · Hủy bước này sẽ hủy toàn bộ lệnh sản xuất vừa nhập.</span><div className="actions"><CustomButton title="Quay lại" variant="text" color="default" inRigth={false} disabled={submitting} onClick={onBack} /><CustomButton title="Hủy lệnh" danger variant="outlined" color="danger" inRigth={false} disabled={submitting} onClick={onCancel} /><CustomButton title={mode === 'edit' ? 'Xác nhận & cập nhật' : 'Xác nhận & tạo lệnh'} type="primary" htmlType="submit" icon={<SaveOutlined />} inRigth={false} loading={submitting} disabled={submitting} /></div></footer>
       </Form>
     </div>
     <Modal

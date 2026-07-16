@@ -244,49 +244,56 @@ const WorkflowAdvanceSection = ({
   transitionOptions = [],
   selectedToStepCode,
   onToStepCodeChange,
-}) => (
-  <div style={{ paddingTop: 24 }}>
-    <div
-      style={{
-        color: '#6b7280',
-        fontSize: 14,
-        fontWeight: 800,
-        letterSpacing: 1.4,
-        textTransform: 'uppercase',
-        marginBottom: 16,
-      }}
-    >
-      Chuyển bước
+}) => {
+  const hasNextStep = transitionOptions.length > 0
+  const buttonDisabled = disabled || loading || !hasNextStep || !selectedToStepCode
+
+  return (
+    <div style={{ paddingTop: 24 }}>
+      <div
+        style={{
+          color: '#6b7280',
+          fontSize: 14,
+          fontWeight: 800,
+          letterSpacing: 1.4,
+          textTransform: 'uppercase',
+          marginBottom: 16,
+        }}
+      >
+        Chuyển bước
+      </div>
+      {transitionOptions.length > 0 && (
+        <Select
+          value={selectedToStepCode}
+          onChange={onToStepCodeChange}
+          options={transitionOptions}
+          placeholder="Chọn bước tiếp theo"
+          style={{ width: '100%', marginBottom: 12 }}
+          disabled={loading}
+        />
+      )}
+      <Button
+        type="primary"
+        block
+        disabled={buttonDisabled}
+        loading={loading}
+        onClick={buttonDisabled ? undefined : onAdvance}
+        style={{
+          height: 54,
+          borderRadius: 8,
+          fontSize: 16,
+          fontWeight: 700,
+          color: buttonDisabled ? '#6b7280' : '#fff',
+          background: buttonDisabled ? '#d1d5db' : '#4f46e5',
+          borderColor: buttonDisabled ? '#d1d5db' : '#4f46e5',
+          cursor: buttonDisabled ? 'not-allowed' : 'pointer',
+        }}
+      >
+        Hoàn thành
+      </Button>
     </div>
-    {transitionOptions.length > 0 && (
-      <Select
-        value={selectedToStepCode}
-        onChange={onToStepCodeChange}
-        options={transitionOptions}
-        placeholder="Chọn bước tiếp theo"
-        style={{ width: '100%', marginBottom: 12 }}
-        disabled={loading}
-      />
-    )}
-    <Button
-      type="primary"
-      block
-      disabled={disabled || loading}
-      loading={loading}
-      onClick={onAdvance}
-      style={{
-        height: 54,
-        borderRadius: 8,
-        fontSize: 16,
-        fontWeight: 700,
-        background: disabled ? '#a5b4fc' : '#4f46e5',
-        borderColor: disabled ? '#a5b4fc' : '#4f46e5',
-      }}
-    >
-      Hoàn thành
-    </Button>
-  </div>
-)
+  )
+}
 
 export const WorkflowProgressPanel = ({
   workflow,
@@ -311,6 +318,7 @@ export const WorkflowProgressPanel = ({
 
   return (
     <Card
+      className="workflow-progress-workflow-card"
       variant="outlined"
       styles={{ body: { padding: 0 } }}
       style={{ borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 4px rgba(15, 23, 42, 0.08)' }}
@@ -337,7 +345,10 @@ export const WorkflowProgressPanel = ({
         </Text>
       </div>
 
-      <div style={{ borderTop: '1px solid #e5e7eb', padding: '22px 20px 20px' }}>
+      <div
+        className="workflow-progress-workflow-scroll"
+        style={{ borderTop: '1px solid #e5e7eb', padding: '22px 20px 20px' }}
+      >
         <WorkflowStepList
           steps={steps}
           currentStep={currentStep}

@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import dayjs from 'dayjs'
 import { Helmet } from 'react-helmet'
 import {
+  Button,
   Col,
   DatePicker,
   Drawer,
@@ -9,11 +11,15 @@ import {
   Pagination,
   Row,
   Select,
+  Space,
   Table,
+  Tooltip,
   message,
 } from 'antd'
 import {
   ClearOutlined,
+  EditOutlined,
+  EyeOutlined,
   FilterOutlined,
   PlusOutlined,
   SearchOutlined,
@@ -37,9 +43,100 @@ const MANUFACTURE_STATUS_MAP = {
   2: 'completed',
 }
 
+const MANUFACTURE_SAVE_API = '/erp/manufacture/save'
+
+const formatManufactureDate = (value) => {
+  if (!value) return undefined
+  if (typeof value?.format === 'function') return value.format('YYYY-MM-DD HH:mm:ss')
+  return value
+}
+
+const buildManufacturePayload = ({ productionOrder = {}, materialConfirmation = {}, isEdit }) => {
+  const productDetails = productionOrder.productDetails ?? {}
+  const orderDetails = productionOrder.orderDetails ?? []
+  const deadlines = Object.values(productDetails)
+    .map(detail => detail?.deadline)
+    .filter(Boolean)
+  const latestDeadline = deadlines
+    .map(deadline => ({ raw: deadline, time: new Date(formatManufactureDate(deadline)).getTime() }))
+    .sort((left, right) => right.time - left.time)[0]?.raw
+
+  const code = productionOrder.productionOrderCode ?? productionOrder.code
+  const details = orderDetails.map((product, index) => {
+      const detailKey = String(product.id ?? index)
+      const detailValues = productDetails[detailKey] ?? {}
+      const quantity = Number(detailValues.quantity ?? product.quantity ?? 0)
+      const unitPrice = Number(product.unitPrice ?? product.price ?? 0)
+
+      return {
+        productId: product.productId,
+        quantity,
+        unitPrice,
+        totalPrice: Number(product.totalPrice ?? product.total ?? (quantity * unitPrice)),
+      }
+    })
+
+  return {
+    manufactureProduct: {
+      ...(isEdit ? { id: productionOrder.id } : {}),
+      code,
+      orderCode: productionOrder.salesOrderCode ?? productionOrder.orderCode,
+      typeOrder: productionOrder.typeOrder ?? 'PRODUCTION',
+      dateStart: formatManufactureDate(productionOrder.dateStart) ?? null,
+      dateEnd: formatManufactureDate(productionOrder.dateEnd ?? latestDeadline) ?? null,
+      note: productionOrder.note ?? null,
+      status: productionOrder.manufactureStatus
+        ?? (typeof productionOrder.status === 'number' ? productionOrder.status : 0),
+      priceStandard: productionOrder.priceStandard ?? null,
+      priceReal: productionOrder.priceReal ?? null,
+      material: productionOrder.material ?? null,
+      details,
+    },
+    materialOutbounds: (materialConfirmation.allocations ?? []).map(allocation => ({
+      warehouseId: allocation.warehouseId,
+      manufactureCode: code,
+      materialId: allocation.materialId,
+      quantity: Number(allocation.quantity ?? 0),
+      width: Number(allocation.width ?? 0),
+      height: Number(allocation.height ?? 0),
+    })),
+  }
+}
+
 const mapManufactureOrder = (record) => {
   const order = record?.order
   const orderDetails = Array.isArray(order?.details) ? order.details : []
+  const manufactureDetails = Array.isArray(record?.details) ? record.details : []
+  const usedOrderDetailIds = new Set()
+  const editingOrderDetails = manufactureDetails.map((detail, index) => {
+    const orderDetail = orderDetails.find(item => (
+      !usedOrderDetailIds.has(String(item.id))
+      && String(item.productId) === String(detail.productId)
+    ))
+    if (orderDetail?.id != null) usedOrderDetailIds.add(String(orderDetail.id))
+
+    const quantity = detail.quantity ?? detail.target ?? orderDetail?.quantity ?? 0
+    const unitPrice = detail.unitPrice ?? orderDetail?.price ?? 0
+
+    return {
+      ...orderDetail,
+      id: orderDetail?.id ?? `manufacture-${detail.id ?? index}`,
+      manufactureDetailId: detail.id,
+      productId: detail.productId,
+      productName: orderDetail?.productName ?? `Sản phẩm #${detail.productId}`,
+      skuId: detail.skuId ?? orderDetail?.skuId ?? null,
+      skuDetails: detail.skuDetails ?? orderDetail?.skuDetails ?? [],
+      quantity: Number(quantity),
+      price: Number(unitPrice),
+      total: Number(detail.totalPrice ?? orderDetail?.total ?? (Number(quantity) * Number(unitPrice))),
+      bomProductId: detail.bomProductId,
+      bomProduct: detail.bomProduct,
+    }
+  })
+  const effectiveOrderDetails = manufactureDetails.length > 0 ? editingOrderDetails : orderDetails
+  const editDeadline = record?.dateEnd && dayjs(record.dateEnd).isValid()
+    ? dayjs(record.dateEnd)
+    : undefined
 
   return {
     ...record,
@@ -48,14 +145,18 @@ const mapManufactureOrder = (record) => {
     salesOrderId: order?.id,
     customerName: order?.customerReceiverName,
     createdAt: record?.createdDate,
-    orderDetails,
-    productDetails: Object.fromEntries(orderDetails.map(detail => [
+    dateStart: record?.dateStart && dayjs(record.dateStart).isValid() ? dayjs(record.dateStart) : undefined,
+    dateEnd: editDeadline,
+    orderDetails: effectiveOrderDetails,
+    manufactureDetails,
+    productDetails: Object.fromEntries(effectiveOrderDetails.map(detail => [
       String(detail?.id),
       {
         quantity: detail?.quantity ?? 0,
-        deadline: record?.dateEnd,
+        deadline: editDeadline,
       },
     ])),
+    manufactureStatus: record?.status,
     status: MANUFACTURE_STATUS_MAP[record?.status] ?? 'new',
   }
 }
@@ -77,7 +178,7 @@ const getProductLabel = (record) => {
     : `${productNames[0]} +${productNames.length - 1}`
 }
 
-const productionOrderColumns = [
+const getProductionOrderColumns = ({ onView, onEdit }) => [
   {
     title: 'Mã lệnh SX',
     dataIndex: 'productionOrderCode',
@@ -149,14 +250,49 @@ const productionOrderColumns = [
       </span>
     ),
   },
+  {
+    title: 'Thao tác',
+    key: 'actions',
+    width: 100,
+    align: 'center',
+    fixed: 'right',
+    render: (_, record) => (
+      <Space size={4}>
+        <Tooltip title="Xem chi tiết">
+          <Button
+            type="text"
+            icon={<EyeOutlined />}
+            aria-label="Xem chi tiết"
+            onClick={(event) => {
+              event.stopPropagation()
+              onView(record)
+            }}
+          />
+        </Tooltip>
+        <Tooltip title="Chỉnh sửa">
+          <Button
+            type="text"
+            icon={<EditOutlined />}
+            aria-label="Chỉnh sửa"
+            onClick={(event) => {
+              event.stopPropagation()
+              onEdit(record)
+            }}
+          />
+        </Tooltip>
+      </Space>
+    ),
+  },
 ]
 
 const ProductionOrderList = () => {
   const [open, setOpen] = useState(false)
+  const [drawerMode, setDrawerMode] = useState('create')
   const [step, setStep] = useState(1)
   const [pendingOrder, setPendingOrder] = useState(null)
   const [orders, setOrders] = useState([])
   const [ordersLoading, setOrdersLoading] = useState(false)
+  const [savingOrder, setSavingOrder] = useState(false)
   const [productionPagination, setProductionPagination] = useState({
     current: 1,
     pageSize: 10,
@@ -265,6 +401,7 @@ const ProductionOrderList = () => {
   }
 
   const openFlow = () => {
+    setDrawerMode('create')
     waitingOrderSearchRef.current = ''
     setWaitingOrders([])
     setWaitingOrderTotal(0)
@@ -272,6 +409,20 @@ const ProductionOrderList = () => {
     setPendingOrder(null)
     setStep(1)
     setOpen(true)
+  }
+
+  const openExistingOrder = (record, mode) => {
+    setDrawerMode(mode)
+    setPendingOrder(record)
+    setStep(1)
+    setWaitingOrders(record?.order ? [record.order] : [])
+    setWaitingOrderTotal(record?.order ? 1 : 0)
+    setOpen(true)
+
+    if (mode === 'edit') {
+      waitingOrderSearchRef.current = ''
+      fetchWaitingOrders({ page: 1, reset: true, force: true }).catch(() => undefined)
+    }
   }
 
   const searchWaitingOrders = (code) => {
@@ -292,6 +443,7 @@ const ProductionOrderList = () => {
 
   const closeFlow = () => {
     setOpen(false)
+    setDrawerMode('create')
     setStep(1)
     setPendingOrder(null)
   }
@@ -307,21 +459,39 @@ const ProductionOrderList = () => {
     })
   }
 
-  const finishFlow = ({ productionOrder, materialConfirmation }) => {
-    setOrders(current => [
-      {
-        ...productionOrder,
-        id: Date.now(),
-        createdAt: Date.now(),
-        bomVersion: materialConfirmation?.version,
-        priority: 'normal',
-        status: 'running',
-      },
-      ...current,
-    ])
-    message.success('Đã tạo lệnh sản xuất và xác nhận vật tư.')
-    closeFlow()
+  const finishFlow = async ({ productionOrder, materialConfirmation }) => {
+    const isEdit = drawerMode === 'edit'
+    const payload = buildManufacturePayload({ productionOrder, materialConfirmation, isEdit })
+
+    setSavingOrder(true)
+    try {
+      const response = await RequestUtils.Post(MANUFACTURE_SAVE_API, payload)
+      const isSuccess = response?.errorCode === 200 || response?.success
+      if (!isSuccess) {
+        message.error(response?.message || (isEdit
+          ? 'Cập nhật lệnh sản xuất thất bại.'
+          : 'Tạo lệnh sản xuất thất bại.'))
+        return
+      }
+
+      message.success(response?.message || (isEdit
+        ? 'Đã cập nhật lệnh sản xuất.'
+        : 'Đã tạo lệnh sản xuất.'))
+      closeFlow()
+      await fetchProductionOrders(filters, productionPagination.current)
+    } catch (error) {
+      message.error(error?.message || (isEdit
+        ? 'Cập nhật lệnh sản xuất thất bại.'
+        : 'Tạo lệnh sản xuất thất bại.'))
+    } finally {
+      setSavingOrder(false)
+    }
   }
+
+  const productionOrderColumns = getProductionOrderColumns({
+    onView: record => openExistingOrder(record, 'view'),
+    onEdit: record => openExistingOrder(record, 'edit'),
+  })
 
   return (
     <>
@@ -423,7 +593,7 @@ const ProductionOrderList = () => {
             pagination={false}
             bordered
             locale={{ emptyText: 'Chưa có lệnh sản xuất' }}
-            scroll={{ x: 1150 }}
+            scroll={{ x: 1250 }}
           />
         </div>
         <div className="production-list-pagination-bottom">
@@ -441,7 +611,7 @@ const ProductionOrderList = () => {
         placement="right"
         width={step === 1 ? 920 : 'min(1200px, 96vw)'}
         destroyOnHidden
-        onClose={step === 2 ? cancelOrder : closeFlow}
+        onClose={step === 2 && drawerMode !== 'view' ? cancelOrder : closeFlow}
         styles={{
           header: { minHeight: 48, padding: '8px 16px' },
           body: { padding: 0, overflowY: 'auto' },
@@ -450,6 +620,7 @@ const ProductionOrderList = () => {
         {step === 1 ? (
           <CreateOrder
             initialValues={pendingOrder}
+            mode={drawerMode}
             waitingOrders={waitingOrders}
             waitingOrderLoading={waitingOrderLoading}
             onSearchWaitingOrders={searchWaitingOrders}
@@ -467,6 +638,8 @@ const ProductionOrderList = () => {
         ) : (
           <BomConfirmation
             productionOrder={pendingOrder}
+            mode={drawerMode}
+            submitting={savingOrder}
             onBack={() => setStep(1)}
             onCancel={cancelOrder}
             onConfirm={finishFlow}

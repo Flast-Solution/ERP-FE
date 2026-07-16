@@ -15,6 +15,6 @@ export const workflowFixedPanelStyle = {
   bottom: 0,
   width: 384,
   maxHeight: 'none',
-  overflowY: 'auto',
+  overflow: 'hidden',
   zIndex: 10,
 }

@@ -13,6 +13,7 @@ import { createSnowflakeId } from '@/utils/snowflake';
 
 const CreateOrder = ({
   initialValues,
+  mode = 'create',
   waitingOrders = [],
   waitingOrderLoading = false,
   onSearchWaitingOrders,
@@ -20,6 +21,7 @@ const CreateOrder = ({
   onNext,
   onCancel,
 }) => {
+  const readOnly = mode === 'view';
   const [form] = Form.useForm();
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [productionOrderCode] = useState(() => (
@@ -30,15 +32,17 @@ const CreateOrder = ({
   useEffect(() => {
     if (!initialValues?.salesOrderId) return
     const order = waitingOrders.find(item => String(item.id) === String(initialValues.salesOrderId))
+      ?? initialValues?.order
     if (order) {
       setSelectedOrder(initialValues?.orderDetails
         ? { ...order, details: initialValues.orderDetails }
         : order)
     }
-  }, [initialValues?.salesOrderId, initialValues?.orderDetails, waitingOrders])
+  }, [initialValues?.salesOrderId, initialValues?.orderDetails, initialValues?.order, waitingOrders])
   const handleSubmit = (values) => {
     if (onNext) {
       onNext({
+        ...initialValues,
         ...values,
         salesOrderCode: selectedOrder?.code,
         orderDetails: selectedOrder?.details ?? [],
@@ -51,10 +55,11 @@ const CreateOrder = ({
   return <ProductionPage>
     <div className="production-card">
       <header className="page-head">
-        <div className="head-row"><div><h1>Tạo lệnh sản xuất</h1><div className="subtitle">WF2 Sản xuất · ISO 9001:2015 §8.5</div></div></div>
+        <div className="head-row"><div><h1>{mode === 'view' ? 'Chi tiết lệnh sản xuất' : mode === 'edit' ? 'Chỉnh sửa lệnh sản xuất' : 'Tạo lệnh sản xuất'}</h1><div className="subtitle">WF2 Sản xuất · ISO 9001:2015 §8.5</div></div></div>
       </header>
       <Form
         form={form}
+        disabled={readOnly}
         layout="vertical"
         initialValues={{ ...initialValues, productionOrderCode }}
         onFinish={handleSubmit}
@@ -109,15 +114,17 @@ const CreateOrder = ({
                   <span>{product.productName || product.name || `Sản phẩm ${productIndex + 1}`}</span>
                   {product.code && <span className="product-block__code">{product.code}</span>}
                 </div>
-                <CustomButtonIcon
-                  title="Xóa sản phẩm"
-                  icon={<DeleteOutlined />}
-                  buttonProps={{ danger: true, size: 'small' }}
-                  handleClick={() => setSelectedOrder(current => ({
-                    ...current,
-                    details: current.details.filter((_, index) => index !== productIndex),
-                  }))}
-                />
+                {!readOnly && (
+                  <CustomButtonIcon
+                    title="Xóa sản phẩm"
+                    icon={<DeleteOutlined />}
+                    buttonProps={{ danger: true, size: 'small' }}
+                    handleClick={() => setSelectedOrder(current => ({
+                      ...current,
+                      details: current.details.filter((_, index) => index !== productIndex),
+                    }))}
+                  />
+                )}
               </div>
               <div className="grid">
                 <FormInput
@@ -148,7 +155,13 @@ const CreateOrder = ({
           ))}
         </section>
       </div>
-      <footer className="foot"><span className="foot-note">Bước 1/2 · Sau khi tiếp tục, bạn cần xác nhận BOM và phân bổ vật tư.</span><div className="actions"><CustomButton title="Hủy" variant="outlined" color="default" inRigth={false} onClick={onCancel} /><CustomButton title="Tiếp tục xác nhận vật tư" type="primary" htmlType="submit" icon={<SaveOutlined />} inRigth={false} /></div></footer>
+      <footer className="foot">
+        <span className="foot-note">{readOnly ? 'Thông tin chi tiết của lệnh sản xuất.' : 'Bước 1/2 · Sau khi tiếp tục, bạn cần xác nhận BOM và phân bổ vật tư.'}</span>
+        <div className="actions">
+          <CustomButton title={readOnly ? 'Đóng' : 'Hủy'} variant="outlined" color="default" inRigth={false} onClick={onCancel} />
+          {!readOnly && <CustomButton title="Tiếp tục xác nhận vật tư" type="primary" htmlType="submit" icon={<SaveOutlined />} inRigth={false} />}
+        </div>
+      </footer>
       </Form>
     </div>
   </ProductionPage>;
