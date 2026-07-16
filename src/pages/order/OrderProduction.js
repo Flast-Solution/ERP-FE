@@ -4,19 +4,17 @@ import { useNavigate } from 'react-router-dom';
 import { BreadcrumbCustom } from '@flast-erp/core/components';
 import ListOrder from '@/containers/Order/List';
 
-const STATUS_PRODUCTION = 2;
-
 const OrderProduction = () => {
 
     const navigate = useNavigate();
     const [ title ] = useState("Đơn hàng đang sản xuất");
 
     const urlParams = new URLSearchParams(window.location.search);
-    const filter = {
-        type: "order",
-        detailStatus: STATUS_PRODUCTION,
-        ...urlParams
-    };
+    urlParams.delete('limit');
+    urlParams.delete('page');
+    urlParams.delete('type');
+    urlParams.delete('detailStatus');
+    const filter = Object.fromEntries(urlParams.entries());
 
     const extraActions = [
         {
@@ -55,6 +53,9 @@ const OrderProduction = () => {
             />
             <ListOrder
                 filter={filter}
+                apiPath="erp/manufacture/get-order"
+                initialPage={0}
+                orderMode
                 hideQuoteButton={true}
                 disableWorkflowAttach={true}
                 extraActions={extraActions}

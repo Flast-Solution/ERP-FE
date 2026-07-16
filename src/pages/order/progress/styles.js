@@ -123,4 +123,164 @@ export const workflowProgressPageStyles = `
             font-weight: 600;
             text-align: right;
           }
+
+          .workflow-history-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 22px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e5e7eb;
+          }
+
+          .workflow-history-title {
+            color: #111827;
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1.4;
+          }
+
+          .workflow-history-count {
+            flex: 0 0 auto;
+            color: #4b5563;
+            font-size: 16px;
+          }
+
+          .workflow-history-list {
+            width: 100%;
+          }
+
+          .workflow-history-item {
+            position: relative;
+            padding: 0 0 26px 34px;
+          }
+
+          .workflow-history-item::before {
+            position: absolute;
+            top: 11px;
+            bottom: -11px;
+            left: 7px;
+            width: 1px;
+            background: #dbe2ea;
+            content: '';
+          }
+
+          .workflow-history-item.is-last {
+            padding-bottom: 0;
+          }
+
+          .workflow-history-item.is-last::before {
+            display: none;
+          }
+
+          .workflow-history-dot {
+            position: absolute;
+            z-index: 1;
+            top: 7px;
+            left: 0;
+            width: 15px;
+            height: 15px;
+            border: 3px solid #fff;
+            border-radius: 50%;
+            background: #2f5be7;
+            box-sizing: content-box;
+          }
+
+          .workflow-history-dot.is-error {
+            background: #ef4444;
+          }
+
+          .workflow-history-transition {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+          }
+
+          .workflow-history-step-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 30px;
+            padding: 3px 12px;
+            border: 1px solid #b8d1ff;
+            border-radius: 999px;
+            background: #eaf3ff;
+            color: #2457d6;
+            font-size: 15px;
+            font-weight: 500;
+            line-height: 22px;
+          }
+
+          .workflow-history-step-bullet {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #3367db;
+          }
+
+          .workflow-history-arrow {
+            color: #94a3b8;
+            font-size: 13px;
+          }
+
+          .workflow-history-meta {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            color: #6b7280;
+            font-size: 14px;
+          }
+
+          .workflow-history-meta-separator {
+            color: #9ca3af;
+          }
+
+          .workflow-history-note {
+            margin-top: 12px;
+            padding: 11px 14px;
+            border-left: 3px solid #cbd5e1;
+            border-radius: 5px;
+            background: #f6f7f9;
+            color: #172033;
+            font-size: 15px;
+            line-height: 1.5;
+          }
+
+          .workflow-history-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+          }
+
+          .workflow-history-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 12px;
+            border: 1px solid #a7efc2;
+            border-radius: 999px;
+            background: #dcfce7;
+            color: #15803d;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 13px;
+          }
+
+          @media (max-width: 575px) {
+            .workflow-history-title {
+              font-size: 18px;
+            }
+
+            .workflow-history-item {
+              padding-left: 28px;
+            }
+
+            .workflow-history-note {
+              font-size: 14px;
+            }
+          }
         `

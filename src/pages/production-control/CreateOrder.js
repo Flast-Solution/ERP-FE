@@ -38,7 +38,11 @@ const CreateOrder = ({
   }, [initialValues?.salesOrderId, initialValues?.orderDetails, waitingOrders])
   const handleSubmit = (values) => {
     if (onNext) {
-      onNext({ ...values, orderDetails: selectedOrder?.details ?? [] })
+      onNext({
+        ...values,
+        salesOrderCode: selectedOrder?.code,
+        orderDetails: selectedOrder?.details ?? [],
+      })
       return
     }
     notify('Đã tạo lệnh sản xuất')
@@ -82,6 +86,7 @@ const CreateOrder = ({
                 setSelectedOrder(selectedOrder ?? null)
                 form.setFieldValue('customerName', selectedOrder?.customerReceiverName)
                 form.setFieldValue('productDetails', undefined)
+                form.setFieldValue('fabricType', selectedOrder?.manufactureProduct?.material)
               }}
               onPopupScroll={(event) => {
                 const target = event.currentTarget
@@ -91,7 +96,6 @@ const CreateOrder = ({
               }}
             />
             <FormInput name="customerName" label="Khách hàng" disabled />
-            <FormInput name="fabricType" label="Loại vải" disabled />
           </div>
         </section>
         <section className="section">

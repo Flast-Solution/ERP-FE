@@ -78,6 +78,7 @@ const WorkflowFormSection = ({
               key={remoteRenderKey}
               ref={isReviewingSubmission ? undefined : remoteFormRef}
               Component={RemoteForm}
+              allowSubmit={!isReviewingSubmission}
               order={order}
               record={order}
               data={order}
@@ -89,10 +90,14 @@ const WorkflowFormSection = ({
               defaultValues={displaySubmissionValues}
               readOnly={isReviewingSubmission}
               disabled={isReviewingSubmission}
+              canSubmit={!isReviewingSubmission}
+              showSubmit={!isReviewingSubmission}
+              hideSubmit={isReviewingSubmission}
+              submitDisabled={isReviewingSubmission}
               hideTitle
               showTitle={false}
               onSubmit={isReviewingSubmission ? undefined : handleRemoteFormSubmit}
-              onSubmitError={handleRemoteFormSubmitError}
+              onSubmitError={isReviewingSubmission ? undefined : handleRemoteFormSubmitError}
             />
           </RemoteFormBoundary>
         </div>

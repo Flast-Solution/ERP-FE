@@ -208,7 +208,15 @@ const copyToClipboard = (text, setCopiedIndex, index) => {
   })
 };
 
-const ListOrder = ({ filter, hideQuoteButton, extraActions, enableLotTree = false, disableWorkflowAttach = false }) => {
+const ListOrder = ({
+  filter = {},
+  hideQuoteButton,
+  extraActions,
+  enableLotTree = false,
+  disableWorkflowAttach = false,
+  apiPath = 'erp/order/fetch',
+  orderMode = false,
+}) => {
 
   const navigate = useNavigate();
   const [ copiedIndex, setCopiedIndex ] = useState(null);
@@ -223,6 +231,7 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions, enableLotTree = fals
   const [ expandedRowKeys, setExpandedRowKeys ] = useState([])
   const [ lotsByOrderId, setLotsByOrderId ] = useState({})
   const [ loadingLotsByOrderId, setLoadingLotsByOrderId ] = useState({})
+  const isOrderList = orderMode || filter.type === 'order'
 
   const onClickViewDetail = (customerOrder) => InAppEvent.emit(HASH_MODAL, {
     hash: "#order.tabs",
@@ -552,7 +561,7 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions, enableLotTree = fals
       width: 150,
       ellipsis: true,
       render: (array, record) => {
-        if (filter?.type !== 'order') {
+        if (!isOrderList) {
           return renderArrayColor(array, record.detailstatus)
         }
 
@@ -750,7 +759,7 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions, enableLotTree = fals
       .map(item => item?.id)
       .filter(Boolean)
 
-    if (filter?.type === 'order' && entityIds.length > 0) {
+    if (isOrderList && entityIds.length > 0) {
       try {
         const response = await RequestUtils.Post(WORKFLOW_INSTANCE_BY_ENTITY_API, {
           entityName: 'order',
@@ -840,7 +849,7 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions, enableLotTree = fals
     }
 
     return tableData;
-  }, [filter?.type]);
+  }, [isOrderList]);
 
   const workflowTargetTypeLabel = selectedWorkflowEntityType === LOT_WORKFLOW_ENTITY_TYPE ? 'lô' : 'đơn'
   const workflowTargetCode = selectedOrder?.code || selectedOrder?.name
@@ -858,7 +867,7 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions, enableLotTree = fals
         hasCreate={false}
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
-        apiPath={'erp/order/fetch'}
+        apiPath={apiPath}
         columns={columns}
       />
 
