@@ -26,9 +26,9 @@ import { ApartmentOutlined, CopyOutlined, EditFilled, EyeOutlined } from '@ant-d
 import { RestList } from "@flast-erp/core/components";
 import { useGetList } from "@flast-erp/core/hooks";
 import Filter from './Filter';
-import { 
-  dateFormatOnSubmit, 
-  formatMoney, 
+import {
+  dateFormatOnSubmit,
+  formatMoney,
   formatTime,
   InAppEvent,
   RequestUtils
@@ -85,7 +85,7 @@ const resolveWorkflowInstances = (response) => {
 
   const objectData = candidates.find(item => item && typeof item === 'object')
   if (objectData) {
-    if (objectData.id || objectData.entityId || objectData.entity_id || objectData.processInstance) {
+    if (objectData.id || objectData.entityId || objectData.processInstance) {
       return [objectData]
     }
 
@@ -98,10 +98,6 @@ const resolveWorkflowInstances = (response) => {
 
   return []
 }
-
-const getValue = (...values) => values.find(value => value !== undefined && value !== null && value !== '')
-
-const getFirstArray = (...values) => values.find(Array.isArray) ?? []
 
 const clonePlainData = (value) => {
   if (value === undefined || value === null) {
@@ -134,20 +130,7 @@ const resolveWorkflowPreview = (response) => {
   return payload
 }
 
-const isSameStepRef = (left, right) => {
-  const normalizedLeft = String(left ?? '').trim()
-  const normalizedRight = String(right ?? '').trim()
-  return Boolean(normalizedLeft && normalizedRight && normalizedLeft === normalizedRight)
-}
-
-const getWorkflowInstanceEntityId = (instance) => getValue(
-  instance?.entityId,
-  instance?.entity_id,
-  instance?.processInstance?.entityId,
-  instance?.processInstance?.entity_id,
-  instance?.workflowInstance?.entityId,
-  instance?.workflowInstance?.entity_id,
-)
+const getWorkflowInstanceEntityId = (instance) => instance?.entityId
 
 const normalizeWorkflowInstance = (instance) => {
   if (!instance?.processInstance) {
@@ -161,90 +144,11 @@ const normalizeWorkflowInstance = (instance) => {
   }
 }
 
-const getWorkflowInstanceProcessId = (instance) => getValue(
-  instance?.processId,
-  instance?.process_id,
-  instance?.process?.id,
-  instance?.workflowProcess?.id,
-  instance?.processInstance?.processId,
-  instance?.processInstance?.process_id,
+const getWorkflowInstanceProcessId = (instance) => instance?.processId
+
+const getWorkflowCurrentStepLabel = (record) => (
+  record?.workflowInstance?.preview?.stepProcesses?.name
 )
-
-const getWorkflowInstanceCurrentStepCode = (instance) => getValue(
-  instance?.currentStepCode,
-  instance?.current_step_code,
-  instance?.preview?.processInstance?.currentStepCode,
-  instance?.preview?.processInstance?.current_step_code,
-  instance?.preview?.currentStepCode,
-  instance?.preview?.current_step_code,
-  instance?.processInstance?.currentStepCode,
-  instance?.processInstance?.current_step_code,
-)
-
-const findCurrentStepInWorkflow = (record) => {
-  const instance = record?.workflowInstance
-  const workflowProcess = record?.workflowProcess ?? instance?.process ?? instance?.workflowProcess
-  const currentStepCode = getWorkflowInstanceCurrentStepCode(instance)
-  const steps = getFirstArray(
-    instance?.preview?.stepProcessList,
-    instance?.preview?.step_process_list,
-    instance?.preview?.steps,
-    instance?.preview?.stepProcesses ? [instance.preview.stepProcesses] : undefined,
-    workflowProcess?.steps,
-    workflowProcess?.stepProcessList,
-    workflowProcess?.step_process_list,
-    workflowProcess?.stepProcesses,
-    workflowProcess?.step_processes,
-    instance?.steps,
-    instance?.stepProcessList,
-    instance?.step_process_list,
-  )
-
-  return steps.find(step =>
-    step?.current
-    || step?.active
-    || isSameStepRef(step?.stepCode, currentStepCode)
-    || isSameStepRef(step?.code, currentStepCode)
-    || isSameStepRef(step?.id, currentStepCode),
-  )
-}
-
-const getWorkflowCurrentStepLabel = (record) => {
-  const instance = record?.workflowInstance
-  const currentStep = getValue(
-    instance?.preview?.currentStep,
-    instance?.preview?.current_step,
-    instance?.preview?.stepProcesses,
-    instance?.preview?.step_processes,
-    instance?.currentStep,
-    instance?.current_step,
-    findCurrentStepInWorkflow(record),
-    instance?.stepProcess,
-    instance?.step_process,
-    instance?.stepProcesses,
-    instance?.processStep,
-    instance?.process_step,
-    instance?.processInstance?.currentStep,
-    instance?.processInstance?.current_step,
-  )
-
-  return getValue(
-    currentStep?.name,
-    currentStep?.label,
-    currentStep?.stepName,
-    currentStep?.step_name,
-    instance?.currentStepName,
-    instance?.current_step_name,
-    instance?.stepName,
-    instance?.step_name,
-    instance?.currentStepLabel,
-    instance?.current_step_label,
-    instance?.processInstance?.currentStepName,
-    instance?.processInstance?.current_step_name,
-    instance?.processInstance?.currentStepLabel,
-    instance?.processInstance?.current_step_label,
-  )
-}
 
 const resolveOrderLots = (response) => {
   const payload = response?.data ?? response
@@ -304,7 +208,15 @@ const copyToClipboard = (text, setCopiedIndex, index) => {
   })
 };
 
-const ListOrder = ({ filter, hideQuoteButton, extraActions, enableLotTree = false, disableWorkflowAttach = false }) => {
+const ListOrder = ({
+  filter = {},
+  hideQuoteButton,
+  extraActions,
+  enableLotTree = false,
+  disableWorkflowAttach = false,
+  apiPath = 'erp/order/fetch',
+  orderMode = false,
+}) => {
 
   const navigate = useNavigate();
   const [ copiedIndex, setCopiedIndex ] = useState(null);
@@ -319,6 +231,7 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions, enableLotTree = fals
   const [ expandedRowKeys, setExpandedRowKeys ] = useState([])
   const [ lotsByOrderId, setLotsByOrderId ] = useState({})
   const [ loadingLotsByOrderId, setLoadingLotsByOrderId ] = useState({})
+  const isOrderList = orderMode || filter.type === 'order'
 
   const onClickViewDetail = (customerOrder) => InAppEvent.emit(HASH_MODAL, {
     hash: "#order.tabs",
@@ -648,7 +561,7 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions, enableLotTree = fals
       width: 150,
       ellipsis: true,
       render: (array, record) => {
-        if (filter?.type !== 'order') {
+        if (!isOrderList) {
           return renderArrayColor(array, record.detailstatus)
         }
 
@@ -846,7 +759,7 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions, enableLotTree = fals
       .map(item => item?.id)
       .filter(Boolean)
 
-    if (filter?.type === 'order' && entityIds.length > 0) {
+    if (isOrderList && entityIds.length > 0) {
       try {
         const response = await RequestUtils.Post(WORKFLOW_INSTANCE_BY_ENTITY_API, {
           entityName: 'order',
@@ -936,7 +849,7 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions, enableLotTree = fals
     }
 
     return tableData;
-  }, [filter?.type]);
+  }, [isOrderList]);
 
   const workflowTargetTypeLabel = selectedWorkflowEntityType === LOT_WORKFLOW_ENTITY_TYPE ? 'lô' : 'đơn'
   const workflowTargetCode = selectedOrder?.code || selectedOrder?.name
@@ -954,7 +867,7 @@ const ListOrder = ({ filter, hideQuoteButton, extraActions, enableLotTree = fals
         hasCreate={false}
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
-        apiPath={'erp/order/fetch'}
+        apiPath={apiPath}
         columns={columns}
       />
 

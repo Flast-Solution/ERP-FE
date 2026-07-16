@@ -168,12 +168,17 @@ function buildProps(field) {
       break
 
     case 'radio':
-    case 'checkbox':
       if (config.options?.length) {
         props.push({ key: 'options', value: config.options, kind: 'json' })
       }
       props.push({ key: 'valueProp', value: 'value', kind: 'str' })
       props.push({ key: 'titleProp', value: 'label', kind: 'str' })
+      break
+
+    case 'checkbox':
+      if (config.options?.[0]?.label) {
+        props.push({ key: 'text', value: config.options[0].label, kind: 'str' })
+      }
       break
 
     case 'lookup':
