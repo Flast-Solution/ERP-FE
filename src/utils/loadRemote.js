@@ -22,6 +22,17 @@ import * as FlastErpCore    from "@flast-erp/core"
 
 let initialized = false
 const registeredRemotes = new Set()
+const loadedRemoteContainers = new Set()
+let remoteLoadQueue = Promise.resolve()
+
+// Các remote form hiện tại đều được build với cùng chunkLoadingGlobal
+// `webpackChunkremote_app`. Cần cô lập lần khởi tạo từng container để chunk của
+// remote đã tải trước không bị replay vào webpack runtime của remote tiếp theo.
+function resetLegacyRemoteChunkScope() {
+  if (typeof window !== "undefined") {
+    window.webpackChunkremote_app = []
+  }
+}
  
 const SHARED_DEPS = {
   react: {
@@ -173,20 +184,30 @@ export async function loadRemote(
   remoteEntryGlobalName = componentId,
   remoteEntryVersion = ''
 ) {
+  const load = async () => {
+    const entryVersion = String(remoteEntryVersion || '').trim()
+    const entry = `${remoteBaseUrl}/${remoteEntryComponentId}/remoteEntry.js${entryVersion ? `?v=${encodeURIComponent(entryVersion)}` : ''}`
+    ensureRemoteRegistered(componentId, entry, remoteEntryGlobalName)
 
-  const entryVersion = String(remoteEntryVersion || '').trim()
-  const entry = `${remoteBaseUrl}/${remoteEntryComponentId}/remoteEntry.js${entryVersion ? `?v=${encodeURIComponent(entryVersion)}` : ''}`
-  ensureRemoteRegistered(componentId, entry, remoteEntryGlobalName)
+    if (!loadedRemoteContainers.has(componentId)) {
+      resetLegacyRemoteChunkScope()
+    }
 
-  const mod = await mfLoadRemote(`${componentId}/${exposedModule}`)
-  if (!mod) {
-    throw new Error(
-      `Module "${exposedModule}" không tìm thấy trong remote "${componentId}". ` +
-      `Kiểm tra lại "exposes" trong craco.config.js của remote-app.`
-    )
+    const mod = await mfLoadRemote(`${componentId}/${exposedModule}`)
+    if (!mod) {
+      throw new Error(
+        `Module "${exposedModule}" không tìm thấy trong remote "${componentId}". ` +
+        `Kiểm tra lại "exposes" trong craco.config.js của remote-app.`
+      )
+    }
+
+    loadedRemoteContainers.add(componentId)
+    return mod
   }
 
-  return mod
+  const request = remoteLoadQueue.then(load, load)
+  remoteLoadQueue = request.catch(() => undefined)
+  return request
 }
 
 /**

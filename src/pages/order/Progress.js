@@ -13,13 +13,14 @@ const OrderProgressPage = () => {
   const { user } = useGetMe()
   const orderState = useOrderProgressOrder()
   const lotState = useOrderLots(orderState.orderId)
-  const orderWorkflowState = useOrderWorkflowInstance(orderState.orderId)
+  const orderWorkflowState = useOrderWorkflowInstance(lotState.selectedLot)
 
   const workflowState = useWorkflowProgress({
     workflowInstance: orderWorkflowState.workflowInstance,
     order: orderState.order,
     orderId: orderState.orderId,
     user,
+    loadingWorkflowInstance: orderWorkflowState.loadingWorkflowInstance,
     syncWorkflowInstance: orderWorkflowState.syncWorkflowInstance,
   })
 
@@ -37,6 +38,7 @@ const OrderProgressPage = () => {
     displayForm: submissionState.displayForm,
     currentStep: workflowState.currentStep,
     displayStep: workflowState.displayStep,
+    displaySubmission: submissionState.displaySubmission,
     workflowPreview: workflowState.workflowPreview,
     refreshWorkflow: workflowState.refreshWorkflow,
     syncWorkflowInstance: orderWorkflowState.syncWorkflowInstance,
