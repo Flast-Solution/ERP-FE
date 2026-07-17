@@ -19,7 +19,7 @@ export const useBomVersions = ({ productionOrder, form, onVersionChange }) => {
 
   const bomItems = useMemo(
     () => buildBomItems(productionOrder),
-    [productionOrder?.orderDetails, productionOrder?.productDetails],
+    [productionOrder],
   );
 
   const products = useMemo(() => buildProducts(bomItems), [bomItems]);

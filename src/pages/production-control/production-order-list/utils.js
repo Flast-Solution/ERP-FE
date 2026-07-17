@@ -74,6 +74,7 @@ export const buildManufacturePayload = ({ productionOrder = {}, materialConfirma
       priceStandard: productionOrder.priceStandard ?? null,
       priceReal: productionOrder.priceReal ?? null,
       material: productionOrder.material ?? null,
+      confirmedBy: materialConfirmation.confirmedBy ?? productionOrder.confirmedBy ?? null,
       details,
     },
     materialOutbounds: (materialConfirmation.allocations ?? []).map(allocation => ({
@@ -141,6 +142,7 @@ export const mapManufactureOrder = (record) => {
       },
     ])),
     manufactureStatus: record?.status,
+    confirmedBy: record?.confirmedBy ?? null,
     status: MANUFACTURE_STATUS_MAP[record?.status] ?? 'new',
   }
 }

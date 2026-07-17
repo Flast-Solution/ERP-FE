@@ -1,42 +1,61 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Form } from 'antd';
-import { message } from 'antd';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Form } from "antd";
+import { message } from "antd";
 import {
   buildAllocationEntry,
   restoreOutboundsToAllocations,
   validateAllocationQuantity,
-} from '../utils';
+} from "../utils";
+
+const EMPTY_OUTBOUNDS = [];
 
 export const useAllocations = ({
   bomRows = [],
   inventoriesByMaterialId = new Map(),
-  mode = 'create',
-  outbounds = [],
+  mode = "create",
+  outbounds,
 }) => {
   const [allocationForm] = Form.useForm();
   const [allocations, setAllocations] = useState([]);
   const [allocationModalOpen, setAllocationModalOpen] = useState(false);
   const allocationSequenceRef = useRef(0);
   const restoredOutboundsRef = useRef(false);
+  const safeOutbounds = Array.isArray(outbounds) ? outbounds : EMPTY_OUTBOUNDS;
 
-  const selectedAllocationProductMaterialId = Form.useWatch('productMaterialId', allocationForm);
-  const selectedAllocationInventoryId = Form.useWatch('inventoryId', allocationForm);
+  const selectedAllocationProductMaterialId = Form.useWatch(
+    "productMaterialId",
+    allocationForm,
+  );
+  const selectedAllocationInventoryId = Form.useWatch(
+    "inventoryId",
+    allocationForm,
+  );
 
-  const selectedAllocationBomRow = bomRows.find(row => (
-    String(row.productMaterialId) === String(selectedAllocationProductMaterialId)
-  ));
+  const selectedAllocationBomRow = bomRows.find(
+    (row) =>
+      String(row.productMaterialId) ===
+      String(selectedAllocationProductMaterialId),
+  );
   const allocationInventoryOptions = selectedAllocationBomRow
-    ? inventoriesByMaterialId.get(String(selectedAllocationBomRow.materialId)) ?? []
+    ? (inventoriesByMaterialId.get(
+        String(selectedAllocationBomRow.materialId),
+      ) ?? [])
     : [];
-  const selectedAllocationInventory = allocationInventoryOptions.find(inventory => (
-    String(inventory.id) === String(selectedAllocationInventoryId)
-  ));
+  const selectedAllocationInventory = allocationInventoryOptions.find(
+    (inventory) =>
+      String(inventory.id) === String(selectedAllocationInventoryId),
+  );
   const selectedInventoryAllocatedQuantity = allocations
-    .filter(allocation => String(allocation.inventoryId) === String(selectedAllocationInventoryId))
+    .filter(
+      (allocation) =>
+        String(allocation.inventoryId) ===
+        String(selectedAllocationInventoryId),
+    )
     .reduce((total, allocation) => total + allocation.quantity, 0);
   const selectedInventoryRemainingQuantity = Math.max(
     0,
-    Number(selectedAllocationInventory?.quantity ?? 0) - selectedInventoryAllocatedQuantity,
+    Number(selectedAllocationInventory?.quantity ?? 0) -
+      selectedInventoryAllocatedQuantity,
   );
 
   const resetAllocations = useCallback(() => {
@@ -46,7 +65,9 @@ export const useAllocations = ({
   }, [allocationForm]);
 
   const removeAllocation = useCallback((allocationId) => {
-    setAllocations(current => current.filter(item => item.id !== allocationId));
+    setAllocations((current) =>
+      current.filter((item) => item.id !== allocationId),
+    );
   }, []);
 
   const openAllocationModal = useCallback(() => {
@@ -67,13 +88,16 @@ export const useAllocations = ({
       return;
     }
 
-    const bomRow = bomRows.find(row => String(row.productMaterialId) === String(values.productMaterialId));
+    const bomRow = bomRows.find(
+      (row) =>
+        String(row.productMaterialId) === String(values.productMaterialId),
+    );
     const inventory = inventoriesByMaterialId
       .get(String(bomRow?.materialId))
-      ?.find(item => String(item.id) === String(values.inventoryId));
+      ?.find((item) => String(item.id) === String(values.inventoryId));
 
     if (!bomRow || !inventory) {
-      message.error('Không tìm thấy vật tư hoặc kho đã chọn.');
+      message.error("Không tìm thấy vật tư hoặc kho đã chọn.");
       return;
     }
 
@@ -90,49 +114,68 @@ export const useAllocations = ({
     }
 
     setAllocations((current) => {
-      const existingAllocation = current.find(item => (
-        item.productMaterialId === bomRow.productMaterialId
-        && item.warehouseId === inventory.warehouseId
-        && item.inventoryId === inventory.id
-      ));
+      const existingAllocation = current.find(
+        (item) =>
+          item.productMaterialId === bomRow.productMaterialId &&
+          item.warehouseId === inventory.warehouseId &&
+          item.inventoryId === inventory.id,
+      );
 
       if (existingAllocation) {
-        return current.map(item => item.id === existingAllocation.id
-          ? { ...item, quantity: item.quantity + quantity }
-          : item);
+        return current.map((item) =>
+          item.id === existingAllocation.id
+            ? { ...item, quantity: item.quantity + quantity }
+            : item,
+        );
       }
 
       allocationSequenceRef.current += 1;
-      return [...current, buildAllocationEntry({
-        bomRow,
-        inventory,
-        quantity,
-        sequence: allocationSequenceRef.current,
-      })];
+      return [
+        ...current,
+        buildAllocationEntry({
+          bomRow,
+          inventory,
+          quantity,
+          sequence: allocationSequenceRef.current,
+        }),
+      ];
     });
     closeAllocationModal();
-  }, [allocationForm, allocations, bomRows, closeAllocationModal, inventoriesByMaterialId]);
+  }, [
+    allocationForm,
+    allocations,
+    bomRows,
+    closeAllocationModal,
+    inventoriesByMaterialId,
+  ]);
 
   useEffect(() => {
-    if (mode !== 'edit' || restoredOutboundsRef.current || bomRows.length === 0) return;
+    if (
+      mode === "create" ||
+      restoredOutboundsRef.current ||
+      bomRows.length === 0
+    )
+      return;
 
-    if (outbounds.length === 0) {
+    if (safeOutbounds.length === 0) {
       restoredOutboundsRef.current = true;
       return;
     }
 
-    const inventoryDataReady = outbounds.every(outbound => (
-      inventoriesByMaterialId.has(String(outbound.materialId))
-    ));
-    if (!inventoryDataReady) return;
-
-    setAllocations(restoreOutboundsToAllocations({
-      outbounds,
-      bomRows,
-      inventoriesByMaterialId,
-    }));
-    restoredOutboundsRef.current = true;
-  }, [bomRows, inventoriesByMaterialId, mode, outbounds]);
+    setAllocations(
+      restoreOutboundsToAllocations({
+        outbounds: safeOutbounds,
+        bomRows,
+        inventoriesByMaterialId,
+      }),
+    );
+    const inventoryDataReady = safeOutbounds.every((outbound) =>
+      inventoriesByMaterialId.has(String(outbound.materialId)),
+    );
+    if (inventoryDataReady) {
+      restoredOutboundsRef.current = true;
+    }
+  }, [bomRows, inventoriesByMaterialId, mode, safeOutbounds]);
 
   return {
     allocationForm,
