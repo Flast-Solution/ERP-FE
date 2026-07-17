@@ -16,6 +16,9 @@ export const useBomConfirmation = ({
 }) => {
   const [form] = Form.useForm();
   const resetAllocationsRef = useRef(() => {});
+  const handleBomVersionReset = useCallback(() => {
+    resetAllocationsRef.current();
+  }, []);
 
   const {
     bomItems,
@@ -27,7 +30,7 @@ export const useBomConfirmation = ({
   } = useBomVersions({
     productionOrder,
     form,
-    onVersionChange: () => resetAllocationsRef.current(),
+    onVersionChange: handleBomVersionReset,
   });
 
   const {
