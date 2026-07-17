@@ -109,6 +109,228 @@ const ProductionPage = styled.div`
     box-shadow: none;
     overflow: hidden;
   }
+  .production-create-card { color: #172033; }
+  .production-create-head { padding: 18px 24px; }
+  .production-create-crumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    color: #7b8494;
+    font-size: 12px;
+  }
+  .production-create-crumb .current { color: #4b5565; font-weight: 600; }
+  .production-create-body { padding-top: 24px; }
+  .production-create-section { margin-bottom: 30px; }
+  .production-create-section .section-head {
+    min-height: 38px;
+    margin-bottom: 18px;
+    padding-bottom: 10px;
+  }
+  .production-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 20px;
+  }
+  .production-info-field { min-width: 0; }
+  .production-info-field > .ant-form-item { margin-bottom: 0; }
+  .production-field-label {
+    margin-bottom: 7px;
+    color: #374151;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .production-readonly {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 40px;
+    padding: 7px 12px;
+    border: 1px dashed #d7dee8;
+    border-radius: 6px;
+    background: #f8fafc;
+  }
+  .production-readonly.mono .production-readonly__value {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .production-readonly__value {
+    min-width: 0;
+    overflow: hidden;
+    color: #1f2937;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .production-child-hint {
+    margin: -4px 0 16px;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .production-child-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .production-child-card {
+    position: relative;
+    padding: 16px;
+    border: 1px solid #dfe5ec;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .03);
+  }
+  .production-child-card__top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-right: 42px;
+  }
+  .production-child-card__body {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 16px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #edf0f4;
+  }
+  .production-child-card__body > .ant-form-item { margin-bottom: 0; }
+  .production-child-attribute {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 38px;
+    padding: 7px 11px;
+    border-radius: 6px;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 12px;
+  }
+  .production-child-attribute strong {
+    color: #334155;
+    font-weight: 600;
+    text-align: right;
+  }
+  .production-child-empty {
+    padding: 18px 0 2px;
+    color: #94a3b8;
+    font-size: 13px;
+    text-align: center;
+  }
+  .production-child-index {
+    position: absolute;
+    top: 18px;
+    right: 16px;
+    color: #94a3b8;
+    font: 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .production-create-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 20px;
+    padding: 14px;
+    border: 1px solid #dfe5ec;
+    border-radius: 8px;
+    background: #f8fafc;
+  }
+  .production-create-metric {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 4px 8px;
+  }
+  .production-create-metric span { color: #64748b; font-size: 12px; }
+  .production-create-metric strong { color: #312e81; font-size: 15px; }
+  .production-create-foot .foot-note { max-width: 65%; line-height: 1.5; }
+  .bom-selection-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .bom-selection-card {
+    overflow: hidden;
+    border: 1px solid #dfe5ec;
+    border-radius: 8px;
+    background: #fff;
+  }
+  .bom-selection-card__title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 14px;
+    border-bottom: 1px solid #edf0f4;
+    background: #f8fafc;
+  }
+  .bom-selection-card__title span {
+    color: #4f46e5;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .bom-selection-card__title strong {
+    overflow: hidden;
+    color: #334155;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bom-selection-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(150px, 1fr) minmax(170px, 1fr);
+    gap: 14px;
+    padding: 14px;
+  }
+  .bom-selection-grid > .ant-form-item { margin-bottom: 0; }
+  .bom-selection-card__empty {
+    padding: 0 14px 14px;
+    color: #dc2626;
+    font-size: 12px;
+  }
+  .bom-material-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .bom-material-card {
+    overflow: hidden;
+    border: 1px solid #dfe5ec;
+    border-radius: 8px;
+    background: #fff;
+  }
+  .bom-material-card__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 10px 14px;
+    border-bottom: 1px solid #edf0f4;
+    background: #f8fafc;
+  }
+  .bom-material-card__head span {
+    flex: 0 0 auto;
+    color: #4f46e5;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .bom-material-card__head strong {
+    min-width: 0;
+    overflow: hidden;
+    color: #334155;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bom-material-card__head em {
+    flex: 0 0 auto;
+    margin-left: auto;
+    color: #64748b;
+    font-size: 12px;
+    font-style: normal;
+  }
   .page-head { padding: 20px 24px; background: #fbfcfe; border-bottom: 1px solid var(--border); }
   .crumb { display: flex; gap: 8px; align-items: center; color: #7b8494; font-size: 13px; margin-bottom: 12px; }
   .crumb .current { color: #4b5565; font-weight: 600; }
@@ -185,6 +407,14 @@ const ProductionPage = styled.div`
     .actions { width: 100%; }
     .actions .ant-btn { flex: 1; }
     h1 { font-size: 22px; }
+    .production-info-grid,
+    .production-child-card__body,
+    .production-create-summary,
+    .bom-selection-grid { grid-template-columns: 1fr; }
+    .production-create-foot .foot-note { max-width: none; }
+    .production-child-card__top { padding-right: 36px; }
+    .bom-material-card__head { align-items: flex-start; flex-wrap: wrap; }
+    .bom-material-card__head em { width: 100%; margin-left: 0; }
   }
 `;
 

@@ -41,9 +41,13 @@ const ListWareHouse = () => {
   const [ isOpen, setIsOpen ] = useState(false);
   const [ detailWareHouse, setDetailWareHouse ] = useState({});
   const [ form ] = useForm();
+  const isEditing = Boolean(detailWareHouse?.id);
 
   useEffect(() => {
-    form.setFieldsValue(detailWareHouse);
+    form.resetFields();
+    if (detailWareHouse?.id) {
+      form.setFieldsValue(detailWareHouse);
+    }
   }, [form, detailWareHouse])
 
   const CUSTOM_ACTION = [
@@ -102,11 +106,15 @@ const ListWareHouse = () => {
   }
 
   const onHandleCreateWareHouse = async (value) => {
-    const data = detailWareHouse ? await RequestUtils.Post('/warehouse/update-stock', value) : await RequestUtils.Post('/warehouse/created-stock', value);
+    const payload = isEditing
+      ? { ...value, id: detailWareHouse.id }
+      : value;
+    const endpoint = isEditing ? '/warehouse/update-stock' : '/warehouse/created-stock';
+    const data = await RequestUtils.Post(endpoint, payload);
     if (data.errorCode) {
       f5List('warehouse/fetch-stock');
       setIsOpen(false);
-      InAppEvent.normalSuccess('Tạo kho thành công');
+      InAppEvent.normalSuccess(isEditing ? 'Cập nhật kho thành công' : 'Tạo kho thành công');
     }
   }
 
@@ -130,7 +138,7 @@ const ListWareHouse = () => {
         columns={CUSTOM_ACTION}
       />
       <ModaleStyles 
-        title={<div style={{ color: '#fff' }}>Tạo kho</div>}
+        title={<div style={{ color: '#fff' }}>{isEditing ? 'Cập nhật kho' : 'Tạo kho'}</div>}
         open={isOpen} 
         footer={false} 
         onCancel={() => {
@@ -184,7 +192,7 @@ const ListWareHouse = () => {
             </Row>
             <Form.Item style={{ display: 'flex', justifyContent: 'end', marginTop: 10 }}>
               <Button type="primary" htmlType="submit">
-                Submit
+                {isEditing ? 'Cập nhật' : 'Tạo mới'}
               </Button>
             </Form.Item>
           </Form>
@@ -195,4 +203,3 @@ const ListWareHouse = () => {
 }
 
 export default ListWareHouse
-

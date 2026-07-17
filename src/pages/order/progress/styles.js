@@ -24,6 +24,17 @@ export const workflowProgressPageStyles = `
               max-width: none !important;
               min-width: 0 !important;
               max-height: none !important;
+              overflow: visible !important;
+            }
+
+            .workflow-progress-fixed-panel .workflow-progress-workflow-card,
+            .workflow-progress-fixed-panel .workflow-progress-workflow-card > .ant-card-body {
+              height: auto;
+              min-height: 0;
+            }
+
+            .workflow-progress-workflow-scroll {
+              overflow-x: visible !important;
               overflow-y: visible !important;
             }
           }
@@ -52,6 +63,21 @@ export const workflowProgressPageStyles = `
             box-shadow: none !important;
           }
 
+          .workflow-progress-fixed-panel .workflow-progress-workflow-card > .ant-card-body {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            height: 100%;
+          }
+
+          .workflow-progress-workflow-scroll {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-x: hidden;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+          }
+
           .workflow-progress-section {
             padding: 0;
           }
@@ -70,6 +96,12 @@ export const workflowProgressPageStyles = `
             color: #111827;
             font-size: 15px;
             font-weight: 700;
+          }
+
+          .workflow-progress-section-icon {
+            flex: 0 0 auto;
+            color: #4f46e5;
+            font-size: 18px;
           }
 
           .workflow-progress-section-head {
@@ -135,6 +167,9 @@ export const workflowProgressPageStyles = `
           }
 
           .workflow-history-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
             color: #111827;
             font-size: 20px;
             font-weight: 700;

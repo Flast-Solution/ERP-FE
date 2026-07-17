@@ -42,7 +42,7 @@ const WorkflowFormSection = ({
     <div className="workflow-progress-section">
       <div className="workflow-progress-section-head">
         <div className="workflow-progress-section-title">
-          <FormOutlined />
+          <FormOutlined className="workflow-progress-section-icon" />
           <span>
             {currentFormName || 'Form bắt buộc tại bước'}
             {selectedLot?.code ? ` - Lô ${selectedLot.code}` : ''}

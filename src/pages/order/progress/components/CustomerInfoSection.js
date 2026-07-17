@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
 import { Descriptions, Empty } from 'antd'
+import { UserOutlined } from '@ant-design/icons'
 
 import { formatTime } from '@flast-erp/core/utils'
 
@@ -39,7 +40,10 @@ const CustomerInfoSection = ({ order }) => {
 
   return (
     <div>
-      <div className="workflow-progress-section-title">Thông tin khách hàng</div>
+      <div className="workflow-progress-section-title">
+        <UserOutlined className="workflow-progress-section-icon" />
+        <span>Thông tin khách hàng</span>
+      </div>
       {order ? (
         <Descriptions
           className="workflow-progress-customer-info"

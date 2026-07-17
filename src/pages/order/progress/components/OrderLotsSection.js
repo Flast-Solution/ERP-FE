@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
 import { Table } from 'antd'
+import { InboxOutlined } from '@ant-design/icons'
 
 import { formatTime } from '@flast-erp/core/utils'
 
@@ -54,7 +55,10 @@ const OrderLotsSection = ({
 
   return (
     <div className="workflow-progress-section">
-      <div className="workflow-progress-section-title">Danh sách lô hàng đã tạo</div>
+      <div className="workflow-progress-section-title">
+        <InboxOutlined className="workflow-progress-section-icon" />
+        <span>Danh sách lô hàng đã tạo</span>
+      </div>
       <Table
         rowKey="id"
         size="small"
