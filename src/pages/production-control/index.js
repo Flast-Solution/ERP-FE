@@ -65,14 +65,14 @@ const buildManufacturePayload = ({ productionOrder = {}, materialConfirmation = 
   const details = orderDetails.map((product, index) => {
       const detailKey = String(product.id ?? index)
       const detailValues = productDetails[detailKey] ?? {}
-      const quantity = Number(detailValues.quantity ?? product.quantity ?? 0)
+      const target = Number(detailValues.target ?? product.target ?? 0)
       const unitPrice = Number(product.unitPrice ?? product.price ?? 0)
 
       return {
         productId: product.productId,
-        quantity,
+        target,
         unitPrice,
-        totalPrice: Number(product.totalPrice ?? product.total ?? (quantity * unitPrice)),
+        totalPrice: Number(detailValues.totalPrice ?? (target * unitPrice)),
       }
     })
 
@@ -115,7 +115,7 @@ const mapManufactureOrder = (record) => {
     ))
     if (orderDetail?.id != null) usedOrderDetailIds.add(String(orderDetail.id))
 
-    const quantity = detail.quantity ?? detail.target ?? orderDetail?.quantity ?? 0
+    const target = detail.target ?? 0
     const unitPrice = detail.unitPrice ?? orderDetail?.price ?? 0
 
     return {
@@ -126,9 +126,9 @@ const mapManufactureOrder = (record) => {
       productName: orderDetail?.productName ?? `Sản phẩm #${detail.productId}`,
       skuId: detail.skuId ?? orderDetail?.skuId ?? null,
       skuDetails: detail.skuDetails ?? orderDetail?.skuDetails ?? [],
-      quantity: Number(quantity),
+      target: Number(target),
       price: Number(unitPrice),
-      total: Number(detail.totalPrice ?? orderDetail?.total ?? (Number(quantity) * Number(unitPrice))),
+      total: Number(detail.totalPrice ?? orderDetail?.total ?? (Number(target) * Number(unitPrice))),
       bomProductId: detail.bomProductId,
       bomProduct: detail.bomProduct,
     }
@@ -152,7 +152,7 @@ const mapManufactureOrder = (record) => {
     productDetails: Object.fromEntries(effectiveOrderDetails.map(detail => [
       String(detail?.id),
       {
-        quantity: detail?.quantity ?? 0,
+        target: detail?.target ?? 0,
         deadline: editDeadline,
       },
     ])),
@@ -162,7 +162,7 @@ const mapManufactureOrder = (record) => {
 }
 
 const getProductionQuantity = (record) => Object.values(record?.productDetails ?? {})
-  .reduce((total, detail) => total + Number(detail?.quantity ?? 0), 0)
+  .reduce((total, detail) => total + Number(detail?.target ?? 0), 0)
 
 const getProductionDeadline = (record) => Object.values(record?.productDetails ?? {})
   .map(detail => detail?.deadline)

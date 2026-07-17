@@ -87,7 +87,7 @@ const CreateOrder = ({
 
   const totalProductionQuantity = productionRows.reduce((total, row) => {
     if (!row.product?.id) return total;
-    return total + Number(watchedProductDetails?.[String(row.product.id)]?.quantity ?? 0);
+    return total + Number(watchedProductDetails?.[String(row.product.id)]?.target ?? 0);
   }, 0);
 
   const handleOrderChange = (value) => {
@@ -119,7 +119,7 @@ const CreateOrder = ({
     const currentProductDetails = form.getFieldValue('productDetails') ?? {};
     if (!currentProductDetails[String(product.id)]) {
       form.setFieldValue(['productDetails', String(product.id)], {
-        quantity: product.quantity,
+        target: product.target,
         deadline: undefined,
       });
     }
@@ -270,11 +270,11 @@ const CreateOrder = ({
                         <div className="production-child-card__body">
                           <FormInputNumber
                             required
-                            name={['productDetails', String(product.id), 'quantity']}
+                            name={['productDetails', String(product.id), 'target']}
                             label="Số lượng sản xuất"
                             placeholder="Nhập số lượng sản xuất"
                             min={0.000001}
-                            initialValue={product.quantity}
+                            initialValue={product.target}
                             style={{ width: '100%' }}
                           />
                           <FormDatePicker
