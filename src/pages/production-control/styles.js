@@ -57,6 +57,11 @@ export const ProductionOrderListShell = styled.div`
     color: #334155;
     font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
   }
+  .production-bom-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
   .production-priority,
   .production-status {
     display: inline-flex;

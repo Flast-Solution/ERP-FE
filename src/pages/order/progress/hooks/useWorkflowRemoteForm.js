@@ -18,6 +18,7 @@ export const useWorkflowRemoteForm = ({
   displayForm,
   currentStep,
   displayStep,
+  displaySubmission,
   workflowPreview,
   refreshWorkflow,
   syncWorkflowInstance,
@@ -28,21 +29,22 @@ export const useWorkflowRemoteForm = ({
 
   const sourceComponent = displayForm?.sourceComponent
   const currentFormName = displayForm?.name ?? displayStep?.name ?? null
-  const remoteEntry = sourceComponent?.microFrontendUrl
-  const remoteComponentId = sourceComponent?.componentId
+  // Mỗi bước có formUrl riêng trong stepProcessList. Khi xem lại phải ưu tiên
+  // URL của chính bước đó, không tái sử dụng remote của bước hiện tại.
+  const remoteEntry = displayStep?.formUrl ?? sourceComponent?.microFrontendUrl
 
   const remoteVersionKey = buildRemoteAlias(
     displayStep?.id,
+    displayStep?.stepCode,
     displayForm?.id,
-    sourceComponent?.version,
-    sourceComponent?.updatedDate,
+    displaySubmission?.id,
+    workflowPreview?.processInstance?.id,
   )
 
-  const remoteRenderKey = buildRemoteAlias(remoteComponentId, remoteEntry, remoteVersionKey)
+  const remoteRenderKey = buildRemoteAlias(remoteEntry, remoteVersionKey)
 
   const { Component: RemoteForm, loading: loadingRemote, error: remoteError } = useRemoteForm(
     remoteEntry,
-    remoteComponentId,
     remoteVersionKey,
   )
 

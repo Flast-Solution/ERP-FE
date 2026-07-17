@@ -154,6 +154,12 @@ export const getProductionDeadline = (record) => Object.values(record?.productDe
   .map(detail => detail?.deadline)
   .find(Boolean)
 
+export const getBomVersions = (record) => [...new Set(
+  (record?.manufactureDetails ?? record?.details ?? [])
+    .map(detail => detail?.bomProduct?.version)
+    .filter(Boolean),
+)]
+
 export const getProductLabel = (record) => {
   const productNames = [...new Set((record?.orderDetails ?? [])
     .map(detail => detail?.productName)

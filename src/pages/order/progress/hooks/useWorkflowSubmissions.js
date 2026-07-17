@@ -88,8 +88,11 @@ export const useWorkflowSubmissions = ({
     const submission = submissions.find((item) => item?.stepCode === displayStep?.stepCode)
     return formTemplates.find((template) => (
       Number(template?.id) === Number(submission?.templateId)
-    )) ?? null
-  }, [displayStep?.stepCode, currentStep?.stepCode, currentForm, formTemplates, submissions])
+    )) ?? displayStep?.formTemplate ?? (displayStep?.formUrl ? {
+      id: submission?.templateId,
+      name: displayStep?.name,
+    } : null)
+  }, [displayStep, currentStep?.stepCode, currentForm, formTemplates, submissions])
 
   const inspectionResults = useMemo(() => buildInspectionResults({
     submissions,

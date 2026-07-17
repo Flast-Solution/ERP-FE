@@ -5,8 +5,42 @@ import {
   EMPTY_FILTERS,
   MANUFACTURE_FETCH_API,
   PRODUCTION_PAGE_SIZE,
+  USER_LIST_API,
+  USER_PAGE_SIZE,
 } from '../constants'
 import { buildProductionOrderQuery, mapManufactureOrder } from '../utils'
+
+const fetchUserNameMap = async (userIds = []) => {
+  const unresolvedIds = new Set(userIds.filter(id => id != null).map(String))
+  const userNameMap = new Map()
+  let page = 1
+
+  while (unresolvedIds.size > 0 && page <= 100) {
+    const response = await RequestUtils.Get(USER_LIST_API, {
+      limit: USER_PAGE_SIZE,
+      page,
+    })
+    const users = Array.isArray(response?.data?.embedded) ? response.data.embedded : []
+    users.forEach((user) => {
+      const id = String(user.id)
+      if (!unresolvedIds.has(id)) return
+      userNameMap.set(id, user.fullName ?? user.ssoId ?? user.code ?? `#${id}`)
+      unresolvedIds.delete(id)
+    })
+
+    const pageData = response?.data?.page
+    const totalElements = Number(pageData?.totalElements ?? pageData?.total ?? 0)
+    const responsePageSize = Number(pageData?.pageSize ?? USER_PAGE_SIZE)
+    const loadedAllUsers = users.length === 0
+      || (totalElements > 0
+        ? page * responsePageSize >= totalElements
+        : users.length < USER_PAGE_SIZE)
+    if (loadedAllUsers) break
+    page += 1
+  }
+
+  return userNameMap
+}
 
 export const useProductionOrders = () => {
   const [orders, setOrders] = useState([])
@@ -29,7 +63,17 @@ export const useProductionOrders = () => {
       if (requestId !== requestIdRef.current) return
       const embedded = response?.data?.embedded ?? []
       const pageData = response?.data?.page
-      setOrders(embedded.map(mapManufactureOrder))
+      let userNameMap = new Map()
+      try {
+        userNameMap = await fetchUserNameMap(embedded.map(record => record?.createdBy))
+      } catch {
+        message.warning('Không tải được tên người tạo lệnh.')
+      }
+      if (requestId !== requestIdRef.current) return
+      setOrders(embedded.map((record) => ({
+        ...mapManufactureOrder(record),
+        createdByName: userNameMap.get(String(record?.createdBy)),
+      })))
       setPagination({
         current: page,
         pageSize: Number(pageData?.pageSize ?? PRODUCTION_PAGE_SIZE),
