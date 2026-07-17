@@ -209,29 +209,11 @@ const getProductionOrderColumns = ({ onView, onEdit }) => [
     render: (_, record) => getProductLabel(record),
   },
   {
-    title: 'BOM',
-    dataIndex: 'bomVersion',
-    key: 'bomVersion',
-    width: 130,
-    render: value => value ? <span className="production-bom-code">{value}</span> : '-',
-  },
-  {
     title: 'SL',
     key: 'quantity',
     width: 90,
     align: 'right',
     render: (_, record) => getProductionQuantity(record).toLocaleString('vi-VN'),
-  },
-  {
-    title: 'Ưu tiên',
-    dataIndex: 'priority',
-    key: 'priority',
-    width: 95,
-    render: value => value ? (
-      <span className={`production-priority ${value}`}>
-        {value === 'high' ? 'Cao' : value === 'low' ? 'Thấp' : 'T.Bình'}
-      </span>
-    ) : '-',
   },
   {
     title: 'Deadline',

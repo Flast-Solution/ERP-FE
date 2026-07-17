@@ -4,7 +4,6 @@ import { DeleteOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons';
 import {
   CustomButton,
   CustomButtonIcon,
-  FormHidden,
   FormInput,
   FormSelect,
 } from '@flast-erp/core/components';
@@ -64,8 +63,8 @@ const mapBomMaterialRows = (bom = {}) => (
 const BomConfirmation = ({ productionOrder, mode = 'create', submitting = false, onConfirm, onCancel, onBack }) => {
   const [form] = Form.useForm();
   const [allocationForm] = Form.useForm();
-  const [bomRows, setBomRows] = useState([]);
   const [bomVersions, setBomVersions] = useState([]);
+  const [selectedBomsByProductId, setSelectedBomsByProductId] = useState({});
   const [bomLoading, setBomLoading] = useState(false);
   const [inventoriesByMaterialId, setInventoriesByMaterialId] = useState(new Map());
   const [inventoryLoading, setInventoryLoading] = useState(false);
@@ -78,26 +77,8 @@ const BomConfirmation = ({ productionOrder, mode = 'create', submitting = false,
   const userLoadingRef = useRef(false);
   const allocationSequenceRef = useRef(0);
   const restoredOutboundsRef = useRef(false);
-  const selectedProductId = Form.useWatch('bomId', form);
   const selectedAllocationProductMaterialId = Form.useWatch('productMaterialId', allocationForm);
   const selectedAllocationInventoryId = Form.useWatch('inventoryId', allocationForm);
-
-  const selectedAllocationBomRow = bomRows.find(row => (
-    String(row.productMaterialId) === String(selectedAllocationProductMaterialId)
-  ));
-  const allocationInventoryOptions = selectedAllocationBomRow
-    ? inventoriesByMaterialId.get(String(selectedAllocationBomRow.materialId)) ?? []
-    : [];
-  const selectedAllocationInventory = allocationInventoryOptions.find(inventory => (
-    String(inventory.id) === String(selectedAllocationInventoryId)
-  ));
-  const selectedInventoryAllocatedQuantity = allocations
-    .filter(allocation => String(allocation.inventoryId) === String(selectedAllocationInventoryId))
-    .reduce((total, allocation) => total + allocation.quantity, 0);
-  const selectedInventoryRemainingQuantity = Math.max(
-    0,
-    Number(selectedAllocationInventory?.quantity ?? 0) - selectedInventoryAllocatedQuantity,
-  );
 
   const loadUsers = useCallback(async (nextPage, append) => {
     if (userLoadingRef.current) return;
@@ -146,9 +127,15 @@ const BomConfirmation = ({ productionOrder, mode = 'create', submitting = false,
           id: productId,
           name: product.productName ?? product.product?.name ?? product.name ?? `Sản phẩm ${index + 1}`,
           code: product.productCode ?? product.product?.code ?? product.code ?? '',
+          orderLabels: [],
           productionEntries: [],
         });
       }
+      const orderLabel = [
+        product.key ?? product.code ?? `#${product.id ?? index + 1}`,
+        product.productName ?? product.product?.name ?? product.name,
+      ].filter(Boolean).join(' · ');
+      uniqueProducts.get(key).orderLabels.push(orderLabel);
       uniqueProducts.get(key).productionEntries.push({
         orderDetailId: product.id ?? index,
         defaultQuantity: Number(product.quantity ?? 1),
@@ -157,29 +144,52 @@ const BomConfirmation = ({ productionOrder, mode = 'create', submitting = false,
     return Array.from(uniqueProducts.values());
   }, [productionOrder?.orderDetails]);
 
-  const bomOptions = useMemo(() => products.map(product => ({
-    id: product.id,
-    name: [product.name, product.code].filter(Boolean).join(' - '),
-  })), [products]);
+  const bomRows = useMemo(() => products.flatMap((product) => {
+    const bom = selectedBomsByProductId[String(product.id)];
+    return bom ? mapBomMaterialRows(bom) : [];
+  }), [products, selectedBomsByProductId]);
 
-  const versionOptions = useMemo(() => bomVersions
-    .filter(bom => String(bom.productId) === String(selectedProductId ?? ''))
-    .map(bom => ({
-      value: bom.version,
-      name: bom.version,
-    })), [bomVersions, selectedProductId]);
+  const selectedAllocationBomRow = bomRows.find(row => (
+    String(row.productMaterialId) === String(selectedAllocationProductMaterialId)
+  ));
+  const allocationInventoryOptions = selectedAllocationBomRow
+    ? inventoriesByMaterialId.get(String(selectedAllocationBomRow.materialId)) ?? []
+    : [];
+  const selectedAllocationInventory = allocationInventoryOptions.find(inventory => (
+    String(inventory.id) === String(selectedAllocationInventoryId)
+  ));
+  const selectedInventoryAllocatedQuantity = allocations
+    .filter(allocation => String(allocation.inventoryId) === String(selectedAllocationInventoryId))
+    .reduce((total, allocation) => total + allocation.quantity, 0);
+  const selectedInventoryRemainingQuantity = Math.max(
+    0,
+    Number(selectedAllocationInventory?.quantity ?? 0) - selectedInventoryAllocatedQuantity,
+  );
 
-  const selectBomVersion = useCallback((bom) => {
+  const handleVersionChange = (productId, version) => {
+    const selectedBom = bomVersions.find(bom => (
+      String(bom.productId) === String(productId)
+      && String(bom.version) === String(version)
+    ));
+    setSelectedBomsByProductId(current => ({
+      ...current,
+      [String(productId)]: selectedBom,
+    }));
     form.setFieldsValue({
-      version: bom?.version,
-      status: bom ? getBomStatusLabel(bom.status) : undefined,
-      bomProductId: bom?.bomProductId,
+      bomSelections: {
+        ...(form.getFieldValue('bomSelections') ?? {}),
+        [String(productId)]: {
+          orderLabel: products.find(product => String(product.id) === String(productId))?.orderLabels.join(', '),
+          version: selectedBom?.version,
+          status: selectedBom ? getBomStatusLabel(selectedBom.status) : undefined,
+          bomProductId: selectedBom?.bomProductId ?? null,
+        },
+      },
     });
     setAllocations([]);
     setAllocationModalOpen(false);
     allocationForm.resetFields();
-    setBomRows(bom ? mapBomMaterialRows(bom) : []);
-  }, [allocationForm, form]);
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -243,34 +253,15 @@ const BomConfirmation = ({ productionOrder, mode = 'create', submitting = false,
     };
   }, [bomRows]);
 
-  const handleProductChange = (productId) => {
-    const productBoms = bomVersions.filter(bom => String(bom.productId) === String(productId));
-    const savedBomProductId = (productionOrder?.manufactureDetails ?? [])
-      .find(detail => String(detail.productId) === String(productId))
-      ?.bomProductId;
-    const defaultBom = productBoms.find(bom => String(bom.bomProductId) === String(savedBomProductId))
-      ?? productBoms.find(bom => Number(bom.status) === 1)
-      ?? productBoms[0];
-    selectBomVersion(defaultBom);
-  };
-
-  const handleVersionChange = (version) => {
-    const selectedBom = bomVersions.find(bom => (
-      String(bom.productId) === String(selectedProductId)
-      && String(bom.version) === String(version)
-    ));
-    selectBomVersion(selectedBom);
-  };
-
   useEffect(() => {
     let mounted = true;
 
     const fetchBoms = async () => {
       if (products.length === 0) {
-        setBomRows([]);
         setBomVersions([]);
+        setSelectedBomsByProductId({});
         setBomLoading(false);
-        form.resetFields(['bomId', 'version', 'status', 'bomProductId']);
+        form.resetFields(['bomSelections']);
         return;
       }
 
@@ -320,23 +311,36 @@ const BomConfirmation = ({ productionOrder, mode = 'create', submitting = false,
       });
 
       setBomVersions(nextBomVersions);
-      const firstProduct = products[0];
-      const firstProductBoms = nextBomVersions.filter(bom => String(bom.productId) === String(firstProduct.id));
-      const savedBomProductId = (productionOrder?.manufactureDetails ?? [])
-        .find(detail => String(detail.productId) === String(firstProduct.id))
-        ?.bomProductId;
-      const defaultBom = firstProductBoms.find(bom => String(bom.bomProductId) === String(savedBomProductId))
-        ?? firstProductBoms.find(bom => Number(bom.status) === 1)
-        ?? firstProductBoms[0];
-      form.setFieldValue('bomId', firstProduct.id);
-      selectBomVersion(defaultBom);
+      const defaultBoms = Object.fromEntries(products.map((product) => {
+        const productBoms = nextBomVersions.filter(bom => String(bom.productId) === String(product.id));
+        const savedBomProductId = (productionOrder?.manufactureDetails ?? [])
+          .find(detail => String(detail.productId) === String(product.id))
+          ?.bomProductId;
+        const defaultBom = productBoms.find(bom => String(bom.bomProductId) === String(savedBomProductId))
+          ?? productBoms.find(bom => Number(bom.status) === 1)
+          ?? productBoms[0];
+        return [String(product.id), defaultBom];
+      }));
+      setSelectedBomsByProductId(defaultBoms);
+      form.setFieldsValue({
+        bomSelections: Object.fromEntries(products.map((product) => {
+          const defaultBom = defaultBoms[String(product.id)];
+          return [String(product.id), {
+            orderLabel: product.orderLabels.join(', '),
+            version: defaultBom?.version,
+            status: defaultBom ? getBomStatusLabel(defaultBom.status) : undefined,
+            bomProductId: defaultBom?.bomProductId ?? null,
+          }];
+        })),
+      });
+      setAllocations([]);
       setBomLoading(false);
     };
 
     fetchBoms().catch(() => {
       if (mounted) {
-        setBomRows([]);
         setBomVersions([]);
+        setSelectedBomsByProductId({});
         setBomLoading(false);
         message.error('Không tải được danh sách BOM.');
       }
@@ -345,7 +349,7 @@ const BomConfirmation = ({ productionOrder, mode = 'create', submitting = false,
     return () => {
       mounted = false;
     };
-  }, [form, productionOrder?.manufactureDetails, productionOrder?.productDetails, products, selectBomVersion]);
+  }, [form, productionOrder?.manufactureDetails, productionOrder?.productDetails, products]);
 
   useEffect(() => {
     if (mode !== 'edit' || restoredOutboundsRef.current || bomRows.length === 0) return;
@@ -558,30 +562,49 @@ const BomConfirmation = ({ productionOrder, mode = 'create', submitting = false,
         <div className="head-row"><div><h1>Xác nhận BOM + phân bổ vật tư</h1><div className="subtitle">WF2 Sản xuất · ISO 9001:2015 §8.5</div></div></div>
       </header>
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
-      <FormHidden name="bomProductId" />
       <div className="body">
         <section className="section">
           <div className="section-head"><span className="section-no">1</span><h2>Phiên bản BOM</h2></div>
-          <div className="grid">
-            <FormSelect
-              required
-              name="bomId"
-              label="Chọn BOM"
-              placeholder="Chọn BOM theo sản phẩm"
-              resourceData={bomOptions}
-              onChange={handleProductChange}
-            />
-            <FormSelect
-              required
-              name="version"
-              label="Version"
-              placeholder="Chọn Version"
-              resourceData={versionOptions}
-              valueProp="value"
-              titleProp="name"
-              onChange={handleVersionChange}
-            />
-            <FormInput name="status" label="Trạng thái BOM" disabled />
+          <div className="bom-selection-list">
+            {products.map((product, index) => {
+              const productVersions = bomVersions
+                .filter(bom => String(bom.productId) === String(product.id))
+                .map(bom => ({ value: bom.version, name: bom.version }));
+              return (
+                <div className="bom-selection-card" key={product.id}>
+                  <div className="bom-selection-card__title">
+                    <span>BOM {index + 1}</span>
+                    <strong>{product.name}</strong>
+                  </div>
+                  <div className="bom-selection-grid">
+                    <FormInput
+                      name={['bomSelections', String(product.id), 'orderLabel']}
+                      label="Đơn hàng cho BOM"
+                      disabled
+                    />
+                    <FormSelect
+                      required
+                      name={['bomSelections', String(product.id), 'version']}
+                      label="Version"
+                      placeholder={bomLoading ? 'Đang tải BOM' : 'Chọn Version'}
+                      resourceData={productVersions}
+                      valueProp="value"
+                      titleProp="name"
+                      disabled={bomLoading || productVersions.length === 0}
+                      onChange={version => handleVersionChange(product.id, version)}
+                    />
+                    <FormInput
+                      name={['bomSelections', String(product.id), 'status']}
+                      label="Trạng thái BOM"
+                      disabled
+                    />
+                  </div>
+                  {productVersions.length === 0 && !bomLoading && (
+                    <div className="bom-selection-card__empty">Sản phẩm chưa có BOM.</div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </section>
         <section className="section">
