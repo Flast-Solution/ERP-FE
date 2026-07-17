@@ -274,7 +274,6 @@ const CreateOrder = ({
                             label="Số lượng sản xuất"
                             placeholder="Nhập số lượng sản xuất"
                             min={0.000001}
-                            initialValue={product.target}
                             style={{ width: '100%' }}
                           />
                           <FormDatePicker

@@ -1,17 +1,17 @@
-import { useCallback, useRef } from 'react';
-import { Form, message } from 'antd';
-import { useAllocations } from './useAllocations';
-import { useBomVersions } from './useBomVersions';
-import { useConfirmUsers } from './useConfirmUsers';
-import { useInventories } from './useInventories';
+import { useCallback, useEffect, useRef } from "react";
+import { Form, message } from "antd";
+import { useAllocations } from "./useAllocations";
+import { useBomVersions } from "./useBomVersions";
+import { useConfirmUsers } from "./useConfirmUsers";
+import { useInventories } from "./useInventories";
 import {
   buildMaterialConfirmationPayload,
   validateSubmitAllocations,
-} from '../utils';
+} from "../utils";
 
 export const useBomConfirmation = ({
   productionOrder,
-  mode = 'create',
+  mode = "create",
   onConfirm,
 }) => {
   const [form] = Form.useForm();
@@ -33,10 +33,10 @@ export const useBomConfirmation = ({
     onVersionChange: handleBomVersionReset,
   });
 
-  const {
-    inventoriesByMaterialId,
-    inventoryLoading,
-  } = useInventories(bomRows);
+  const { inventoriesByMaterialId, inventoryLoading } = useInventories(
+    bomRows,
+    productionOrder?.outbound,
+  );
 
   const allocationsState = useAllocations({
     bomRows,
@@ -49,20 +49,43 @@ export const useBomConfirmation = ({
 
   const usersState = useConfirmUsers();
 
-  const handleSubmit = useCallback((values) => {
-    const validationError = validateSubmitAllocations(bomRows, allocationsState.allocations);
-    if (validationError) {
-      message.error(validationError);
-      return;
-    }
+  useEffect(() => {
+    if (mode === "create") return;
 
-    const materialConfirmation = buildMaterialConfirmationPayload(values, allocationsState.allocations);
-    if (onConfirm) {
-      onConfirm({ productionOrder, materialConfirmation });
-      return;
+    const confirmedById = productionOrder?.confirmedBy;
+    if (confirmedById == null) return;
+
+    const confirmer = usersState.users.find(
+      (user) => String(user.id) === String(confirmedById),
+    );
+    if (confirmer) {
+      form.setFieldValue("confirmedBy", confirmer.id);
     }
-    message.success('Đã xác nhận và phân bổ vật tư');
-  }, [allocationsState.allocations, bomRows, onConfirm, productionOrder]);
+  }, [form, mode, productionOrder?.confirmedBy, usersState.users]);
+
+  const handleSubmit = useCallback(
+    (values) => {
+      const validationError = validateSubmitAllocations(
+        bomRows,
+        allocationsState.allocations,
+      );
+      if (validationError) {
+        message.error(validationError);
+        return;
+      }
+
+      const materialConfirmation = buildMaterialConfirmationPayload(
+        values,
+        allocationsState.allocations,
+      );
+      if (onConfirm) {
+        onConfirm({ productionOrder, materialConfirmation });
+        return;
+      }
+      message.success("Đã xác nhận và phân bổ vật tư");
+    },
+    [allocationsState.allocations, bomRows, onConfirm, productionOrder],
+  );
 
   return {
     form,
@@ -72,9 +95,16 @@ export const useBomConfirmation = ({
     bomMaterialGroups,
     bomRows,
     handleVersionChange,
+    onVersionChange: handleVersionChange,
     inventoryLoading,
     ...allocationsState,
+    onOpenAllocationModal: allocationsState.openAllocationModal,
+    onCloseAllocationModal: allocationsState.closeAllocationModal,
+    onAddAllocation: allocationsState.addAllocation,
+    onRemoveAllocation: allocationsState.removeAllocation,
     ...usersState,
+    onUserDropdownOpen: usersState.handleUserDropdownOpen,
+    onUserPopupScroll: usersState.handleUserPopupScroll,
     handleSubmit,
   };
 };

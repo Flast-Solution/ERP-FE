@@ -1,5 +1,5 @@
-import React from 'react';
-import { FormSelect } from '@flast-erp/core/components';
+import React from "react";
+import { FormSelect } from "@flast-erp/core/components";
 
 const ConfirmerSection = ({
   users = [],
@@ -20,8 +20,10 @@ const ConfirmerSection = ({
         loading={userLoading}
         showSearch
         optionFilterProp="label"
-        formatText={(fullName, user) => [fullName, user?.ssoId].filter(Boolean).join(' · ')}
-        onDropdownVisibleChange={onUserDropdownOpen}
+        formatText={(fullName, user) =>
+          [fullName, user?.ssoId].filter(Boolean).join(" · ")
+        }
+        onOpenChange={onUserDropdownOpen}
         onPopupScroll={onUserPopupScroll}
       />
     </div>
