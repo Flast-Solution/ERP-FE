@@ -687,6 +687,12 @@ const ListOrder = ({
               <Button
                 size="small"
                 style={{ color: "#fa8c16" }}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  navigate(`/document-templates/editor/ORDER/${record.id}?documentType=QUOTATION`, {
+                    state: { entityData: clonePlainData(record) },
+                  })
+                }}
               >
                 Báo giá
               </Button>
