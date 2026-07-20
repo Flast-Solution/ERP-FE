@@ -19,8 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { Badge, Tooltip } from 'antd';
-import { Link } from 'react-router-dom';
+import { Tooltip } from 'antd';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import moment from 'moment';
@@ -29,8 +28,9 @@ import SearchInput from './SearchInput';
 import ServiceSelect from './ServiceSelect';
 import HeaderWrapper from './styles';
 import { CustomButton } from '@flast-erp/core/components';
-import { BellFilled, PlusOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { PlusOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import UserInfo from './UserInfo';
+import NotificationDropdown from './NotificationDropdown';
 import { useNavigate } from "react-router-dom";
 
 const Header = () => {
@@ -70,11 +70,7 @@ const Header = () => {
           icon={<PlusOutlined />}
           type='primary'
         />
-        <Link to="/notifications" className="link-noti">
-          <Badge count={0}>
-            <BellFilled className="icon-noti" />
-          </Badge>
-        </Link>
+        <NotificationDropdown onViewAll={() => navigate('/notifications')} />
         <Tooltip title={isVietnamese ? t('header.languageToggleToEn') : t('header.languageToggleToVi')}>
           <button
             type="button"
