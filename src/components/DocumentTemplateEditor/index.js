@@ -85,7 +85,7 @@ const DocumentTemplateEditor = ({
           </Space>
           <Space>
             <Button icon={<EyeOutlined />} onClick={() => setPreviewOpen(true)}>Xem trước</Button>
-            <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={() => onSave?.(editor.serializedTemplate)}>Lưu bản nháp</Button>
+            <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={() => onSave?.(editor.serializedTemplate)}>Lưu chứng từ</Button>
           </Space>
         </EditorToolbar>
 
@@ -129,9 +129,6 @@ const DocumentTemplateEditor = ({
 
 export default DocumentTemplateEditor
 export {
-  buildDraftStorageKey,
   createDocumentNode,
   createEmptyTemplate,
-  readTemplateDraft,
-  writeTemplateDraft,
 } from './utils'

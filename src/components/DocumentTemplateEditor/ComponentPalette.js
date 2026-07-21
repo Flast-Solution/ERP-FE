@@ -19,7 +19,7 @@ const DraggablePaletteItem = ({ item, onAdd }) => {
       {...listeners}
       {...attributes}
     >
-      <Icon style={{ fontSize: 20 }} />
+      <Icon className="palette-item__icon" />
       <span>{item.label}</span>
     </PaletteItem>
   )

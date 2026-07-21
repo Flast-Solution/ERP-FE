@@ -5,6 +5,7 @@ import {
   ALIGN_OPTIONS,
   COLUMN_SPAN_OPTIONS,
   COMPONENT_TYPES,
+  DOCUMENT_TYPE_OPTIONS,
   FONT_OPTIONS,
   FORMAT_OPTIONS,
 } from './constants'
@@ -31,6 +32,16 @@ const PageLayoutInspector = ({ template, onTemplateChange }) => {
 
   return (
     <InspectorBody>
+      <InspectorSection>
+        <InspectorTitle>Loại chứng từ</InspectorTitle>
+        <Form.Item label="Loại chứng từ">
+          <Select
+            value={template?.documentType ?? 'QUOTATION'}
+            options={DOCUMENT_TYPE_OPTIONS}
+            onChange={documentType => onTemplateChange({ documentType })}
+          />
+        </Form.Item>
+      </InspectorSection>
       <InspectorSection>
         <InspectorTitle>Lưới bố cục</InspectorTitle>
         <div style={{ marginBottom: 14, padding: '9px 12px', borderRadius: 6, background: '#f3f4f6', fontWeight: 600 }}>
@@ -71,8 +82,17 @@ const FieldInspector = ({ node, template, dataSchema = [], onChange, onTemplateC
   }
 
   const updateStyle = (key, value) => onChange({ style: { ...(node.style ?? {}), [key]: value } })
-  const scalarFields = dataSchema.filter(field => field.scope !== 'items')
-  const tableFields = dataSchema.filter(field => field.scope === node.source || field.scope === 'items')
+  const scalarFields = dataSchema.filter(field => !field.scope)
+  const tableFields = dataSchema.filter(field => field.scope === node.source)
+  const collectionOptions = Array.from(dataSchema.reduce((result, field) => {
+    if (field.scope && !result.has(field.scope)) {
+      result.set(field.scope, {
+        value: field.scope,
+        label: field.collectionLabel || field.group || field.scope,
+      })
+    }
+    return result
+  }, new Map()).values())
 
   const updateColumn = (columnId, changes) => onChange({
     columns: node.columns.map(column => column.id === columnId ? { ...column, ...changes } : column),
@@ -117,16 +137,34 @@ const FieldInspector = ({ node, template, dataSchema = [], onChange, onTemplateC
               style={{ width: '100%' }}
             />
           </Form.Item>
-          <Form.Item label="Chiều cao tối thiểu">
-            <InputNumber
-              min={0}
-              max={1000}
-              placeholder="Tự động theo nội dung"
-              value={node.layout?.minHeight}
-              onChange={minHeight => onChange({ layout: { ...(node.layout ?? {}), minHeight } })}
-              style={{ width: '100%' }}
-            />
-          </Form.Item>
+          <Row gutter={8}>
+            <Col span={12}>
+              <Form.Item
+                label="Số dòng chiếm"
+                extra="Tăng giá trị để giữ cột bên cạnh qua nhiều dòng."
+              >
+                <InputNumber
+                  min={1}
+                  max={20}
+                  value={node.layout?.rowSpan ?? 1}
+                  onChange={rowSpan => onChange({ layout: { ...(node.layout ?? {}), rowSpan: rowSpan || 1 } })}
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Chiều cao tối thiểu">
+                <InputNumber
+                  min={0}
+                  max={1000}
+                  placeholder="Tự động"
+                  value={node.layout?.minHeight}
+                  onChange={minHeight => onChange({ layout: { ...(node.layout ?? {}), minHeight } })}
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
           <Checkbox
             checked={node.layout?.startNewRow === true}
             onChange={event => onChange({ layout: { ...(node.layout ?? {}), startNewRow: event.target.checked } })}
@@ -153,6 +191,18 @@ const FieldInspector = ({ node, template, dataSchema = [], onChange, onTemplateC
                 />
               </Form.Item>
               <Form.Item label="Định dạng"><Select value={node.format ?? 'text'} options={FORMAT_OPTIONS} onChange={format => onChange({ format })} /></Form.Item>
+              {node.type === COMPONENT_TYPES.DATA_FIELD && (
+                <Form.Item
+                  label="Giá trị mock khi xem trước"
+                  extra="Chỉ dùng khi dữ liệu preview chưa có giá trị cho field đã chọn."
+                >
+                  <Input
+                    value={node.mockValue}
+                    placeholder="Nhập dữ liệu minh họa"
+                    onChange={event => onChange({ mockValue: event.target.value })}
+                  />
+                </Form.Item>
+              )}
               <Form.Item label="Khi không có dữ liệu"><Input value={node.fallback} onChange={event => onChange({ fallback: event.target.value })} /></Form.Item>
             </>
           )}
@@ -178,7 +228,7 @@ const FieldInspector = ({ node, template, dataSchema = [], onChange, onTemplateC
           {node.type === COMPONENT_TYPES.TABLE && (
             <>
               <Form.Item label="Danh sách dữ liệu">
-                <Select value={node.source} options={[{ value: 'items', label: 'Chi tiết đơn hàng' }]} onChange={source => onChange({ source })} />
+                <Select value={node.source || undefined} options={collectionOptions} onChange={source => onChange({ source, columns: [] })} />
               </Form.Item>
               <Form.Item><Checkbox checked={node.repeatHeader} onChange={event => onChange({ repeatHeader: event.target.checked })}>Lặp tiêu đề khi sang trang</Checkbox></Form.Item>
               <InspectorTitle>Cột dữ liệu</InspectorTitle>

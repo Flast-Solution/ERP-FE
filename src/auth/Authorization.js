@@ -27,7 +27,6 @@ import { useLocation, useNavigate, matchPath } from "react-router-dom";
 const LOGIN_PATH = '/login';
 const PUBLIC_AUTHENTICATED_PREFIXES = [
     '/sale/order/progress',
-    '/document-templates/editor',
     '/customer/enterprise'
 ];
 /* const log = (key, value) => console.log('[auth.Authorization] ' + key + ' ', value); */
