@@ -13,6 +13,11 @@ import {
 export const DOCUMENT_SCHEMA_VERSION = 1
 export const DOCUMENT_CANVAS_ID = 'document-template-canvas'
 
+export const DOCUMENT_TYPE_OPTIONS = [
+  { value: 'QUOTATION', label: 'Chứng từ báo giá' },
+  { value: 'GOODS_ISSUE', label: 'Chứng từ xuất hàng' },
+]
+
 export const COMPONENT_TYPES = {
   TEXT: 'text',
   DATA_FIELD: 'dataField',
@@ -61,6 +66,7 @@ export const DEFAULT_STYLE = {
 
 export const DEFAULT_NODE_LAYOUT = {
   columnSpan: 12,
+  rowSpan: 1,
   minHeight: null,
   startNewRow: false,
 }

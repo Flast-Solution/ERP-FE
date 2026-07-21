@@ -8,18 +8,20 @@ import {
 export const createNodeId = () => `document-node-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 
 const createDefaultColumns = (schema = []) => {
-  const itemFields = schema.filter(field => field.scope === 'items').slice(0, 4)
+  const firstCollection = schema.find(field => field.scope)?.scope
+  const itemFields = schema.filter(field => field.scope === firstCollection).slice(0, 4)
   return itemFields.map(field => ({
     id: createNodeId(),
     title: field.label,
-    binding: field.relativePath ?? field.path.replace(/^items\./, ''),
+    binding: field.relativePath ?? String(field.path || '').replace(`${firstCollection}.`, ''),
     format: field.dataType === 'number' ? 'number' : 'text',
     align: field.dataType === 'number' ? 'right' : 'left',
   }))
 }
 
 export const createDocumentNode = (type, dataSchema = []) => {
-  const firstField = dataSchema.find(field => field.scope !== 'items')
+  const firstField = dataSchema.find(field => !field.scope)
+  const firstCollection = dataSchema.find(field => field.scope)?.scope ?? ''
   const common = {
     id: createNodeId(),
     type,
@@ -32,13 +34,20 @@ export const createDocumentNode = (type, dataSchema = []) => {
     case COMPONENT_TYPES.TEXT:
       return { ...common, content: 'Nhập nội dung văn bản', style: { ...common.style, fontSize: 16 } }
     case COMPONENT_TYPES.DATA_FIELD:
-      return { ...common, label: firstField?.label ?? 'Trường dữ liệu', binding: firstField?.path ?? '', format: 'text', fallback: '-' }
+      return {
+        ...common,
+        label: firstField?.label ?? 'Trường dữ liệu',
+        binding: firstField?.path ?? '',
+        format: 'text',
+        mockValue: '',
+        fallback: '-',
+      }
     case COMPONENT_TYPES.MANUAL_FIELD:
       return { ...common, label: 'Trường nhập tay', placeholder: 'Nhập nội dung', required: false }
     case COMPONENT_TYPES.TABLE:
       return {
         ...common,
-        source: 'items',
+        source: firstCollection,
         columns: createDefaultColumns(dataSchema),
         repeatHeader: true,
         style: { ...common.style, padding: 0 },
@@ -52,7 +61,13 @@ export const createDocumentNode = (type, dataSchema = []) => {
     case COMPONENT_TYPES.BARCODE:
       return { ...common, label: 'Barcode', binding: firstField?.path ?? '', height: 64 }
     case COMPONENT_TYPES.DATE:
-      return { ...common, label: 'Ngày lập', binding: 'order.createdAt', format: 'date', fallback: '-' }
+      return {
+        ...common,
+        label: dataSchema.find(field => !field.scope && field.dataType === 'date')?.label ?? firstField?.label ?? 'Ngày lập',
+        binding: dataSchema.find(field => !field.scope && field.dataType === 'date')?.path ?? firstField?.path ?? '',
+        format: 'date',
+        fallback: '-',
+      }
     case COMPONENT_TYPES.RECTANGLE:
       return { ...common, height: 80, style: { ...common.style, borderWidth: 1 } }
     case COMPONENT_TYPES.LINE:
@@ -65,7 +80,7 @@ export const createDocumentNode = (type, dataSchema = []) => {
   }
 }
 
-export const createEmptyTemplate = ({ name = 'Mẫu chứng từ', documentType = 'DOCUMENT' } = {}) => ({
+export const createEmptyTemplate = ({ name = 'Mẫu chứng từ', documentType = 'QUOTATION' } = {}) => ({
   schemaVersion: DOCUMENT_SCHEMA_VERSION,
   name,
   documentType,
@@ -108,7 +123,11 @@ export const formatBindingValue = (value, format = 'text') => {
 }
 
 export const resolveNodeValue = (node, data) => formatBindingValue(
-  getValueByPath(data, node?.binding, node?.fallback ?? ''),
+  getValueByPath(
+    data,
+    node?.binding,
+    node?.mockValue !== undefined && node?.mockValue !== '' ? node.mockValue : (node?.fallback ?? ''),
+  ),
   node?.format,
 )
 
@@ -117,22 +136,3 @@ export const serializeTemplate = (template) => ({
   schemaVersion: DOCUMENT_SCHEMA_VERSION,
   updatedAt: new Date().toISOString(),
 })
-
-export const buildDraftStorageKey = ({ documentType, entityType, entityId }) => (
-  ['document-template-draft', documentType, entityType, entityId].filter(Boolean).join(':')
-)
-
-export const readTemplateDraft = (key) => {
-  if (!key) return null
-  try {
-    const value = window.localStorage.getItem(key)
-    return value ? JSON.parse(value) : null
-  } catch (_) {
-    return null
-  }
-}
-
-export const writeTemplateDraft = (key, template) => {
-  if (!key) return
-  window.localStorage.setItem(key, JSON.stringify(serializeTemplate(template)))
-}

@@ -66,7 +66,7 @@ const CodeGraphic = ({ type, value, size = 96, height = 64 }) => {
 }
 
 const DocumentNodeContent = ({ node, data = {}, preview = false }) => {
-  if (!node?.visible && preview) return null
+  if (node?.visible === false && preview) return null
   const style = resolveStyle(node.style)
   const boundValue = preview ? resolveNodeValue(node, data) : `{{ ${node.binding || 'chưa chọn field'} }}`
 

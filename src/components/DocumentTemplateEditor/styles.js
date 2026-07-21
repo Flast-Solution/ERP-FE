@@ -25,12 +25,12 @@ export const EditorToolbar = styled.div`
 export const EditorBody = styled.div`
   flex: 1;
   display: grid;
-  grid-template-columns: 224px minmax(520px, 1fr) 292px;
+  grid-template-columns: 224px minmax(520px, 1fr) 340px;
   min-height: 0;
   overflow: hidden;
 
   @media (max-width: 1200px) {
-    grid-template-columns: 190px minmax(480px, 1fr) 260px;
+    grid-template-columns: 200px minmax(480px, 1fr) 300px;
   }
 `
 
@@ -53,32 +53,46 @@ export const PanelHeader = styled.div`
 `
 
 export const PaletteGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 12px;
 `
 
 export const PaletteItem = styled.button`
-  min-height: 72px;
-  padding: 9px 6px;
-  border: 1px solid ${props => props.$dragging ? '#4f46e5' : '#e5e7eb'};
-  border-radius: 8px;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 14px;
+  border: 1px solid ${props => props.$dragging ? '#4f46e5' : 'transparent'};
+  border-radius: 7px;
   background: ${props => props.$dragging ? '#eef2ff' : '#fff'};
   color: #374151;
   cursor: grab;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  gap: 7px;
-  font-size: 12px;
+  justify-content: flex-start;
+  gap: 14px;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
   transition: 150ms ease;
+
+  .palette-item__icon {
+    flex: 0 0 24px;
+    width: 24px;
+    color: #374151;
+    font-size: 24px;
+  }
 
   &:hover {
     color: #4f46e5;
-    border-color: #a5b4fc;
-    background: #f8f8ff;
+    border-color: #c7d2fe;
+    background: #f5f7ff;
+
+    .palette-item__icon {
+      color: #4f46e5;
+    }
   }
 
   &:active { cursor: grabbing; }

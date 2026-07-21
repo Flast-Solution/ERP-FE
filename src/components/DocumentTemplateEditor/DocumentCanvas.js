@@ -29,6 +29,7 @@ const SortableDocumentNode = ({ node, selected, data, onSelect, onRemove, onDupl
         gridColumn: node.layout?.startNewRow
           ? `1 / span ${node.layout?.columnSpan ?? 12}`
           : `span ${node.layout?.columnSpan ?? 12}`,
+        gridRow: `span ${node.layout?.rowSpan ?? 1}`,
         minHeight: node.layout?.minHeight || undefined,
       }}
       $selected={selected}
