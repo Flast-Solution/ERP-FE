@@ -54,7 +54,8 @@ const ListOrder = ({
   const {
     quoteViewerOpen,
     quoteLoading,
-    quoteDocuments,
+    quoteTemplate,
+    quoteData,
     quoteOrder,
     openQuotationViewer,
     closeQuotationViewer,
@@ -137,7 +138,8 @@ const ListOrder = ({
       <GeneratedDocumentViewer
         open={quoteViewerOpen}
         loading={quoteLoading}
-        documents={quoteDocuments}
+        template={quoteTemplate}
+        data={quoteData}
         title={`Báo giá${quoteOrder?.code ? ` - ${quoteOrder.code}` : ''}`}
         onClose={closeQuotationViewer}
       />

@@ -1,7 +1,6 @@
 import { RequestUtils } from '@flast-erp/core/utils'
 
 const TEMPLATE_PATH = '/erp/template'
-const GENERATED_DOCUMENT_PATH = '/erp/generated-document'
 
 const normalizeDataType = value => {
   const normalizedValue = String(value || '').toLowerCase()
@@ -87,7 +86,7 @@ const DocumentTemplateService = {
 
   saveTemplate: payload => RequestUtils.Post(`${TEMPLATE_PATH}/save-data`, payload),
 
-  fetchGeneratedDocuments: params => RequestUtils.Get(`${GENERATED_DOCUMENT_PATH}/fetch`, params),
+  fetchInvoice: id => RequestUtils.Get(`${TEMPLATE_PATH}/invoice`, { id }),
 }
 
 export default DocumentTemplateService

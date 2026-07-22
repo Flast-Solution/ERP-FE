@@ -14,7 +14,7 @@ export const DOCUMENT_SCHEMA_VERSION = 1
 export const DOCUMENT_CANVAS_ID = 'document-template-canvas'
 
 export const DOCUMENT_TYPE_OPTIONS = [
-  { value: 'QUOTATION', label: 'Chứng từ báo giá' },
+  { value: 'invoice', label: 'Chứng từ báo giá' },
   { value: 'GOODS_ISSUE', label: 'Chứng từ xuất hàng' },
 ]
 

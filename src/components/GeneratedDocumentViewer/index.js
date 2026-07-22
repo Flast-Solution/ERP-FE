@@ -1,45 +1,141 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Button, Drawer, Empty, List, Space, Spin, Tag, Typography } from 'antd'
-import { DownloadOutlined, FilePdfOutlined, PrinterOutlined } from '@ant-design/icons'
+import React, { useRef, useState } from 'react'
+import { Button, Drawer, Empty, message, Space, Spin } from 'antd'
+import { DownloadOutlined, PrinterOutlined } from '@ant-design/icons'
+import html2canvas from 'html2canvas'
+import { jsPDF } from 'jspdf'
+import { useReactToPrint } from 'react-to-print'
+import DocumentNodeContent from '@/components/DocumentTemplateEditor/DocumentNodeContent'
+import { A4ContentGrid, A4Page, CanvasViewport } from '@/components/DocumentTemplateEditor/styles'
 
-const { Text } = Typography
+const getPdfFileName = (template, title, data) => {
+  const orderCode = data?.customerOrder?.code ?? data?.order?.code
+  const rawName = orderCode
+    ? `${template?.name ?? title}-${orderCode}`
+    : template?.name ?? title ?? 'chung-tu'
+
+  const normalizedName = String(rawName)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .replace(/[^a-zA-Z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+  return `${normalizedName || 'chung-tu'}.pdf`
+}
 
 const GeneratedDocumentViewer = ({
   open,
-  title = 'Chứng từ PDF',
+  title = 'Chứng từ',
   loading = false,
-  documents = [],
+  template,
+  data = {},
   onClose,
 }) => {
-  const iframeRef = useRef(null)
-  const [selectedId, setSelectedId] = useState(null)
+  const documentRef = useRef(null)
+  const [downloading, setDownloading] = useState(false)
+  const orientation = template?.page?.orientation === 'landscape' ? 'landscape' : 'portrait'
+  const pageWidth = orientation === 'landscape' ? 297 : 210
+  const pageHeight = orientation === 'landscape' ? 210 : 297
+  const printDocument = useReactToPrint({
+    contentRef: documentRef,
+    documentTitle: template?.name || title,
+    pageStyle: `
+      @page { size: A4 ${orientation}; margin: 0; }
+      @media print {
+        html, body {
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #fff !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .generated-document-page {
+          width: ${pageWidth}mm !important;
+          min-height: ${pageHeight}mm !important;
+          margin: 0 !important;
+          border: 0 !important;
+          box-shadow: none !important;
+        }
+        .generated-document-page > div > div,
+        .generated-document-page tr,
+        .generated-document-page img { break-inside: avoid; }
+        .generated-document-page thead { display: table-header-group; }
+      }
+    `,
+  })
 
-  useEffect(() => {
-    if (!open) return
-    const preferredDocument = documents.find(item => item.isDefault) || documents[0]
-    setSelectedId(preferredDocument?.id ?? null)
-  }, [documents, open])
+  const downloadPdf = async () => {
+    if (!documentRef.current || downloading) return
 
-  const selectedDocument = useMemo(() => (
-    documents.find(item => String(item.id) === String(selectedId)) || documents[0] || null
-  ), [documents, selectedId])
-
-  const handlePrint = () => {
-    const url = selectedDocument?.viewUrl
-    if (!url) return
+    setDownloading(true)
 
     try {
-      const frameWindow = iframeRef.current?.contentWindow
-      if (frameWindow) {
-        frameWindow.focus()
-        frameWindow.print()
-        return
+      if (document.fonts?.ready) {
+        await document.fonts.ready
       }
-    } catch (error) {
-      // Trình duyệt chặn gọi print trực tiếp khi PDF nằm khác domain.
-    }
 
-    window.open(url, '_blank', 'noopener,noreferrer')
+      const canvas = await html2canvas(documentRef.current, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#ffffff',
+        logging: false,
+      })
+      const pdf = new jsPDF({
+        orientation,
+        unit: 'mm',
+        format: 'a4',
+        compress: true,
+      })
+      const pagePixelHeight = Math.max(1, Math.floor(canvas.width * pageHeight / pageWidth))
+      let pageIndex = 0
+
+      for (let offsetY = 0; offsetY < canvas.height; offsetY += pagePixelHeight) {
+        const sliceHeight = Math.min(pagePixelHeight, canvas.height - offsetY)
+        const pageCanvas = document.createElement('canvas')
+        const pageContext = pageCanvas.getContext('2d')
+
+        pageCanvas.width = canvas.width
+        pageCanvas.height = sliceHeight
+        pageContext.fillStyle = '#ffffff'
+        pageContext.fillRect(0, 0, pageCanvas.width, pageCanvas.height)
+        pageContext.drawImage(
+          canvas,
+          0,
+          offsetY,
+          canvas.width,
+          sliceHeight,
+          0,
+          0,
+          canvas.width,
+          sliceHeight,
+        )
+
+        if (pageIndex > 0) pdf.addPage('a4', orientation)
+
+        const imageHeight = sliceHeight * pageWidth / canvas.width
+        pdf.addImage(
+          pageCanvas.toDataURL('image/jpeg', 0.95),
+          'JPEG',
+          0,
+          0,
+          pageWidth,
+          imageHeight,
+          undefined,
+          'FAST',
+        )
+        pageIndex += 1
+      }
+
+      pdf.save(getPdfFileName(template, title, data))
+      message.success('Đã tải chứng từ PDF')
+    } catch (error) {
+      console.error('Không thể tạo PDF từ chứng từ', error)
+      message.error('Không thể tạo file PDF. Vui lòng kiểm tra ảnh trong chứng từ và thử lại.')
+    } finally {
+      setDownloading(false)
+    }
   }
 
   return (
@@ -47,73 +143,61 @@ const GeneratedDocumentViewer = ({
       title={title}
       open={open}
       onClose={onClose}
-      width="92vw"
-      styles={{ body: { padding: 0, height: '100%', overflow: 'hidden' } }}
+      width="min(1100px, 92vw)"
+      extra={(
+        <Space>
+          <Button icon={<PrinterOutlined />} disabled={!template} onClick={printDocument}>In</Button>
+          <Button
+            type="primary"
+            icon={<DownloadOutlined />}
+            disabled={!template}
+            loading={downloading}
+            onClick={downloadPdf}
+          >
+            Tải xuống
+          </Button>
+        </Space>
+      )}
+      styles={{ body: { padding: 0, background: '#eef1f5' } }}
       destroyOnHidden
     >
       <Spin spinning={loading}>
-        {!loading && documents.length === 0 ? (
-          <div style={{ height: 'calc(100vh - 56px)', display: 'grid', placeItems: 'center' }}>
-            <Empty description="Đơn hàng chưa có file báo giá PDF" />
+        {!loading && !template ? (
+          <div style={{ minHeight: 'calc(100vh - 56px)', display: 'grid', placeItems: 'center' }}>
+            <Empty description="Đơn hàng chưa có mẫu báo giá" />
           </div>
         ) : (
-          <div style={{ height: 'calc(100vh - 56px)', display: 'grid', gridTemplateColumns: '280px minmax(0, 1fr)' }}>
-            <aside style={{ borderRight: '1px solid #f0f0f0', overflow: 'auto', padding: 12 }}>
-              <List
-                dataSource={documents}
-                renderItem={item => (
-                  <List.Item
-                    onClick={() => setSelectedId(item.id)}
-                    style={{
-                      cursor: 'pointer',
-                      padding: 12,
-                      borderRadius: 8,
-                      background: String(item.id) === String(selectedDocument?.id) ? '#e6f4ff' : 'transparent',
-                    }}
-                  >
-                    <List.Item.Meta
-                      avatar={<FilePdfOutlined style={{ color: '#cf1322', fontSize: 22 }} />}
-                      title={item.fileName || 'Báo giá.pdf'}
-                      description={(
-                        <Space size={6} wrap>
-                          {item.version ? <Tag>{item.version}</Tag> : null}
-                          <Text type="secondary">{item.createdAt || ''}</Text>
-                        </Space>
-                      )}
-                    />
-                  </List.Item>
-                )}
-              />
-            </aside>
-
-            <section style={{ minWidth: 0, display: 'flex', flexDirection: 'column', background: '#f5f5f5' }}>
-              <div style={{ padding: '10px 16px', background: '#fff', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text strong ellipsis>{selectedDocument?.fileName || 'Báo giá PDF'}</Text>
-                <Space>
-                  <Button
-                    icon={<DownloadOutlined />}
-                    href={selectedDocument?.downloadUrl || selectedDocument?.viewUrl}
-                    target="_blank"
-                    disabled={!selectedDocument?.viewUrl && !selectedDocument?.downloadUrl}
-                  >
-                    Tải PDF
-                  </Button>
-                  <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrint} disabled={!selectedDocument?.viewUrl}>
-                    In
-                  </Button>
-                </Space>
-              </div>
-              {selectedDocument?.viewUrl ? (
-                <iframe
-                  key={selectedDocument.id}
-                  ref={iframeRef}
-                  title={selectedDocument.fileName || 'PDF preview'}
-                  src={selectedDocument.viewUrl}
-                  style={{ width: '100%', flex: 1, border: 0, background: '#fff' }}
-                />
-              ) : null}
-            </section>
-          </div>
+          <CanvasViewport>
+            {template ? (
+              <A4Page
+                ref={documentRef}
+                className="generated-document-page"
+                $margin={template.page?.margin}
+              >
+                <A4ContentGrid
+                  $columns={template.layout?.columns}
+                  $columnGap={template.layout?.columnGap}
+                  $rowGap={template.layout?.rowGap}
+                >
+                  {(template.nodes ?? []).map(node => (
+                    <div
+                      key={node.id}
+                      style={{
+                        gridColumn: node.layout?.startNewRow
+                          ? `1 / span ${node.layout?.columnSpan ?? 12}`
+                          : `span ${node.layout?.columnSpan ?? 12}`,
+                        gridRow: `span ${node.layout?.rowSpan ?? 1}`,
+                        minWidth: 0,
+                        minHeight: node.layout?.minHeight || undefined,
+                      }}
+                    >
+                      <DocumentNodeContent node={node} data={data} preview />
+                    </div>
+                  ))}
+                </A4ContentGrid>
+              </A4Page>
+            ) : null}
+          </CanvasViewport>
         )}
       </Spin>
     </Drawer>
