@@ -80,7 +80,7 @@ export const createDocumentNode = (type, dataSchema = []) => {
   }
 }
 
-export const createEmptyTemplate = ({ name = 'Mẫu chứng từ', documentType = 'QUOTATION' } = {}) => ({
+export const createEmptyTemplate = ({ name = 'Mẫu chứng từ', documentType = 'invoice' } = {}) => ({
   schemaVersion: DOCUMENT_SCHEMA_VERSION,
   name,
   documentType,

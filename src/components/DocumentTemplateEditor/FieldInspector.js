@@ -36,7 +36,7 @@ const PageLayoutInspector = ({ template, onTemplateChange }) => {
         <InspectorTitle>Loại chứng từ</InspectorTitle>
         <Form.Item label="Loại chứng từ">
           <Select
-            value={template?.documentType ?? 'QUOTATION'}
+            value={template?.documentType ?? 'invoice'}
             options={DOCUMENT_TYPE_OPTIONS}
             onChange={documentType => onTemplateChange({ documentType })}
           />

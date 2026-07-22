@@ -76,9 +76,11 @@ const DocumentTemplateEditorPage = () => {
         setSchema(schemaData)
         setDataSchema(normalizeDocumentSchema(schemaData))
         setPreviewData({})
-        const resolvedDocumentType = ['QUOTATION', 'GOODS_ISSUE'].includes(templateSource.documentType)
-          ? templateSource.documentType
-          : 'QUOTATION'
+        const resolvedDocumentType = templateSource.documentType === 'QUOTATION'
+          ? 'invoice'
+          : ['invoice', 'GOODS_ISSUE'].includes(templateSource.documentType)
+            ? templateSource.documentType
+            : 'invoice'
         const normalizedStoredTemplate = storedTemplate
           ? {
             ...storedTemplate,
@@ -114,7 +116,7 @@ const DocumentTemplateEditorPage = () => {
       fields: Array.isArray(sourceTemplate?.fields) ? sourceTemplate.fields : [],
       status: record?.status ?? 1,
       bizId: sourceTemplate?.bizId ?? null,
-      documentType: documentType || 'QUOTATION',
+      documentType: documentType || 'invoice',
       data: JSON.stringify(templateData),
     }
     console.log('[DocumentTemplateEditor] Lưu chứng từ payload:', payload)

@@ -32,12 +32,16 @@ import { PlusOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import UserInfo from './UserInfo';
 import NotificationDropdown from './NotificationDropdown';
 import { useNavigate } from "react-router-dom";
+import useGetMe from '@/hooks/useGetMe';
+import useNotificationStream from '@/hooks/useNotificationStream';
 
 const Header = () => {
 
   const { t, i18n } = useTranslation();
   const { isCollapseSidebar, toggleCollapse } = useCollapseSidebar();
   const { serviceId, setServiceId } = useServiceId();
+  const { user } = useGetMe();
+  const notifications = useNotificationStream(user?.id);
   let navigate = useNavigate();
 
   const isVietnamese = String(i18n.language || 'vi').toLowerCase().startsWith('vi');
@@ -70,7 +74,10 @@ const Header = () => {
           icon={<PlusOutlined />}
           type='primary'
         />
-        <NotificationDropdown onViewAll={() => navigate('/notifications')} />
+        <NotificationDropdown
+          notifications={notifications}
+          onViewAll={() => navigate('/notifications')}
+        />
         <Tooltip title={isVietnamese ? t('header.languageToggleToEn') : t('header.languageToggleToVi')}>
           <button
             type="button"

@@ -6,26 +6,39 @@ import { SUCCESS_CODE } from '@/configs'
 const useQuotationViewer = () => {
   const [quoteViewerOpen, setQuoteViewerOpen] = useState(false)
   const [quoteLoading, setQuoteLoading] = useState(false)
-  const [quoteDocuments, setQuoteDocuments] = useState([])
+  const [quoteTemplate, setQuoteTemplate] = useState(null)
+  const [quoteData, setQuoteData] = useState({})
   const [quoteOrder, setQuoteOrder] = useState(null)
 
   const openQuotationViewer = useCallback(async (order) => {
     setQuoteOrder(order)
-    setQuoteDocuments([])
+    setQuoteTemplate(null)
+    setQuoteData({})
     setQuoteViewerOpen(true)
     setQuoteLoading(true)
     try {
-      const response = await DocumentTemplateService.fetchGeneratedDocuments({
-        categoryCode: 'ORDER_QUOTATION',
-        sourceType: 'ORDER',
-        sourceId: order.id,
-      })
+      const response = await DocumentTemplateService.fetchInvoice(order.id)
       if (Number(response?.errorCode) !== SUCCESS_CODE) {
         throw new Error(response?.message || 'Không tải được báo giá')
       }
-      setQuoteDocuments(Array.isArray(response?.data) ? response.data : [])
+      const templateData = JSON.parse(response?.data?.templateData || '')
+      if (!templateData || !Array.isArray(templateData.nodes)) {
+        throw new Error('Template báo giá không hợp lệ')
+      }
+      const customerOrder = response.data.customerOrder
+      setQuoteOrder(customerOrder)
+      setQuoteTemplate(templateData)
+      setQuoteData({
+        customerOrder,
+        customer: {
+          name: customerOrder?.customerReceiverName,
+          address: customerOrder?.customerAddress,
+          mobile: customerOrder?.customerMobilePhone,
+          email: customerOrder?.customerEmail,
+        },
+      })
     } catch (error) {
-      message.error(error?.message || 'Không tải được file báo giá PDF')
+      message.error(error?.message || 'Không tải được báo giá')
     } finally {
       setQuoteLoading(false)
     }
@@ -33,14 +46,16 @@ const useQuotationViewer = () => {
 
   const closeQuotationViewer = useCallback(() => {
     setQuoteViewerOpen(false)
-    setQuoteDocuments([])
+    setQuoteTemplate(null)
+    setQuoteData({})
     setQuoteOrder(null)
   }, [])
 
   return {
     quoteViewerOpen,
     quoteLoading,
-    quoteDocuments,
+    quoteTemplate,
+    quoteData,
     quoteOrder,
     openQuotationViewer,
     closeQuotationViewer,
