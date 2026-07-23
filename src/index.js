@@ -24,6 +24,7 @@ import ReactDOM from 'react-dom/client';
 import axios from 'axios';
 import App from '@/App';
 import { GATEWAY } from '@/configs';
+import { handleUnauthorized, hasAccessToken } from '@/utils/sessionExpiry';
 
 // RequestUtils (@flast-erp/core) builds url as baseURL + path, then calls axios.get(url).
 // With a relative baseURL like '/api', axios combines baseURL again → /api/api/...
@@ -35,6 +36,15 @@ const resolveApiBaseUrl = (gateway) => {
 
 axios.defaults.withCredentials = true;
 axios.defaults.baseURL = resolveApiBaseUrl(GATEWAY);
+axios.interceptors.response.use(
+  response => response,
+  error => {
+    if (error?.response?.status === 401 && hasAccessToken()) {
+      handleUnauthorized();
+    }
+    return Promise.reject(error);
+  }
+);
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<App />);

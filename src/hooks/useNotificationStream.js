@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import axios from 'axios'
+import { handleUnauthorized } from '@/utils/sessionExpiry'
 
 const INITIAL_RECONNECT_DELAY = 1000
 const MAX_RECONNECT_DELAY = 30000
@@ -32,22 +33,21 @@ const normalizeNotification = (event) => {
   if (String(event.type ?? '').toUpperCase() === 'HEARTBEAT') return null
 
   const parsedData = parseJson(event.data)
-  const source = parsedData && typeof parsedData === 'object' ? parsedData : event
-  const sourceType = String(source.type ?? '').toLowerCase()
+  const sourceType = String(event.type ?? '').toLowerCase()
   const displayType = ['approve', 'done', 'alert', 'info'].includes(sourceType)
     ? sourceType
     : 'info'
-  const createdAt = source.createdAt ?? event.timestamp ?? Date.now()
-  const title = source.title ?? 'Thông báo mới'
+  const createdAt = event.timestamp ?? Date.now()
+  const title = event.title ?? 'Thông báo mới'
 
   return {
-    id: source.id ?? source.notificationId ?? `${createdAt}-${title}`,
+    id: event.id ?? `${createdAt}-${title}`,
     type: displayType,
     title,
-    description: source.content ?? source.message ?? '',
+    description: event.content ?? '',
     createdAt,
-    read: Boolean(source.read),
-    data: source,
+    read: Boolean(event.read),
+    data: parsedData,
   }
 }
 
@@ -62,7 +62,6 @@ const useNotificationStream = (userId) => {
   useEffect(() => {
     if (userId === undefined || userId === null || userId === '') return undefined
 
-    const token = window.localStorage.getItem('jwt_access_token')
     let stopped = false
     let controller = null
     let reconnectTimer = null
@@ -86,6 +85,7 @@ const useNotificationStream = (userId) => {
 
     const connect = async () => {
       controller = new AbortController()
+      const token = window.localStorage.getItem('jwt_access_token')
 
       try {
         const response = await fetch(buildStreamUrl(userId), {
@@ -98,6 +98,12 @@ const useNotificationStream = (userId) => {
           cache: 'no-store',
           signal: controller.signal,
         })
+
+        if (response.status === 401) {
+          stopped = true
+          handleUnauthorized()
+          return
+        }
 
         if (!response.ok || !response.body) {
           throw new Error(`Notification stream failed with status ${response.status}`)

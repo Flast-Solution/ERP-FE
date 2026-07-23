@@ -29,6 +29,7 @@ const NotificationDropdown = ({
   onMarkAllRead,
   onSelect,
   onViewAll,
+  onRequestPermission,
 }) => {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState('all');
@@ -134,11 +135,12 @@ const NotificationDropdown = ({
     >
       <button
         type="button"
-        className="notification-trigger"
-        aria-label="Thông báo"
-        aria-haspopup="true"
-        aria-expanded={open}
-      >
+      className="notification-trigger"
+      aria-label="Thông báo"
+      aria-haspopup="true"
+      aria-expanded={open}
+      onClick={onRequestPermission}
+    >
         <Badge count={unreadCount} size="small" overflowCount={99}>
           <BellOutlined />
         </Badge>

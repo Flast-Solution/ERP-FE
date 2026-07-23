@@ -7,7 +7,7 @@ const UserForm = ({ closeModal, data }) => {
 
   const onSubmit = useCallback( async (values) => {
     let params = (values?.id ?? '') === '' ? {} : { id: values.id };
-    let uri = params?.id ? '/user/update' : '/user/create';
+    let uri = params?.id ? '/auth/user-bussiness/save-user' : '/auth/user-bussiness/save-user';
     const { errorCode } = await RequestUtils.Post(uri, {...values, layout: 'UserLayout'}, params);
     f5List('user/fetch-user-department');
     InAppEvent.normalInfo(errorCode === 200 ? "Cập nhật thành công" : "Lỗi cập nhật, vui lòng thử lại sau");
