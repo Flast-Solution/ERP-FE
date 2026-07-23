@@ -23,6 +23,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { FuseUtils } from '@flast-erp/core/utils';
 import { useStore } from '@flast-erp/core/components';
 import { useLocation, useNavigate, matchPath } from "react-router-dom";
+import { AUTH_REDIRECT_URL_KEY } from '@/utils/sessionExpiry';
 
 const LOGIN_PATH = '/login';
 const PUBLIC_AUTHENTICATED_PREFIXES = [
@@ -52,13 +53,18 @@ const Authorization = (props) => {
 
     const redirectRoute = useCallback(() => {
         const { pathname, state } = location;
-        let redirectUrl = state?.redirectUrl ?? '/sale/report-common';
+        const storedRedirectUrl = window.sessionStorage.getItem(AUTH_REDIRECT_URL_KEY);
+        let redirectUrl = state?.redirectUrl ?? storedRedirectUrl ?? '/sale/report-common';
         if (!user?.id) {
-            let strParams = window.location.search.substring(1)
+            const requestedUrl = `${pathname}${location.search}${location.hash}`;
+            if (pathname !== LOGIN_PATH) {
+                window.sessionStorage.setItem(AUTH_REDIRECT_URL_KEY, requestedUrl);
+            }
             navigate(LOGIN_PATH, {
-                state: { redirectUrl: pathname.concat(strParams ? '?' + strParams : '') }
+                state: { redirectUrl: requestedUrl }
             });
         } else {
+            window.sessionStorage.removeItem(AUTH_REDIRECT_URL_KEY);
             navigate(redirectUrl);
         }
     }, [navigate, location, user])
