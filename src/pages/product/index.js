@@ -25,7 +25,7 @@ import { Helmet } from "react-helmet";
 import { RestList, BreadcrumbCustom, CustomImage } from '@flast-erp/core/components';
 import Filter from './Filter';
 import { Button, Space } from 'antd';
-import { InAppEvent } from "@flast-erp/core/utils";
+import { InAppEvent, RequestUtils } from "@flast-erp/core/utils";
 import { GATEWAY, HASH_MODAL } from 'configs';
 import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils';
 import ProductAttrService from '@/services/ProductAttrService';
@@ -35,12 +35,14 @@ import { Link } from 'react-router-dom';
 
 const Index = () => {
 
-  const onEdit = (item) => {
-    let title = 'Sửa sản phẩm # ' + item.id;
+  const onEdit = async (item) => {
+    const { data: productDetail, errorCode } = await RequestUtils.Get("/product/find-by-id", { id: item.id });
+    const source = errorCode === 200 && productDetail ? productDetail : item;
+    let title = 'Sửa sản phẩm # ' + source.id;
     let hash = '#draw/product.edit';
-    let data = cloneDeep(item);
+    let data = cloneDeep(source);
     let skus = [], listProperties = [];
-    for (const property of item.listProperties) {
+    for (const property of (Array.isArray(source?.listProperties) ? source.listProperties : [])) {
       let attr = listProperties.find(i => i.attributedId === property.attributedId);
       if (attr) {
         attr.attributedValueId.push(property.attributedValueId);
@@ -49,14 +51,18 @@ const Index = () => {
         listProperties.push(attr);
       }
     }
-    for (const iSkus of item.skus) {
-      let item = { id: iSkus?.id, name: iSkus.name, skuPrices: iSkus.skuPrices || [] }
-      let details = [];
-      for (const detail of iSkus.skuDetails) {
-        details.push({ id: detail?.id, attributedId: detail.attributedId, attributedValueId: detail.attributedValueId });
-      }
-      item.sku = details;
-      skus.push(item);
+    for (const iSkus of (Array.isArray(source?.skus) ? source.skus : [])) {
+      const skuDetails = Array.isArray(iSkus?.skuDetails) ? iSkus.skuDetails : [];
+      skus.push({
+        id: iSkus?.id,
+        name: iSkus?.name,
+        skuPrices: Array.isArray(iSkus?.skuPrices) ? iSkus.skuPrices : [],
+        sku: skuDetails.map(detail => ({
+          id: detail?.id,
+          attributedId: detail?.attributedId,
+          attributedValueId: detail?.attributedValueId,
+        })),
+      });
     }
     data.listProperties = listProperties;
     data.skus = skus;
@@ -157,8 +163,9 @@ const Index = () => {
     }
     let attrsId = [], attrsValuesId = [];
     for (let item of values.embedded) {
-      attrsId = item.listProperties.map(i => i.attributedId).filter(i => i && i > 0);
-      attrsValuesId = item.listProperties.map(i => i.attributedValueId).filter(i => i && i > 0);
+      const properties = Array.isArray(item?.listProperties) ? item.listProperties : [];
+      attrsId = properties.map(i => i.attributedId).filter(i => i && i > 0);
+      attrsValuesId = properties.map(i => i.attributedValueId).filter(i => i && i > 0);
     }
     ProductAttrService.loadByIds(attrsId);
     ProductAttrService.loadValueByIds(attrsValuesId);
@@ -180,7 +187,7 @@ const Index = () => {
         filter={<Filter />}
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
-        apiPath={'erp/product/fetch'}
+        apiPath={'erp/solr/fetch-product'}
         customClickCreate={onCreateProduct}
         columns={CUSTOM_ACTION}
       />
