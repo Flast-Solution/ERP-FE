@@ -14,7 +14,7 @@ const getProductionOrderColumns = ({ onView, onEdit }) => [
     title: 'Mã lệnh SX',
     dataIndex: 'productionOrderCode',
     key: 'productionOrderCode',
-    width: 155,
+    width: 250,
     render: (value, record) => (
       <>
         <span className="production-code">{value}</span>
@@ -23,7 +23,7 @@ const getProductionOrderColumns = ({ onView, onEdit }) => [
     ),
   },
   {
-    title: 'Khách hàng · Đơn hàng',
+    title: 'K.hàng · Đ.hàng',
     key: 'customerOrder',
     width: 185,
     render: (_, record) => (
@@ -68,10 +68,10 @@ const getProductionOrderColumns = ({ onView, onEdit }) => [
     render: (_, record) => formatListDate(getProductionDeadline(record)),
   },
   {
-    title: 'Người tạo lệnh',
+    title: 'Người t.lệnh',
     dataIndex: 'createdByName',
     key: 'createdBy',
-    width: 125,
+    width: 155,
     render: (value, record) => value ?? (record.createdBy != null ? `#${record.createdBy}` : '-'),
   },
   {

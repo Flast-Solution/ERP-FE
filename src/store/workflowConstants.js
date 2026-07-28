@@ -89,47 +89,12 @@ export const GUARD_TYPES = {
       { name: 'step_code', label: 'Code của bước', type: 'input', required: true },
     ],
   },
-  sub_table_all: {
-    label: 'Bảng phụ — tất cả thỏa',
-    description: 'Mọi row trong bảng phụ phải pass điều kiện.',
+  update_erp_core: {
+    label: 'Update bảng sang ERP - CORE',
+    description: 'Chọn bước nguồn và các field trong form của bước đó để cập nhật dữ liệu sang ERP - CORE.',
     configFields: [
-      { name: 'table_name', label: 'Bảng phụ', type: 'input', required: true },
-    ],
-  },
-  sub_table_any: {
-    label: 'Bảng phụ — ít nhất một thỏa',
-    description: 'Có ít nhất một row pass điều kiện.',
-    configFields: [
-      { name: 'table_name', label: 'Bảng phụ', type: 'input', required: true },
-    ],
-  },
-  sub_table_none: {
-    label: 'Bảng phụ — không có row nào thỏa',
-    description: 'Không row nào pass — đảm bảo không có lỗi.',
-    configFields: [
-      { name: 'table_name', label: 'Bảng phụ', type: 'input', required: true },
-    ],
-  },
-  sub_table_count: {
-    label: 'Bảng phụ — đếm số row',
-    description: 'So sánh số lượng row với một hằng số.',
-    configFields: [
-      { name: 'table_name', label: 'Bảng phụ', type: 'input', required: true },
-      {
-        name: 'operator',
-        label: 'Toán tử',
-        type: 'select',
-        required: true,
-        options: [
-          { value: 'eq', label: '= (bằng)' },
-          { value: 'neq', label: '≠ (khác)' },
-          { value: 'gt', label: '> (lớn hơn)' },
-          { value: 'gte', label: '≥ (lớn hơn hoặc bằng)' },
-          { value: 'lt', label: '< (nhỏ hơn)' },
-          { value: 'lte', label: '≤ (nhỏ hơn hoặc bằng)' },
-        ],
-      },
-      { name: 'expected_value', label: 'Số row', type: 'number', required: true },
+      { name: 'from_step', label: 'Lấy field từ bước', type: 'select', required: true },
+      { name: 'field_names', label: 'Field gửi sang ERP - CORE', type: 'select', required: true },
     ],
   },
 }

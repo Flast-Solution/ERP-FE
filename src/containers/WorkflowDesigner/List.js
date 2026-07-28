@@ -303,7 +303,7 @@ const WorkflowDesignerList = ({ onCreate, onEdit }) => {
     {
       title: 'Số bước',
       dataIndex: 'stepCount',
-      width: 90,
+      width: 100,
       align: 'center',
     },
     {
