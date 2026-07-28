@@ -66,7 +66,11 @@ const AllocationModal = ({
               : '';
             return {
               value: inventory.id,
-              label: `Kho #${inventory.warehouseId} · Mã tồn #${inventory.id} · Còn ${remainingQuantity}${dimension}`,
+              label: [
+                inventory.wareHouseStock?.name,
+                inventory.wareHouseStock?.address,
+                `Còn ${remainingQuantity}${dimension}`,
+              ].filter(Boolean).join(' · '),
               disabled: remainingQuantity <= 0,
             };
           })}
