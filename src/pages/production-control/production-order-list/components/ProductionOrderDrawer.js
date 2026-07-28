@@ -23,7 +23,7 @@ const ProductionOrderDrawer = ({
     open={open}
     title={null}
     placement="right"
-    width={step === 1 ? 920 : 'min(1200px, 96vw)'}
+    width="min(750px, calc(100vw - 16px))"
     destroyOnHidden
     onClose={step === 2 && drawerMode !== 'view' ? onCancelOrder : onClose}
     styles={{

@@ -91,10 +91,11 @@ export const GUARD_TYPES = {
   },
   update_erp_core: {
     label: 'Update bảng sang ERP - CORE',
-    description: 'Chọn bước nguồn và các field trong form của bước đó để cập nhật dữ liệu sang ERP - CORE.',
+    description: 'Chọn bảng đích, bước nguồn và ánh xạ field trong form sang cột tương ứng của ERP - CORE.',
     configFields: [
+      { name: 'table_name', label: 'Chọn bảng', type: 'select', required: true },
       { name: 'from_step', label: 'Lấy field từ bước', type: 'select', required: true },
-      { name: 'field_names', label: 'Field gửi sang ERP - CORE', type: 'select', required: true },
+      { name: 'field_mappings', label: 'Field gửi sang ERP - CORE', type: 'list', required: true },
     ],
   },
 }

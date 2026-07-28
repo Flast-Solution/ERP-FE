@@ -1,4 +1,5 @@
 import styled from 'styled-components'
+import { Button } from 'antd'
 
 export const DrawerHeader = styled.div`
   display: flex;
@@ -187,4 +188,42 @@ export const MessageSection = styled.div`
   border-top: 1px solid #f0f0f0;
   padding-top: 14px;
   margin-top: 14px;
+`
+
+export const MappingCard = styled.div`
+  position: relative;
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  background: #fafafa;
+
+  .mapping-remove {
+    position: absolute;
+    z-index: 1;
+    top: 5px;
+    right: 5px;
+    color: #8c8c8c;
+  }
+
+  .mapping-field-label {
+    margin-bottom: 5px;
+    color: #8c8c8c;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .ant-form-item {
+    margin-bottom: 10px;
+  }
+
+  .ant-form-item:last-child {
+    margin-bottom: 0;
+  }
+`
+
+export const AddMappingButton = styled(Button)`
+  margin-top: 2px;
 `

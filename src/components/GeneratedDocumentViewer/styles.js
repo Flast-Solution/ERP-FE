@@ -1,19 +1,33 @@
 import styled from 'styled-components'
 
 export const ViewerShell = styled.div`
-  display: grid;
-  grid-template-columns: minmax(680px, 1.6fr) minmax(360px, 0.8fr);
-  height: calc(100vh - 80px);
+  height: calc(100vh - 132px);
   min-height: 0;
   overflow: hidden;
   background: #eef1f5;
+`
 
-  @media (max-width: 1100px) {
-    grid-template-columns: minmax(0, 1fr);
+export const ViewerModeBar = styled.div`
+  height: 52px;
+  padding: 9px 16px;
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-bottom: 1px solid #d8dee8;
+
+  .ant-segmented {
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .ant-segmented-item {
+    flex: 1;
+    text-align: center;
   }
 `
 
 export const DocumentPane = styled.section`
+  height: 100%;
   display: flex;
   min-width: 0;
   min-height: 0;
@@ -94,7 +108,7 @@ export const DocumentCanvas = styled.div`
   height: 100%;
   min-height: 0;
   overflow: auto;
-  padding: 28px 12px 40px;
+  padding: 22px 8px 36px;
 `
 
 export const PageZoom = styled.div`
@@ -110,15 +124,12 @@ export const PageZoom = styled.div`
 `
 
 export const DiscussionPane = styled.aside`
+  height: 100%;
   min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
   background: #fff;
-
-  @media (max-width: 1100px) {
-    display: none;
-  }
 `
 
 export const DiscussionHeader = styled.div`

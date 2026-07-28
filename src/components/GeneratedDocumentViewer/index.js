@@ -1,5 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Button, Drawer, Empty, Input, message, Spin, Tooltip } from 'antd'
+import {
+  Button,
+  Drawer,
+  Empty,
+  Input,
+  message,
+  Segmented,
+  Spin,
+  Tooltip,
+} from 'antd'
 import {
   CloseOutlined,
   DownloadOutlined,
@@ -27,6 +36,7 @@ import {
   FileInfo,
   PageZoom,
   ToolbarActions,
+  ViewerModeBar,
   ViewerShell,
 } from './styles'
 
@@ -70,7 +80,8 @@ const GeneratedDocumentViewer = ({
 }) => {
   const documentRef = useRef(null)
   const [downloading, setDownloading] = useState(false)
-  const [zoom, setZoom] = useState(1)
+  const [zoom, setZoom] = useState(0.85)
+  const [activePane, setActivePane] = useState('document')
   const [commentValue, setCommentValue] = useState('')
   const [discussionComments, setDiscussionComments] = useState(comments)
   const orientation = template?.page?.orientation === 'landscape' ? 'landscape' : 'portrait'
@@ -115,7 +126,8 @@ const GeneratedDocumentViewer = ({
 
   useEffect(() => {
     if (!open) return
-    setZoom(1)
+    setZoom(0.85)
+    setActivePane('document')
     setCommentValue('')
     setDiscussionComments(comments)
   }, [comments, open])
@@ -232,7 +244,7 @@ const GeneratedDocumentViewer = ({
       )}
       open={open}
       onClose={onClose}
-      width="min(1480px, 94vw)"
+      width="min(750px, calc(100vw - 16px))"
       closeIcon={<CloseOutlined style={{ color: '#fff', fontSize: 18 }} />}
       styles={{
         header: {
@@ -246,8 +258,23 @@ const GeneratedDocumentViewer = ({
       }}
       destroyOnHidden
     >
+      <ViewerModeBar>
+        <Segmented
+          block
+          value={activePane}
+          onChange={setActivePane}
+          options={[
+            { value: 'document', label: 'Chứng từ' },
+            {
+              value: 'discussion',
+              label: `Trao đổi (${discussionComments.length})`,
+            },
+          ]}
+        />
+      </ViewerModeBar>
       <ViewerShell>
-        <DocumentPane>
+        {activePane === 'document' ? (
+          <DocumentPane>
           <DocumentToolbar>
             <FileInfo>
               <span className="file-dot" />
@@ -332,9 +359,11 @@ const GeneratedDocumentViewer = ({
               ) : null}
             </DocumentCanvas>
           </Spin>
-        </DocumentPane>
+          </DocumentPane>
+        ) : null}
 
-        <DiscussionPane>
+        {activePane === 'discussion' ? (
+          <DiscussionPane>
           <DiscussionHeader>
             <h3>Trao đổi về báo giá</h3>
             <span>{discussionComments.length} bình luận</span>
@@ -378,7 +407,8 @@ const GeneratedDocumentViewer = ({
               />
             </div>
           </DiscussionComposer>
-        </DiscussionPane>
+          </DiscussionPane>
+        ) : null}
       </ViewerShell>
     </Drawer>
   )
