@@ -11,19 +11,32 @@ const OrderActions = ({
   onClickViewDetail,
   openQuotationViewer,
   openWorkflowModal,
+  openWorkflowProgressDrawer,
   navigate,
 }) => {
-  const hasWorkflowInstance = Boolean(record?.workflowInstance)
+  const workflowDetails = (record?.details ?? []).filter(detail => (
+    Array.isArray(detail?.workflowInstances) && detail.workflowInstances.length > 0
+  ))
+  const hasWorkflowInstance = Boolean(record?.workflowInstance) || workflowDetails.length > 0
   const workflowMenuItems = [
-    !disableWorkflowAttach && !hasWorkflowInstance && {
-      key: 'attach',
-      icon: <ApartmentOutlined />,
-      label: 'Gắn workflow',
-    },
-    hasWorkflowInstance && {
-      key: 'progress',
+    ...workflowDetails.map(detail => ({
+      key: `progress:${detail.id}`,
+      icon: <EyeOutlined />,
+      label: (
+        <span>
+          <strong>Mã&nbsp;</strong> {detail.code}
+        </span>
+      ),
+    })),
+    record?.workflowInstance && workflowDetails.length === 0 && {
+      key: 'legacy-progress',
       icon: <EyeOutlined />,
       label: 'Xem tiến trình',
+    },
+    !disableWorkflowAttach && {
+      key: 'attach',
+      icon: <ApartmentOutlined />,
+      label: hasWorkflowInstance ? 'Gắn thêm workflow' : 'Gắn workflow',
     },
   ].filter(Boolean)
 
@@ -59,7 +72,15 @@ const OrderActions = ({
                 openWorkflowModal(record)
                 return
               }
-              if (key === 'progress') {
+              if (key.startsWith('progress:')) {
+                const detailId = key.slice('progress:'.length)
+                const detail = workflowDetails.find(item => String(item?.id) === detailId)
+                if (detail) {
+                  openWorkflowProgressDrawer(record, detail)
+                }
+                return
+              }
+              if (key === 'legacy-progress') {
                 const instanceId = record.workflowInstance?.id
                 navigate(`/sale/order/progress/${record.id}${instanceId ? `?instanceId=${instanceId}` : ''}`, {
                   state: {

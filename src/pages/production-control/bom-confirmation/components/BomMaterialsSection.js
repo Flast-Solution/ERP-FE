@@ -3,7 +3,7 @@ import { Table } from 'antd';
 
 const MATERIAL_COLUMNS = [
   { title: 'Tên vật tư', dataIndex: 'name' },
-  { title: 'Quy cách', dataIndex: 'specification', width: 145 },
+  { title: 'Đơn vị tính', dataIndex: 'specification', width: 145 },
   { title: 'SL cần', dataIndex: 'requiredQuantity', align: 'right' },
   { title: 'Tồn kho', dataIndex: 'stockQuantity', align: 'right' },
   { title: 'Trạng thái', dataIndex: 'status', align: 'center' },

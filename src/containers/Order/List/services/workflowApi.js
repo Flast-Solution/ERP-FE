@@ -55,9 +55,16 @@ export const fetchWorkflowPreview = async (instanceId) => {
  * Preserves existing N+1 fetch behavior; extract-only refactor.
  */
 export const enrichOrdersWithWorkflowData = async (tableData) => {
-  const entityIds = (tableData?.embedded ?? [])
+  const orders = tableData?.embedded ?? []
+  const parentEntityIds = orders
     .map(item => item?.id)
     .filter(Boolean)
+  const detailEntityIds = orders.flatMap(item => (
+    Array.isArray(item?.details)
+      ? item.details.map(detail => detail?.id).filter(Boolean)
+      : []
+  ))
+  const entityIds = Array.from(new Set([...parentEntityIds, ...detailEntityIds]))
 
   if (entityIds.length === 0) {
     return tableData
@@ -71,14 +78,19 @@ export const enrichOrdersWithWorkflowData = async (tableData) => {
 
     const instancesByEntityId = instances.reduce((result, item) => {
       const entityId = getWorkflowInstanceEntityId(item)
-      if (entityId) {
-        result.set(Number(entityId), normalizeWorkflowInstance(item))
+      if (entityId !== undefined && entityId !== null && entityId !== '') {
+        const entityKey = String(entityId)
+        result.set(entityKey, [
+          ...(result.get(entityKey) ?? []),
+          normalizeWorkflowInstance(item),
+        ])
       }
       return result
     }, new Map())
 
     const processIds = Array.from(new Set(
       Array.from(instancesByEntityId.values())
+        .flat()
         .map(getWorkflowInstanceProcessId)
         .filter(Boolean)
         .map(Number)
@@ -104,7 +116,8 @@ export const enrichOrdersWithWorkflowData = async (tableData) => {
     }
 
     const workflowPreviewsByInstanceId = new Map()
-    const previewableInstances = Array.from(instancesByEntityId.values())
+    const previewableInstances = parentEntityIds
+      .flatMap(entityId => instancesByEntityId.get(String(entityId)) ?? [])
       .filter(instance => instance?.id)
 
     if (previewableInstances.length > 0) {
@@ -132,19 +145,43 @@ export const enrichOrdersWithWorkflowData = async (tableData) => {
       })
     }
 
-    tableData.embedded = tableData.embedded.map(item => ({
-      ...item,
-      workflowInstance: instancesByEntityId.get(Number(item.id))
-        ? {
-          ...instancesByEntityId.get(Number(item.id)),
-          preview: workflowPreviewsByInstanceId.get(Number(instancesByEntityId.get(Number(item.id))?.id)) ?? null,
-        }
-        : null,
-      workflowProcess: workflowProcessesById.get(Number(getWorkflowInstanceProcessId(instancesByEntityId.get(Number(item.id))))) ?? null,
-    }))
+    tableData.embedded = orders.map((item) => {
+      const parentInstances = instancesByEntityId.get(String(item.id)) ?? []
+      const enrichedParentInstances = parentInstances.map(instance => ({
+        ...instance,
+        preview: workflowPreviewsByInstanceId.get(Number(instance?.id)) ?? null,
+        workflowProcess: workflowProcessesById.get(Number(getWorkflowInstanceProcessId(instance))) ?? null,
+      }))
+      const firstParentInstance = enrichedParentInstances[0] ?? null
+
+      return {
+        ...item,
+        details: Array.isArray(item?.details)
+          ? item.details.map((detail) => {
+            const detailInstances = instancesByEntityId.get(String(detail?.id)) ?? []
+            return {
+              ...detail,
+              workflowInstances: detailInstances.map(instance => ({
+                ...instance,
+                workflowProcess: workflowProcessesById.get(
+                  Number(getWorkflowInstanceProcessId(instance))
+                ) ?? null,
+              })),
+            }
+          })
+          : item?.details,
+        workflowInstances: enrichedParentInstances,
+        workflowInstance: firstParentInstance,
+        workflowProcess: firstParentInstance?.workflowProcess ?? null,
+      }
+    })
   } catch (error) {
     tableData.embedded = tableData.embedded.map(item => ({
       ...item,
+      details: Array.isArray(item?.details)
+        ? item.details.map(detail => ({ ...detail, workflowInstances: [] }))
+        : item?.details,
+      workflowInstances: [],
       workflowInstance: null,
       workflowProcess: null,
     }))

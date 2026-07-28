@@ -18,6 +18,7 @@ const createOrderColumns = ({
   onClickViewDetail,
   openQuotationViewer,
   openWorkflowModal,
+  openWorkflowProgressDrawer,
   navigate,
 }) => [
   {
@@ -169,6 +170,7 @@ const createOrderColumns = ({
         onClickViewDetail={onClickViewDetail}
         openQuotationViewer={openQuotationViewer}
         openWorkflowModal={openWorkflowModal}
+        openWorkflowProgressDrawer={openWorkflowProgressDrawer}
         navigate={navigate}
       />
     ),

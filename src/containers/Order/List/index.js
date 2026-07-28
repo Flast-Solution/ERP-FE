@@ -9,10 +9,12 @@ import Filter from '../Filter'
 import createOrderColumns from './columns/createOrderColumns'
 import OrderLotExpandable from './components/OrderLotExpandable'
 import WorkflowAttachModal from './components/WorkflowAttachModal'
+import WorkflowProgressDrawer from './components/WorkflowProgressDrawer'
 import useOrderLots from './hooks/useOrderLots'
 import useOrderWorkflowData from './hooks/useOrderWorkflowData'
 import useQuotationViewer from './hooks/useQuotationViewer'
 import useWorkflowModal from './hooks/useWorkflowModal'
+import useWorkflowProgressDrawer from './hooks/useWorkflowProgressDrawer'
 
 const ListOrder = ({
   filter = {},
@@ -39,17 +41,28 @@ const ListOrder = ({
     workflowModalOpen,
     workflowLoading,
     workflowAttaching,
-    workflowKeyword,
-    setWorkflowKeyword,
+    workflows,
     selectedOrder,
     selectedWorkflowEntityType,
-    selectedWorkflowId,
-    setSelectedWorkflowId,
-    filteredWorkflows,
+    workflowTargets,
+    selectedWorkflowIdsByTarget,
+    initialWorkflowIdsByTarget,
+    setWorkflowIdsForTarget,
+    canSubmit,
     openWorkflowModal,
     closeWorkflowModal,
     handleAttachWorkflow,
   } = useWorkflowModal({ setLotsByOrderId })
+
+  const {
+    workflowProgressDrawerOpen,
+    workflowProgressDrawerLoading,
+    workflowProgressOrder,
+    workflowProgressOrderDetail,
+    workflowProgressInstances,
+    openWorkflowProgressDrawer,
+    closeWorkflowProgressDrawer,
+  } = useWorkflowProgressDrawer()
 
   const {
     quoteViewerOpen,
@@ -61,7 +74,9 @@ const ListOrder = ({
     closeQuotationViewer,
   } = useQuotationViewer()
 
-  const { onData } = useOrderWorkflowData(isOrderList)
+  const { onData } = useOrderWorkflowData(
+    isOrderList || filter.type === 'cohoi'
+  )
 
   const onClickViewDetail = useCallback((customerOrder) => InAppEvent.emit(HASH_MODAL, {
     hash: '#order.tabs',
@@ -89,6 +104,7 @@ const ListOrder = ({
     onClickViewDetail,
     openQuotationViewer,
     openWorkflowModal,
+    openWorkflowProgressDrawer,
     navigate,
   })
 
@@ -125,14 +141,24 @@ const ListOrder = ({
         onCancel={closeWorkflowModal}
         onOk={handleAttachWorkflow}
         confirmLoading={workflowAttaching}
-        selectedWorkflowId={selectedWorkflowId}
-        setSelectedWorkflowId={setSelectedWorkflowId}
-        workflowKeyword={workflowKeyword}
-        setWorkflowKeyword={setWorkflowKeyword}
-        filteredWorkflows={filteredWorkflows}
+        workflowTargets={workflowTargets}
+        selectedWorkflowIdsByTarget={selectedWorkflowIdsByTarget}
+        initialWorkflowIdsByTarget={initialWorkflowIdsByTarget}
+        setWorkflowIdsForTarget={setWorkflowIdsForTarget}
+        workflows={workflows}
         workflowLoading={workflowLoading}
         selectedOrder={selectedOrder}
         selectedWorkflowEntityType={selectedWorkflowEntityType}
+        canSubmit={canSubmit}
+      />
+
+      <WorkflowProgressDrawer
+        open={workflowProgressDrawerOpen}
+        loading={workflowProgressDrawerLoading}
+        order={workflowProgressOrder}
+        orderDetail={workflowProgressOrderDetail}
+        workflowInstances={workflowProgressInstances}
+        onClose={closeWorkflowProgressDrawer}
       />
 
       <GeneratedDocumentViewer

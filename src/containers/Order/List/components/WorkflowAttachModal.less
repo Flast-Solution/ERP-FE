@@ -1,0 +1,88 @@
+.workflow-attach-modal {
+  .ant-modal-header {
+    margin-bottom: 0;
+    padding-bottom: 18px;
+    border-bottom: 1px solid #edf0f5;
+  }
+
+  .ant-modal-body {
+    max-height: 64vh;
+    padding: 24px 0;
+    overflow-y: auto;
+  }
+
+  .ant-modal-footer {
+    margin-top: 0;
+    padding-top: 18px;
+    border-top: 1px solid #edf0f5;
+  }
+
+  &__heading {
+    padding-right: 32px;
+
+    .ant-typography {
+      margin: 2px 0 0;
+    }
+  }
+
+  &__eyebrow {
+    color: #727b8c;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+  }
+
+  &__content {
+    display: grid;
+    gap: 20px;
+  }
+
+  &__order {
+    padding: 22px;
+    border: 1px solid #e2e7ef;
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  &__order-title {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 16px;
+    font-size: 16px;
+  }
+
+  &__select {
+    width: 100%;
+
+    .ant-select-selector {
+      min-height: 48px;
+      padding: 7px 10px !important;
+      border-radius: 9px;
+    }
+
+    .ant-select-selection-item {
+      border-color: #ccd5ff;
+      border-radius: 16px;
+      color: #4f46e5;
+      background: #f2f4ff;
+    }
+  }
+
+  &__tag {
+    padding: 2px 10px;
+    border-color: #ccd5ff;
+    border-radius: 16px;
+    color: #4f46e5;
+    background: #f2f4ff;
+  }
+}
+
+@media (max-width: 576px) {
+  .workflow-attach-modal {
+    &__order {
+      padding: 16px;
+    }
+  }
+}

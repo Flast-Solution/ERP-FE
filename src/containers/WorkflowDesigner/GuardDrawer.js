@@ -47,13 +47,14 @@ const CONFIG_FIELD_NAMES = [
   'step_code',
   'form_key',
   'requirement',
-  'table_name',
-  'min_rows',
+  'field_names',
 ]
 
 const normalizeGuardType = (type) => {
   if (type === 'form_field') return 'step_form_field'
-  if (type === 'sub_table') return 'sub_table_count'
+  if (type === 'sub_table' || String(type ?? '').startsWith('sub_table_')) {
+    return 'update_erp_core'
+  }
   return GUARD_TYPES[type] ? type : 'field_value'
 }
 
@@ -145,6 +146,20 @@ const fetchTemplateFieldOptions = async (forms = []) => {
       options,
     }
   }).filter((group) => group.options.length > 0)
+}
+
+const flattenFieldOptions = (options = []) => {
+  const fields = options.flatMap(option => (
+    Array.isArray(option?.options) ? option.options : [option]
+  ))
+  const uniqueFields = new Map()
+
+  fields.forEach((field) => {
+    if (field?.value == null || field.value === '') return
+    uniqueFields.set(String(field.value), field)
+  })
+
+  return Array.from(uniqueFields.values())
 }
 
 const buildStepOptions = (nodes = []) =>
@@ -405,41 +420,59 @@ const StepFormFieldConfig = ({ form, stepOptions, formOptions }) => {
   )
 }
 
-const SubTableConfig = ({ guardType }) => (
+const ErpCoreUpdateConfig = ({
+  fieldOptions,
+  fieldsLoading,
+  form,
+  onFromStepChange,
+  stepOptions,
+}) => (
   <>
     <Form.Item
-      name={['config', 'table_name']}
-      label="Bảng phụ"
-      rules={[{ required: true, message: 'Nhập bảng phụ' }]}
+      name={['config', 'from_step']}
+      label="Lấy field từ bước"
+      rules={[{ required: true, message: 'Chọn bước' }]}
     >
-      <Input placeholder="Tên bảng phụ" />
+      <Select
+        showSearch
+        allowClear
+        placeholder="Chọn bước có form"
+        options={stepOptions}
+        optionFilterProp="label"
+        onChange={(stepCode) => {
+          form.setFieldValue(['config', 'field_names'], [])
+          onFromStepChange(stepCode)
+        }}
+        onOpenChange={(open) => {
+          if (!open) return
+          const stepCode = form.getFieldValue(['config', 'from_step'])
+          if (stepCode && fieldOptions.length === 0) {
+            onFromStepChange(stepCode)
+          }
+        }}
+      />
     </Form.Item>
 
-    {guardType === 'sub_table_count' && (
-      <ConditionBuilder>
-        <ConditionRow>
-          <ConditionLabel>Số row</ConditionLabel>
-          <Form.Item
-            name={['config', 'operator']}
-            rules={[{ required: true, message: 'Chọn toán tử' }]}
-            style={{ width: 150 }}
-          >
-            <Select options={OPERATOR_OPTIONS} />
-          </Form.Item>
-          <Form.Item
-            name={['config', 'expected_value']}
-            rules={[{ required: true, message: 'Nhập số row' }]}
-            style={{ flex: 1, minWidth: 0 }}
-          >
-            <InputNumber style={{ width: '100%' }} min={0} placeholder="1" />
-          </Form.Item>
-        </ConditionRow>
-      </ConditionBuilder>
-    )}
-
-    {guardType !== 'sub_table_count' && (
-      <FieldHelp>Điều kiện chi tiết của từng row sẽ được engine xử lý theo cấu hình bảng phụ.</FieldHelp>
-    )}
+    <Form.Item
+      name={['config', 'field_names']}
+      label="Field gửi sang ERP - CORE"
+      rules={[{ required: true, message: 'Chọn ít nhất một field' }]}
+    >
+      <Select
+        mode="multiple"
+        showSearch
+        allowClear
+        placeholder="Chọn field từ form của bước nguồn"
+        options={flattenFieldOptions(fieldOptions)}
+        optionFilterProp="label"
+        loading={fieldsLoading}
+        disabled={fieldsLoading || fieldOptions.length === 0}
+        notFoundContent={fieldsLoading ? 'Đang tải field...' : 'Bước nguồn chưa có field'}
+      />
+    </Form.Item>
+    <FieldHelp>
+      Chỉ hiển thị field thuộc form của bước đã chọn.
+    </FieldHelp>
   </>
 )
 
@@ -548,8 +581,16 @@ const GuardConfigForm = ({
     )
   }
 
-  if (guardType.startsWith('sub_table_')) {
-    return <SubTableConfig guardType={guardType} />
+  if (guardType === 'update_erp_core') {
+    return (
+      <ErpCoreUpdateConfig
+        fieldOptions={fieldOptions}
+        fieldsLoading={fieldsLoading}
+        form={form}
+        onFromStepChange={onFromStepChange}
+        stepOptions={predecessorStepOptions}
+      />
+    )
   }
 
   return (
@@ -640,6 +681,9 @@ const GuardDrawer = ({
     if (nextType === 'field_value' && nextFromStep) {
       handleFieldStepChange(nextFromStep)
     }
+    if (nextType === 'update_erp_core' && nextFromStep) {
+      handleFieldStepChange(nextFromStep)
+    }
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [guardIndex, initialValue, localForm, sourceStepCode, nodes, edges])
 
@@ -653,17 +697,30 @@ const GuardDrawer = ({
       type: nextType,
       config: {
         from_step: undefined,
-        operator: ['field_value', 'sub_table_count'].includes(nextType) ? 'eq' : undefined,
+        operator: nextType === 'field_value' ? 'eq' : undefined,
         step_code: nextType === 'step_form_field' ? sourceStepCode : undefined,
         requirement: nextType === 'step_form_field' ? 'filled' : undefined,
       },
     })
+
   }
 
   const handleConfirm = () => {
     localForm
       .validateFields()
-      .then((values) => onConfirm(values))
+      .then((values) => {
+        if (guardType === 'update_erp_core') {
+          onConfirm({
+            ...values,
+            config: {
+              from_step: values?.config?.from_step,
+              field_names: values?.config?.field_names ?? [],
+            },
+          })
+          return
+        }
+        onConfirm(values)
+      })
       .catch(() => {})
   }
 
@@ -733,7 +790,9 @@ const GuardDrawer = ({
               <GuardConfigForm
                 guardType={guardType}
                 configFields={configFields}
-                fieldOptions={guardType === 'field_value' ? fieldApiOptions : fieldOptions}
+                fieldOptions={['field_value', 'update_erp_core'].includes(guardType)
+                  ? fieldApiOptions
+                  : fieldOptions}
                 fieldsLoading={fieldsLoading}
                 form={localForm}
                 formOptions={formOptions}
