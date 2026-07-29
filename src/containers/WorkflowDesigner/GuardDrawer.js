@@ -258,7 +258,7 @@ const buildFormOptions = (forms = []) =>
 
 const GuardTypePicker = ({ value, onChange }) => (
   <GuardTypeGrid>
-    {Object.entries(GUARD_TYPES).map(([type, config]) => {
+    {Object.entries(GUARD_TYPES).filter(([, config]) => !config.hidden).map(([type, config]) => {
       const active = value === type
 
       return (

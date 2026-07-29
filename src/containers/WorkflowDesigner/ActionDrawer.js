@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Checkbox, Form, Input, InputNumber, Select, Switch } from 'antd'
-import { CloseOutlined } from '@ant-design/icons'
+import { CloseOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { PanelBody, SectionLabel } from './styles'
 import {
@@ -19,6 +19,8 @@ import {
   GuardTypeHead,
   GuardTypeName,
   FieldHelp,
+  MappingCard,
+  AddMappingButton,
   SectionTitle,
 } from './guardDrawer.styles'
 
@@ -64,6 +66,16 @@ const ACTION_TYPE_DEFS = {
     desc: 'Tạo task theo ngữ cảnh bước hiện tại.',
     sectionTitle: 'Task',
   },
+  update_erp_core: {
+    label: 'Update bảng sang ERP - CORE',
+    desc: 'Chọn bước nguồn và các field trong form của bước đó để cập nhật dữ liệu sang ERP - CORE.',
+    sectionTitle: 'Cấu hình',
+  },
+  store_erp_data: {
+    label: 'Lưu trữ dữ liệu sang ERP',
+    desc: 'Chọn bước nguồn và field trong form cần lưu trữ sang ERP.',
+    sectionTitle: 'Cấu hình',
+  },
 }
 
 const FIXED_ACTION_TYPES = [
@@ -73,6 +85,8 @@ const FIXED_ACTION_TYPES = [
   'set_field',
   'notification',
   'task',
+  'update_erp_core',
+  'store_erp_data',
 ]
 
 const TRIGGER_LABELS = {
@@ -103,6 +117,14 @@ const DEADLINE_OPTIONS = [
   { value: '2d', label: 'Trong 2 ngày' },
   { value: '3d', label: 'Trong 3 ngày' },
   { value: 'custom', label: 'Tuỳ chỉnh' },
+]
+
+const ERP_CORE_TABLE_OPTIONS = [
+  { value: 'customer_order', label: 'Đơn hàng' },
+  { value: 'customer_enterprise', label: 'KH doanh nghiệp' },
+  { value: 'customer_personal', label: 'KH bán lẻ' },
+  { value: 'manufacture_product', label: 'Lệnh sản xuất' },
+  { value: 'user', label: 'Nhân viên' },
 ]
 
 const normalizeActionType = (type) =>
@@ -275,6 +297,16 @@ const getDefaultConfig = (type) => {
       display_name: label,
       async: true,
     }
+  }
+
+  if (type === 'update_erp_core') {
+    return {
+      field_mappings: [{}],
+    }
+  }
+
+  if (type === 'store_erp_data') {
+    return {}
   }
 
   return {
@@ -591,6 +623,155 @@ const NotificationConfig = () => (
   </>
 )
 
+const ErpCoreUpdateConfig = ({
+  fieldOptions,
+  fieldsLoading,
+  onFromStepChange,
+  stepOptions,
+}) => (
+  <>
+    <Form.Item
+      name={['config', 'table_name']}
+      label="Chọn bảng"
+      rules={[{ required: true, message: 'Chọn bảng cần cập nhật' }]}
+    >
+      <Select
+        showSearch
+        placeholder="-- Chọn bảng --"
+        options={ERP_CORE_TABLE_OPTIONS}
+        optionFilterProp="label"
+        allowClear
+      />
+    </Form.Item>
+
+    <Form.Item
+      name={['config', 'from_step']}
+      label="Lấy field từ bước"
+      rules={[{ required: true, message: 'Chọn bước nguồn' }]}
+    >
+      <Select
+        showSearch
+        placeholder="-- Chọn bước --"
+        options={stepOptions}
+        optionFilterProp="label"
+        allowClear
+        onChange={onFromStepChange}
+      />
+    </Form.Item>
+
+    <Form.List
+      name={['config', 'field_mappings']}
+      rules={[{
+        validator: async (_, mappings) => {
+          if (!Array.isArray(mappings) || mappings.length === 0) {
+            throw new Error('Thêm ít nhất một cấu hình field')
+          }
+        },
+      }]}
+    >
+      {(fields, { add, remove }, { errors }) => (
+        <>
+          {fields.map(({ key, name, ...restField }) => (
+            <MappingCard key={key}>
+              {fields.length > 1 && (
+                <Button
+                  className="mapping-remove"
+                  type="text"
+                  size="small"
+                  icon={<DeleteOutlined />}
+                  onClick={() => remove(name)}
+                />
+              )}
+
+              <div className="mapping-field-label">Tên cột</div>
+              <Form.Item
+                {...restField}
+                name={[name, 'column_name']}
+                rules={[
+                  { required: true, message: 'Nhập tên cột ERP - CORE' },
+                  { whitespace: true, message: 'Tên cột không được để trống' },
+                ]}
+              >
+                <Input placeholder="Ví dụ: note" />
+              </Form.Item>
+
+              <div className="mapping-field-label">Giá trị</div>
+              <Form.Item
+                {...restField}
+                name={[name, 'field_name']}
+                rules={[{ required: true, message: 'Chọn field nguồn' }]}
+              >
+                <Select
+                  showSearch
+                  placeholder="-- Chọn field trong form --"
+                  options={fieldOptions}
+                  optionFilterProp="label"
+                  allowClear
+                  loading={fieldsLoading}
+                  disabled={fieldsLoading || fieldOptions.length === 0}
+                />
+              </Form.Item>
+            </MappingCard>
+          ))}
+
+          <Form.ErrorList errors={errors} />
+          <AddMappingButton
+            type="link"
+            icon={<PlusOutlined />}
+            onClick={() => add({})}
+          >
+            Thêm cấu hình mới
+          </AddMappingButton>
+        </>
+      )}
+    </Form.List>
+
+    <FieldHelp>Chỉ hiển thị field thuộc form của bước đã chọn.</FieldHelp>
+  </>
+)
+
+const StoreErpDataConfig = ({
+  fieldOptions,
+  fieldsLoading,
+  onFromStepChange,
+  stepOptions,
+}) => (
+  <>
+    <Form.Item
+      name={['config', 'from_step']}
+      label="Lấy field từ bước"
+      rules={[{ required: true, message: 'Chọn bước nguồn' }]}
+    >
+      <Select
+        showSearch
+        placeholder="-- Chọn bước --"
+        options={stepOptions}
+        optionFilterProp="label"
+        allowClear
+        onChange={onFromStepChange}
+      />
+    </Form.Item>
+
+    <Form.Item
+      name={['config', 'field_name']}
+      label="Chọn field trong form"
+      rules={[{ required: true, message: 'Chọn field cần lưu trữ' }]}
+    >
+      <Select
+        showSearch
+        placeholder="-- Chọn field trong form --"
+        options={fieldOptions}
+        optionFilterProp="label"
+        allowClear
+        loading={fieldsLoading}
+        disabled={fieldsLoading || fieldOptions.length === 0}
+      />
+    </Form.Item>
+
+    <FieldHelp>Chỉ hiển thị field thuộc form của bước đã chọn.</FieldHelp>
+  </>
+)
+
 const CommonConfig = () => (
   <ConfigSection>
     <SectionTitle>Cấu hình chung</SectionTitle>
@@ -658,6 +839,33 @@ const ActionDrawer = ({
     }
   }, [localForm, nodes])
 
+  const handleErpSourceStepChange = useCallback(async (stepCode, options = {}) => {
+    if (!options.keepFieldValues) {
+      const mappings = localForm.getFieldValue(['config', 'field_mappings']) ?? []
+      localForm.setFieldValue(
+        ['config', 'field_mappings'],
+        mappings.map((mapping) => ({
+          ...mapping,
+          field_name: undefined,
+        })),
+      )
+    }
+    setFieldOptions([])
+
+    if (!stepCode) return
+
+    setFieldsLoading(true)
+    try {
+      const forms = getNodeFormsByStep(nodes, stepCode)
+      const nextFields = await fetchStepFieldOptions(forms)
+      setFieldOptions(nextFields)
+    } catch (error) {
+      console.error('[WorkflowDesigner][ActionDrawer] fetch ERP source fields failed', error)
+    } finally {
+      setFieldsLoading(false)
+    }
+  }, [localForm, nodes])
+
   useEffect(() => {
     const nextType = normalizeActionType(initialValue?.type)
     setActionType(nextType)
@@ -675,7 +883,14 @@ const ActionDrawer = ({
     if (nextType === 'set_field' && targetStep) {
       handleTargetStepChange(targetStep, { keepFieldValue: true, keepValue: true })
     }
-  }, [handleTargetStepChange, initialValue, localForm, trigger])
+    const sourceStep = initialValue?.config?.from_step
+    if (nextType === 'update_erp_core' && sourceStep) {
+      handleErpSourceStepChange(sourceStep, { keepFieldValues: true })
+    }
+    if (nextType === 'store_erp_data' && sourceStep) {
+      handleTargetStepChange(sourceStep, { keepFieldValue: true, keepValue: true })
+    }
+  }, [handleErpSourceStepChange, handleTargetStepChange, initialValue, localForm, trigger])
 
   const handleTypeChange = (nextType) => {
     setActionType(nextType)
@@ -694,11 +909,41 @@ const ActionDrawer = ({
   const handleConfirm = () => {
     localForm
       .validateFields()
-      .then((values) => onConfirm({
-        ...values,
-        trigger,
-        config: values.config ?? {},
-      }))
+      .then((values) => {
+        if (values.type === 'update_erp_core') {
+          onConfirm({
+            type: values.type,
+            trigger,
+            config: {
+              table_name: values?.config?.table_name,
+              from_step: values?.config?.from_step,
+              field_mappings: (values?.config?.field_mappings ?? []).map((mapping) => ({
+                column_name: mapping.column_name?.trim(),
+                field_name: mapping.field_name,
+              })),
+            },
+          })
+          return
+        }
+
+        if (values.type === 'store_erp_data') {
+          onConfirm({
+            type: values.type,
+            trigger,
+            config: {
+              from_step: values?.config?.from_step,
+              field_name: values?.config?.field_name,
+            },
+          })
+          return
+        }
+
+        onConfirm({
+          ...values,
+          trigger,
+          config: values.config ?? {},
+        })
+      })
       .catch(() => {})
   }
 
@@ -730,6 +975,28 @@ const ActionDrawer = ({
 
     if (actionType === 'notification') {
       return <NotificationConfig />
+    }
+
+    if (actionType === 'update_erp_core') {
+      return (
+        <ErpCoreUpdateConfig
+          fieldOptions={fieldOptions}
+          fieldsLoading={fieldsLoading}
+          onFromStepChange={handleErpSourceStepChange}
+          stepOptions={stepOptions}
+        />
+      )
+    }
+
+    if (actionType === 'store_erp_data') {
+      return (
+        <StoreErpDataConfig
+          fieldOptions={fieldOptions}
+          fieldsLoading={fieldsLoading}
+          onFromStepChange={handleTargetStepChange}
+          stepOptions={stepOptions}
+        />
+      )
     }
 
     return <ConfigFields fields={actionConfig?.configFields ?? []} />
@@ -788,7 +1055,7 @@ const ActionDrawer = ({
             {renderActionConfig()}
           </ConfigSection>
 
-          <CommonConfig />
+          {!['update_erp_core', 'store_erp_data'].includes(actionType) && <CommonConfig />}
         </Form>
       </PanelBody>
 

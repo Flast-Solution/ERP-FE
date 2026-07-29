@@ -52,6 +52,7 @@ const ListOrder = ({
   const navigate = useNavigate()
   const [copiedIndex, setCopiedIndex] = useState(null)
   const isOrderList = orderMode || filter.type === 'order'
+  const isOpportunityList = filter.type === 'cohoi'
 
   const {
     expandedRowKeys,
@@ -99,8 +100,14 @@ const ListOrder = ({
   } = useQuotationViewer()
 
   const { onData } = useOrderWorkflowData(
-    isOrderList || filter.type === 'cohoi'
+    isOrderList || isOpportunityList
   )
+
+  const handleOpenWorkflowModal = useCallback((record, entityType) => {
+    openWorkflowModal(record, entityType, {
+      splitOrderDetails: isOpportunityList,
+    })
+  }, [isOpportunityList, openWorkflowModal])
 
   const onClickViewDetail = useCallback((customerOrder) => InAppEvent.emit(HASH_MODAL, {
     hash: '#order.tabs',
@@ -119,6 +126,7 @@ const ListOrder = ({
 
   const columns = createOrderColumns({
     isOrderList,
+    isOpportunityList,
     copiedIndex,
     setCopiedIndex,
     actionWidth,
@@ -127,7 +135,7 @@ const ListOrder = ({
     extraActions,
     onClickViewDetail,
     openQuotationViewer,
-    openWorkflowModal,
+    openWorkflowModal: handleOpenWorkflowModal,
     openWorkflowProgressDrawer,
     navigate,
   })
@@ -139,7 +147,7 @@ const ListOrder = ({
       lotsByOrderId,
       loadingLotsByOrderId,
       navigate,
-      openWorkflowModal,
+      openWorkflowModal: handleOpenWorkflowModal,
     })
     : undefined
 

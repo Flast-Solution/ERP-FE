@@ -92,6 +92,7 @@ export const GUARD_TYPES = {
   update_erp_core: {
     label: 'Update bảng sang ERP - CORE',
     description: 'Chọn bảng đích, bước nguồn và ánh xạ field trong form sang cột tương ứng của ERP - CORE.',
+    hidden: true,
     configFields: [
       { name: 'table_name', label: 'Chọn bảng', type: 'select', required: true },
       { name: 'from_step', label: 'Lấy field từ bước', type: 'select', required: true },
@@ -100,10 +101,12 @@ export const GUARD_TYPES = {
   },
 }
 
-export const GUARD_TYPE_OPTIONS = Object.entries(GUARD_TYPES).map(([value, { label }]) => ({
-  value,
-  label,
-}))
+export const GUARD_TYPE_OPTIONS = Object.entries(GUARD_TYPES)
+  .filter(([, config]) => !config.hidden)
+  .map(([value, { label }]) => ({
+    value,
+    label,
+  }))
 
 // ─── Action Types ─────────────────────────────────────────────────────────────
 export const ACTION_TYPES = {
@@ -161,6 +164,21 @@ export const ACTION_TYPES = {
       { name: 'title', label: 'Tiêu đề task', type: 'input', required: true },
       { name: 'assign_to', label: 'Giao cho (field hoặc userId)', type: 'input', required: false },
       { name: 'due_offset_days', label: 'Hạn (số ngày từ hôm nay)', type: 'number', required: false },
+    ],
+  },
+  update_erp_core: {
+    label: 'Update bảng sang ERP - CORE',
+    configFields: [
+      { name: 'table_name', label: 'Chọn bảng', type: 'select', required: true },
+      { name: 'from_step', label: 'Lấy field từ bước', type: 'select', required: true },
+      { name: 'field_mappings', label: 'Field gửi sang ERP - CORE', type: 'list', required: true },
+    ],
+  },
+  store_erp_data: {
+    label: 'Lưu trữ dữ liệu sang ERP',
+    configFields: [
+      { name: 'from_step', label: 'Lấy field từ bước', type: 'select', required: true },
+      { name: 'field_name', label: 'Chọn field trong form', type: 'select', required: true },
     ],
   },
 }
