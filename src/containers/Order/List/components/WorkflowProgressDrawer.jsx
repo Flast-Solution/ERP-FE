@@ -40,7 +40,7 @@ const WorkflowProgressDrawer = ({
       className="workflow-detail-drawer"
       open={open}
       onClose={onClose}
-      width="min(1440px, 98vw)"
+      width="min(750px, calc(100vw - 16px))"
       destroyOnHidden
       title={(
         <div>

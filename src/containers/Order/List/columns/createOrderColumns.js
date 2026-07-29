@@ -9,6 +9,7 @@ import OrderActions from '../components/OrderActions'
 
 const createOrderColumns = ({
   isOrderList,
+  isOpportunityList,
   copiedIndex,
   setCopiedIndex,
   actionWidth,
@@ -164,6 +165,7 @@ const createOrderColumns = ({
     render: (_, record) => (
       <OrderActions
         record={record}
+        isOpportunityList={isOpportunityList}
         hideQuoteButton={hideQuoteButton}
         disableWorkflowAttach={disableWorkflowAttach}
         extraActions={extraActions}

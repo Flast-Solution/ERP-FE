@@ -5,6 +5,7 @@ import { clonePlainData } from '../utils/orderMappers'
 
 const OrderActions = ({
   record,
+  isOpportunityList,
   hideQuoteButton,
   disableWorkflowAttach,
   extraActions,
@@ -17,28 +18,44 @@ const OrderActions = ({
   const workflowDetails = (record?.details ?? []).filter(detail => (
     Array.isArray(detail?.workflowInstances) && detail.workflowInstances.length > 0
   ))
-  const hasWorkflowInstance = Boolean(record?.workflowInstance) || workflowDetails.length > 0
-  const workflowMenuItems = [
-    ...workflowDetails.map(detail => ({
-      key: `progress:${detail.id}`,
-      icon: <EyeOutlined />,
-      label: (
-        <span>
-          <strong>Mã&nbsp;</strong> {detail.code}
-        </span>
-      ),
-    })),
-    record?.workflowInstance && workflowDetails.length === 0 && {
-      key: 'legacy-progress',
-      icon: <EyeOutlined />,
-      label: 'Xem tiến trình',
-    },
-    !disableWorkflowAttach && {
-      key: 'attach',
-      icon: <ApartmentOutlined />,
-      label: hasWorkflowInstance ? 'Gắn thêm workflow' : 'Gắn workflow',
-    },
-  ].filter(Boolean)
+  const hasParentWorkflowInstance = Boolean(record?.workflowInstance)
+  const hasWorkflowInstance = isOpportunityList
+    ? hasParentWorkflowInstance || workflowDetails.length > 0
+    : hasParentWorkflowInstance
+  const workflowMenuItems = isOpportunityList
+    ? [
+      ...workflowDetails.map(detail => ({
+        key: `progress:${detail.id}`,
+        icon: <EyeOutlined />,
+        label: (
+          <span>
+            <strong>Mã&nbsp;</strong> {detail.code}
+          </span>
+        ),
+      })),
+      hasParentWorkflowInstance && workflowDetails.length === 0 && {
+        key: 'progress',
+        icon: <EyeOutlined />,
+        label: 'Xem tiến trình',
+      },
+      !disableWorkflowAttach && {
+        key: 'attach',
+        icon: <ApartmentOutlined />,
+        label: hasWorkflowInstance ? 'Gắn thêm workflow' : 'Gắn workflow',
+      },
+    ].filter(Boolean)
+    : [
+      !disableWorkflowAttach && !hasParentWorkflowInstance && {
+        key: 'attach',
+        icon: <ApartmentOutlined />,
+        label: 'Gắn workflow',
+      },
+      hasParentWorkflowInstance && {
+        key: 'progress',
+        icon: <EyeOutlined />,
+        label: 'Xem tiến trình',
+      },
+    ].filter(Boolean)
 
   return (
     <Space gap={8}>
@@ -80,7 +97,7 @@ const OrderActions = ({
                 }
                 return
               }
-              if (key === 'legacy-progress') {
+              if (key === 'progress') {
                 const instanceId = record.workflowInstance?.id
                 navigate(`/sale/order/progress/${record.id}${instanceId ? `?instanceId=${instanceId}` : ''}`, {
                   state: {

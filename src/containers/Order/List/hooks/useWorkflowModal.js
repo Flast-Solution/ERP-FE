@@ -19,9 +19,10 @@ import {
 
 const createTargetKey = target => String(target?.id ?? '')
 
-const resolveWorkflowTargets = (record, entityType) => {
+const resolveWorkflowTargets = (record, entityType, splitOrderDetails = false) => {
   if (!record) return []
   if (entityType === LOT_WORKFLOW_ENTITY_TYPE) return record?.id ? [record] : []
+  if (!splitOrderDetails) return record?.id ? [record] : []
 
   const orderDetails = Array.isArray(record?.details)
     ? record.details.filter(detail => detail?.id)
@@ -90,11 +91,16 @@ const useWorkflowModal = ({ setLotsByOrderId } = {}) => {
 
   const openWorkflowModal = useCallback(async (
     record,
-    entityType = ORDER_WORKFLOW_ENTITY_TYPE
+    entityType = ORDER_WORKFLOW_ENTITY_TYPE,
+    options = {},
   ) => {
     const requestId = openRequestRef.current + 1
     openRequestRef.current = requestId
-    const targets = resolveWorkflowTargets(record, entityType)
+    const targets = resolveWorkflowTargets(
+      record,
+      entityType,
+      options.splitOrderDetails === true,
+    )
     const targetIds = targets.map(target => target.id)
     const localSelections = groupWorkflowIdsByEntity(targets)
 

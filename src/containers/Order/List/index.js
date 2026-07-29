@@ -16,6 +16,30 @@ import useQuotationViewer from './hooks/useQuotationViewer'
 import useWorkflowModal from './hooks/useWorkflowModal'
 import useWorkflowProgressDrawer from './hooks/useWorkflowProgressDrawer'
 
+const QUOTATION_COMMENT_MOCKS = [
+  {
+    id: 'quotation-comment-1',
+    author: 'Lan Anh',
+    role: 'Khách hàng',
+    time: '10:24',
+    content: 'Bên em thấy mục giá phân hệ kho hơi cao so với ngân sách. Anh/chị có thể xem lại được không ạ?',
+  },
+  {
+    id: 'quotation-comment-2',
+    author: 'Minh Tuấn',
+    role: 'Kinh doanh',
+    time: '10:41',
+    content: 'Nếu ký hợp đồng trong tháng này, bên mình có thể miễn phí năm bảo trì đầu tiên.',
+  },
+  {
+    id: 'quotation-comment-3',
+    author: 'Lan Anh',
+    role: 'Khách hàng',
+    time: '11:05',
+    content: 'Bên em đồng ý với phương án điều chỉnh. Nhờ anh/chị gửi lại bản báo giá cập nhật.',
+  },
+]
+
 const ListOrder = ({
   filter = {},
   hideQuoteButton,
@@ -28,6 +52,7 @@ const ListOrder = ({
   const navigate = useNavigate()
   const [copiedIndex, setCopiedIndex] = useState(null)
   const isOrderList = orderMode || filter.type === 'order'
+  const isOpportunityList = filter.type === 'cohoi'
 
   const {
     expandedRowKeys,
@@ -75,8 +100,14 @@ const ListOrder = ({
   } = useQuotationViewer()
 
   const { onData } = useOrderWorkflowData(
-    isOrderList || filter.type === 'cohoi'
+    isOrderList || isOpportunityList
   )
+
+  const handleOpenWorkflowModal = useCallback((record, entityType) => {
+    openWorkflowModal(record, entityType, {
+      splitOrderDetails: isOpportunityList,
+    })
+  }, [isOpportunityList, openWorkflowModal])
 
   const onClickViewDetail = useCallback((customerOrder) => InAppEvent.emit(HASH_MODAL, {
     hash: '#order.tabs',
@@ -95,6 +126,7 @@ const ListOrder = ({
 
   const columns = createOrderColumns({
     isOrderList,
+    isOpportunityList,
     copiedIndex,
     setCopiedIndex,
     actionWidth,
@@ -103,7 +135,7 @@ const ListOrder = ({
     extraActions,
     onClickViewDetail,
     openQuotationViewer,
-    openWorkflowModal,
+    openWorkflowModal: handleOpenWorkflowModal,
     openWorkflowProgressDrawer,
     navigate,
   })
@@ -115,7 +147,7 @@ const ListOrder = ({
       lotsByOrderId,
       loadingLotsByOrderId,
       navigate,
-      openWorkflowModal,
+      openWorkflowModal: handleOpenWorkflowModal,
     })
     : undefined
 
@@ -166,6 +198,7 @@ const ListOrder = ({
         loading={quoteLoading}
         template={quoteTemplate}
         data={quoteData}
+        comments={QUOTATION_COMMENT_MOCKS}
         title={`Báo giá${quoteOrder?.code ? ` - ${quoteOrder.code}` : ''}`}
         onClose={closeQuotationViewer}
       />

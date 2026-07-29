@@ -60,7 +60,7 @@ const WorkflowOrderDetailCard = ({ order, orderDetail }) => {
         columns={columns}
         dataSource={orderDetail ? [orderDetail] : []}
         pagination={false}
-        scroll={{ x: 720 }}
+        scroll={{ x: 680 }}
       />
     </section>
   )

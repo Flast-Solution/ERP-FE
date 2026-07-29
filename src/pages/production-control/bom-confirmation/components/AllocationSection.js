@@ -18,13 +18,13 @@ const AllocationSection = ({
       },
       {
         title: "Kho xuất",
-        dataIndex: "warehouseId",
-        render: (value) => `Kho #${value}`,
+        dataIndex: "warehouseName",
+        render: (value) => value || "-",
       },
       {
-        title: "Mã tồn kho",
-        dataIndex: "inventoryId",
-        render: (value) => (value == null ? "-" : `#${value}`),
+        title: "Địa chỉ kho",
+        dataIndex: "warehouseAddress",
+        render: (value) => value || "-",
       },
       {
         title: "Tồn kho",

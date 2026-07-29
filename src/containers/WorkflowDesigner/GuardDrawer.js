@@ -1,6 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Button, Form, Input, InputNumber, Select } from 'antd'
-import { ArrowRightOutlined, CloseOutlined } from '@ant-design/icons'
+import {
+  ArrowRightOutlined,
+  CloseOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+} from '@ant-design/icons'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { GUARD_TYPES } from '@/store/workflowConstants'
 import { PanelBody, SectionLabel } from './styles'
@@ -22,6 +27,8 @@ import {
   GuardTypeHead,
   GuardTypeName,
   MessageSection,
+  MappingCard,
+  AddMappingButton,
   SectionTitle,
   SegmentedButton,
   SegmentedControl,
@@ -47,7 +54,17 @@ const CONFIG_FIELD_NAMES = [
   'step_code',
   'form_key',
   'requirement',
+  'table_name',
   'field_names',
+  'field_mappings',
+]
+
+const ERP_CORE_TABLE_OPTIONS = [
+  { value: 'customer_order', label: 'Đơn hàng' },
+  { value: 'customer_enterprise', label: 'KH doanh nghiệp' },
+  { value: 'customer_personal', label: 'KH bán lẻ' },
+  { value: 'manufacture_product', label: 'Lệnh sản xuất' },
+  { value: 'user', label: 'Nhân viên' },
 ]
 
 const normalizeGuardType = (type) => {
@@ -241,7 +258,7 @@ const buildFormOptions = (forms = []) =>
 
 const GuardTypePicker = ({ value, onChange }) => (
   <GuardTypeGrid>
-    {Object.entries(GUARD_TYPES).map(([type, config]) => {
+    {Object.entries(GUARD_TYPES).filter(([, config]) => !config.hidden).map(([type, config]) => {
       const active = value === type
 
       return (
@@ -429,6 +446,20 @@ const ErpCoreUpdateConfig = ({
 }) => (
   <>
     <Form.Item
+      name={['config', 'table_name']}
+      label="Chọn bảng"
+      rules={[{ required: true, message: 'Chọn bảng cần cập nhật' }]}
+    >
+      <Select
+        showSearch
+        allowClear
+        placeholder="-- Chọn bảng --"
+        options={ERP_CORE_TABLE_OPTIONS}
+        optionFilterProp="label"
+      />
+    </Form.Item>
+
+    <Form.Item
       name={['config', 'from_step']}
       label="Lấy field từ bước"
       rules={[{ required: true, message: 'Chọn bước' }]}
@@ -440,7 +471,14 @@ const ErpCoreUpdateConfig = ({
         options={stepOptions}
         optionFilterProp="label"
         onChange={(stepCode) => {
-          form.setFieldValue(['config', 'field_names'], [])
+          const mappings = form.getFieldValue(['config', 'field_mappings']) ?? []
+          form.setFieldValue(
+            ['config', 'field_mappings'],
+            mappings.map(mapping => ({
+              column_name: mapping?.column_name,
+              field_name: undefined,
+            })),
+          )
           onFromStepChange(stepCode)
         }}
         onOpenChange={(open) => {
@@ -453,26 +491,74 @@ const ErpCoreUpdateConfig = ({
       />
     </Form.Item>
 
-    <Form.Item
-      name={['config', 'field_names']}
-      label="Field gửi sang ERP - CORE"
-      rules={[{ required: true, message: 'Chọn ít nhất một field' }]}
+    <div style={{ marginBottom: 7, fontSize: 12, fontWeight: 600, color: '#262626' }}>
+      Field gửi sang ERP - CORE <span style={{ color: '#ff4d4f' }}>*</span>
+    </div>
+    <Form.List
+      name={['config', 'field_mappings']}
+      rules={[{
+        validator: async (_, mappings) => {
+          if (!Array.isArray(mappings) || mappings.length === 0) {
+            throw new Error('Thêm ít nhất một cấu hình field')
+          }
+        },
+      }]}
     >
-      <Select
-        mode="multiple"
-        showSearch
-        allowClear
-        placeholder="Chọn field từ form của bước nguồn"
-        options={flattenFieldOptions(fieldOptions)}
-        optionFilterProp="label"
-        loading={fieldsLoading}
-        disabled={fieldsLoading || fieldOptions.length === 0}
-        notFoundContent={fieldsLoading ? 'Đang tải field...' : 'Bước nguồn chưa có field'}
-      />
-    </Form.Item>
-    <FieldHelp>
-      Chỉ hiển thị field thuộc form của bước đã chọn.
-    </FieldHelp>
+      {(fields, { add, remove }, { errors }) => (
+        <>
+          {fields.map((field, index) => (
+            <MappingCard key={field.key}>
+              {fields.length > 1 ? (
+                <Button
+                  className="mapping-remove"
+                  type="text"
+                  size="small"
+                  title="Xóa cấu hình"
+                  icon={<DeleteOutlined />}
+                  onClick={() => remove(field.name)}
+                />
+              ) : null}
+              <div className="mapping-field-label">Tên cột</div>
+              <Form.Item
+                name={[field.name, 'column_name']}
+                rules={[{ required: true, message: 'Nhập tên cột ERP - CORE' }]}
+              >
+                <Input placeholder="Ví dụ: note" />
+              </Form.Item>
+
+              <div className="mapping-field-label">Giá trị</div>
+              <Form.Item
+                name={[field.name, 'field_name']}
+                rules={[{ required: true, message: 'Chọn field nguồn' }]}
+              >
+                <Select
+                  showSearch
+                  allowClear
+                  placeholder="Chọn field từ form"
+                  options={flattenFieldOptions(fieldOptions)}
+                  optionFilterProp="label"
+                  loading={fieldsLoading}
+                  disabled={fieldsLoading || fieldOptions.length === 0}
+                  notFoundContent={fieldsLoading ? 'Đang tải field...' : 'Bước nguồn chưa có field'}
+                />
+              </Form.Item>
+              {index === fields.length - 1 ? (
+                <FieldHelp>Chỉ hiển thị field thuộc form của bước đã chọn.</FieldHelp>
+              ) : null}
+            </MappingCard>
+          ))}
+          <Form.ErrorList errors={errors} />
+          <AddMappingButton
+            type="link"
+            size="small"
+            icon={<PlusOutlined />}
+            onClick={() => add({ column_name: undefined, field_name: undefined })}
+          >
+            Thêm cấu hình mới
+          </AddMappingButton>
+        </>
+      )}
+    </Form.List>
   </>
 )
 
@@ -665,6 +751,13 @@ const GuardDrawer = ({
       ? initialFromStep
       : undefined
 
+    const initialFieldMappings = Array.isArray(initialValue?.config?.field_mappings)
+      ? initialValue.config.field_mappings
+      : (initialValue?.config?.field_names ?? []).map(fieldName => ({
+          column_name: undefined,
+          field_name: fieldName,
+        }))
+
     localForm.setFieldsValue({
       type: nextType,
       errorMessage: initialValue?.errorMessage ?? initialValue?.config?.message ?? '',
@@ -675,6 +768,9 @@ const GuardDrawer = ({
         requirement: nextType === 'step_form_field' ? 'filled' : undefined,
         ...initialValue?.config,
         from_step: nextFromStep,
+        field_mappings: nextType === 'update_erp_core'
+          ? (initialFieldMappings.length > 0 ? initialFieldMappings : [{}])
+          : undefined,
       },
     })
 
@@ -700,6 +796,7 @@ const GuardDrawer = ({
         operator: nextType === 'field_value' ? 'eq' : undefined,
         step_code: nextType === 'step_form_field' ? sourceStepCode : undefined,
         requirement: nextType === 'step_form_field' ? 'filled' : undefined,
+        field_mappings: nextType === 'update_erp_core' ? [{}] : undefined,
       },
     })
 
@@ -713,8 +810,12 @@ const GuardDrawer = ({
           onConfirm({
             ...values,
             config: {
+              table_name: values?.config?.table_name,
               from_step: values?.config?.from_step,
-              field_names: values?.config?.field_names ?? [],
+              field_mappings: (values?.config?.field_mappings ?? []).map(mapping => ({
+                column_name: mapping.column_name?.trim(),
+                field_name: mapping.field_name,
+              })),
             },
           })
           return
@@ -772,6 +873,9 @@ const GuardDrawer = ({
               operator: normalizeGuardType(initialValue?.type) === 'field_value' ? 'eq' : undefined,
               step_code: normalizeGuardType(initialValue?.type) === 'step_form_field' ? sourceStepCode : undefined,
               requirement: normalizeGuardType(initialValue?.type) === 'step_form_field' ? 'filled' : undefined,
+              field_mappings: normalizeGuardType(initialValue?.type) === 'update_erp_core'
+                ? (initialValue?.config?.field_mappings ?? [{}])
+                : undefined,
               ...initialValue?.config,
             },
           }}
