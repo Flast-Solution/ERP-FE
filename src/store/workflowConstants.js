@@ -174,13 +174,6 @@ export const ACTION_TYPES = {
       { name: 'field_mappings', label: 'Field gửi sang ERP - CORE', type: 'list', required: true },
     ],
   },
-  store_erp_data: {
-    label: 'Lưu trữ dữ liệu sang ERP',
-    configFields: [
-      { name: 'from_step', label: 'Lấy field từ bước', type: 'select', required: true },
-      { name: 'field_name', label: 'Chọn field trong form', type: 'select', required: true },
-    ],
-  },
 }
 
 export const ACTION_TYPE_OPTIONS = Object.entries(ACTION_TYPES).map(([value, { label }]) => ({

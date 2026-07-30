@@ -5,6 +5,10 @@ export const FORM_TEMPLATE_DETAIL_API = '/workflow/forms/template/find-id'
 export const WORKFLOW_PROCESS_FIND_API = '/workflow/process/find-id'
 export const PROCESS_TYPE_FIND_API = '/workflow/process/process-type-find'
 export const ORDER_LOTS_FIND_API = '/qms/warehouse-paracel/find-entity'
+export const WORKFLOW_INSTANCE_BY_ENTITY_API = '/workflow/process/instance/get-entity'
+
+export const ORDER_WORKFLOW_ENTITY_TYPE = 'order'
+export const LOT_WORKFLOW_ENTITY_TYPE = 'WAREHOUSE'
 
 export const workflowFixedPanelStyle = {
   position: 'fixed',

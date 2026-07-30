@@ -64,7 +64,7 @@ const isSuccessfulResponse = response => (
   response?.success === true || Number(response?.errorCode) === SUCCESS_CODE
 )
 
-const useWorkflowModal = ({ setLotsByOrderId } = {}) => {
+const useWorkflowModal = ({ setLotsByOrderId, onAttached } = {}) => {
   const openRequestRef = useRef(0)
   const [workflowModalOpen, setWorkflowModalOpen] = useState(false)
   const [workflowLoading, setWorkflowLoading] = useState(false)
@@ -230,10 +230,12 @@ const useWorkflowModal = ({ setLotsByOrderId } = {}) => {
       }
 
       if (failedCount > 0) {
+        onAttached?.(successfulResults)
         message.warning(`Đã gắn ${successfulResults.length} workflow, ${failedCount} workflow thất bại.`)
         return
       }
 
+      onAttached?.(successfulResults)
       message.success(`Đã gắn ${successfulResults.length} workflow.`)
       closeWorkflowModal()
     } catch (error) {
@@ -244,6 +246,7 @@ const useWorkflowModal = ({ setLotsByOrderId } = {}) => {
   }, [
     closeWorkflowModal,
     pendingAssignments,
+    onAttached,
     selectedWorkflowEntityType,
     setLotsByOrderId,
   ])

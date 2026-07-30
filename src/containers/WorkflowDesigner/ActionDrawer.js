@@ -71,11 +71,6 @@ const ACTION_TYPE_DEFS = {
     desc: 'Chọn bước nguồn và các field trong form của bước đó để cập nhật dữ liệu sang ERP - CORE.',
     sectionTitle: 'Cấu hình',
   },
-  store_erp_data: {
-    label: 'Lưu trữ dữ liệu sang ERP',
-    desc: 'Chọn bước nguồn và field trong form cần lưu trữ sang ERP.',
-    sectionTitle: 'Cấu hình',
-  },
 }
 
 const FIXED_ACTION_TYPES = [
@@ -86,7 +81,6 @@ const FIXED_ACTION_TYPES = [
   'notification',
   'task',
   'update_erp_core',
-  'store_erp_data',
 ]
 
 const TRIGGER_LABELS = {
@@ -303,10 +297,6 @@ const getDefaultConfig = (type) => {
     return {
       field_mappings: [{}],
     }
-  }
-
-  if (type === 'store_erp_data') {
-    return {}
   }
 
   return {
@@ -730,48 +720,6 @@ const ErpCoreUpdateConfig = ({
   </>
 )
 
-const StoreErpDataConfig = ({
-  fieldOptions,
-  fieldsLoading,
-  onFromStepChange,
-  stepOptions,
-}) => (
-  <>
-    <Form.Item
-      name={['config', 'from_step']}
-      label="Lấy field từ bước"
-      rules={[{ required: true, message: 'Chọn bước nguồn' }]}
-    >
-      <Select
-        showSearch
-        placeholder="-- Chọn bước --"
-        options={stepOptions}
-        optionFilterProp="label"
-        allowClear
-        onChange={onFromStepChange}
-      />
-    </Form.Item>
-
-    <Form.Item
-      name={['config', 'field_name']}
-      label="Chọn field trong form"
-      rules={[{ required: true, message: 'Chọn field cần lưu trữ' }]}
-    >
-      <Select
-        showSearch
-        placeholder="-- Chọn field trong form --"
-        options={fieldOptions}
-        optionFilterProp="label"
-        allowClear
-        loading={fieldsLoading}
-        disabled={fieldsLoading || fieldOptions.length === 0}
-      />
-    </Form.Item>
-
-    <FieldHelp>Chỉ hiển thị field thuộc form của bước đã chọn.</FieldHelp>
-  </>
-)
-
 const CommonConfig = () => (
   <ConfigSection>
     <SectionTitle>Cấu hình chung</SectionTitle>
@@ -887,9 +835,6 @@ const ActionDrawer = ({
     if (nextType === 'update_erp_core' && sourceStep) {
       handleErpSourceStepChange(sourceStep, { keepFieldValues: true })
     }
-    if (nextType === 'store_erp_data' && sourceStep) {
-      handleTargetStepChange(sourceStep, { keepFieldValue: true, keepValue: true })
-    }
   }, [handleErpSourceStepChange, handleTargetStepChange, initialValue, localForm, trigger])
 
   const handleTypeChange = (nextType) => {
@@ -921,18 +866,6 @@ const ActionDrawer = ({
                 column_name: mapping.column_name?.trim(),
                 field_name: mapping.field_name,
               })),
-            },
-          })
-          return
-        }
-
-        if (values.type === 'store_erp_data') {
-          onConfirm({
-            type: values.type,
-            trigger,
-            config: {
-              from_step: values?.config?.from_step,
-              field_name: values?.config?.field_name,
             },
           })
           return
@@ -983,17 +916,6 @@ const ActionDrawer = ({
           fieldOptions={fieldOptions}
           fieldsLoading={fieldsLoading}
           onFromStepChange={handleErpSourceStepChange}
-          stepOptions={stepOptions}
-        />
-      )
-    }
-
-    if (actionType === 'store_erp_data') {
-      return (
-        <StoreErpDataConfig
-          fieldOptions={fieldOptions}
-          fieldsLoading={fieldsLoading}
-          onFromStepChange={handleTargetStepChange}
           stepOptions={stepOptions}
         />
       )
@@ -1055,7 +977,7 @@ const ActionDrawer = ({
             {renderActionConfig()}
           </ConfigSection>
 
-          {!['update_erp_core', 'store_erp_data'].includes(actionType) && <CommonConfig />}
+          {actionType !== 'update_erp_core' && <CommonConfig />}
         </Form>
       </PanelBody>
 

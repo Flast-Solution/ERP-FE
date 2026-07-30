@@ -13,6 +13,8 @@ import { InspectionResultList } from '../InspectionResults'
 const WorkflowFormSection = ({
   order,
   selectedLot,
+  workflowEntity,
+  workflowInstance,
   displayStep,
   displayForm,
   displaySubmission,
@@ -82,6 +84,12 @@ const WorkflowFormSection = ({
               order={order}
               record={order}
               data={order}
+              lot={selectedLot}
+              entity={workflowEntity}
+              entityType={workflowEntity?.entityType}
+              entityId={workflowEntity?.entityId}
+              workflowInstance={workflowInstance}
+              workflowInstanceId={workflowInstance?.id}
               step={displayStep}
               formTemplate={displayForm}
               submission={displaySubmission}

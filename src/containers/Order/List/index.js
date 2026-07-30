@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { RestList } from '@flast-erp/core/components'
 import { useGetList } from '@flast-erp/core/hooks'
-import { dateFormatOnSubmit, InAppEvent } from '@flast-erp/core/utils'
+import { dateFormatOnSubmit, f5List, InAppEvent } from '@flast-erp/core/utils'
 import GeneratedDocumentViewer from '@/components/GeneratedDocumentViewer'
 import { HASH_MODAL } from '@/configs'
 import Filter from '../Filter'
@@ -77,7 +77,10 @@ const ListOrder = ({
     openWorkflowModal,
     closeWorkflowModal,
     handleAttachWorkflow,
-  } = useWorkflowModal({ setLotsByOrderId })
+  } = useWorkflowModal({
+    setLotsByOrderId,
+    onAttached: () => f5List(apiPath),
+  })
 
   const {
     workflowProgressDrawerOpen,
