@@ -78,6 +78,17 @@ export const workflowProgressPageStyles = `
             overscroll-behavior: contain;
           }
 
+          .workflow-progress-empty-panel {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 280px;
+            padding: 24px;
+            border: 1px solid #e5e7eb;
+            border-radius: 0 8px 8px 0;
+            background: #fff;
+          }
+
           .workflow-progress-section {
             padding: 0;
           }
@@ -114,6 +125,61 @@ export const workflowProgressPageStyles = `
 
           .workflow-progress-section-head .workflow-progress-section-title {
             margin-bottom: 0;
+          }
+
+          .workflow-context-section {
+            padding: 16px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: #fafbff;
+          }
+
+          .workflow-context-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+          }
+
+          .workflow-context-scope {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+
+          .workflow-context-scope .ant-tag {
+            margin-inline-end: 0;
+          }
+
+          .workflow-instance-tabs {
+            margin-top: 12px;
+          }
+
+          .workflow-instance-tabs .ant-tabs-nav {
+            margin-bottom: 0;
+          }
+
+          .workflow-instance-tabs .ant-tabs-tab {
+            margin: 0 8px 0 0 !important;
+            padding: 8px 14px !important;
+            border: 1px solid #dbe3f0;
+            border-radius: 999px;
+            background: #fff;
+          }
+
+          .workflow-instance-tabs .ant-tabs-tab-active {
+            border-color: #7c83f5;
+            background: #eef2ff;
+          }
+
+          .workflow-instance-tabs .ant-tabs-ink-bar {
+            display: none;
+          }
+
+          .workflow-lot-hint {
+            margin: -6px 0 12px;
+            color: #6b7280;
+            font-size: 13px;
           }
 
           .workflow-progress-content-panel .ant-card {

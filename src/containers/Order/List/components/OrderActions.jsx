@@ -18,7 +18,10 @@ const OrderActions = ({
   const workflowDetails = (record?.details ?? []).filter(detail => (
     Array.isArray(detail?.workflowInstances) && detail.workflowInstances.length > 0
   ))
-  const hasParentWorkflowInstance = Boolean(record?.workflowInstance)
+  const parentWorkflowInstances = Array.isArray(record?.workflowInstances)
+    ? record.workflowInstances
+    : (record?.workflowInstance ? [record.workflowInstance] : [])
+  const hasParentWorkflowInstance = parentWorkflowInstances.length > 0
   const hasWorkflowInstance = isOpportunityList
     ? hasParentWorkflowInstance || workflowDetails.length > 0
     : hasParentWorkflowInstance
@@ -45,10 +48,10 @@ const OrderActions = ({
       },
     ].filter(Boolean)
     : [
-      !disableWorkflowAttach && !hasParentWorkflowInstance && {
+      !disableWorkflowAttach && {
         key: 'attach',
         icon: <ApartmentOutlined />,
-        label: 'Gắn workflow',
+        label: hasParentWorkflowInstance ? 'Gắn thêm workflow' : 'Gắn workflow',
       },
       hasParentWorkflowInstance && {
         key: 'progress',
@@ -98,11 +101,9 @@ const OrderActions = ({
                 return
               }
               if (key === 'progress') {
-                const instanceId = record.workflowInstance?.id
-                navigate(`/sale/order/progress/${record.id}${instanceId ? `?instanceId=${instanceId}` : ''}`, {
+                navigate(`/sale/order/progress/${record.id}`, {
                   state: {
                     order: clonePlainData(record),
-                    workflowInstance: clonePlainData(record.workflowInstance),
                   },
                 })
               }

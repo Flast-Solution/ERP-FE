@@ -59,6 +59,9 @@ const OrderLotsSection = ({
         <InboxOutlined className="workflow-progress-section-icon" />
         <span>Danh sách lô hàng đã tạo</span>
       </div>
+      <div className="workflow-lot-hint">
+        Chọn một lô hàng để chuyển sang xem các workflow được gắn riêng cho lô đó.
+      </div>
       <Table
         rowKey="id"
         size="small"

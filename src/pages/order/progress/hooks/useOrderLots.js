@@ -30,7 +30,9 @@ export const useOrderLots = (orderId) => {
         const orderLots = resolveOrderLots(response)
         if (!mounted) return
         setLots(orderLots)
-        setSelectedLot(orderLots[0] ?? null)
+        setSelectedLot(current => (
+          orderLots.find(lot => String(lot?.id) === String(current?.id)) ?? null
+        ))
       } catch (error) {
         if (!mounted) return
         setLots([])
@@ -55,10 +57,15 @@ export const useOrderLots = (orderId) => {
     return true
   }, [])
 
+  const selectOrder = useCallback(() => {
+    setSelectedLot(null)
+  }, [])
+
   return {
     lots,
     selectedLot,
     loadingLots,
     selectLot,
+    selectOrder,
   }
 }
