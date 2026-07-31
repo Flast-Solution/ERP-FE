@@ -33,6 +33,14 @@ export const BrandLogo = styled.span`
   border-radius: 7px;
   background: ${t.violet500};
   color: #fff;
+  overflow: hidden;
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
 `
 
 export const NavLinks = styled.nav`
@@ -41,10 +49,14 @@ export const NavLinks = styled.nav`
   margin-left: 8px;
   font-size: 14px;
   color: #54545f;
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 `
 
 export const CtaSm = styled.button`
-  margin-left: auto;
   border: 1px solid #e2e2ea;
   background: #fff;
   color: #16161a;
@@ -54,6 +66,14 @@ export const CtaSm = styled.button`
   padding: 7px 14px;
   border-radius: 8px;
   cursor: pointer;
+  text-decoration: none;
+`
+
+export const NavActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
 `
 
 export const Hero = styled.section`
@@ -107,6 +127,7 @@ export const CtaPrimary = styled.button`
   border-radius: 10px;
   cursor: pointer;
   box-shadow: 0 6px 18px rgba(124, 92, 255, 0.32);
+  text-decoration: none;
 `
 
 export const CtaGhost = styled.button`
@@ -119,6 +140,7 @@ export const CtaGhost = styled.button`
   padding: 11px 20px;
   border-radius: 10px;
   cursor: pointer;
+  text-decoration: none;
 `
 
 export const FeaturesGrid = styled.section`
@@ -129,10 +151,21 @@ export const FeaturesGrid = styled.section`
 `
 
 export const FeatCard = styled.div`
+  display: flex;
+  flex-direction: column;
   padding: 22px;
   border: 1px solid #eee;
   border-radius: 14px;
   background: #fff;
+`
+
+export const FeatImage = styled.img`
+  display: block;
+  width: 100%;
+  height: 150px;
+  margin-bottom: 14px;
+  border-radius: 10px;
+  object-fit: cover;
 `
 
 export const FeatIcon = styled.span`
@@ -159,6 +192,16 @@ export const FeatDesc = styled.p`
   font-size: 13.5px;
   line-height: 1.5;
   color: #6f6f82;
+`
+
+export const FeatCta = styled.a`
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  margin-top: 14px;
+  font-size: 13px;
+  font-weight: 650;
+  text-decoration: none;
 `
 
 export const Pricing = styled.section`
@@ -207,6 +250,27 @@ export const Plan = styled.div`
   background: ${({ $hot }) => ($hot ? 'rgba(124,92,255,.1)' : 'rgba(255,255,255,.03)')};
 `
 
+export const PlanMedia = styled.img`
+  display: block;
+  width: 100%;
+  height: 110px;
+  margin-bottom: 10px;
+  border-radius: 9px;
+  object-fit: cover;
+`
+
+export const PlanIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin-bottom: 5px;
+  border-radius: 9px;
+  background: rgba(124, 92, 255, .14);
+  font-size: 17px;
+`
+
 export const PlanTag = styled.span`
   position: absolute;
   top: -10px;
@@ -244,6 +308,7 @@ export const PlanCtaPrimary = styled(CtaPrimary)`
   text-align: center;
   font-size: 13px;
   padding: 9px 0;
+  text-decoration: none;
 `
 
 export const PlanCtaGhost = styled.button`
@@ -258,6 +323,7 @@ export const PlanCtaGhost = styled.button`
   font-weight: 600;
   border-radius: 10px;
   cursor: pointer;
+  text-decoration: none;
 `
 
 export const Footer = styled.footer`
@@ -266,4 +332,154 @@ export const Footer = styled.footer`
   font-size: 13px;
   color: #8a8a96;
   border-top: 1px solid #eee;
+`
+
+export const ContentBlock = styled.section`
+  padding: 22px 32px;
+`
+
+export const ContentHeading = styled.h2`
+  margin: 0;
+  color: #16161a;
+  font-size: 30px;
+  line-height: 1.25;
+  text-align: ${({ $align }) => $align || 'left'};
+`
+
+export const ContentText = styled.p`
+  margin: 0;
+  color: #54545f;
+  font-size: 16px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  text-align: ${({ $align }) => $align || 'left'};
+`
+
+export const ContentImage = styled.img`
+  display: block;
+  width: 100%;
+  max-height: 560px;
+  object-fit: cover;
+`
+
+export const ImageCaption = styled.p`
+  margin: 8px 0 0;
+  color: #8a8a96;
+  font-size: 12px;
+  text-align: center;
+`
+
+export const ContentButtonWrap = styled.div`
+  padding: 18px 32px;
+  text-align: ${({ $align }) => $align || 'left'};
+`
+
+export const ContentButton = styled.a`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 11px 20px;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+`
+
+export const DividerBlock = styled.hr`
+  margin: 0 auto;
+  border: 0;
+  border-top: 1px solid #e8e8ee;
+`
+
+export const SpacerBlock = styled.div`
+  min-height: 8px;
+`
+
+export const UnknownBlock = styled.div`
+  margin: 12px 32px;
+  padding: 18px;
+  border: 1px dashed #d7d7e0;
+  color: #8a8a96;
+  text-align: center;
+`
+
+export const Banner = styled.section`
+  position: relative;
+  min-height: 180px;
+  overflow: hidden;
+  background: #f2f2f6;
+`
+
+export const BannerTrack = styled.div`
+  display: flex;
+  width: 100%;
+  height: 100%;
+  transition: transform .45s ease;
+`
+
+export const BannerSlide = styled.div`
+  display: block;
+  width: 100%;
+  height: 100%;
+  flex: 0 0 100%;
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+`
+
+export const BannerEmpty = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  border: 1px dashed #cfcfd8;
+  background: #f7f7fa;
+  color: #8a8a96;
+  font-size: 14px;
+`
+
+export const BannerArrow = styled.button`
+  position: absolute;
+  top: 50%;
+  ${({ $left }) => ($left ? 'left: 16px;' : 'right: 16px;')}
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0 0 3px;
+  border: 1px solid rgba(255, 255, 255, .55);
+  border-radius: 50%;
+  background: rgba(16, 16, 24, .42);
+  color: #fff;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+`
+
+export const BannerDots = styled.div`
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 7px;
+`
+
+export const BannerDot = styled.button`
+  width: ${({ $active }) => ($active ? '22px' : '8px')};
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: ${({ $active }) => ($active ? '#fff' : 'rgba(255,255,255,.55)')};
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+  cursor: pointer;
+  transition: width .2s ease, background .2s ease;
 `

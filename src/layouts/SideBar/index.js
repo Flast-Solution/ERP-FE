@@ -184,7 +184,7 @@ function SideBar() {
       getItem(<Link to="/post">Trang tin tức</Link>, 'post', <span> - </span>),
       getItem(<Link to="/faq">Faq</Link>, 'faq', <span> - </span>),
       getItem(<Link to="/tag">Quản lý Tag</Link>, 'tag', <span> - </span>),
-      getItem(<Link to="/landing/edit">Quản lý trang</Link>, 'page', <span> - </span>)
+      getItem(<Link to="/landing">Quản lý trang</Link>, 'page', <span> - </span>)
     ]),
     getItem('Tài khoản', 'tai_khoan', <UserOutlined />, [
       ...(canManageBusinessUnits

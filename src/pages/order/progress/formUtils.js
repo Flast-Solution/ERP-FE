@@ -45,9 +45,22 @@ export const buildFieldDisplayItems = (values = {}, fields = []) => {
   })
 }
 
-export const normalizeSubmissionValue = (value) => {
+const getFieldInputType = (field = {}) => String(
+  field.inputType ?? field.type ?? field.component ?? '',
+).toLowerCase()
+
+export const normalizeSubmissionValue = (value, field) => {
   if (value === undefined || value === '') {
     return null
+  }
+  if (
+    getFieldInputType(field) === 'date'
+    && value
+    && typeof value === 'object'
+    && typeof value.format === 'function'
+    && typeof value.isValid === 'function'
+  ) {
+    return value.isValid() ? value.format('YYYY/MM/DD') : null
   }
   if (value && typeof value === 'object' && typeof value.toISOString === 'function' && typeof value.isValid === 'function') {
     return value.isValid() ? value.toISOString() : null
@@ -79,13 +92,34 @@ export const collectFormFieldKeys = (fields = []) => (
   }, [])
 )
 
+const collectFormFields = (fields = []) => (
+  fields.reduce((result, field) => {
+    result.push(field)
+    const children = Array.isArray(field?.children) ? field.children : []
+    if (children.length) {
+      result.push(...collectFormFields(children))
+    }
+    return result
+  }, [])
+)
+
 export const normalizeSubmissionValues = (values = {}, currentForm) => {
-  const normalizedValues = normalizeSubmissionValue(values) ?? {}
-  const payloadValues = normalizedValues && typeof normalizedValues === 'object' && !Array.isArray(normalizedValues)
-    ? { ...normalizedValues }
+  const formFields = collectFormFields(getFormFields(currentForm))
+  const fieldsByKey = new Map(
+    formFields
+      .filter(field => field?.fieldKey)
+      .map(field => [field.fieldKey, field]),
+  )
+  const payloadValues = values && typeof values === 'object' && !Array.isArray(values)
+    ? Object.fromEntries(
+      Object.entries(values).map(([key, value]) => [
+        key,
+        normalizeSubmissionValue(value, fieldsByKey.get(key)),
+      ]),
+    )
     : {}
 
-  collectFormFieldKeys(getFormFields(currentForm)).forEach((key) => {
+  collectFormFieldKeys(formFields).forEach((key) => {
     if (!Object.prototype.hasOwnProperty.call(payloadValues, key)) {
       payloadValues[key] = null
     }
