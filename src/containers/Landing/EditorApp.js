@@ -1,15 +1,18 @@
 import { useEffect } from 'react'
 import { ConfigProvider, App, theme } from 'antd'
+import { useLocation } from 'react-router-dom'
 import { useEditorStore } from '@/store/editorStore'
 import { EditorChrome } from './EditorChrome'
 import { PreviewCanvas } from './PreviewCanvas'
 import { ApiConfigModal } from './ApiConfigModal'
-import { Root, Stage, Frame, Coach, CoachSpark, Toast } from './EditorApp.style'
+import { Root, Workspace, Stage, Frame, Coach, CoachSpark, Toast } from './EditorApp.style'
 import { t } from '@/css/landing'
 import { EditPromptBar } from './EditPromptBar'
+import { useLandingAi } from './useLandingAi'
+import { BlockInspector, BlockNavigator } from './EditorPanels'
 
 const antdTheme = {
-  algorithm: theme.darkAlgorithm,
+  algorithm: theme.defaultAlgorithm,
   token: {
     colorPrimary:  t.violet500,
     colorBgBase:   t.surfaceCard,
@@ -20,6 +23,8 @@ const antdTheme = {
 }
 
 function EditorContent() {
+  const { submit } = useLandingAi()
+  const { search } = useLocation()
   
   const selected = useEditorStore((s) => s.selected)
   const value = useEditorStore((s) => s.value)
@@ -32,31 +37,54 @@ function EditorContent() {
 
   const setValue = useEditorStore((s) => s.setValue)
   const close = useEditorStore((s) => s.close)
-  const submit = useEditorStore((s) => s.submit)
   const addFiles = useEditorStore((s) => s.addFiles)
   const removeFile = useEditorStore((s) => s.removeFile)
   const setConfigOpen = useEditorStore((s) => s.setConfigOpen)
+  const undo = useEditorStore((s) => s.undo)
+  const redo = useEditorStore((s) => s.redo)
+  const initializePage = useEditorStore((s) => s.initializePage)
+
+  useEffect(() => {
+    const params = new URLSearchParams(search)
+    initializePage({
+      id: params.get('id') || 'landing-home',
+      mode: params.get('mode') || 'edit',
+    })
+  }, [initializePage, search])
 
   useEffect(() => {
     const onKey = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setConfigOpen(true)
+        return
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault()
+        if (e.shiftKey) {
+          redo()
+        } else {
+          undo()
+        }
       }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [setConfigOpen])
+  }, [redo, setConfigOpen, undo])
 
   return (
     <Root>
       <EditorChrome />
 
-      <Stage onClick={(e) => { if (e.target === e.currentTarget) close() }}>
-        <Frame $mobile={device === 'mobile'}>
-          <PreviewCanvas />
-        </Frame>
-      </Stage>
+      <Workspace>
+        <BlockNavigator />
+        <Stage onClick={(e) => { if (e.target === e.currentTarget) close() }}>
+          <Frame $mobile={device === 'mobile'}>
+            <PreviewCanvas />
+          </Frame>
+        </Stage>
+        <BlockInspector />
+      </Workspace>
 
       {selected ? (
         <EditPromptBar
@@ -75,7 +103,7 @@ function EditorContent() {
         />
       ) : (
         <Coach>
-          Di chuột vào một khối trong bản xem trước, rồi nhấn biểu tượng{' '}
+          Chọn block để sửa thủ công hoặc nhấn{' '}
           <CoachSpark>✦</CoachSpark> để sửa bằng AI
         </Coach>
       )}

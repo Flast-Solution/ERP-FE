@@ -114,10 +114,9 @@ const DEADLINE_OPTIONS = [
 ]
 
 const ERP_CORE_TABLE_OPTIONS = [
-  { value: 'customer_order', label: 'Đơn hàng' },
-  { value: 'customer_enterprise', label: 'KH doanh nghiệp' },
-  { value: 'customer_personal', label: 'KH bán lẻ' },
-  { value: 'manufacture_product', label: 'Lệnh sản xuất' },
+  { value: 'order', label: 'Đơn hàng' },
+  { value: 'order_detail', label: 'Đơn hàng con' },
+  { value: 'product', label: 'Sản phẩm' },
   { value: 'user', label: 'Nhân viên' },
 ]
 

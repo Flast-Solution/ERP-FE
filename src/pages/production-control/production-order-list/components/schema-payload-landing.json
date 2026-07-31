@@ -1,0 +1,159 @@
+{
+    "pageId": "landing-home",
+    "slug": "/",
+    "remoteUrl":"",
+    "schema": {
+        "schemaVersion": 1,
+        "name": "Trang chủ flast.vn",
+        "theme": {
+            "primaryColor": "#7c5cff",
+            "fontFamily": "Inter, sans-serif"
+        },
+        "sections": [
+            {
+                "id": "nav",
+                "type": "navbar",
+                "props": {
+                    "brandName": "Nimbus",
+                    "links": [
+                        {
+                            "label": "Sản phẩm",
+                            "url": "#features"
+                        },
+                        {
+                            "label": "Giải pháp",
+                            "url": "#hero"
+                        },
+                        {
+                            "label": "Bảng giá",
+                            "url": "#pricing"
+                        }
+                    ],
+                    "buttonText": "Dùng thử",
+                    "logoUrl": "http://localhost:3000/api/upload/folder/view?filename=landing%2Fe83ac6f0-ab44-453b-aa93-cba2b07e6967.png",
+                    "logoAlt": "",
+                    "actions": [
+                        {
+                            "label": "Dùng thử",
+                            "url": "/dung-thu",
+                            "openInNewTab": false
+                        }
+                    ]
+                }
+            },
+            {
+                "id": "bannerSlider-157c1b5b-6511-4bb8-924d-d912d9b7c9d8",
+                "type": "bannerSlider",
+                "props": {
+                    "images": [
+                        {
+                            "url": "http://localhost:3000/api/upload/folder/view?filename=landing%2Fbanner%2Fd50219f9-ce73-48e4-ab20-6788ef28494f.png",
+                            "alt": "Gemini_Generated_Image_1xd36o1xd36o1xd3.png",
+                            "link": "",
+                            "openInNewTab": false
+                        },
+                        {
+                            "url": "http://localhost:3000/api/upload/folder/view?filename=landing%2Fbanner%2Fa3b2e71b-1dbd-42ae-86a5-d63ca706f29b.png",
+                            "alt": "Gemini_Generated_Image_8q2he38q2he38q2h.png",
+                            "link": "",
+                            "openInNewTab": false
+                        }
+                    ],
+                    "autoplay": true,
+                    "interval": "5",
+                    "height": "420",
+                    "showDots": true
+                }
+            },
+            {
+                "id": "image-bdeb906f-c386-4f14-8abc-57aedb3d54e2",
+                "type": "image",
+                "props": {
+                    "src": "http://localhost:3000/api/upload/folder/view?filename=landing%2Fimage%2F803a732a-4120-49b9-a110-9ff6e0498884.png",
+                    "alt": "Hình ảnh",
+                    "caption": "",
+                    "radius": "12"
+                }
+            },
+            {
+                "id": "hero",
+                "type": "hero",
+                "props": {
+                    "eyebrow": "Nền tảng vận hành",
+                    "title": "Đưa sản phẩm ra thị trường nhanh hơn",
+                    "description": "Nimbus giúp đội ngũ của bạn xây dựng, triển khai và mở rộng — tất cả trong một nơi.",
+                    "primaryButtonText": "Bắt đầu miễn phí",
+                    "secondaryButtonText": "Xem demo",
+                    "background": "#fafaff",
+                    "primaryButtonUrl": "/dung-thu",
+                    "secondaryButtonUrl": "/view-demo"
+                }
+            },
+            {
+                "id": "features",
+                "type": "features",
+                "props": {
+                    "items": [
+                        {
+                            "title": "Triển khai tức thì",
+                            "description": "Đẩy code lên production chỉ với một cú nhấp."
+                        },
+                        {
+                            "title": "Cộng tác thời gian thực",
+                            "description": "Cả nhóm cùng làm việc trên một bản xem trước.",
+                            "icon": "heart",
+                            "buttonText": ""
+                        },
+                        {
+                            "title": "Phân tích tích hợp",
+                            "description": "Theo dõi hiệu suất ngay trong bảng điều khiển."
+                        }
+                    ]
+                }
+            },
+            {
+                "id": "pricing",
+                "type": "pricing",
+                "props": {
+                    "title": "Bảng giá linh hoạt",
+                    "description": "Bắt đầu miễn phí, nâng cấp khi nhóm phát triển.",
+                    "borderRadius": "16px",
+                    "plans": [
+                        {
+                            "name": "Free",
+                            "price": "0₫",
+                            "description": "Cho cá nhân",
+                            "featured": false,
+                            "buttonText": "Chọn gói",
+                            "buttonUrl": "/free"
+                        },
+                        {
+                            "name": "Team",
+                            "price": "290k",
+                            "description": "Cho nhóm nhỏ",
+                            "featured": true,
+                            "buttonText": "Chọn gói",
+                            "buttonUrl": "/smal"
+                        },
+                        {
+                            "name": "Scale",
+                            "price": "Liên hệ",
+                            "description": "Cho doanh nghiệp",
+                            "featured": false,
+                            "buttonText": "Chọn gói",
+                            "buttonUrl": "/contact"
+                        }
+                    ]
+                }
+            },
+            {
+                "id": "footer",
+                "type": "footer",
+                "props": {
+                    "text": "© 2026 Nimbus · Được tạo với Patch"
+                }
+            }
+        ]
+    },
+    "publishedAt": "2026-07-31T01:36:12.606Z"
+}

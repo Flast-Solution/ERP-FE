@@ -25,9 +25,7 @@ export const getBomStatusLabel = (status) => (
 );
 
 export const getMaterialSpecification = (row = {}) => (
-  row.materialUnit === 'DIMENSION'
-    ? `${Number(row.width ?? 0)} × ${Number(row.height ?? 0)} cm`
-    : '-'
+  row.material?.unit ?? '-'
 );
 
 export const mapBomMaterialRows = (bom = {}) => (
