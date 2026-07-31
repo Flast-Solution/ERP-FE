@@ -3,6 +3,9 @@ import { useEditorStore } from '@/store/editorStore'
 import {
   Page, Nav, Brand, BrandLogo, NavLinks, CtaSm,
   NavActions,
+  MobileMenuButton, MobileDrawerBackdrop, MobileDrawer, MobileDrawerHead,
+  MobileDrawerLinks, MobileDrawerActions,
+  BlockTitle,
   Hero, Eyebrow, HeroTitle, HeroDesc, HeroActions, CtaPrimary, CtaGhost,
   FeaturesGrid, FeatCard, FeatIcon, FeatTitle, FeatDesc,
   FeatImage, FeatCta,
@@ -14,6 +17,7 @@ import {
   Banner, BannerTrack, BannerSlide, BannerEmpty, BannerArrow, BannerDots, BannerDot,
 } from './PreviewCanvas.style'
 import { EditableHighlight } from './EditableHighlight'
+import { ExtendedBlockRenderer, isExtendedBlock } from './ExtendedBlockRenderer'
 
 const BoltIcon = () => (
   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
@@ -28,6 +32,102 @@ const BlockIcon = ({ name = 'bolt' }) => {
   if (name === 'star') return <span>★</span>
   if (name === 'heart') return <span>♥</span>
   return <BoltIcon />
+}
+
+const NavbarBlock = ({ props, primaryColor }) => {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const actions = props.actions?.length
+    ? props.actions
+    : (props.buttonText ? [{ label: props.buttonText, url: '#' }] : [])
+
+  useEffect(() => {
+    if (!menuOpen) return undefined
+    const closeOnEscape = event => {
+      if (event.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('keydown', closeOnEscape)
+    return () => document.removeEventListener('keydown', closeOnEscape)
+  }, [menuOpen])
+
+  const brand = (
+    <Brand>
+      <BrandLogo style={{ background: props.logoUrl ? 'transparent' : primaryColor }}>
+        {props.logoUrl
+          ? <img src={props.logoUrl} alt={props.logoAlt || props.brandName || 'Logo'} />
+          : <BoltIcon />
+        }
+      </BrandLogo>
+      {props.brandName}
+    </Brand>
+  )
+
+  return (
+    <>
+      <Nav>
+        {brand}
+        <NavLinks className="landing-desktop-nav">
+          {(props.links ?? []).map((link, index) => (
+            <a href={link.url || '#'} key={`${link.label}-${index}`}>{link.label}</a>
+          ))}
+        </NavLinks>
+        <NavActions className="landing-desktop-nav">
+          {actions.map((action, index) => (
+            <CtaSm
+              as="a"
+              key={`${action.label}-${index}`}
+              href={action.url || '#'}
+              target={action.openInNewTab ? '_blank' : undefined}
+              rel={action.openInNewTab ? 'noopener noreferrer' : undefined}
+            >
+              {action.label}
+            </CtaSm>
+          ))}
+        </NavActions>
+        <MobileMenuButton
+          className="landing-mobile-menu-button"
+          type="button"
+          aria-label="Mở menu"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(true)}
+        >
+          <span />
+        </MobileMenuButton>
+      </Nav>
+
+      {menuOpen && (
+        <>
+          <MobileDrawerBackdrop type="button" aria-label="Đóng menu" onClick={() => setMenuOpen(false)} />
+          <MobileDrawer role="dialog" aria-modal="true" aria-label="Menu điều hướng">
+            <MobileDrawerHead>
+              {brand}
+              <button type="button" aria-label="Đóng menu" onClick={() => setMenuOpen(false)}>×</button>
+            </MobileDrawerHead>
+            <MobileDrawerLinks>
+              {(props.links ?? []).map((link, index) => (
+                <a href={link.url || '#'} key={`${link.label}-mobile-${index}`} onClick={() => setMenuOpen(false)}>
+                  {link.label}
+                </a>
+              ))}
+            </MobileDrawerLinks>
+            <MobileDrawerActions>
+              {actions.map((action, index) => (
+                <a
+                  key={`${action.label}-mobile-${index}`}
+                  href={action.url || '#'}
+                  target={action.openInNewTab ? '_blank' : undefined}
+                  rel={action.openInNewTab ? 'noopener noreferrer' : undefined}
+                  style={{ background: primaryColor }}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  {action.label}
+                </a>
+              ))}
+            </MobileDrawerActions>
+          </MobileDrawer>
+        </>
+      )}
+    </>
+  )
 }
 
 const BannerSlider = ({ props }) => {
@@ -108,42 +208,7 @@ const renderBlock = (section, primaryColor) => {
 
   switch (section?.type) {
     case 'navbar':
-      return (
-        <Nav>
-          <Brand>
-            <BrandLogo style={{ background: props.logoUrl ? 'transparent' : primaryColor }}>
-              {props.logoUrl
-                ? <img src={props.logoUrl} alt={props.logoAlt || props.brandName || 'Logo'} />
-                : <BoltIcon />
-              }
-            </BrandLogo>
-            {props.brandName}
-          </Brand>
-          <NavLinks>
-            {(props.links ?? []).map((link, index) => (
-              <a href={link.url || '#'} key={`${link.label}-${index}`}>
-                {link.label}
-              </a>
-            ))}
-          </NavLinks>
-          <NavActions>
-            {(props.actions?.length
-              ? props.actions
-              : (props.buttonText ? [{ label: props.buttonText, url: '#' }] : [])
-            ).map((action, index) => (
-              <CtaSm
-                as="a"
-                key={`${action.label}-${index}`}
-                href={action.url || '#'}
-                target={action.openInNewTab ? '_blank' : undefined}
-                rel={action.openInNewTab ? 'noopener noreferrer' : undefined}
-              >
-                {action.label}
-              </CtaSm>
-            ))}
-          </NavActions>
-        </Nav>
-      )
+      return <NavbarBlock props={props} primaryColor={primaryColor} />
 
     case 'hero':
       return (
@@ -224,7 +289,7 @@ const renderBlock = (section, primaryColor) => {
 
     case 'features':
       return (
-        <FeaturesGrid>
+        <FeaturesGrid className="landing-features-grid">
           {(props.items ?? []).map((item, index) => (
             <FeatCard key={`${item.title}-${index}`}>
               {item.imageUrl ? (
@@ -253,12 +318,12 @@ const renderBlock = (section, primaryColor) => {
 
     case 'pricing':
       return (
-        <Pricing $radius={props.borderRadius}>
+        <Pricing className="landing-pricing" $radius={props.borderRadius}>
           <PriceHead>
             <h2>{props.title}</h2>
             <p>{props.description}</p>
           </PriceHead>
-          <Plans>
+          <Plans className="landing-pricing-plans">
             {(props.plans ?? []).map((plan, index) => (
               <Plan key={`${plan.name}-${index}`} $hot={plan.featured}>
                 {plan.featured && <PlanTag style={{ background: primaryColor }}>Phổ biến</PlanTag>}
@@ -320,6 +385,7 @@ const renderBlock = (section, primaryColor) => {
       return <Footer>{props.text}</Footer>
 
     default:
+      if (isExtendedBlock(section?.type)) return <ExtendedBlockRenderer section={section} />
       return <UnknownBlock>Không hỗ trợ block “{section?.type}”</UnknownBlock>
   }
 }
@@ -327,21 +393,44 @@ const renderBlock = (section, primaryColor) => {
 export function PreviewCanvas() {
   const selected = useEditorStore((state) => state.selected)
   const schema = useEditorStore((state) => state.draftSchema)
+  const device = useEditorStore((state) => state.device)
+  const viewMode = useEditorStore((state) => state.viewMode)
   const openEdit = useEditorStore((state) => state.openEdit)
   const primaryColor = schema?.theme?.primaryColor
 
   return (
     <Page
       className="patch-light"
+      data-landing-preview="true"
+      data-device={device}
       style={{ fontFamily: schema?.theme?.fontFamily }}
+      onClickCapture={event => {
+        if (viewMode !== 'edit') return
+        if (event.target.closest?.('[data-landing-editor-only="true"]')) return
+        if (event.target.closest?.('a, button, input, textarea, select, iframe')) {
+          event.preventDefault()
+          event.stopPropagation()
+        }
+      }}
     >
       {(schema?.sections ?? []).map(section => (
         <EditableHighlight
           key={section.id}
           elementId={section.id}
+          data-block-type={section.type}
+          data-has-block-title={Boolean(
+            typeof section.props?.blockTitle === 'string' && section.props.blockTitle.trim(),
+          )}
           selected={selected === section.id}
           onEdit={openEdit}
+          disabled={viewMode !== 'edit'}
+          showTrigger={viewMode === 'edit'}
         >
+          {typeof section.props?.blockTitle === 'string' && section.props.blockTitle.trim() && (
+            <BlockTitle style={{ '--block-title-accent': primaryColor }}>
+              {section.props.blockTitle.trim()}
+            </BlockTitle>
+          )}
           {renderBlock(section, primaryColor)}
         </EditableHighlight>
       ))}

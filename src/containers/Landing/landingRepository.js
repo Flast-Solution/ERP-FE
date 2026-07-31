@@ -2,6 +2,7 @@ import {
   clonePageSchema,
   DEFAULT_PAGE_SCHEMA,
   isPageSchema,
+  normalizePageSchema,
 } from './pageSchema'
 
 const PAGE_STORAGE_KEY = 'flast_landing_pages_v1'
@@ -75,11 +76,11 @@ export const saveLandingPage = ({
     ...previous,
     id,
     name: schema.name || 'Trang chưa đặt tên',
-    slug: previous?.slug ?? slug,
+    slug: slug || previous?.slug || '/',
     status,
     updatedAt: new Date().toISOString(),
     publishedAt: publishedAt ?? previous?.publishedAt ?? null,
-    schema: clonePageSchema(schema),
+    schema: normalizePageSchema(schema),
   }
   const nextPages = previous
     ? pages.map(page => String(page.id) === String(id) ? nextPage : page)
@@ -88,4 +89,3 @@ export const saveLandingPage = ({
   write(PAGE_STORAGE_KEY, nextPages)
   return nextPage
 }
-

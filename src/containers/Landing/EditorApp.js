@@ -10,6 +10,7 @@ import { t } from '@/css/landing'
 import { EditPromptBar } from './EditPromptBar'
 import { useLandingAi } from './useLandingAi'
 import { BlockInspector, BlockNavigator } from './EditorPanels'
+import { HtmlSourceView } from './HtmlSourceView'
 
 const antdTheme = {
   algorithm: theme.defaultAlgorithm,
@@ -33,6 +34,8 @@ function EditorContent() {
   const files = useEditorStore((s) => s.files)
   const toast = useEditorStore((s) => s.toast)
   const device = useEditorStore((s) => s.device)
+  const viewMode = useEditorStore((s) => s.viewMode)
+  const draftSchema = useEditorStore((s) => s.draftSchema)
   const apiConfig = useEditorStore((s) => s.apiConfig)
 
   const setValue = useEditorStore((s) => s.setValue)
@@ -54,12 +57,12 @@ function EditorContent() {
 
   useEffect(() => {
     const onKey = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      if (viewMode === 'edit' && (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setConfigOpen(true)
         return
       }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+      if (viewMode === 'edit' && (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
         e.preventDefault()
         if (e.shiftKey) {
           redo()
@@ -70,23 +73,24 @@ function EditorContent() {
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [redo, setConfigOpen, undo])
+  }, [redo, setConfigOpen, undo, viewMode])
 
   return (
     <Root>
       <EditorChrome />
 
       <Workspace>
-        <BlockNavigator />
+        {viewMode === 'edit' && <BlockNavigator />}
         <Stage onClick={(e) => { if (e.target === e.currentTarget) close() }}>
-          <Frame $mobile={device === 'mobile'}>
+          <Frame $mobile={device === 'mobile'} style={{ display: viewMode !== 'html' ? 'block' : 'none' }}>
             <PreviewCanvas />
           </Frame>
+          <HtmlSourceView schema={draftSchema} active={viewMode === 'html'} />
         </Stage>
-        <BlockInspector />
+        {viewMode === 'edit' && <BlockInspector />}
       </Workspace>
 
-      {selected ? (
+      {viewMode === 'edit' && selected ? (
         <EditPromptBar
           docked
           elementId={selected}
@@ -101,12 +105,12 @@ function EditorContent() {
           onRemoveAttachment={removeFile}
           apis={apiConfig[selected] || []}
         />
-      ) : (
+      ) : viewMode === 'edit' ? (
         <Coach>
           Chọn block để sửa thủ công hoặc nhấn{' '}
           <CoachSpark>✦</CoachSpark> để sửa bằng AI
         </Coach>
-      )}
+      ) : null}
 
       {toast && <Toast>{toast}</Toast>}
 

@@ -22,6 +22,7 @@ export const Stage = styled.main`
   flex: 1;
   min-width: 0;
   overflow: auto;
+  scroll-behavior: smooth;
   display: flex;
   justify-content: center;
   padding: ${t.s16} ${t.s12} 120px;

@@ -19,12 +19,12 @@ export function EditableHighlight({
   ].filter(Boolean).join(' ')
 
   return (
-    <Wrap className={cls} {...rest}>
+    <Wrap id={elementId || undefined} className={cls} {...rest}>
       {children}
-      <Overlay aria-hidden="true" />
-      {elementId && <Tag>#{elementId}</Tag>}
+      <Overlay aria-hidden="true" data-landing-editor-only="true" />
+      {elementId && <Tag data-landing-editor-only="true">#{elementId}</Tag>}
       {showTrigger && !disabled && (
-        <TriggerSlot>
+        <TriggerSlot data-landing-editor-only="true">
           <AgentTrigger
             size="sm"
             label={`Sửa #${elementId || 'phần tử'}`}

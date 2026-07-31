@@ -1,7 +1,7 @@
 import { useEditorStore } from '@/store/editorStore'
 import { Button, Tooltip, Badge } from 'antd'
 import { useNavigate } from 'react-router-dom'
-import { Bolt, Undo, Redo, Monitor, Phone, Cursor, Gear } from './icons'
+import { Bolt, Undo, Redo, Monitor, Phone, Cursor, Gear, Code } from './icons'
 import {
   Bar, 
   BarGroup, 
@@ -24,6 +24,8 @@ export function EditorChrome() {
 
   const device = useEditorStore((s) => s.device)
   const setDevice = useEditorStore((s) => s.setDevice)
+  const viewMode = useEditorStore((s) => s.viewMode)
+  const setViewMode = useEditorStore((s) => s.setViewMode)
   const status = useEditorStore((s) => s.status)
   const publish = useEditorStore((s) => s.publish)
   const saveDraft = useEditorStore((s) => s.saveDraft)
@@ -47,16 +49,12 @@ export function EditorChrome() {
       </BarGroup>
 
       <BarCenter>
-        <Tooltip title="Chế độ chọn (V)">
-          <IconButton aria-label="Chọn" variant="solid" size="sm"><Cursor /></IconButton>
-        </Tooltip>
-        <Sep />
         <Tooltip title="Hoàn tác (⌘Z)">
           <IconButton
             aria-label="Hoàn tác"
             variant="ghost"
             size="sm"
-            disabled={busy || historyIndex <= 0}
+            disabled={viewMode !== 'edit' || busy || historyIndex <= 0}
             onClick={undo}
           >
             <Undo />
@@ -67,12 +65,39 @@ export function EditorChrome() {
             aria-label="Làm lại"
             variant="ghost"
             size="sm"
-            disabled={busy || historyIndex >= historyLength - 1}
+            disabled={viewMode !== 'edit' || busy || historyIndex >= historyLength - 1}
             onClick={redo}
           >
             <Redo />
           </IconButton>
         </Tooltip>
+        <Sep />
+        <DeviceToggle>
+          <DeviceBtn
+            className={viewMode === 'edit' ? 'is-on' : ''}
+            onClick={() => setViewMode('edit')}
+            aria-label="Chỉnh sửa"
+            title="Chỉnh sửa"
+          >
+            <Cursor />
+          </DeviceBtn>
+          <DeviceBtn
+            className={viewMode === 'preview' ? 'is-on' : ''}
+            onClick={() => setViewMode('preview')}
+            aria-label="Preview"
+            title="Preview"
+          >
+            <Monitor />
+          </DeviceBtn>
+          <DeviceBtn
+            className={viewMode === 'html' ? 'is-on' : ''}
+            onClick={() => setViewMode('html')}
+            aria-label="HTML"
+            title="HTML"
+          >
+            <Code />
+          </DeviceBtn>
+        </DeviceToggle>
         <Sep />
         <DeviceToggle>
           <DeviceBtn
@@ -93,7 +118,7 @@ export function EditorChrome() {
         <Sep />
         <Tooltip title="Cấu hình API (⌘K)">
           <CfgWrap>
-            <IconButton aria-label="Cấu hình API" variant="ghost" size="sm" onClick={() => setConfigOpen(true)}>
+            <IconButton aria-label="Cấu hình API" variant="ghost" size="sm" disabled={viewMode !== 'edit'} onClick={() => setConfigOpen(true)}>
               <Gear />
             </IconButton>
             {apiCount > 0 && <CfgCount>{apiCount}</CfgCount>}

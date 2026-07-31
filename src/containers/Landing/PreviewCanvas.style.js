@@ -2,9 +2,92 @@ import styled from 'styled-components'
 import { t } from '@/css/landing'
 
 export const Page = styled.div`
+  position: relative;
+  min-height: 100%;
   font-family: ${t.fontSans};
   color: #16161a;
   background: #fff;
+  scroll-behavior: smooth;
+
+  > [id] {
+    scroll-margin-top: 16px;
+  }
+
+  > [data-has-block-title='true'] {
+    padding-top: 44px;
+  }
+
+  > [data-has-block-title='true'] .landing-features-grid,
+  > [data-has-block-title='true'] .landing-pricing,
+  > [data-has-block-title='true'] .landing-responsive-columns {
+    padding-top: 10px;
+  }
+
+  &[data-device='mobile'] .landing-features-grid,
+  &[data-device='mobile'] .landing-pricing-plans {
+    grid-template-columns: 1fr;
+  }
+
+  &[data-device='mobile'] .landing-features-grid {
+    padding: 28px 16px;
+  }
+
+  &[data-device='mobile'] .landing-pricing {
+    margin: 8px 8px 28px;
+    padding: 28px 16px;
+  }
+
+  &[data-device='mobile'] .landing-responsive-columns {
+    flex-direction: column;
+    padding: 28px 16px !important;
+  }
+
+  &[data-device='mobile'] .landing-responsive-column {
+    width: 100%;
+    flex-basis: auto !important;
+  }
+
+  &[data-device='mobile'] .landing-desktop-nav {
+    display: none;
+  }
+
+  &[data-device='mobile'] .landing-mobile-menu-button {
+    display: inline-flex;
+  }
+
+  @media (max-width: 600px) {
+    .landing-features-grid,
+    .landing-pricing-plans {
+      grid-template-columns: 1fr;
+    }
+
+    .landing-features-grid {
+      padding: 28px 16px;
+    }
+
+    .landing-pricing {
+      margin: 8px 8px 28px;
+      padding: 28px 16px;
+    }
+
+    .landing-responsive-columns {
+      flex-direction: column;
+      padding: 28px 16px !important;
+    }
+
+    .landing-responsive-column {
+      width: 100%;
+      flex-basis: auto !important;
+    }
+
+    .landing-desktop-nav {
+      display: none;
+    }
+
+    .landing-mobile-menu-button {
+      display: inline-flex;
+    }
+  }
 `
 
 export const Nav = styled.header`
@@ -13,6 +96,143 @@ export const Nav = styled.header`
   gap: 24px;
   padding: 18px 32px;
   border-bottom: 1px solid #eee;
+`
+
+export const BlockTitle = styled.h2`
+  width: calc(100% - 64px);
+  margin: 0 32px 18px;
+  padding: 3px 0 3px 14px;
+  border-left: 4px solid var(--block-title-accent, ${t.violet500});
+  color: #16161a;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+
+  @media (max-width: 600px) {
+    width: calc(100% - 32px);
+    margin: 0 16px 14px;
+    padding-left: 11px;
+    font-size: 22px;
+  }
+`
+
+export const MobileMenuButton = styled.button`
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  margin-left: auto;
+  border: 1px solid #e2e2ea;
+  border-radius: 9px;
+  background: #fff;
+  color: #16161a;
+  cursor: pointer;
+
+  span,
+  span::before,
+  span::after {
+    display: block;
+    width: 18px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+  }
+
+  span { position: relative; }
+  span::before,
+  span::after { content: ''; position: absolute; left: 0; }
+  span::before { top: -6px; }
+  span::after { top: 6px; }
+`
+
+export const MobileDrawerBackdrop = styled.button`
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 100vh;
+  height: 100dvh;
+  z-index: 50;
+  border: 0;
+  background: rgba(15, 17, 24, 0.46);
+  cursor: pointer;
+`
+
+export const MobileDrawer = styled.aside`
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 51;
+  display: flex;
+  flex-direction: column;
+  width: min(82%, 320px);
+  height: 100vh;
+  height: 100dvh;
+  padding: 20px;
+  overflow-y: auto;
+  background: #fff;
+  box-shadow: 16px 0 40px rgba(20, 20, 32, 0.2);
+  animation: landingDrawerIn 180ms ease-out;
+
+  @keyframes landingDrawerIn {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  }
+`
+
+export const MobileDrawerHead = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #eee;
+
+  button {
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-radius: 8px;
+    background: #f4f4f8;
+    font-size: 22px;
+    cursor: pointer;
+  }
+`
+
+export const MobileDrawerLinks = styled.nav`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px 0;
+
+  a {
+    padding: 12px 10px;
+    border-radius: 8px;
+    color: #252530;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  a:hover { background: #f4f2ff; }
+`
+
+export const MobileDrawerActions = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: auto;
+
+  a {
+    padding: 11px 14px;
+    border-radius: 9px;
+    color: #fff;
+    font-weight: 650;
+    text-align: center;
+    text-decoration: none;
+  }
 `
 
 export const Brand = styled.div`
