@@ -1,3 +1,5 @@
+import { EXTENDED_LANDING_BLOCKS } from './extendedBlockRegistry'
+
 const createId = (type) => {
   const suffix = (typeof window !== 'undefined' && window.crypto?.randomUUID?.())
     ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -396,6 +398,7 @@ export const LANDING_BLOCKS = [
       { name: 'text', label: 'Nội dung', control: 'textarea' },
     ],
   },
+  ...EXTENDED_LANDING_BLOCKS,
 ]
 
 export const getLandingBlock = (type) => (
@@ -409,6 +412,9 @@ export const createLandingBlock = (type) => {
   return {
     id: createId(type),
     type,
-    props: JSON.parse(JSON.stringify(definition.defaults)),
+    props: {
+      blockTitle: '',
+      ...JSON.parse(JSON.stringify(definition.defaults)),
+    },
   }
 }

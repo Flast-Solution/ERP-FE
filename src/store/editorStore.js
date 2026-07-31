@@ -3,6 +3,8 @@ import {
   clonePageSchema,
   DEFAULT_PAGE_SCHEMA,
   isPageSchema,
+  normalizePageSchema,
+  validatePageSchema,
 } from '@/containers/Landing/pageSchema'
 import { applyLandingPatch } from '@/containers/Landing/landingAi'
 import { createLandingBlock } from '@/containers/Landing/blockRegistry'
@@ -12,23 +14,11 @@ import {
 } from '@/containers/Landing/landingRepository'
 
 /* Dữ liệu mặc định — ràng buộc API cho từng phần tử trên trang */
-const DEFAULT_API = {
-  nav: [],
-  hero: [{ id: 'a1', key: 'config', method: 'GET', url: 'https://api.flast.vn/site/config' }],
-  features: [{ id: 'a2', key: 'features', method: 'GET', url: 'https://api.flast.vn/features' }],
-  pricing: [
-    { id: 'a3', key: 'plans', method: 'GET', url: 'https://api.flast.vn/pricing/plans' },
-    { id: 'a4', key: 'promo', method: 'GET', url: 'https://api.flast.vn/pricing/promo' },
-  ],
-}
+const DEFAULT_API = {}
 
-const DEFAULT_SEO = [
-  { id: 's1', name: 'title', value: 'flast.vn — Xây trang web bằng AI' },
-  { id: 's2', name: 'description', value: 'Tạo và chỉnh sửa website trực quan với trợ lý AI.' },
-  { id: 's3', name: 'og:image', value: 'https://flast.vn/og.png' },
-]
+const DEFAULT_SEO = DEFAULT_PAGE_SCHEMA.seo.meta
 
-const DEFAULT_CRUMBS = [{ id: 'c1', text: 'Trang chủ', url: '/' }]
+const DEFAULT_CRUMBS = DEFAULT_PAGE_SCHEMA.breadcrumbs
 
 const APPLIED_MS = 700
 const TOAST_MS = 2600
@@ -59,7 +49,7 @@ const writeStorage = (key, value) => {
 
 const storedDraft = readStorage(DRAFT_STORAGE_KEY, null)
 const initialSchema = isPageSchema(storedDraft?.schema)
-  ? storedDraft.schema
+  ? normalizePageSchema(storedDraft.schema)
   : clonePageSchema(DEFAULT_PAGE_SCHEMA)
 
 const storedVersions = readStorage(VERSION_STORAGE_KEY, [])
@@ -68,6 +58,7 @@ const initialVersions = Array.isArray(storedVersions) ? storedVersions : []
 export const useEditorStore = create((set, get) => ({
   /* Trạng thái giao diện */
   device: 'desktop',
+  viewMode: 'edit',
   selected: null,
   value: '',
   busy: false,
@@ -99,6 +90,10 @@ export const useEditorStore = create((set, get) => ({
   },
 
   setDevice: (device) => set({ device }),
+  setViewMode: (viewMode) => {
+    if (viewMode !== 'edit') get().close()
+    set({ viewMode })
+  },
 
   initializePage: ({ id, mode } = {}) => {
     const pageId = id || 'landing-home'
@@ -106,7 +101,7 @@ export const useEditorStore = create((set, get) => ({
 
     const page = mode === 'create' ? null : getLandingPage(pageId)
     const schema = page?.schema
-      ? clonePageSchema(page.schema)
+      ? normalizePageSchema(page.schema)
       : {
           ...clonePageSchema(DEFAULT_PAGE_SCHEMA),
           name: mode === 'create' ? 'Trang mới' : DEFAULT_PAGE_SCHEMA.name,
@@ -125,6 +120,9 @@ export const useEditorStore = create((set, get) => ({
       status: 'idle',
       lastSavedAt: page?.updatedAt ?? null,
       publishedAt: page?.publishedAt ?? null,
+      apiConfig: schema.dataSources ?? {},
+      seoConfig: schema.seo?.meta ?? DEFAULT_SEO,
+      crumbConfig: schema.breadcrumbs ?? DEFAULT_CRUMBS,
     })
   },
 
@@ -240,7 +238,9 @@ export const useEditorStore = create((set, get) => ({
   applyAiPatch: (operations, summary) => {
     try {
       const current = get()
-      const nextSchema = applyLandingPatch(current.draftSchema, operations)
+      const nextSchema = normalizePageSchema(applyLandingPatch(current.draftSchema, operations))
+      const validationErrors = validatePageSchema(nextSchema)
+      if (validationErrors.length) throw new Error(validationErrors[0])
       const nextHistory = [
         ...current.history.slice(0, current.historyIndex + 1),
         clonePageSchema(nextSchema),
@@ -277,7 +277,7 @@ export const useEditorStore = create((set, get) => ({
 
   undo: () => {
     const current = get()
-    if (current.historyIndex <= 0 || current.busy) return
+    if (current.viewMode !== 'edit' || current.historyIndex <= 0 || current.busy) return
     const historyIndex = current.historyIndex - 1
     set({
       draftSchema: clonePageSchema(current.history[historyIndex]),
@@ -289,7 +289,7 @@ export const useEditorStore = create((set, get) => ({
 
   redo: () => {
     const current = get()
-    if (current.historyIndex >= current.history.length - 1 || current.busy) return
+    if (current.viewMode !== 'edit' || current.historyIndex >= current.history.length - 1 || current.busy) return
     const historyIndex = current.historyIndex + 1
     set({
       draftSchema: clonePageSchema(current.history[historyIndex]),
@@ -318,7 +318,12 @@ export const useEditorStore = create((set, get) => ({
 
   publish: () => {
     const publishedAt = new Date().toISOString()
-    const schema = clonePageSchema(get().draftSchema)
+    const schema = normalizePageSchema(get().draftSchema)
+    const validationErrors = validatePageSchema(schema)
+    if (validationErrors.length) {
+      get()._showToast(validationErrors[0])
+      return
+    }
     const publishPayload = {
       pageId: get().currentPageId,
       slug: get().currentPageSlug,
@@ -390,23 +395,31 @@ export const useEditorStore = create((set, get) => ({
 
   saveConfig: (config) => {
     set({ apiConfig: config, configOpen: false })
+    get()._commitSchema({ ...get().draftSchema, dataSources: config })
     get()._showToast(`Đã lưu cấu hình · ${countApis(config)} API`)
   },
 
-  saveSeo: (seo) => set({ seoConfig: seo }),
+  saveSeo: (seo) => {
+    set({ seoConfig: seo })
+    get()._commitSchema({ ...get().draftSchema, seo: { meta: seo } })
+  },
 
-  saveCrumb: (crumbs) => set({ crumbConfig: crumbs }),
+  saveCrumb: (crumbs) => {
+    set({ crumbConfig: crumbs })
+    get()._commitSchema({ ...get().draftSchema, breadcrumbs: crumbs })
+  },
 
   /* Nội bộ */
   _commitSchema: (schema, selected = get().selected) => {
-    if (!isPageSchema(schema)) return
+    const normalizedSchema = normalizePageSchema(schema)
+    if (validatePageSchema(normalizedSchema).length) return
     const current = get()
     const nextHistory = [
       ...current.history.slice(0, current.historyIndex + 1),
-      clonePageSchema(schema),
+      clonePageSchema(normalizedSchema),
     ]
     set({
-      draftSchema: clonePageSchema(schema),
+      draftSchema: clonePageSchema(normalizedSchema),
       history: nextHistory,
       historyIndex: nextHistory.length - 1,
       selected,

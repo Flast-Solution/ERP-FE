@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Button, Tag, Tooltip } from 'antd'
 import {
   SettingOutlined,
@@ -49,13 +49,6 @@ const METHODS = ['GET', 'POST', 'PUT', 'DELETE']
 const METHOD_COLOR = { GET: '#34d399', POST: '#60a5fa', PUT: '#fbbf24', DELETE: '#f87171' }
 const META_PRESETS = ['title', 'description', 'keywords', 'og:title', 'og:description', 'og:image', 'twitter:card', 'robots', 'canonical']
 
-const COMPONENTS = [
-  { id: 'nav', label: 'Thanh điều hướng' },
-  { id: 'hero', label: 'Khối Hero' },
-  { id: 'features', label: 'Lưới tính năng' },
-  { id: 'pricing', label: 'Bảng giá' },
-]
-
 const TABS = [
   { id: 'api', label: 'API', icon: <ApiOutlined />, subtitle: (n) => `Gán nguồn dữ liệu cho từng phần tử · ${n} API` },
   { id: 'seo', label: 'SEO', icon: <SearchOutlined />, subtitle: (n) => `Thẻ meta SEO · ${n} thẻ` },
@@ -71,6 +64,7 @@ export function ApiConfigModal({ onBuild }) {
   const apiConfig = useEditorStore((s) => s.apiConfig)
   const seoConfig = useEditorStore((s) => s.seoConfig)
   const crumbConfig = useEditorStore((s) => s.crumbConfig)
+  const sections = useEditorStore((s) => s.draftSchema?.sections ?? [])
   const saveConfig = useEditorStore((s) => s.saveConfig)
   const saveSeo = useEditorStore((s) => s.saveSeo)
   const saveCrumb = useEditorStore((s) => s.saveCrumb)
@@ -81,6 +75,10 @@ export function ApiConfigModal({ onBuild }) {
   const [crumbDraft, setCrumbDraft] = useState(crumbConfig)
   const [codeDraft, setCodeDraft] = useState({})
   const [copiedId, setCopiedId] = useState(null)
+  const components = useMemo(() => sections.map((section, index) => ({
+    id: section.id,
+    label: `${index + 1}. ${section.type}`,
+  })), [sections])
 
   const fileInputs = useRef({})
   
@@ -238,7 +236,7 @@ export function ApiConfigModal({ onBuild }) {
       {/* API */}
       {tab === 'api' && (
         <ApiCfg>
-          {COMPONENTS.map((c) => {
+          {components.map((c) => {
             const list = draft[c.id] || []
             const files = codeDraft[c.id] || []
             return (

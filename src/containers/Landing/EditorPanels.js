@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios'
 import { message } from 'antd'
 import { useEditorStore } from '@/store/editorStore'
@@ -22,8 +22,57 @@ const formatTime = value => {
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('vi-VN')
 }
 
+const RichTextControl = ({ value, onChange }) => {
+  const editorRef = useRef(null)
+
+  useEffect(() => {
+    if (editorRef.current && editorRef.current.innerHTML !== (value ?? '')) {
+      editorRef.current.innerHTML = value ?? ''
+    }
+  }, [value])
+
+  const run = (command, commandValue) => {
+    editorRef.current?.focus()
+    document.execCommand(command, false, commandValue)
+    onChange(editorRef.current?.innerHTML ?? '')
+  }
+
+  const addLink = () => {
+    const url = window.prompt('Nhập URL liên kết')
+    if (url) run('createLink', url)
+  }
+
+  return (
+    <div style={{ border: '1px solid #dedee8', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
+      <div style={{ display: 'flex', gap: 4, padding: 6, borderBottom: '1px solid #ececf2', flexWrap: 'wrap' }}>
+        {[
+          ['bold', 'B'], ['italic', 'I'], ['underline', 'U'],
+          ['insertUnorderedList', '• List'], ['insertOrderedList', '1. List'],
+        ].map(([command, label]) => (
+          <button key={command} type="button" onMouseDown={event => event.preventDefault()} onClick={() => run(command)} style={{ border: '1px solid #e2e2ea', borderRadius: 5, background: '#fff', padding: '4px 7px' }}>
+            {label}
+          </button>
+        ))}
+        <button type="button" onMouseDown={event => event.preventDefault()} onClick={addLink} style={{ border: '1px solid #e2e2ea', borderRadius: 5, background: '#fff', padding: '4px 7px' }}>Link</button>
+        <button type="button" onMouseDown={event => event.preventDefault()} onClick={() => run('removeFormat')} style={{ border: '1px solid #e2e2ea', borderRadius: 5, background: '#fff', padding: '4px 7px' }}>Xóa format</button>
+      </div>
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={event => onChange(event.currentTarget.innerHTML)}
+        style={{ minHeight: 150, padding: 10, outline: 0, lineHeight: 1.55 }}
+      />
+    </div>
+  )
+}
+
 const PropertyControl = ({ field, value, onChange }) => {
   const [uploading, setUploading] = useState(false)
+
+  if (field.control === 'richtext') {
+    return <RichTextControl value={value} onChange={onChange} />
+  }
 
   if (field.control === 'multiImage') {
     const images = Array.isArray(value) ? value : []
@@ -383,6 +432,15 @@ export function BlockInspector() {
       <PanelBody>
         {section ? (
           <>
+            <Field>
+              <span>Tiêu đề của block (không bắt buộc)</span>
+              <PropertyControl
+                field={{ name: 'blockTitle', label: 'Tiêu đề của block', control: 'text' }}
+                value={section.props?.blockTitle}
+                onChange={value => updateBlockProps(section.id, { blockTitle: value })}
+              />
+            </Field>
+
             {(definition?.fields ?? []).length > 0 ? (
               definition.fields.map(field => (
                 <Field key={field.name}>
