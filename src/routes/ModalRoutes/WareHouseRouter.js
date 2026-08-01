@@ -33,6 +33,11 @@ const WareHoseRouter = [
     modalOptions: { title: '', width: 750 }
   },
   {
+    path: 'stock.add',
+    Component: React.lazy(() => import('@/containers/WareHouse/ModalNhapKho')),
+    modalOptions: { title: '', width: 750 }
+  },
+  {
     path: 'ship.update',
     Component: React.lazy(() => import('@/containers/Ship/DeliveryPager')),
     modalOptions: { title: '', width: 750 }

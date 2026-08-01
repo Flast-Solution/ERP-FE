@@ -21,10 +21,11 @@
 
 import React, { useState, useCallback } from 'react';
 import { Col, Form, message, Row } from 'antd';
-import { 
-  FormContextCustom, 
-  FormSelectInfiniteProduct, 
+import {
+  FormContextCustom,
+  FormSelectInfiniteProduct,
   BtnSubmit,
+  FormInput,
   FormSelect,
 	FormInputNumber,
 	FormSelectInfiniteProvider,
@@ -41,15 +42,18 @@ import { useEffectAsync } from '@flast-erp/core/hooks';
 
 const ModalNhapKho = ({
   product,
-  onSave = (values) => values
+  onSave,
+  data,
+  closeModal
 }) => {
 
   const [ form ] = Form.useForm();
   const [ inStocks, setInStocks ] = useState([]);
   const [ skus, setSkus ] = useState([]);
   const [ record, setRecord ] = useState({});
-  const [ mProduct, setProduct ] = useState(product || {});
+  const [ mProduct, setProduct ] = useState(product || data?.product || {});
   const [ sku, setSkuDetail ] = useState();
+  const handleSave = onSave || data?.onSave;
 
   useEffectAsync(async() => {
     if (!mProduct?.id) {
@@ -69,8 +73,9 @@ const ModalNhapKho = ({
 
     const { message: msg, data, errorCode } = await RequestUtils.Post(endpoint, { model, mSkuDetails });
     message.success(msg);
-    onSave({ data, errorCode });
-  }, [onSave, sku, mProduct]);
+    handleSave?.({ data, errorCode });
+    closeModal?.();
+  }, [closeModal, handleSave, sku, mProduct]);
 
   const onChangeGetSelectedItem = (value, nProduct) => {
     setSkus(nProduct?.skus || []);
@@ -101,7 +106,7 @@ const ModalNhapKho = ({
           <Col span={24}>
             <FormHidden name="id" />
           </Col>
-          <Col span={12}>
+          <Col md={12} xs={24}>
             <FormSelectInfiniteProduct
               label='Chọn sản phẩm'
               placeholder='Chọn sản phẩm'
@@ -110,7 +115,7 @@ const ModalNhapKho = ({
               onChangeGetSelectedItem={onChangeGetSelectedItem}
             />
           </Col>
-          <Col span={12}>
+          <Col md={12} xs={24}>
             <FormSelect
               label='SKU'
               name='skuId'
@@ -125,7 +130,7 @@ const ModalNhapKho = ({
           <Col span={24} style={{marginBottom: 20}}>
             {memoSkuDetail}
           </Col>
-          <Col span={12}>
+          <Col md={12} xs={24}>
             <FormInputNumber
               label='Số lượng'
               name='quantity'
@@ -136,7 +141,7 @@ const ModalNhapKho = ({
               messageRequire='Số lượng không được để trống'
             />
           </Col>
-          <Col span={12}>
+          <Col md={12} xs={24}>
             <FormSelectInfiniteProvider
               label='Nhà cung cấp'
               name='providerId'
@@ -145,7 +150,14 @@ const ModalNhapKho = ({
               messageRequire='Nhà cung cấp không được để trống'
             />
           </Col>
-          <Col span={24}>
+          <Col md={12} xs={24}>
+            <FormInput
+              label='Mã đơn NCC'
+              name='providerOrderCode'
+              placeholder='Nhập mã đơn nhà cung cấp'
+            />
+          </Col>
+          <Col md={12} xs={24}>
             <FormInfiniteStock
               label='Kho hàng'
               name='stockId'
