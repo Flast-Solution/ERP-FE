@@ -33,7 +33,7 @@ import {
 import ProductFormProperty from './ProductFormProperty';
 import { SwitcherOutlined } from '@ant-design/icons';
 import ProductFormPrice from './ProductFormPrice';
-import { PRODUCT_STATUS } from '@/configs/localData';
+import { PRODUCT_CURRENCIES, PRODUCT_STATUS } from '@/configs/localData';
 import { FormListStyles } from "@/css/global";
 import FormInfiniteQcProduct from '@/components/FormInfiniteQcProduct';
 
@@ -56,7 +56,7 @@ const ProductForm = () => {
           showSearch
           onData={(data) => data ?? []}
           apiPath='service/list'
-          apiAddNewItem='product-type/save'
+          apiAddNewItem='erp/service/create'
           label="Dịch vụ"
           name="serviceId"
           placeholder="Chọn dịch vụ"
@@ -92,7 +92,19 @@ const ProductForm = () => {
           placeholder={"Chọn trạng thái"}
         />
       </Col>
-      <Col md={12} xs={24}>
+      <Col md={8} xs={24}>
+        <FormSelect
+          required
+          initialValue="VND"
+          resourceData={PRODUCT_CURRENCIES}
+          valueProp="value"
+          titleProp="text"
+          label="Loại tiền"
+          name="currency"
+          placeholder="Chọn loại tiền"
+        />
+      </Col>
+      <Col md={8} xs={24}>
         <FormInputNumber
           required
           label="Giá hiển thị"
@@ -100,7 +112,7 @@ const ProductForm = () => {
           placeholder={"Nhập giá hiển thị"}
         />
       </Col>
-      <Col md={12} xs={24}>
+      <Col md={8} xs={24}>
         <FormInputNumber
           label="Giá tham khảo"
           name="priceRef"

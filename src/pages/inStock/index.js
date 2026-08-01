@@ -34,7 +34,7 @@ import { useGetList } from "@flast-erp/core/hooks";
 import { dateFormatOnSubmit, f5List, formatTime } from '@flast-erp/core/utils';
 import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import { ShowSkuDetail } from '@/containers/Product/SkuView';
-import { HASH_POPUP, HASH_MODAL } from '@/configs/constant';
+import { HASH_MODAL } from '@/configs/constant';
 
 const ListInStock = () => {
 
@@ -50,8 +50,8 @@ const ListInStock = () => {
     const onAfterSubmit = (values) => {
       f5List("warehouse/fetch");
     };
-    InAppEvent.emit(HASH_POPUP, {
-      hash: "stock.add",
+    InAppEvent.emit(HASH_MODAL, {
+      hash: "#stock.add",
       title: "Nhập kho",
       data: { onSave: onAfterSubmit }
     });
