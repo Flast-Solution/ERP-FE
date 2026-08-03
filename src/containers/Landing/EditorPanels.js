@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import axios from 'axios'
 import { message } from 'antd'
+import JoditEditor from 'jodit-react'
 import { useEditorStore } from '@/store/editorStore'
 import {
   extractUploadItems,
   resolveUploadUrl,
 } from '@/containers/PreviewModal/uploadUtils'
-import { LANDING_BLOCKS, getLandingBlock } from './blockRegistry'
+import { LANDING_BLOCKS, createLandingBlock, getLandingBlock } from './blockRegistry'
 import {
   Panel, PanelHead, PanelBody, SectionLabel, BlockList, BlockRow, BlockIcon, BlockName,
   Palette, PaletteButton, Divider, Field, TextInput, TextArea, SelectInput, ColorRow,
@@ -23,52 +24,39 @@ const formatTime = value => {
 }
 
 const RichTextControl = ({ value, onChange }) => {
-  const editorRef = useRef(null)
-
-  useEffect(() => {
-    if (editorRef.current && editorRef.current.innerHTML !== (value ?? '')) {
-      editorRef.current.innerHTML = value ?? ''
-    }
-  }, [value])
-
-  const run = (command, commandValue) => {
-    editorRef.current?.focus()
-    document.execCommand(command, false, commandValue)
-    onChange(editorRef.current?.innerHTML ?? '')
-  }
-
-  const addLink = () => {
-    const url = window.prompt('Nhập URL liên kết')
-    if (url) run('createLink', url)
-  }
+  const config = useMemo(() => ({
+    readonly: false,
+    height: 260,
+    toolbarAdaptive: false,
+    buttons: [
+      'bold', 'italic', 'underline', 'strikethrough', '|',
+      'ul', 'ol', '|', 'paragraph', 'fontsize', 'brush', '|',
+      'link', 'align', '|', 'undo', 'redo', 'eraser', 'source',
+    ],
+    askBeforePasteHTML: false,
+    askBeforePasteFromWord: false,
+  }), [])
 
   return (
-    <div style={{ border: '1px solid #dedee8', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
-      <div style={{ display: 'flex', gap: 4, padding: 6, borderBottom: '1px solid #ececf2', flexWrap: 'wrap' }}>
-        {[
-          ['bold', 'B'], ['italic', 'I'], ['underline', 'U'],
-          ['insertUnorderedList', '• List'], ['insertOrderedList', '1. List'],
-        ].map(([command, label]) => (
-          <button key={command} type="button" onMouseDown={event => event.preventDefault()} onClick={() => run(command)} style={{ border: '1px solid #e2e2ea', borderRadius: 5, background: '#fff', padding: '4px 7px' }}>
-            {label}
-          </button>
-        ))}
-        <button type="button" onMouseDown={event => event.preventDefault()} onClick={addLink} style={{ border: '1px solid #e2e2ea', borderRadius: 5, background: '#fff', padding: '4px 7px' }}>Link</button>
-        <button type="button" onMouseDown={event => event.preventDefault()} onClick={() => run('removeFormat')} style={{ border: '1px solid #e2e2ea', borderRadius: 5, background: '#fff', padding: '4px 7px' }}>Xóa format</button>
-      </div>
-      <div
-        ref={editorRef}
-        contentEditable
-        suppressContentEditableWarning
-        onInput={event => onChange(event.currentTarget.innerHTML)}
-        style={{ minHeight: 150, padding: 10, outline: 0, lineHeight: 1.55 }}
-      />
-    </div>
+    <JoditEditor
+      value={value ?? ''}
+      config={config}
+      onBlur={nextValue => onChange(nextValue)}
+    />
   )
 }
 
 const PropertyControl = ({ field, value, onChange }) => {
   const [uploading, setUploading] = useState(false)
+  const [dragIndex, setDragIndex] = useState(null)
+
+  if (field.control === 'repeater') {
+    return <RepeaterControl field={field} value={value} onChange={onChange} />
+  }
+
+  if (field.control === 'nestedBlocks') {
+    return <NestedBlocksControl value={value} onChange={onChange} />
+  }
 
   if (field.control === 'richtext') {
     return <RichTextControl value={value} onChange={onChange} />
@@ -97,7 +85,7 @@ const PropertyControl = ({ field, value, onChange }) => {
       try {
         const formData = new FormData()
         files.forEach(file => formData.append('files', file))
-        formData.append('folder', 'landing/banner')
+        formData.append('folder', field.uploadFolder || 'landing/banner')
         const response = await axios.post('/upload/folder/multiple', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         })
@@ -108,14 +96,17 @@ const PropertyControl = ({ field, value, onChange }) => {
             alt: files[index]?.name ?? `Banner ${images.length + index + 1}`,
             link: '',
             openInNewTab: false,
+            caption: '',
+            focalX: 50,
+            focalY: 50,
           }))
           .filter(item => item.url)
 
         if (!nextImages.length) throw new Error('API upload không trả về đường dẫn ảnh.')
         onChange([...images, ...nextImages])
-        message.success(`Đã tải lên ${nextImages.length} ảnh banner.`)
+        message.success(`Đã tải lên ${nextImages.length} ảnh.`)
       } catch (error) {
-        message.error(error?.response?.data?.message || error.message || 'Upload banner thất bại.')
+        message.error(error?.response?.data?.message || error.message || 'Upload ảnh thất bại.')
       } finally {
         setUploading(false)
       }
@@ -125,6 +116,14 @@ const PropertyControl = ({ field, value, onChange }) => {
       onChange(images.map((image, imageIndex) => (
         imageIndex === index ? { ...image, ...values } : image
       )))
+    }
+
+    const moveImage = (fromIndex, toIndex) => {
+      if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || toIndex >= images.length) return
+      const nextImages = [...images]
+      const [moved] = nextImages.splice(fromIndex, 1)
+      nextImages.splice(toIndex, 0, moved)
+      onChange(nextImages)
     }
 
     return (
@@ -141,8 +140,28 @@ const PropertyControl = ({ field, value, onChange }) => {
         </MultiUploadButton>
         <MultiImageList>
           {images.map((image, index) => (
-            <MultiImageItem key={`${image.url}-${index}`}>
-              <MultiImageThumb src={image.url} alt={image.alt || `Banner ${index + 1}`} />
+            <MultiImageItem
+              key={`${image.url}-${index}`}
+              draggable
+              onDragStart={() => setDragIndex(index)}
+              onDragOver={event => event.preventDefault()}
+              onDrop={() => {
+                if (dragIndex !== null) moveImage(dragIndex, index)
+                setDragIndex(null)
+              }}
+              onDragEnd={() => setDragIndex(null)}
+            >
+              <div>
+                <MultiImageThumb
+                  src={image.url}
+                  alt={image.alt || `Banner ${index + 1}`}
+                  style={{ objectPosition: `${image.focalX ?? 50}% ${image.focalY ?? 50}%` }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 4, marginTop: 5 }}>
+                  <button type="button" disabled={index === 0} onClick={() => moveImage(index, index - 1)}>↑</button>
+                  <button type="button" disabled={index === images.length - 1} onClick={() => moveImage(index, index + 1)}>↓</button>
+                </div>
+              </div>
               <MultiImageFields>
                 <TextInput
                   value={image.alt ?? ''}
@@ -150,10 +169,33 @@ const PropertyControl = ({ field, value, onChange }) => {
                   onChange={event => updateImage(index, { alt: event.target.value })}
                 />
                 <TextInput
+                  value={image.caption ?? ''}
+                  placeholder="Chú thích ảnh"
+                  onChange={event => updateImage(index, { caption: event.target.value })}
+                />
+                <TextInput
                   value={image.link ?? ''}
                   placeholder="URL khi click"
                   onChange={event => updateImage(index, { link: event.target.value })}
                 />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                  <TextInput
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={image.focalX ?? 50}
+                    title="Điểm lấy nét ngang (%)"
+                    onChange={event => updateImage(index, { focalX: event.target.value })}
+                  />
+                  <TextInput
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={image.focalY ?? 50}
+                    title="Điểm lấy nét dọc (%)"
+                    onChange={event => updateImage(index, { focalY: event.target.value })}
+                  />
+                </div>
                 <CheckRow>
                   <input
                     type="checkbox"
@@ -343,6 +385,86 @@ const RepeaterControl = ({ field, value, onChange }) => {
       >
         + Thêm mục
       </ActionButton>
+    </Repeater>
+  )
+}
+
+const NESTED_BLOCK_TYPES = new Set([
+  'heading', 'text', 'image', 'button', 'features', 'pricing', 'divider', 'spacer',
+  'richText', 'cta', 'contactForm', 'leadForm', 'video', 'gallery', 'faq',
+  'testimonials', 'logos', 'stats', 'map', 'social', 'productList', 'postList',
+  'teamList', 'countdown', 'tabs', 'timeline', 'customHtml',
+])
+
+const NestedBlocksControl = ({ value, onChange }) => {
+  const blocks = Array.isArray(value) ? value : []
+  const definitions = LANDING_BLOCKS.filter(block => NESTED_BLOCK_TYPES.has(block.type))
+  const [type, setType] = useState(definitions[0]?.type || 'heading')
+  const [dragIndex, setDragIndex] = useState(null)
+
+  const updateBlockProps = (index, name, nextValue) => {
+    onChange(blocks.map((block, blockIndex) => blockIndex === index
+      ? { ...block, props: { ...block.props, [name]: nextValue } }
+      : block))
+  }
+
+  const moveBlock = (fromIndex, toIndex) => {
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || toIndex >= blocks.length) return
+    const nextBlocks = [...blocks]
+    const [moved] = nextBlocks.splice(fromIndex, 1)
+    nextBlocks.splice(toIndex, 0, moved)
+    onChange(nextBlocks)
+  }
+
+  return (
+    <Repeater>
+      {blocks.map((block, index) => {
+        const definition = getLandingBlock(block.type)
+        return (
+          <RepeaterItem
+            key={block.id || `${block.type}-${index}`}
+            draggable
+            onDragStart={() => setDragIndex(index)}
+            onDragOver={event => event.preventDefault()}
+            onDrop={() => {
+              if (dragIndex !== null) moveBlock(dragIndex, index)
+              setDragIndex(null)
+            }}
+            onDragEnd={() => setDragIndex(null)}
+          >
+            <RepeaterHead>
+              <strong>{index + 1}. {definition?.label || block.type}</strong>
+              <span style={{ display: 'flex', gap: 5 }}>
+                <button type="button" disabled={index === 0} onClick={() => moveBlock(index, index - 1)}>↑</button>
+                <button type="button" disabled={index === blocks.length - 1} onClick={() => moveBlock(index, index + 1)}>↓</button>
+                <button type="button" onClick={() => onChange(blocks.filter((_, blockIndex) => blockIndex !== index))}>Xóa</button>
+              </span>
+            </RepeaterHead>
+            <details>
+              <summary style={{ cursor: 'pointer', marginBottom: 10 }}>Cấu hình block</summary>
+              {(definition?.fields ?? []).map(field => (
+                <Field key={field.name}>
+                  <span>{field.label}</span>
+                  <PropertyControl
+                    field={field}
+                    value={block.props?.[field.name]}
+                    onChange={nextValue => updateBlockProps(index, field.name, nextValue)}
+                  />
+                </Field>
+              ))}
+            </details>
+          </RepeaterItem>
+        )
+      })}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 7 }}>
+        <SelectInput value={type} onChange={event => setType(event.target.value)}>
+          {definitions.map(definition => <option key={definition.type} value={definition.type}>{definition.label}</option>)}
+        </SelectInput>
+        <ActionButton type="button" onClick={() => {
+          const block = createLandingBlock(type)
+          if (block) onChange([...blocks, block])
+        }}>+ Thêm</ActionButton>
+      </div>
     </Repeater>
   )
 }

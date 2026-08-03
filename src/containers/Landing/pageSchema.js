@@ -21,6 +21,11 @@ export const DEFAULT_PAGE_SCHEMA = {
       type: 'navbar',
       props: {
         brandName: 'Nimbus',
+        brandUrl: '/',
+        brandOpenInNewTab: false,
+        sticky: false,
+        backgroundColor: '#ffffff',
+        textColor: '#16161a',
         links: [
           { label: 'Sản phẩm', url: '#features' },
           { label: 'Giải pháp', url: '#hero' },
@@ -39,6 +44,19 @@ export const DEFAULT_PAGE_SCHEMA = {
         primaryButtonText: 'Bắt đầu miễn phí',
         secondaryButtonText: 'Xem demo',
         background: '#fafaff',
+        backgroundType: 'color',
+        backgroundImageUrl: '',
+        backgroundVideoUrl: '',
+        overlayColor: '#000000',
+        overlayOpacity: '35',
+        layout: 'center',
+        minHeight: '520',
+        mobileMinHeight: '420',
+        textColor: '#16161a',
+        titleFontSize: '48',
+        mobileTitleFontSize: '36',
+        descriptionFontSize: '18',
+        mobileDescriptionFontSize: '16',
       },
     },
     {
@@ -121,16 +139,49 @@ export const validatePageSchema = schema => {
   if (new Set(schema.sections.map(section => section?.id)).size !== schema.sections.length) {
     errors.push('ID block không được trùng nhau.')
   }
-  schema.sections.forEach((section, index) => {
+  const allBlockIds = []
+  const validateSection = (section, label) => {
     if (!isPlainObject(section)) {
-      errors.push(`Block ${index + 1} không phải object.`)
+      errors.push(`${label} không phải object.`)
       return
     }
-    if (typeof section.id !== 'string' || !section.id.trim()) errors.push(`Block ${index + 1} thiếu id.`)
-    if (typeof section.type !== 'string' || !section.type.trim()) errors.push(`Block ${index + 1} thiếu type.`)
-    else if (!getLandingBlock(section.type)) errors.push(`Block ${section.id || index + 1} có type không được hỗ trợ.`)
-    if (!isPlainObject(section.props)) errors.push(`Props của block ${section.id || index + 1} không hợp lệ.`)
-  })
+    if (typeof section.id !== 'string' || !section.id.trim()) errors.push(`${label} thiếu id.`)
+    else allBlockIds.push(section.id)
+    if (typeof section.type !== 'string' || !section.type.trim()) errors.push(`${label} thiếu type.`)
+    else if (!getLandingBlock(section.type)) errors.push(`Block ${section.id || label} có type không được hỗ trợ.`)
+    if (!isPlainObject(section.props)) {
+      errors.push(`Props của block ${section.id || label} không hợp lệ.`)
+      return
+    }
+
+    if (['contactForm', 'leadForm'].includes(section.type)) {
+      const fields = Array.isArray(section.props.fields) ? section.props.fields : []
+      const names = fields.map(field => String(field?.name ?? '').trim()).filter(Boolean)
+      if (names.length !== fields.length) errors.push(`Form ${section.id} có field thiếu tên.`)
+      if (new Set(names).size !== names.length) errors.push(`Form ${section.id} có tên field bị trùng.`)
+    }
+
+    if (section.type === 'countdown') {
+      if (Number.isNaN(new Date(section.props.targetDate).getTime())) errors.push(`Countdown ${section.id} có ngày kết thúc không hợp lệ.`)
+      try {
+        new Intl.DateTimeFormat('vi-VN', { timeZone: section.props.timezone || 'Asia/Ho_Chi_Minh' }).format()
+      } catch {
+        errors.push(`Countdown ${section.id} có múi giờ không hợp lệ.`)
+      }
+    }
+
+    const nestedGroups = [
+      ...(Array.isArray(section.props.blocks) ? [section.props.blocks] : []),
+      ...(Array.isArray(section.props.columns)
+        ? section.props.columns.map(column => Array.isArray(column?.blocks) ? column.blocks : [])
+        : []),
+    ]
+    nestedGroups.forEach((blocks, groupIndex) => blocks.forEach((block, blockIndex) => (
+      validateSection(block, `${label}.${groupIndex + 1}.${blockIndex + 1}`)
+    )))
+  }
+  schema.sections.forEach((section, index) => validateSection(section, `Block ${index + 1}`))
+  if (new Set(allBlockIds).size !== allBlockIds.length) errors.push('ID block lồng nhau không được trùng nhau.')
   if (schema.seo != null && (!isPlainObject(schema.seo) || !Array.isArray(schema.seo.meta))) errors.push('SEO không hợp lệ.')
   else if (schema.seo?.meta?.some(meta => !isPlainObject(meta) || typeof meta.name !== 'string' || typeof meta.value !== 'string')) errors.push('Thẻ SEO không hợp lệ.')
   if (schema.breadcrumbs != null && !Array.isArray(schema.breadcrumbs)) errors.push('Breadcrumb không hợp lệ.')
