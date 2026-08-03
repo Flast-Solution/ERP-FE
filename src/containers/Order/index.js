@@ -80,8 +80,26 @@ function randomString(length = 8) {
 
 function findByQuantity(arr, quantity) {
   return arrayNotEmpty(arr) ? arr.find(
-    item => quantity >= item.quantityFrom && quantity <= item.quantityTo
+    item => Number(quantity) >= Number(item.quantityFrom)
+      && Number(quantity) <= Number(item.quantityTo)
   ) || {} : {};
+}
+
+function findSkuById(skus = [], skuId) {
+  return (Array.isArray(skus) ? skus : []).find(
+    sku => String(sku?.id) === String(skuId)
+  );
+}
+
+function resolveUnitPrice({ skuPrices = [], quantity, product = {} }) {
+  const priceRange = findByQuantity(skuPrices, quantity);
+  return Number(
+    priceRange?.price
+    ?? priceRange?.priceRef
+    ?? product?.price
+    ?? product?.priceRef
+    ?? 0
+  );
 }
 
 const EditButton = ({
@@ -156,19 +174,25 @@ const BanHangPage = ({
       order.warehouseOptions = getWarehouseByProduct(skuId, mProduct);
 
       const skus = mProduct?.skus ?? [];
-      let skuPrices = [];
+      const selectedSku = findSkuById(skus, skuId);
+      const skuPrices = Array.isArray(selectedSku?.skuPrices) ? selectedSku.skuPrices : [];
+
+      order.skuPrices = skuPrices;
+      order.productPrice = Number(mProduct?.price ?? mProduct?.priceRef ?? 0);
+      order.currency = mProduct?.currency ?? 'VND';
+
       if (arrayNotEmpty(order.warehouseOptions)) {
         let warehouse = _.first(order.warehouseOptions);
         order.warehouse = warehouse?.stockName ?? '';
         order.stock = warehouse?.quantity ?? 0;
-        skuPrices = skus.find(s => s.id === warehouse?.skuId)?.skuPrices ?? [];
       }
 
-      const dataPrice = findByQuantity(skuPrices, order.quantity);
-      if (dataPrice?.priceRef) {
-        order.price = dataPrice.priceRef;
-        order.totalPrice = order.price * order.quantity;
-      }
+      order.price = resolveUnitPrice({
+        skuPrices,
+        quantity: order.quantity,
+        product: mProduct
+      });
+      order.totalPrice = order.price * order.quantity;
       setData(datas => ([...datas, order]));
     };
 
@@ -314,6 +338,15 @@ const BanHangPage = ({
     }
 
     /* Calculate dependent fields */
+    if (field === 'quantity' && arrayNotEmpty(target.skuPrices)) {
+      target.price = resolveUnitPrice({
+        skuPrices: target.skuPrices,
+        quantity: target.quantity,
+        product: {
+          price: target.productPrice
+        }
+      });
+    }
     if (field === 'quantity' || field === 'price') {
       target.totalPrice = target.quantity * target.price;
     }
