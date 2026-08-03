@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { toNumberOrNull } from './utils'
 import { coerceGuardValue } from './guards'
 
@@ -49,18 +50,41 @@ const getFieldInputType = (field = {}) => String(
   field.inputType ?? field.type ?? field.component ?? '',
 ).toLowerCase()
 
+const normalizeTemporalString = (value, inputType) => {
+  const text = String(value ?? '').trim()
+  if (!text) return null
+
+  const vietnameseDateTime = text.match(
+    /^(\d{2})[/-](\d{2})[/-](\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/,
+  )
+  const normalizedText = vietnameseDateTime
+    ? `${vietnameseDateTime[3]}-${vietnameseDateTime[2]}-${vietnameseDateTime[1]}${vietnameseDateTime[4]
+      ? ` ${vietnameseDateTime[4].padStart(2, '0')}:${vietnameseDateTime[5]}:${vietnameseDateTime[6] ?? '00'}`
+      : ''}`
+    : text.replace(/^(\d{4})\/(\d{2})\/(\d{2})/, '$1-$2-$3')
+
+  const parsed = dayjs(normalizedText)
+  if (!parsed.isValid()) return value
+
+  return parsed.format(inputType === 'datetime' ? 'YYYY-MM-DD HH:mm:ss' : 'YYYY-MM-DD')
+}
+
 export const normalizeSubmissionValue = (value, field) => {
   if (value === undefined || value === '') {
     return null
   }
-  if (
-    getFieldInputType(field) === 'date'
-    && value
-    && typeof value === 'object'
-    && typeof value.format === 'function'
-    && typeof value.isValid === 'function'
-  ) {
-    return value.isValid() ? value.format('YYYY/MM/DD') : null
+  const inputType = getFieldInputType(field)
+  if (inputType === 'date' || inputType === 'datetime') {
+    if (
+      value
+      && typeof value === 'object'
+      && typeof value.format === 'function'
+      && typeof value.isValid === 'function'
+    ) {
+      if (!value.isValid()) return null
+      return value.format(inputType === 'datetime' ? 'YYYY-MM-DD HH:mm:ss' : 'YYYY-MM-DD')
+    }
+    return normalizeTemporalString(value, inputType)
   }
   if (value && typeof value === 'object' && typeof value.toISOString === 'function' && typeof value.isValid === 'function') {
     return value.isValid() ? value.toISOString() : null

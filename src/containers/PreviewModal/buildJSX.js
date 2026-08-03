@@ -141,10 +141,12 @@ function buildProps(field) {
 
     case 'datetime':
       props.push({ key: 'showTime', kind: 'bare' })
+      props.push({ key: 'format', value: 'DD/MM/YYYY HH:mm', kind: 'str' })
       props.push({ key: 'style', value: '{{ width: \'100%\' }}', kind: 'raw' })
       break
 
     case 'date':
+      props.push({ key: 'format', value: 'DD/MM/YYYY', kind: 'str' })
       props.push({ key: 'style', value: '{{ width: \'100%\' }}', kind: 'raw' })
       break
 

@@ -129,7 +129,15 @@ const FieldPreview = ({ field }) => {
       )
 
     case 'date':
-      return <FormDatePicker name={fieldKey} label={label} required={required} style={{ width: '100%' }} />
+      return (
+        <FormDatePicker
+          name={fieldKey}
+          label={label}
+          required={required}
+          format="DD/MM/YYYY"
+          style={{ width: '100%' }}
+        />
+      )
 
     case 'datetime':
       return (
@@ -138,6 +146,7 @@ const FieldPreview = ({ field }) => {
           label={label}
           required={required}
           showTime
+          format="DD/MM/YYYY HH:mm"
           style={{ width: '100%' }}
         />
       )
