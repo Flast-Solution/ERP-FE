@@ -15,6 +15,8 @@ const WorkflowProgressDrawer = ({
   orderDetail,
   workflowInstances,
   onClose,
+  entityLabel = 'Mã',
+  entityType = 'order',
 }) => {
   const items = workflowInstances.map((instance, index) => {
     const processId = getWorkflowInstanceProcessId(instance)
@@ -30,6 +32,7 @@ const WorkflowProgressDrawer = ({
           order={order}
           orderDetail={orderDetail}
           workflowInstance={instance}
+          entityType={entityType}
         />
       ),
     }
@@ -46,7 +49,7 @@ const WorkflowProgressDrawer = ({
         <div>
           <Text className="workflow-detail-drawer__eyebrow">TIẾN TRÌNH WORKFLOW</Text>
           <Title level={4}>
-            Mã {orderDetail?.code ?? order?.code ?? ''}
+            {entityLabel} {orderDetail?.code ?? order?.code ?? orderDetail?.name ?? order?.name ?? ''}
           </Title>
         </div>
       )}
@@ -54,7 +57,7 @@ const WorkflowProgressDrawer = ({
       <style>{workflowProgressPageStyles}</style>
       <Spin spinning={loading}>
         {!loading && items.length === 0 ? (
-          <Empty description="Mã đơn này chưa có workflow" />
+          <Empty description={`${entityLabel} này chưa có workflow`} />
         ) : (
           <Tabs
             items={items}

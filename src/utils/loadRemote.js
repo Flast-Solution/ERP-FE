@@ -19,6 +19,7 @@ import * as JoditReact      from "jodit-react"
 import * as QueryString     from "query-string"
 import * as ReactWaypoint   from "react-waypoint"
 import * as FlastErpCore    from "@flast-erp/core"
+import * as FlastWebRuntime from "@/containers/Landing/WebDataContext"
 
 let initialized = false
 const registeredRemotes = new Set()
@@ -131,6 +132,12 @@ const SHARED_DEPS = {
     lib: () => FlastErpCore,
     shareConfig: { singleton: true, requiredVersion: "^1.0.23" },
   },
+  "@flast/web-runtime": {
+    version: "1.0.0",
+    scope: "default",
+    lib: () => FlastWebRuntime,
+    shareConfig: { singleton: true, requiredVersion: "^1.0.0" },
+  },
 }
 
 function ensureInit() {
@@ -202,6 +209,36 @@ export async function loadRemote(
     }
 
     loadedRemoteContainers.add(componentId)
+    return mod
+  }
+
+  const request = remoteLoadQueue.then(load, load)
+  remoteLoadQueue = request.catch(() => undefined)
+  return request
+}
+
+/** Tải remote từ URL remoteEntry đầy đủ, dùng cho trang WEB cấu hình động. */
+export async function loadRemoteFromUrl({
+  name,
+  entry,
+  scope,
+  module = 'MPage',
+  version = '',
+}) {
+  const remoteName = String(name || scope || '').trim()
+  const remoteEntry = String(entry || '').trim()
+  const exposedModule = String(module || 'MPage').replace(/^\.\//, '')
+  if (!remoteName || !remoteEntry) throw new Error('Thiếu tên hoặc URL remoteEntry.')
+
+  const load = async () => {
+    const entryUrl = version
+      ? `${remoteEntry}${remoteEntry.includes('?') ? '&' : '?'}v=${encodeURIComponent(version)}`
+      : remoteEntry
+    ensureRemoteRegistered(remoteName, entryUrl, String(scope || remoteName).trim())
+    if (!loadedRemoteContainers.has(remoteName)) resetLegacyRemoteChunkScope()
+    const mod = await mfLoadRemote(`${remoteName}/${exposedModule}`)
+    if (!mod) throw new Error(`Không tìm thấy module "${module}" trong remote "${scope || remoteName}".`)
+    loadedRemoteContainers.add(remoteName)
     return mod
   }
 

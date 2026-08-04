@@ -404,15 +404,81 @@ const getTransitionStepRef = (transition = {}, direction) => {
   return value != null ? String(value) : ''
 }
 
-const normalizeProcess = (process = {}) => ({
-  ...process,
-  id: process?.id ?? null,
-  processKey: process?.processKey ?? process?.process_key ?? process?.key ?? process?.code ?? '',
-  name: process?.name ?? 'Untitled',
-  code: process?.code ?? process?.processKey ?? process?.process_key ?? 'untitled',
-  description: process?.description ?? '',
-  flowType: process?.flowType ?? process?.flow_type ?? '',
+const normalizeStatusConfiguration = (item = {}) => ({
+  stepProcessIds: firstArray(
+    item.stepProcessIds,
+    item.stepTypeIds,
+    item.listStepProcessId,
+    item.list_step_process_id,
+  ),
+  statusName: item.statusName ?? item.text ?? '',
+  scope: item.scope ?? 'current',
+  color: item.color ?? null,
 })
+
+export const normalizeProcessStatusConfigurations = (value) => {
+  if (Array.isArray(value)) {
+    return value.map(normalizeStatusConfiguration)
+  }
+
+  if (value && typeof value === 'object') {
+    const items = firstArray(value.items, value.configurations, value.listStatus)
+    return items.map(normalizeStatusConfiguration)
+  }
+
+  if (typeof value !== 'string' || !value.trim()) {
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(value)
+    return normalizeProcessStatusConfigurations(parsed)
+  } catch (_) {
+    const configurations = []
+    const itemPattern = /ProcessUpdateItem\[listStepProcessId=\[([^\]]*)\],\s*text=([\s\S]*?),\s*color=([^\]]*)\]/g
+    let match = itemPattern.exec(value)
+
+    while (match) {
+      const stepProcessIds = match[1]
+        .split(',')
+        .map(item => item.trim())
+        .filter(Boolean)
+        .map(item => {
+          const numberValue = Number(item)
+          return Number.isSafeInteger(numberValue) ? numberValue : item
+        })
+      const rawColor = match[3].trim()
+
+      configurations.push({
+        stepProcessIds,
+        statusName: match[2].trim(),
+        scope: 'current',
+        color: rawColor === 'null' ? null : rawColor,
+      })
+      match = itemPattern.exec(value)
+    }
+
+    return configurations
+  }
+}
+
+const normalizeProcess = (process = {}) => {
+  const configuredStatuses = Array.isArray(process?.statusConfigurations)
+    && process.statusConfigurations.length > 0
+    ? process.statusConfigurations
+    : (process?.listStatus ?? process?.list_status)
+
+  return {
+    ...process,
+    id: process?.id ?? null,
+    processKey: process?.processKey ?? process?.process_key ?? process?.key ?? process?.code ?? '',
+    name: process?.name ?? 'Untitled',
+    code: process?.code ?? process?.processKey ?? process?.process_key ?? 'untitled',
+    description: process?.description ?? '',
+    flowType: process?.flowType ?? process?.flow_type ?? '',
+    statusConfigurations: normalizeProcessStatusConfigurations(configuredStatuses),
+  }
+}
 
 /*
   Keep legacy shape in comments for quick mental mapping:

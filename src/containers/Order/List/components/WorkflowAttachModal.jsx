@@ -19,9 +19,11 @@ const WorkflowAttachModal = ({
   selectedOrder,
   selectedWorkflowEntityType,
   canSubmit,
+  entityLabel,
 }) => {
   const isLotTarget = selectedWorkflowEntityType === LOT_WORKFLOW_ENTITY_TYPE
   const orderCode = selectedOrder?.code || selectedOrder?.name
+  const resolvedEntityLabel = entityLabel || (isLotTarget ? 'Lô' : 'Đơn')
   const workflowOptions = workflows.map(workflow => ({
     value: workflow.id,
     label: workflow.name || workflow.processKey || `Workflow #${workflow.id}`,
@@ -40,7 +42,7 @@ const WorkflowAttachModal = ({
         <div className="workflow-attach-modal__heading">
           <Text className="workflow-attach-modal__eyebrow">THÊM WORKFLOW</Text>
           <Title level={4}>
-            {isLotTarget ? 'Lô' : 'Đơn'} {orderCode || ''}
+            {resolvedEntityLabel} {orderCode || ''}
           </Title>
         </div>
       )}
@@ -57,7 +59,7 @@ const WorkflowAttachModal = ({
       <Spin spinning={workflowLoading}>
         <div className="workflow-attach-modal__content">
           {workflowTargets.length === 0 ? (
-            <Empty description="Đơn hàng chưa có đơn con để gắn workflow" />
+            <Empty description={`${resolvedEntityLabel} chưa có đối tượng để gắn workflow`} />
           ) : workflowTargets.map((target, index) => {
             const targetKey = String(target.id)
             const targetCode = target.code || `${orderCode || 'Đơn'} - ${index + 1}`

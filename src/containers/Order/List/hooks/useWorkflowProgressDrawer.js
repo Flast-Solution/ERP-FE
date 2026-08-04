@@ -16,7 +16,7 @@ const useWorkflowProgressDrawer = () => {
   const [orderDetail, setOrderDetail] = useState(null)
   const [workflowInstances, setWorkflowInstances] = useState([])
 
-  const openWorkflowProgressDrawer = useCallback(async (selectedOrder, selectedDetail) => {
+  const openWorkflowProgressDrawer = useCallback(async (selectedOrder, selectedDetail, options = {}) => {
     if (!selectedDetail?.id) return
 
     const requestId = requestIdRef.current + 1
@@ -29,7 +29,7 @@ const useWorkflowProgressDrawer = () => {
 
     try {
       const instances = await fetchWorkflowInstancesByEntity({
-        entityName: ORDER_WORKFLOW_ENTITY_TYPE,
+        entityName: options.entityName || ORDER_WORKFLOW_ENTITY_TYPE,
         entityIds: [selectedDetail.id],
       })
       const processIds = Array.from(new Set(
@@ -53,7 +53,7 @@ const useWorkflowProgressDrawer = () => {
       })))
     } catch (error) {
       if (requestIdRef.current === requestId) {
-        message.error('Không tải được tiến trình workflow của mã đơn này.')
+        message.error(`Không tải được tiến trình workflow của ${options.entityLabel || 'đối tượng này'}.`)
       }
     } finally {
       if (requestIdRef.current === requestId) {

@@ -19,6 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
+import { useEffect } from 'react';
 import { Row, Col } from 'antd';
 import {
   FormInput,
@@ -26,8 +27,34 @@ import {
   FormSelect,
   FormDatePicker
 } from '@flast-erp/core/components';
+import { RequestUtils } from '@flast-erp/core/utils';
+
+const PRODUCT_STATUS_OPTIONS = [
+  { id: 1, name: 'Kích hoạt' },
+  { id: 0, name: 'Ngưng' }
+];
 
 const ProductFilter = () => {
+  useEffect(() => {
+    let active = true;
+
+    RequestUtils.Get('/entity-status/list-by-type', { type: 'PRODUCT' })
+      .then((response) => {
+        if (active) {
+          console.log('[ProductFilter] entity status response:', response);
+        }
+      })
+      .catch((error) => {
+        if (active) {
+          console.error('[ProductFilter] entity status error:', error);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <>
       <Row gutter={16}>
@@ -45,17 +72,32 @@ const ProductFilter = () => {
           />
         </Col>
         <Col xl={6} lg={6} md={6} xs={24}>
+          <FormInput
+            label="Tên thiết lập"
+            name="attributedName"
+            placeholder="Nhập tên thiết lập"
+          />
+        </Col>
+        <Col xl={6} lg={6} md={6} xs={24}>
+          <FormInput
+            label="Giá trị thiết lập"
+            name="attributedValue"
+            placeholder="Nhập giá trị thiết lập"
+          />
+        </Col>
+        <Col xl={6} lg={6} md={6} xs={24}>
           <FormSelectUser
-            name={'userId'}
+            name="createdBy"
             label="Nhân viên"
           />
         </Col>
         <Col xl={6} lg={6} md={6} xs={24}>
           <FormSelect
             label="Trạng thái"
+            name="status"
             valueProp="id"
             titleProp='name'
-            resourceData={[]}
+            resourceData={PRODUCT_STATUS_OPTIONS}
             placeholder='Lọc theo trạng thái'
           />
         </Col>
