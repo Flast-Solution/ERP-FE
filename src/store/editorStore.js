@@ -99,7 +99,7 @@ export const useEditorStore = create((set, get) => ({
     const pageId = id || 'landing-home'
     if (get().initializedPage && String(get().currentPageId) === String(pageId)) return
 
-    const page = mode === 'create' ? null : getLandingPage(pageId)
+    const page = getLandingPage(pageId)
     const schema = page?.schema
       ? normalizePageSchema(page.schema)
       : {

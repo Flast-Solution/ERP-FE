@@ -43,7 +43,7 @@ const MainLayout = (props) => {
     }, []);
 
     const memoLayout = useMemo(() => {
-        const isLanding = pathname.startsWith('/landing/edit');
+        const isLanding = pathname.startsWith('/landing/edit') || pathname.startsWith('/m/');
         const Layout = ContainerLayouts[isLanding 
             ? 'LandingLayout' 
             : (user?.id ? 'PrivateLayout' : 'GuestLayout')

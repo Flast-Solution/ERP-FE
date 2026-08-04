@@ -61,6 +61,43 @@ export const getLandingPage = id => (
   listLandingPages().find(page => String(page.id) === String(id)) ?? null
 )
 
+export const WEB_CONTENT_TYPES = {
+  LANDING: 'LANDING_EDITOR',
+  MICRO_FRONTEND: 'MICRO_FRONTEND',
+}
+
+export const saveWebPage = page => {
+  if (!page?.id) return null
+
+  const pages = listLandingPages()
+  const previous = pages.find(item => String(item.id) === String(page.id))
+  const nextPage = {
+    ...previous,
+    ...page,
+    id: page.id,
+    name: String(page.name || previous?.name || 'Trang chưa đặt tên'),
+    slug: String(page.slug || previous?.slug || `/m/${page.id}`),
+    contentType: page.contentType || previous?.contentType || WEB_CONTENT_TYPES.LANDING,
+    status: page.status || previous?.status || 'DRAFT',
+    authenticationRequired: Boolean(page.authenticationRequired),
+    updatedAt: new Date().toISOString(),
+  }
+  const nextPages = previous
+    ? pages.map(item => String(item.id) === String(page.id) ? nextPage : item)
+    : [nextPage, ...pages]
+
+  write(PAGE_STORAGE_KEY, nextPages)
+  return nextPage
+}
+
+export const deleteWebPage = id => {
+  const pages = listLandingPages()
+  const nextPages = pages.filter(page => String(page.id) !== String(id))
+  if (nextPages.length === pages.length) return false
+  write(PAGE_STORAGE_KEY, nextPages)
+  return true
+}
+
 export const saveLandingPage = ({
   id,
   schema,
@@ -80,6 +117,8 @@ export const saveLandingPage = ({
     status,
     updatedAt: new Date().toISOString(),
     publishedAt: publishedAt ?? previous?.publishedAt ?? null,
+    contentType: WEB_CONTENT_TYPES.LANDING,
+    authenticationRequired: Boolean(previous?.authenticationRequired),
     schema: normalizePageSchema(schema),
   }
   const nextPages = previous

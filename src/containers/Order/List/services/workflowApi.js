@@ -51,6 +51,67 @@ export const fetchWorkflowPreview = async (instanceId) => {
 }
 
 /**
+ * Gắn dữ liệu workflow vào danh sách entity chung (sản phẩm, khách hàng...).
+ * Không tải preview tại màn danh sách; preview chỉ được tải khi mở tiến trình.
+ */
+export const enrichEntitiesWithWorkflowData = async (tableData, entityType) => {
+  const entities = Array.isArray(tableData?.embedded) ? tableData.embedded : []
+  const entityIds = entities.map(item => item?.id).filter(Boolean)
+  if (!entityIds.length) return tableData
+
+  try {
+    const instances = await fetchWorkflowInstancesByEntity({
+      entityName: entityType,
+      entityIds,
+    })
+    const instancesByEntityId = instances.reduce((result, instance) => {
+      const entityId = getWorkflowInstanceEntityId(instance)
+      if (entityId === undefined || entityId === null || entityId === '') return result
+      const key = String(entityId)
+      result.set(key, [...(result.get(key) ?? []), normalizeWorkflowInstance(instance)])
+      return result
+    }, new Map())
+    const processIds = Array.from(new Set(
+      instances.map(getWorkflowInstanceProcessId).filter(Boolean).map(Number)
+    ))
+    const processes = await Promise.all(processIds.map(async processId => {
+      try {
+        return await fetchWorkflowProcessDetail(processId)
+      } catch {
+        return { id: processId }
+      }
+    }))
+    const processMap = new Map(processes.filter(Boolean).map(process => [Number(process.id), process]))
+
+    return {
+      ...tableData,
+      embedded: entities.map(entity => {
+        const workflowInstances = (instancesByEntityId.get(String(entity.id)) ?? []).map(instance => ({
+          ...instance,
+          workflowProcess: processMap.get(Number(getWorkflowInstanceProcessId(instance))) ?? null,
+        }))
+        return {
+          ...entity,
+          workflowInstances,
+          workflowInstance: workflowInstances[0] ?? null,
+          workflowProcess: workflowInstances[0]?.workflowProcess ?? null,
+        }
+      }),
+    }
+  } catch {
+    return {
+      ...tableData,
+      embedded: entities.map(entity => ({
+        ...entity,
+        workflowInstances: [],
+        workflowInstance: null,
+        workflowProcess: null,
+      })),
+    }
+  }
+}
+
+/**
  * Enrich order table rows with workflow instance, process detail, and preview.
  * Preserves existing N+1 fetch behavior; extract-only refactor.
  */

@@ -10,6 +10,13 @@ const TagPage = React.lazy(() => import('@/pages/tag'));
 const TagEditPage = React.lazy(() => import('@/pages/tag/Edit'));
 const Landing = React.lazy(() => import('@/pages/landing'));
 const LandingEdit = React.lazy(() => import('@/pages/landing/Edit'));
+const WebPageRuntime = React.lazy(() => import('@/containers/Landing/WebPageRuntime'));
+
+export const PublicWebConfig = {
+  routes: [
+    { path: '/m/:pageId', element: <WebPageRuntime /> }
+  ]
+};
 
 export const WebConfig = {
   auth    : authRoles.user,

@@ -8,6 +8,7 @@ import { useWorkflowRemoteForm } from '@/pages/order/progress/hooks/useWorkflowR
 import WorkflowFormSection from '@/pages/order/progress/components/WorkflowFormSection'
 import WorkflowDrawerSteps from './WorkflowDrawerSteps'
 import WorkflowOrderDetailCard from './WorkflowOrderDetailCard'
+import WorkflowProductCard from './WorkflowProductCard'
 
 const { Text, Title } = Typography
 
@@ -15,6 +16,7 @@ const WorkflowInstanceContent = ({
   order,
   orderDetail,
   workflowInstance,
+  entityType = 'order',
 }) => {
   const { user } = useGetMe()
   const scopedOrder = useMemo(() => ({
@@ -56,6 +58,11 @@ const WorkflowInstanceContent = ({
     && workflowState.stepTransitionOptions.length > 0
     && Boolean(workflowState.selectedToStepCode)
   )
+  const workflowEntity = useMemo(() => ({
+    entityType,
+    entityId: orderDetail?.id ?? order?.id,
+    data: orderDetail ?? order,
+  }), [entityType, order, orderDetail])
 
   if (workflowState.loadingPreview && !workflowState.workflowPreview) {
     return (
@@ -67,7 +74,10 @@ const WorkflowInstanceContent = ({
 
   return (
     <div className="workflow-detail-drawer__tab-content">
-      <WorkflowOrderDetailCard order={order} orderDetail={orderDetail} />
+      {entityType === 'product'
+        ? <WorkflowProductCard product={orderDetail ?? order} />
+        : <WorkflowOrderDetailCard order={order} orderDetail={orderDetail} />
+      }
 
       <section className="workflow-detail-drawer__block">
         <div className="workflow-detail-drawer__process-head">
@@ -121,6 +131,8 @@ const WorkflowInstanceContent = ({
         <WorkflowFormSection
           order={scopedOrder}
           selectedLot={null}
+          workflowEntity={workflowEntity}
+          workflowInstance={workflowInstance}
           displayStep={workflowState.displayStep}
           displayForm={submissionState.displayForm}
           displaySubmission={submissionState.displaySubmission}
