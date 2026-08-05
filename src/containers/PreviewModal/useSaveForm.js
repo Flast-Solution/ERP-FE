@@ -44,7 +44,7 @@ const useSaveForm = ({
         jsxCode: buildJsxCode,
       })
 
-      if (!buildResult.previewUrl) {
+      if (!buildResult.url) {
         message.error('Build thành công nhưng server chưa trả URL micro-frontend.')
         return
       }
@@ -55,8 +55,8 @@ const useSaveForm = ({
         syncError: '',
         isDirty,
         build: {
-          componentId: buildResult.componentId ?? buildComponentId,
-          url: buildResult.previewUrl,
+          component_id: buildResult.component_id ?? buildComponentId,
+          url: buildResult.url,
           entryFilename,
         },
       })

@@ -7,7 +7,13 @@ import {
   extractUploadItems,
   resolveUploadUrl,
 } from '@/containers/PreviewModal/uploadUtils'
-import { LANDING_BLOCKS, createLandingBlock, getLandingBlock } from './blockRegistry'
+import {
+  COMMON_BLOCK_FIELDS,
+  LANDING_BLOCKS,
+  NESTED_BLOCK_BOX_FIELDS,
+  createLandingBlock,
+  getLandingBlock,
+} from './blockRegistry'
 import {
   Panel, PanelHead, PanelBody, SectionLabel, BlockList, BlockRow, BlockIcon, BlockName,
   Palette, PaletteButton, Divider, Field, TextInput, TextArea, SelectInput, ColorRow,
@@ -311,7 +317,7 @@ const PropertyControl = ({ field, value, onChange }) => {
     )
   }
 
-  if (field.control === 'color') {
+  if (field.control === 'color' || field.control === 'colorOptional') {
     return (
       <ColorRow>
         <input
@@ -442,6 +448,19 @@ const NestedBlocksControl = ({ value, onChange }) => {
             </RepeaterHead>
             <details>
               <summary style={{ cursor: 'pointer', marginBottom: 10 }}>Cấu hình block</summary>
+              <div style={{ padding: '10px 0', marginBottom: 10, borderBottom: '1px solid #e8e8ee' }}>
+                <strong style={{ display: 'block', marginBottom: 10 }}>Khoảng cách, nền và border</strong>
+                {NESTED_BLOCK_BOX_FIELDS.map(field => (
+                  <Field key={field.name}>
+                    <span>{field.label}</span>
+                    <PropertyControl
+                      field={field}
+                      value={block.props?.[field.name]}
+                      onChange={nextValue => updateBlockProps(index, field.name, nextValue)}
+                    />
+                  </Field>
+                ))}
+              </div>
               {(definition?.fields ?? []).map(field => (
                 <Field key={field.name}>
                   <span>{field.label}</span>
@@ -563,6 +582,22 @@ export function BlockInspector() {
               />
             </Field>
 
+            <details style={{ marginBottom: 16 }}>
+              <summary style={{ cursor: 'pointer', fontWeight: 700 }}>Bố cục và giao diện khu vực</summary>
+              <div style={{ display: 'grid', gap: 12, marginTop: 12 }}>
+                {COMMON_BLOCK_FIELDS.map(field => (
+                  <Field key={field.name}>
+                    <span>{field.label}</span>
+                    <PropertyControl
+                      field={field}
+                      value={section.props?.[field.name]}
+                      onChange={value => updateBlockProps(section.id, { [field.name]: value })}
+                    />
+                  </Field>
+                ))}
+              </div>
+            </details>
+
             {(definition?.fields ?? []).length > 0 ? (
               definition.fields.map(field => (
                 <Field key={field.name}>
@@ -651,6 +686,61 @@ export function BlockInspector() {
                 onChange={event => updateTheme({ fontFamily: event.target.value })}
               />
             </Field>
+            <Field>
+              <span>Font tiêu đề</span>
+              <TextInput
+                value={schema?.theme?.displayFontFamily ?? ''}
+                placeholder="Fraunces, serif"
+                onChange={event => updateTheme({ displayFontFamily: event.target.value })}
+              />
+            </Field>
+            <Field>
+              <span>Font monospace / nhãn</span>
+              <TextInput
+                value={schema?.theme?.monoFontFamily ?? ''}
+                placeholder="IBM Plex Mono, monospace"
+                onChange={event => updateTheme({ monoFontFamily: event.target.value })}
+              />
+            </Field>
+            <Field>
+              <span>URL stylesheet font</span>
+              <TextInput
+                value={schema?.theme?.fontStylesheetUrl ?? ''}
+                placeholder="https://fonts.googleapis.com/css2?..."
+                onChange={event => updateTheme({ fontStylesheetUrl: event.target.value })}
+              />
+            </Field>
+            {[
+              ['secondaryColor', 'Màu phụ'],
+              ['surfaceColor', 'Màu nền trang'],
+              ['surfaceAltColor', 'Màu nền phụ'],
+              ['textColor', 'Màu chữ chính'],
+              ['mutedColor', 'Màu chữ phụ'],
+            ].map(([name, label]) => (
+              <Field key={name}>
+                <span>{label}</span>
+                <PropertyControl
+                  field={{ name, label, control: 'color' }}
+                  value={schema?.theme?.[name]}
+                  onChange={value => updateTheme({ [name]: value })}
+                />
+              </Field>
+            ))}
+            {[
+              ['containerWidth', 'Độ rộng nội dung tối đa (px)'],
+              ['borderRadius', 'Bo góc mặc định (px)'],
+              ['sectionSpacingDesktop', 'Khoảng cách section desktop (px)'],
+              ['sectionSpacingMobile', 'Khoảng cách section mobile (px)'],
+            ].map(([name, label]) => (
+              <Field key={name}>
+                <span>{label}</span>
+                <PropertyControl
+                  field={{ name, label, control: 'number' }}
+                  value={schema?.theme?.[name]}
+                  onChange={value => updateTheme({ [name]: value })}
+                />
+              </Field>
+            ))}
 
             <Divider />
             <SectionLabel>Phiên bản đã xuất bản</SectionLabel>

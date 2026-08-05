@@ -80,6 +80,7 @@ export const saveWebPage = page => {
     contentType: page.contentType || previous?.contentType || WEB_CONTENT_TYPES.LANDING,
     status: page.status || previous?.status || 'DRAFT',
     authenticationRequired: Boolean(page.authenticationRequired),
+    remoteId: page.remoteId ?? previous?.remoteId ?? null,
     updatedAt: new Date().toISOString(),
   }
   const nextPages = previous
@@ -105,6 +106,7 @@ export const saveLandingPage = ({
   status = 'DRAFT',
   publishedAt = null,
   build,
+  remoteId,
 }) => {
   if (!id || !isPageSchema(schema)) return null
 
@@ -122,6 +124,8 @@ export const saveLandingPage = ({
     authenticationRequired: Boolean(previous?.authenticationRequired),
     schema: normalizePageSchema(schema),
     build: build ?? previous?.build ?? null,
+    // remoteId = id từ API create/update; thiếu → lần lưu sau phải create
+    remoteId: remoteId ?? previous?.remoteId ?? null,
   }
   const nextPages = previous
     ? pages.map(page => String(page.id) === String(id) ? nextPage : page)

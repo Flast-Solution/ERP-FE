@@ -3,23 +3,26 @@ import { Wrap, Overlay, Tag, TriggerSlot } from './EditableHighlight.style'
 
 export function EditableHighlight({
   elementId,
+  domId,
   onEdit,
   active = false,
   selected = false,
   disabled = false,
   showTrigger = true,
   triggerProps,
+  className = '',
   children,
   ...rest
 }) {
   const cls = [
+    className,
     active && 'is-active',
     selected && 'is-selected',
     disabled && 'is-disabled',
   ].filter(Boolean).join(' ')
 
   return (
-    <Wrap id={elementId || undefined} className={cls} {...rest}>
+    <Wrap id={domId || elementId || undefined} className={cls} {...rest}>
       {children}
       <Overlay aria-hidden="true" data-landing-editor-only="true" />
       {elementId && <Tag data-landing-editor-only="true">#{elementId}</Tag>}

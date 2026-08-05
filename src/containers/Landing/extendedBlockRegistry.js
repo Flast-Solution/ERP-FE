@@ -8,6 +8,40 @@ const list = (name, label, itemFields, itemDefaults) => ({
   name, label, control: 'repeater', itemFields, itemDefaults,
 })
 
+const COLUMN_BOX_DEFAULTS = {
+  marginTop: '0', marginRight: '0', marginBottom: '0', marginLeft: '0',
+  paddingTop: '20', paddingRight: '20', paddingBottom: '20', paddingLeft: '20',
+  background: '#ffffff', borderWidth: '1', borderStyle: 'solid',
+  borderColor: '#e8e8ee', borderRadius: '14', shadow: 'none', verticalAlign: 'stretch',
+}
+
+const COLUMN_BOX_FIELDS = [
+  text('marginTop', 'Margin trên (px)', 'number'), text('marginRight', 'Margin phải (px)', 'number'),
+  text('marginBottom', 'Margin dưới (px)', 'number'), text('marginLeft', 'Margin trái (px)', 'number'),
+  text('paddingTop', 'Padding trên (px)', 'number'), text('paddingRight', 'Padding phải (px)', 'number'),
+  text('paddingBottom', 'Padding dưới (px)', 'number'), text('paddingLeft', 'Padding trái (px)', 'number'),
+  text('background', 'Màu nền cột', 'colorOptional'), text('borderWidth', 'Độ dày border (px)', 'number'),
+  {
+    name: 'borderStyle', label: 'Kiểu border', control: 'select', options: [
+      { label: 'Liền', value: 'solid' }, { label: 'Nét đứt', value: 'dashed' },
+      { label: 'Chấm', value: 'dotted' }, { label: 'Hai đường', value: 'double' },
+    ],
+  },
+  text('borderColor', 'Màu border', 'color'), text('borderRadius', 'Bo góc (px)', 'number'),
+  {
+    name: 'shadow', label: 'Đổ bóng', control: 'select', options: [
+      { label: 'Không dùng', value: 'none' }, { label: 'Nhẹ', value: 'soft' },
+      { label: 'Vừa', value: 'medium' }, { label: 'Đậm', value: 'strong' },
+    ],
+  },
+  {
+    name: 'verticalAlign', label: 'Căn dọc cột', control: 'select', options: [
+      { label: 'Cao bằng hàng', value: 'stretch' }, { label: 'Trên', value: 'start' },
+      { label: 'Giữa', value: 'center' }, { label: 'Dưới', value: 'end' },
+    ],
+  },
+]
+
 const contentListBlock = ({ type, label, icon, entity }) => ({
   type,
   label,
@@ -18,9 +52,15 @@ const contentListBlock = ({ type, label, icon, entity }) => ({
     entity,
     emptyText: 'Chưa có dữ liệu để hiển thị.',
     pageSize: '6',
+    hideButtons: false,
+    buttonStyle: 'outline',
+    buttonBackground: '#232D4B',
+    buttonTextColor: '#232D4B',
+    buttonBorderColor: '#232D4B',
+    buttonBorderRadius: '0',
     items: [
-      { title: `${label} mẫu 1`, description: 'Dữ liệu xem trước', imageUrl: '', url: '#' },
-      { title: `${label} mẫu 2`, description: 'Dữ liệu xem trước', imageUrl: '', url: '#' },
+      { title: `${label} mẫu 1`, description: 'Dữ liệu xem trước', imageUrl: '', buttonText: 'Xem chi tiết', url: '#', openInNewTab: false },
+      { title: `${label} mẫu 2`, description: 'Dữ liệu xem trước', imageUrl: '', buttonText: 'Xem chi tiết', url: '#', openInNewTab: false },
     ],
   },
   fields: [
@@ -29,17 +69,31 @@ const contentListBlock = ({ type, label, icon, entity }) => ({
     text('entity', 'Mã nguồn dữ liệu'),
     text('emptyText', 'Nội dung khi trống'),
     text('pageSize', 'Số mục mỗi trang', 'number'),
+    text('hideButtons', 'Ẩn nút', 'checkbox'),
+    {
+      name: 'buttonStyle', label: 'Kiểu nút', control: 'select', options: [
+        { label: 'Nút chính', value: 'primary' },
+        { label: 'Nút viền', value: 'outline' },
+        { label: 'Liên kết', value: 'link' },
+      ],
+    },
+    text('buttonBackground', 'Màu nền nút', 'color'),
+    text('buttonTextColor', 'Màu chữ nút', 'color'),
+    text('buttonBorderColor', 'Màu viền nút', 'color'),
+    text('buttonBorderRadius', 'Bo góc nút (px)', 'number'),
     list('items', 'Dữ liệu xem trước', [
       text('title', 'Tiêu đề'),
       text('description', 'Mô tả', 'textarea'),
       { name: 'imageUrl', label: 'Hình ảnh', control: 'image', uploadFolder: `landing/${type}` },
-      text('url', 'Liên kết'),
+      text('buttonText', 'Nhãn nút'),
+      text('url', 'URL của nút'),
+      text('openInNewTab', 'Mở trong tab mới', 'checkbox'),
       text('publishedDate', 'Ngày đăng'),
       text('author', 'Tác giả'),
       text('category', 'Danh mục'),
       text('jobTitle', 'Chức danh'),
       text('department', 'Phòng ban'),
-    ], { title: 'Mục mới', description: '', imageUrl: '', url: '#', publishedDate: '', author: '', category: '', jobTitle: '', department: '' }),
+    ], { title: 'Mục mới', description: '', imageUrl: '', buttonText: 'Xem chi tiết', url: '#', openInNewTab: false, publishedDate: '', author: '', category: '', jobTitle: '', department: '' }),
   ],
 })
 
@@ -57,14 +111,42 @@ export const EXTENDED_LANDING_BLOCKS = [
     type: 'columns', label: 'Hàng và cột', icon: '▥',
     defaults: {
       gap: '20',
+      rowMarginTop: '0', rowMarginRight: '0', rowMarginBottom: '0', rowMarginLeft: '0',
+      rowPaddingTop: '40', rowPaddingRight: '32', rowPaddingBottom: '40', rowPaddingLeft: '32',
+      rowBackground: '', rowBorderWidth: '0', rowBorderStyle: 'solid',
+      rowBorderColor: '#e8e8ee', rowBorderRadius: '0', rowShadow: 'none',
       columns: [
-        { width: '50', title: 'Cột thứ nhất', content: 'Nội dung cột thứ nhất', buttonText: '', buttonUrl: '#', blocks: [] },
-        { width: '50', title: 'Cột thứ hai', content: 'Nội dung cột thứ hai', buttonText: '', buttonUrl: '#', blocks: [] },
+        { ...COLUMN_BOX_DEFAULTS, width: '50', title: 'Cột thứ nhất', content: 'Nội dung cột thứ nhất', buttonText: '', buttonUrl: '#', blocks: [] },
+        { ...COLUMN_BOX_DEFAULTS, width: '50', title: 'Cột thứ hai', content: 'Nội dung cột thứ hai', buttonText: '', buttonUrl: '#', blocks: [] },
       ],
     },
     fields: [
       text('gap', 'Khoảng cách cột (px)', 'number'),
-      list('columns', 'Danh sách cột', [text('width', 'Độ rộng (%)', 'number'), { name: 'blocks', label: 'Block trong cột', control: 'nestedBlocks' }, text('title', 'Tiêu đề dự phòng'), text('content', 'Nội dung dự phòng', 'textarea'), ...actionFields.slice(0, 2)], { width: '50', title: 'Cột mới', content: '', buttonText: '', buttonUrl: '#', blocks: [] }),
+      text('rowMarginTop', 'Margin trên của hàng (px)', 'number'),
+      text('rowMarginRight', 'Margin phải của hàng (px)', 'number'),
+      text('rowMarginBottom', 'Margin dưới của hàng (px)', 'number'),
+      text('rowMarginLeft', 'Margin trái của hàng (px)', 'number'),
+      text('rowPaddingTop', 'Padding trên của hàng (px)', 'number'),
+      text('rowPaddingRight', 'Padding phải của hàng (px)', 'number'),
+      text('rowPaddingBottom', 'Padding dưới của hàng (px)', 'number'),
+      text('rowPaddingLeft', 'Padding trái của hàng (px)', 'number'),
+      text('rowBackground', 'Màu nền hàng', 'colorOptional'),
+      text('rowBorderWidth', 'Độ dày border hàng (px)', 'number'),
+      {
+        name: 'rowBorderStyle', label: 'Kiểu border hàng', control: 'select', options: [
+          { label: 'Liền', value: 'solid' }, { label: 'Nét đứt', value: 'dashed' },
+          { label: 'Chấm', value: 'dotted' }, { label: 'Hai đường', value: 'double' },
+        ],
+      },
+      text('rowBorderColor', 'Màu border hàng', 'color'),
+      text('rowBorderRadius', 'Bo góc hàng (px)', 'number'),
+      {
+        name: 'rowShadow', label: 'Đổ bóng hàng', control: 'select', options: [
+          { label: 'Không dùng', value: 'none' }, { label: 'Nhẹ', value: 'soft' },
+          { label: 'Vừa', value: 'medium' }, { label: 'Đậm', value: 'strong' },
+        ],
+      },
+      list('columns', 'Danh sách cột', [text('width', 'Độ rộng (%)', 'number'), ...COLUMN_BOX_FIELDS, { name: 'blocks', label: 'Block trong cột', control: 'nestedBlocks' }, text('title', 'Tiêu đề dự phòng'), text('content', 'Nội dung dự phòng', 'textarea'), ...actionFields.slice(0, 2)], { ...COLUMN_BOX_DEFAULTS, width: '50', title: 'Cột mới', content: '', buttonText: '', buttonUrl: '#', blocks: [] }),
     ],
   },
   {
@@ -131,8 +213,32 @@ export const EXTENDED_LANDING_BLOCKS = [
   },
   {
     type: 'logos', label: 'Logo đối tác', icon: '◇',
-    defaults: { title: 'Đối tác của chúng tôi', grayscale: true, logoHeight: '64', images: [] },
-    fields: [text('title', 'Tiêu đề'), text('grayscale', 'Ảnh xám, hiện màu khi hover', 'checkbox'), text('logoHeight', 'Chiều cao logo (px)', 'number'), { name: 'images', label: 'Danh sách logo', control: 'multiImage', uploadFolder: 'landing/logos' }],
+    defaults: {
+      title: 'Đối tác của chúng tôi', displayMode: 'image', grayscale: true,
+      logoHeight: '64', images: [], partners: [], background: '#F3EEE1',
+      titleColor: '#726C5C', titleFontSize: '12', textColor: '#374873', textFontSize: '20',
+      columns: '5', mobileColumns: '2',
+    },
+    fields: [
+      text('title', 'Tiêu đề'),
+      {
+        name: 'displayMode', label: 'Kiểu logo', control: 'select', options: [
+          { label: 'Logo hình ảnh', value: 'image' },
+          { label: 'Tên thương hiệu dạng chữ', value: 'text' },
+        ],
+      },
+      text('background', 'Màu nền', 'color'),
+      text('titleColor', 'Màu tiêu đề', 'color'),
+      text('titleFontSize', 'Cỡ chữ tiêu đề (px)', 'number'),
+      text('columns', 'Số cột desktop', 'number'),
+      text('mobileColumns', 'Số cột mobile', 'number'),
+      list('partners', 'Danh sách tên đối tác', [text('name', 'Tên đối tác'), text('url', 'Liên kết')], { name: 'Đối tác mới', url: '#' }),
+      text('textColor', 'Màu tên đối tác', 'color'),
+      text('textFontSize', 'Cỡ chữ tên đối tác (px)', 'number'),
+      text('grayscale', 'Ảnh xám, hiện màu khi hover', 'checkbox'),
+      text('logoHeight', 'Chiều cao logo (px)', 'number'),
+      { name: 'images', label: 'Danh sách logo', control: 'multiImage', uploadFolder: 'landing/logos' },
+    ],
   },
   {
     type: 'stats', label: 'Số liệu thống kê', icon: '#',
@@ -154,18 +260,104 @@ export const EXTENDED_LANDING_BLOCKS = [
   contentListBlock({ type: 'teamList', label: 'Danh sách nhân sự', icon: '♙', entity: 'user' }),
   {
     type: 'countdown', label: 'Countdown', icon: '◷',
-    defaults: { title: 'Ưu đãi kết thúc sau', targetDate: '2026-12-31T23:59', timezone: 'Asia/Ho_Chi_Minh', completedText: 'Chương trình đã kết thúc' },
-    fields: [text('title', 'Tiêu đề'), text('targetDate', 'Thời điểm kết thúc (ISO)'), text('timezone', 'Múi giờ IANA'), text('completedText', 'Nội dung khi kết thúc')],
+    defaults: {
+      title: 'Ưu đãi kết thúc sau',
+      targetDate: '2026-12-31T23:59',
+      timezone: 'Asia/Ho_Chi_Minh',
+      completedText: 'Chương trình đã kết thúc',
+      titleColor: '',
+      boxBackground: '#ffffff',
+      boxBorderColor: '#e8e8ee',
+      valueColor: '#16161a',
+      labelColor: '#726C5C',
+    },
+    fields: [
+      text('title', 'Tiêu đề'),
+      text('targetDate', 'Thời điểm kết thúc (ISO)'),
+      text('timezone', 'Múi giờ IANA'),
+      text('completedText', 'Nội dung khi kết thúc'),
+      text('titleColor', 'Màu tiêu đề', 'colorOptional'),
+      text('boxBackground', 'Màu nền ô đếm', 'color'),
+      text('boxBorderColor', 'Màu viền ô đếm', 'colorOptional'),
+      text('valueColor', 'Màu số đếm', 'color'),
+      text('labelColor', 'Màu nhãn đơn vị', 'color'),
+    ],
   },
   {
     type: 'popup', label: 'Popup', icon: '▱',
-    defaults: { title: 'Thông báo', content: 'Nội dung popup', buttonText: 'Xem ngay', buttonUrl: '#', delay: '3', showOnce: true },
-    fields: [text('title', 'Tiêu đề'), text('content', 'Nội dung', 'textarea'), text('buttonText', 'Nhãn nút'), text('buttonUrl', 'URL'), text('delay', 'Hiển thị sau (giây)', 'number'), text('showOnce', 'Chỉ hiện một lần mỗi phiên', 'checkbox')],
+    defaults: {
+      title: 'Thông báo', content: 'Nội dung popup', buttonText: 'Xem ngay', buttonUrl: '#',
+      triggerType: 'delay', delay: '3', scrollPercent: '60', frequency: 'session',
+      showLauncher: false, launcherLabel: 'Mở popup', width: '520', position: 'center',
+      overlayColor: '#0f1118', overlayOpacity: '55', background: '#ffffff', textColor: '#16161a',
+      closeOnOverlay: true, closeOnEscape: true, lockBodyScroll: true, showCloseButton: true,
+      contentBlocks: [],
+    },
+    fields: [
+      text('title', 'Tiêu đề dự phòng'), text('content', 'Nội dung dự phòng', 'textarea'),
+      { name: 'contentBlocks', label: 'Nội dung trong popup', control: 'nestedBlocks' },
+      text('buttonText', 'Nhãn nút dự phòng'), text('buttonUrl', 'URL nút dự phòng'),
+      {
+        name: 'triggerType', label: 'Điều kiện mở popup', control: 'select', options: [
+          { label: 'Sau một khoảng thời gian', value: 'delay' },
+          { label: 'Khi cuộn trang', value: 'scroll' },
+          { label: 'Khi chuẩn bị rời trang', value: 'exit_intent' },
+          { label: 'Chỉ mở bằng nút', value: 'manual' },
+        ],
+      },
+      text('delay', 'Hiển thị sau (giây)', 'number'),
+      text('scrollPercent', 'Mở khi cuộn đến (%)', 'number'),
+      {
+        name: 'frequency', label: 'Tần suất hiển thị', control: 'select', options: [
+          { label: 'Mỗi lần tải trang', value: 'always' },
+          { label: 'Một lần mỗi phiên', value: 'session' },
+          { label: 'Một lần mỗi ngày', value: 'day' },
+        ],
+      },
+      text('showLauncher', 'Hiển thị nút mở popup', 'checkbox'),
+      text('launcherLabel', 'Nhãn nút mở popup'),
+      text('width', 'Chiều rộng popup (px)', 'number'),
+      {
+        name: 'position', label: 'Vị trí popup', control: 'select', options: [
+          { label: 'Giữa màn hình', value: 'center' },
+          { label: 'Dưới bên phải', value: 'bottom-right' },
+          { label: 'Dưới màn hình', value: 'bottom' },
+        ],
+      },
+      text('overlayColor', 'Màu lớp phủ', 'color'), text('overlayOpacity', 'Độ mờ lớp phủ (%)', 'number'),
+      text('background', 'Màu nền popup', 'color'), text('textColor', 'Màu chữ popup', 'color'),
+      text('closeOnOverlay', 'Đóng khi click lớp phủ', 'checkbox'),
+      text('closeOnEscape', 'Đóng bằng phím Escape', 'checkbox'),
+      text('lockBodyScroll', 'Khóa cuộn trang khi mở', 'checkbox'),
+      text('showCloseButton', 'Hiển thị nút đóng', 'checkbox'),
+    ],
   },
   {
     type: 'tabs', label: 'Tabs', icon: '▰',
-    defaults: { style: 'underline', items: [{ label: 'Tab 1', content: 'Nội dung tab 1' }, { label: 'Tab 2', content: 'Nội dung tab 2' }] },
-    fields: [{ name: 'style', label: 'Kiểu tab', control: 'select', options: [{ label: 'Gạch chân', value: 'underline' }, { label: 'Pill', value: 'pill' }, { label: 'Box', value: 'box' }] }, list('items', 'Danh sách tab', [text('label', 'Nhãn'), text('content', 'Nội dung', 'textarea')], { label: 'Tab mới', content: '' })],
+    defaults: {
+      style: 'underline', tabTextColor: '#54545f', tabBackground: '',
+      activeTabTextColor: '#6550d8', activeTabBackground: '#eee9ff',
+      tabBorderColor: '#dedee8', panelBackground: '#ffffff', panelTextColor: '#211f1b',
+      items: [
+        { label: 'Tab 1', content: '<p>Nội dung tab 1</p>', blocks: [] },
+        { label: 'Tab 2', content: '<p>Nội dung tab 2</p>', blocks: [] },
+      ],
+    },
+    fields: [
+      { name: 'style', label: 'Kiểu tab', control: 'select', options: [{ label: 'Gạch chân', value: 'underline' }, { label: 'Pill', value: 'pill' }, { label: 'Box', value: 'box' }] },
+      text('tabTextColor', 'Màu chữ tab', 'color'),
+      text('tabBackground', 'Màu nền tab', 'colorOptional'),
+      text('activeTabTextColor', 'Màu chữ tab đang chọn', 'color'),
+      text('activeTabBackground', 'Màu nền tab đang chọn', 'colorOptional'),
+      text('tabBorderColor', 'Màu viền tab', 'color'),
+      text('panelBackground', 'Màu nền vùng nội dung', 'colorOptional'),
+      text('panelTextColor', 'Màu chữ vùng nội dung', 'color'),
+      list('items', 'Danh sách tab', [
+        text('label', 'Nhãn'),
+        { name: 'blocks', label: 'Block trong tab', control: 'nestedBlocks' },
+        text('content', 'Nội dung Rich Text dự phòng', 'richtext'),
+      ], { label: 'Tab mới', content: '<p>Nội dung tab mới</p>', blocks: [] }),
+    ],
   },
   {
     type: 'timeline', label: 'Timeline', icon: '↧',

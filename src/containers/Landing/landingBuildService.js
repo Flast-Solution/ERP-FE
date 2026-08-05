@@ -20,8 +20,8 @@ const LandingPage = () => (
 export default LandingPage
 `
 
-export const buildLandingPage = async ({ pageId, schema, sessionId }) => {
-  const html = generateLandingHtml(schema)
+export const buildLandingPage = async ({ pageId, schema, sessionId, allowHtmlFallback = false }) => {
+  const html = generateLandingHtml(schema, { allowFallback: allowHtmlFallback })
   const componentId = toComponentSlug(`landing_${pageId}`)
   const entryFilename = `${toComponentName(`landing_${pageId}`)}.jsx`
   const jsxCode = createLandingBuildCode({ html, title: schema?.name })
@@ -32,13 +32,16 @@ export const buildLandingPage = async ({ pageId, schema, sessionId }) => {
     jsxCode,
   })
 
-  if (!result.previewUrl) {
-    throw new Error('Build đã được tiếp nhận nhưng server chưa trả URL Micro Frontend.')
+  const url = result?.url || result?.data?.url || result?.previewUrl || ''
+  const resolvedComponentId = result?.component_id || result?.data?.component_id || result?.componentId || componentId
+
+  if (!url) {
+    throw new Error('Build thành công nhưng server chưa trả data.url.')
   }
 
   return {
-    componentId: result.componentId ?? componentId,
-    remoteEntryUrl: result.previewUrl,
+    component_id: resolvedComponentId,
+    url,
     entryFilename,
     builtAt: new Date().toISOString(),
   }

@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import timezone from 'dayjs/plugin/timezone'
 import { useEditorStore } from '@/store/editorStore'
+import { getLandingOverlayRoot } from './landingOverlayRoot'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -15,6 +17,20 @@ const sectionStyle = {
 }
 const cardStyle = { border: '1px solid #e8e8ee', borderRadius: 14, padding: 20, background: '#fff' }
 const gridStyle = { display: 'grid', gap: 18 }
+const boxShadows = {
+  none: 'none',
+  soft: '0 8px 24px rgba(20, 20, 30, .08)',
+  medium: '0 14px 36px rgba(20, 20, 30, .14)',
+  strong: '0 20px 52px rgba(20, 20, 30, .22)',
+}
+
+const numberOr = (value, fallback = 0) => {
+  if (value == null || value === '') return fallback
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
+const px = (value, fallback = 0) => `${Math.max(0, numberOr(value, fallback))}px`
 
 const safeUrl = (value, fallback = '#') => {
   const url = String(value ?? '').trim()
@@ -26,8 +42,8 @@ const safeUrl = (value, fallback = '#') => {
 export const sanitizeHtml = value => {
   if (typeof window === 'undefined') return ''
   const doc = new window.DOMParser().parseFromString(String(value ?? ''), 'text/html')
-  const allowedTags = new Set(['A', 'B', 'BLOCKQUOTE', 'BR', 'CODE', 'DIV', 'EM', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'HR', 'I', 'LI', 'OL', 'P', 'PRE', 'S', 'SPAN', 'STRONG', 'U', 'UL'])
-  const allowedAttrs = new Set(['href', 'target', 'rel', 'class', 'style'])
+  const allowedTags = new Set(['A', 'B', 'BLOCKQUOTE', 'BR', 'CODE', 'DIV', 'EM', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'HR', 'I', 'LI', 'OL', 'P', 'PRE', 'S', 'SMALL', 'SPAN', 'STRONG', 'TABLE', 'TBODY', 'TD', 'TFOOT', 'TH', 'THEAD', 'TR', 'U', 'UL'])
+  const allowedAttrs = new Set(['href', 'target', 'rel', 'class', 'style', 'colspan', 'rowspan', 'scope'])
   Array.from(doc.body.querySelectorAll('*')).forEach(node => {
     if (!allowedTags.has(node.tagName)) {
       node.replaceWith(...node.childNodes)
@@ -146,15 +162,34 @@ const Countdown = ({ props }) => {
       style={{ ...sectionStyle, textAlign: 'center' }}
     >
       {Number.isNaN(targetTime) && <p role="alert" style={{ color: '#c62828' }}>Ngày kết thúc không hợp lệ.</p>}
-      <h2>{remaining ? props.title : props.completedText}</h2>
-      {remaining > 0 && <div className="landing-countdown-grid" style={{ ...gridStyle, gridTemplateColumns: 'repeat(4, minmax(70px, 120px))', justifyContent: 'center' }}>
-        {units.map(([label, value]) => <div data-countdown-unit={label} key={label} style={cardStyle}><strong style={{ fontSize: 26 }}>{value}</strong><div>{label}</div></div>)}
-      </div>}
+      <h2 style={{ color: props.titleColor || undefined }}>{remaining ? props.title : props.completedText}</h2>
+      {remaining > 0 && (
+        <div
+          className="landing-countdown-grid"
+          style={{ ...gridStyle, gridTemplateColumns: 'repeat(4, minmax(70px, 120px))', justifyContent: 'center' }}
+        >
+          {units.map(([label, value]) => (
+            <div
+              data-countdown-unit={label}
+              key={label}
+              style={{
+                ...cardStyle,
+                background: props.boxBackground || '#ffffff',
+                borderColor: props.boxBorderColor || '#e8e8ee',
+                color: props.valueColor || '#16161a',
+              }}
+            >
+              <strong style={{ display: 'block', fontSize: 26, color: props.valueColor || '#16161a' }}>{value}</strong>
+              <div style={{ marginTop: 4, fontSize: 12, color: props.labelColor || '#726C5C' }}>{label}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   )
 }
 
-const InteractiveTabs = ({ items = [], variant = 'underline', blockId = 'tabs' }) => {
+const InteractiveTabs = ({ items = [], variant = 'underline', blockId = 'tabs', renderNestedBlock, appearance = {} }) => {
   const [active, setActive] = useState(0)
   const safeActive = active < items.length ? active : 0
   return (
@@ -166,10 +201,28 @@ const InteractiveTabs = ({ items = [], variant = 'underline', blockId = 'tabs' }
           const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : (safeActive + (event.key === 'ArrowRight' ? 1 : -1) + items.length) % items.length
           setActive(next)
           event.currentTarget.parentElement?.children[next]?.focus()
-        }} onClick={() => setActive(index)} style={{ flex: '0 0 auto', border: variant === 'box' ? '1px solid #ddd' : 0, borderBottom: variant === 'underline' && index === safeActive ? '2px solid #6550d8' : '2px solid transparent', borderRadius: variant === 'pill' ? 999 : variant === 'box' ? 8 : 0, padding: '10px 14px', background: variant === 'pill' && index === safeActive ? '#eee9ff' : 'transparent', fontWeight: 650 }}>{item.label}</button>)}
+        }} onClick={() => setActive(index)} style={{
+          flex: '0 0 auto',
+          border: variant === 'box' ? `1px solid ${appearance.tabBorderColor || '#ddd'}` : 0,
+          borderBottom: variant === 'underline' && index === safeActive
+            ? `2px solid ${appearance.activeTabTextColor || '#6550d8'}`
+            : '2px solid transparent',
+          borderRadius: variant === 'pill' ? 999 : variant === 'box' ? 8 : 0,
+          padding: '10px 14px',
+          color: index === safeActive ? (appearance.activeTabTextColor || '#6550d8') : (appearance.tabTextColor || 'inherit'),
+          background: index === safeActive
+            ? (appearance.activeTabBackground || (variant === 'pill' ? '#eee9ff' : 'transparent'))
+            : (appearance.tabBackground || 'transparent'),
+          fontWeight: 650,
+        }}>{item.label}</button>)}
       </div>
       {items.map((item, index) => (
-        <div key={`${item.label}-panel-${index}`} role="tabpanel" id={`${blockId}-panel-${index}`} aria-labelledby={`${blockId}-tab-${index}`} data-tab-panel={index} hidden={index !== safeActive} style={{ padding: '22px 8px' }}>{item.content}</div>
+        <div key={`${item.label}-panel-${index}`} role="tabpanel" id={`${blockId}-panel-${index}`} aria-labelledby={`${blockId}-tab-${index}`} data-tab-panel={index} hidden={index !== safeActive} style={{ padding: '22px', color: appearance.panelTextColor || '#211f1b', background: appearance.panelBackground || 'transparent' }}>
+          {(item.blocks ?? []).length
+            ? item.blocks.map(block => <div key={block.id}>{renderNestedBlock?.(block)}</div>)
+            : <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.content) }} />
+          }
+        </div>
       ))}
     </section>
   )
@@ -278,31 +331,263 @@ const DataList = ({ props, type }) => {
   const pageCount = Math.max(1, Math.ceil(items.length / pageSize))
   const currentPage = Math.min(page, pageCount)
   const visibleItems = items.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const buttonStyle = {
+    display: 'inline-block',
+    marginTop: 4,
+    padding: props.buttonStyle === 'link' ? 0 : '9px 14px',
+    border: props.buttonStyle === 'link'
+      ? 0
+      : `1px solid ${props.buttonBorderColor || props.buttonBackground || '#232D4B'}`,
+    borderRadius: `${Math.max(0, Number(props.buttonBorderRadius) || 0)}px`,
+    color: props.buttonStyle === 'primary' ? (props.buttonTextColor || '#fff') : (props.buttonTextColor || '#232D4B'),
+    background: props.buttonStyle === 'primary' ? (props.buttonBackground || '#232D4B') : 'transparent',
+    fontWeight: 650,
+    textDecoration: props.buttonStyle === 'link' ? 'underline' : 'none',
+  }
   return (
     <section style={sectionStyle}>
       <h2>{props.title}</h2>{props.description && <p>{props.description}</p>}
-      {items.length ? <div style={{ ...gridStyle, gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))' }}>{visibleItems.map((item, index) => <a key={`${item.title}-${index}`} href={safeUrl(item.url)} style={{ ...cardStyle, color: 'inherit', textDecoration: 'none' }}>{item.imageUrl && <img loading="lazy" src={item.imageUrl} alt={item.title || ''} style={{ width: '100%', height: 160, objectFit: 'cover', borderRadius: 9 }} />}<h3>{item.title}</h3>{type === 'postList' && <div style={{ color: '#777', fontSize: 12 }}>{[item.publishedDate, item.author, item.category].filter(Boolean).join(' · ')}</div>}{type === 'teamList' && <div style={{ color: '#777', fontSize: 12 }}>{[item.jobTitle, item.department].filter(Boolean).join(' · ')}</div>}<p>{item.description}</p></a>)}</div> : <p>{props.emptyText}</p>}
+      {items.length ? <div style={{ ...gridStyle, gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))' }}>{visibleItems.map((item, index) => {
+        const showButton = !props.hideButtons && Boolean(item.buttonText)
+        const content = <>{item.imageUrl && <img loading="lazy" src={item.imageUrl} alt={item.title || ''} style={{ width: '100%', height: 160, objectFit: 'cover', borderRadius: 9 }} />}<h3>{item.title}</h3>{type === 'postList' && <div style={{ color: '#777', fontSize: 12 }}>{[item.publishedDate, item.author, item.category].filter(Boolean).join(' · ')}</div>}{type === 'teamList' && <div style={{ color: '#777', fontSize: 12 }}>{[item.jobTitle, item.department].filter(Boolean).join(' · ')}</div>}<p>{item.description}</p>{showButton && <a href={safeUrl(item.url)} target={item.openInNewTab ? '_blank' : undefined} rel={item.openInNewTab ? 'noopener noreferrer' : undefined} style={buttonStyle}>{item.buttonText}</a>}</>
+        return (showButton || props.hideButtons)
+          ? <article key={`${item.title}-${index}`} style={cardStyle}>{content}</article>
+          : <a key={`${item.title}-${index}`} href={safeUrl(item.url)} style={{ ...cardStyle, color: 'inherit', textDecoration: 'none' }}>{content}</a>
+      })}</div> : <p>{props.emptyText}</p>}
       {pageCount > 1 && <nav aria-label="Phân trang" style={{ display: 'flex', justifyContent: 'center', gap: 7, marginTop: 22 }}>{Array.from({ length: pageCount }, (_, index) => <button type="button" aria-current={currentPage === index + 1 ? 'page' : undefined} onClick={() => setPage(index + 1)} key={index + 1}>{index + 1}</button>)}</nav>}
     </section>
   )
 }
 
-const Popup = ({ props, blockId }) => {
+const Popup = ({ props, blockId, renderNestedBlock }) => {
   const viewMode = useEditorStore(state => state.viewMode)
   const [open, setOpen] = useState(false)
-  useEffect(() => {
-    if (viewMode === 'edit') return undefined
-    const storageKey = `landing-popup-${blockId}`
-    if (props.showOnce && window.sessionStorage.getItem(storageKey)) return undefined
-    const timer = window.setTimeout(() => {
-      setOpen(true)
-      if (props.showOnce) window.sessionStorage.setItem(storageKey, 'shown')
-    }, Math.max(0, Number(props.delay) || 0) * 1000)
-    return () => window.clearTimeout(timer)
-  }, [blockId, props.delay, props.showOnce, viewMode])
+  const dialogRef = useRef(null)
+  const triggerAnchorRef = useRef(null)
+  const returnFocusRef = useRef(null)
 
-  if (viewMode === 'edit') return <section style={sectionStyle}><div style={{ ...cardStyle, maxWidth: 520, margin: '0 auto' }}><small>Preview popup · sau {props.delay || 0}s</small><h2>{props.title}</h2><p>{props.content}</p></div></section>
-  return <div data-popup="true" data-delay={props.delay || 0} data-show-once={Boolean(props.showOnce)} hidden={!open} role="dialog" aria-modal="true" aria-labelledby={`${blockId}-title`} style={{ position: 'fixed', inset: 0, zIndex: 999, display: open ? 'grid' : 'none', placeItems: 'center', padding: 20, background: 'rgba(15,17,24,.55)' }} onClick={event => { if (event.target === event.currentTarget) setOpen(false) }}><div style={{ ...cardStyle, position: 'relative', width: 'min(100%, 520px)', boxShadow: '0 20px 60px rgba(0,0,0,.22)' }}><button data-popup-close="true" type="button" aria-label="Đóng popup" onClick={() => setOpen(false)} style={{ position: 'absolute', top: 10, right: 10, border: 0, background: 'transparent', fontSize: 24 }}>×</button><h2 id={`${blockId}-title`}>{props.title}</h2><p>{props.content}</p><a href={safeUrl(props.buttonUrl)}>{props.buttonText}</a></div></div>
+  useEffect(() => {
+    if (viewMode === 'edit') {
+      setOpen(false)
+      return undefined
+    }
+    const storageKey = `landing-popup-${blockId}`
+    const frequency = props.frequency || (props.showOnce ? 'session' : 'always')
+    // Preview trong editor luôn chạy lại trigger để người dùng kiểm tra cấu hình.
+    // Chỉ trang runtime mới áp dụng giới hạn session/day.
+    if (viewMode !== 'preview') {
+      const storedValue = frequency === 'day'
+        ? window.localStorage.getItem(storageKey)
+        : window.sessionStorage.getItem(storageKey)
+      if (storedValue && (frequency !== 'day' || Date.now() - Number(storedValue) < 86400000)) return undefined
+    }
+
+    const show = () => setOpen(true)
+    const triggerType = props.triggerType || 'delay'
+    let timer
+    let cleanup = () => {}
+    if (triggerType === 'delay') {
+      timer = window.setTimeout(show, Math.max(0, Number(props.delay) || 0) * 1000)
+    } else if (triggerType === 'scroll') {
+      const findScrollContainer = element => {
+        let current = element?.parentElement
+        while (current) {
+          const style = window.getComputedStyle(current)
+          if (/(auto|scroll)/.test(`${style.overflow}${style.overflowY}`)) return current
+          current = current.parentElement
+        }
+        return window
+      }
+      const scrollContainer = findScrollContainer(triggerAnchorRef.current)
+      const handleScroll = () => {
+        const current = scrollContainer === window ? window.scrollY : scrollContainer.scrollTop
+        const total = scrollContainer === window
+          ? Math.max(1, document.documentElement.scrollHeight - window.innerHeight)
+          : Math.max(1, scrollContainer.scrollHeight - scrollContainer.clientHeight)
+        if ((current / total) * 100 >= Math.max(0, Number(props.scrollPercent) || 50)) {
+          show()
+          scrollContainer.removeEventListener('scroll', handleScroll)
+        }
+      }
+      scrollContainer.addEventListener('scroll', handleScroll, { passive: true })
+      handleScroll()
+      cleanup = () => scrollContainer.removeEventListener('scroll', handleScroll)
+    } else if (triggerType === 'exit_intent') {
+      const handleExit = event => {
+        if (event.clientY <= 0) {
+          show()
+          document.removeEventListener('mouseout', handleExit)
+        }
+      }
+      document.addEventListener('mouseout', handleExit)
+      cleanup = () => document.removeEventListener('mouseout', handleExit)
+    }
+    return () => {
+      window.clearTimeout(timer)
+      cleanup()
+    }
+  }, [blockId, props.delay, props.frequency, props.scrollPercent, props.showOnce, props.triggerType, viewMode])
+
+  useEffect(() => {
+    if (!open || viewMode === 'edit') return undefined
+    returnFocusRef.current = document.activeElement
+    const previousOverflow = document.body.style.overflow
+    if (props.lockBodyScroll !== false) document.body.style.overflow = 'hidden'
+    const focusables = () => Array.from(dialogRef.current?.querySelectorAll('a[href], button:not([disabled]), input, textarea, select, [tabindex]:not([tabindex="-1"])') ?? [])
+    const frame = window.requestAnimationFrame(() => focusables()[0]?.focus())
+    const onKeyDown = event => {
+      if (event.key === 'Escape' && props.closeOnEscape !== false) {
+        event.preventDefault()
+        setOpen(false)
+        return
+      }
+      if (event.key !== 'Tab') return
+      const elements = focusables()
+      if (!elements.length) return
+      const first = elements[0]
+      const last = elements[elements.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault(); last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault(); first.focus()
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', onKeyDown)
+      returnFocusRef.current?.focus?.()
+    }
+  }, [open, props.closeOnEscape, props.lockBodyScroll, viewMode])
+
+  const close = () => {
+    const frequency = props.frequency || (props.showOnce ? 'session' : 'always')
+    const storageKey = `landing-popup-${blockId}`
+    if (viewMode !== 'preview') {
+      if (frequency === 'session') window.sessionStorage.setItem(storageKey, String(Date.now()))
+      if (frequency === 'day') window.localStorage.setItem(storageKey, String(Date.now()))
+    }
+    setOpen(false)
+  }
+
+  const content = (props.contentBlocks ?? []).length
+    ? props.contentBlocks.map(block => <div key={block.id}>{renderNestedBlock?.(block)}</div>)
+    : <><h2 id={`${blockId}-title`}>{props.title}</h2><p>{props.content}</p>{props.buttonText && <a href={safeUrl(props.buttonUrl)}>{props.buttonText}</a>}</>
+
+  const popupBackground = props.background || props.backgroundColor || '#ffffff'
+  const overlayOpacity = Math.min(100, Math.max(0, Number(props.overlayOpacity) || 55)) / 100
+  const position = props.position || 'center'
+  const alignItems = position === 'bottom' || position === 'bottom-right' ? 'end' : 'center'
+  const justifyItems = position === 'bottom-right' ? 'end' : 'center'
+  // Portal vào khung preview (editor) hoặc body (runtime) — tránh section transform
+  // đè overlay, đồng thời không thoát khỏi khung mobile trong editor.
+  const portalTarget = getLandingOverlayRoot()
+  const portalContent = (
+    <>
+      {props.showLauncher && (
+        <button
+          type="button"
+          data-popup-launcher={blockId}
+          onClick={() => setOpen(true)}
+          style={{ position: 'fixed', right: 20, bottom: 20, zIndex: 10001 }}
+        >
+          {props.launcherLabel || 'Mở thông tin'}
+        </button>
+      )}
+      <div
+        data-popup="true"
+        data-popup-id={blockId}
+        data-trigger-type={props.triggerType || 'delay'}
+        data-delay={props.delay || 0}
+        data-scroll-percent={props.scrollPercent || 50}
+        data-frequency={props.frequency || (props.showOnce ? 'session' : 'always')}
+        data-close-overlay={props.closeOnOverlay !== false}
+        data-close-escape={props.closeOnEscape !== false}
+        data-lock-scroll={props.lockBodyScroll !== false}
+        hidden={!open}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${blockId}-title`}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 10000,
+          display: open ? 'grid' : 'none',
+          alignItems,
+          justifyItems,
+          padding: 20,
+          background: 'transparent',
+        }}
+      >
+        <div
+          aria-hidden="true"
+          data-popup-backdrop="true"
+          onClick={() => { if (props.closeOnOverlay !== false) close() }}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: props.overlayColor || '#0f1118',
+            opacity: overlayOpacity,
+          }}
+        />
+        <div
+          ref={dialogRef}
+          style={{
+            ...cardStyle,
+            position: 'relative',
+            zIndex: 1,
+            width: `min(100%, ${Math.max(280, Number(props.width) || 520)}px)`,
+            maxHeight: 'calc(100vh - 40px)',
+            overflowY: 'auto',
+            color: props.textColor || '#16161a',
+            background: popupBackground,
+            boxShadow: '0 20px 60px rgba(0,0,0,.22)',
+          }}
+        >
+          {props.showCloseButton !== false && (
+            <button
+              data-popup-close="true"
+              type="button"
+              aria-label="Đóng popup"
+              onClick={close}
+              style={{ position: 'absolute', top: 10, right: 10, border: 0, background: 'transparent', color: 'inherit', fontSize: 24 }}
+            >
+              ×
+            </button>
+          )}
+          {content}
+        </div>
+      </div>
+    </>
+  )
+
+  if (viewMode === 'edit') {
+    return (
+      <>
+        <section style={sectionStyle}>
+          <div style={{ ...cardStyle, maxWidth: Number(props.width) || 520, margin: '0 auto', color: props.textColor, background: popupBackground }}>
+            <small>Popup · trigger {props.triggerType || 'delay'} · mở ở chế độ Preview để kiểm tra</small>
+            <h3 style={{ margin: '10px 0 6px' }}>{props.title || 'Popup'}</h3>
+            <p style={{ margin: 0, color: '#6f6f82', fontSize: 13 }}>
+              {(props.contentBlocks ?? []).length
+                ? `${props.contentBlocks.length} block nội dung`
+                : (props.content || 'Chưa có nội dung')}
+            </p>
+          </div>
+        </section>
+        <span ref={triggerAnchorRef} aria-hidden="true" style={{ display: 'none' }} />
+        {portalTarget ? createPortal(portalContent, portalTarget) : null}
+      </>
+    )
+  }
+
+  return (
+    <>
+      <span ref={triggerAnchorRef} aria-hidden="true" style={{ display: 'none' }} />
+      {portalTarget ? createPortal(portalContent, portalTarget) : portalContent}
+    </>
+  )
 }
 
 export const ExtendedBlockRenderer = ({ section, primaryColor = '#6550d8', renderNestedBlock }) => {
@@ -310,7 +595,81 @@ export const ExtendedBlockRenderer = ({ section, primaryColor = '#6550d8', rende
   const html = useMemo(() => sanitizeHtml(props.html), [props.html])
   switch (section?.type) {
     case 'container': return <section style={{ ...sectionStyle, maxWidth: Number(props.maxWidth) || 1120, padding: Number(props.padding) || 32, background: props.background }}>{(props.blocks ?? []).length ? props.blocks.map(block => <div key={block.id}>{renderNestedBlock?.(block)}</div>) : <><h2>{props.title}</h2><p>{props.content}</p></>}</section>
-    case 'columns': return <section className="landing-responsive-columns" style={{ ...sectionStyle, display: 'flex', flexWrap: 'wrap', gap: Number(props.gap) || 20 }}>{(props.columns ?? []).map((column, index) => <div className="landing-responsive-column" key={`${column.title}-${index}`} style={{ ...cardStyle, minWidth: 0, flex: `1 1 calc(${Math.min(100, Math.max(10, Number(column.width) || 50))}% - ${Number(props.gap) || 20}px)` }}>{(column.blocks ?? []).length ? column.blocks.map(block => <div key={block.id}>{renderNestedBlock?.(block)}</div>) : <><h3>{column.title}</h3><p>{column.content}</p>{column.buttonText && <a href={safeUrl(column.buttonUrl)}>{column.buttonText}</a>}</>}</div>)}</section>
+    case 'columns': {
+      const gap = Math.max(0, numberOr(props.gap, 20))
+      const rowBorderWidth = Math.max(0, numberOr(props.rowBorderWidth, 0))
+      const rowStyle = {
+        ...sectionStyle,
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap,
+        marginTop: px(props.rowMarginTop),
+        marginRight: px(props.rowMarginRight),
+        marginBottom: px(props.rowMarginBottom),
+        marginLeft: px(props.rowMarginLeft),
+        paddingTop: px(props.rowPaddingTop, 40),
+        paddingRight: px(props.rowPaddingRight, 32),
+        paddingBottom: px(props.rowPaddingBottom, 40),
+        paddingLeft: px(props.rowPaddingLeft, 32),
+        background: props.rowBackground || 'transparent',
+        border: rowBorderWidth > 0
+          ? `${rowBorderWidth}px ${props.rowBorderStyle || 'solid'} ${props.rowBorderColor || '#e8e8ee'}`
+          : 'none',
+        borderRadius: px(props.rowBorderRadius),
+        boxShadow: boxShadows[props.rowShadow] || 'none',
+      }
+
+      return (
+        <section className="landing-responsive-columns" style={rowStyle}>
+          {(props.columns ?? []).map((column, index) => {
+            const borderWidth = Math.max(0, numberOr(column.borderWidth, 1))
+            const columnStyle = {
+              minWidth: 0,
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column',
+              flex: `1 1 calc(${Math.min(100, Math.max(10, numberOr(column.width, 50)))}% - ${gap}px)`,
+              alignSelf: ['start', 'center', 'end', 'stretch'].includes(column.verticalAlign)
+                ? column.verticalAlign
+                : 'stretch',
+              marginTop: px(column.marginTop),
+              marginRight: px(column.marginRight),
+              marginBottom: px(column.marginBottom),
+              marginLeft: px(column.marginLeft),
+              paddingTop: px(column.paddingTop, 20),
+              paddingRight: px(column.paddingRight, 20),
+              paddingBottom: px(column.paddingBottom, 20),
+              paddingLeft: px(column.paddingLeft, 20),
+              background: column.background || '#fff',
+              border: borderWidth > 0
+                ? `${borderWidth}px ${column.borderStyle || 'solid'} ${column.borderColor || '#e8e8ee'}`
+                : 'none',
+              borderRadius: px(column.borderRadius, 14),
+              overflow: numberOr(column.borderRadius, 14) > 0 ? 'hidden' : undefined,
+              boxShadow: boxShadows[column.shadow] || 'none',
+            }
+
+            return (
+              <div className="landing-responsive-column" key={`${column.title}-${index}`} style={columnStyle}>
+                {(column.blocks ?? []).length
+                  ? column.blocks.map(block => (
+                    <div
+                      key={block.id}
+                      style={block?.type === 'image' && block?.props?.fillContainer
+                        ? { flex: '1 1 auto', minHeight: 0 }
+                        : undefined}
+                    >
+                      {renderNestedBlock?.(block)}
+                    </div>
+                  ))
+                  : <><h3>{column.title}</h3><p>{column.content}</p>{column.buttonText && <a href={safeUrl(column.buttonUrl)}>{column.buttonText}</a>}</>
+                }
+              </div>
+            )
+          })}
+        </section>
+      )
+    }
     case 'richText':
     case 'customHtml': return <section style={sectionStyle} dangerouslySetInnerHTML={{ __html: html }} />
     case 'cta': {
@@ -323,10 +682,43 @@ export const ExtendedBlockRenderer = ({ section, primaryColor = '#6550d8', rende
     case 'gallery': return <Gallery props={props} />
     case 'faq': return <Faq props={props} blockId={section.id} />
     case 'testimonials': return <section style={sectionStyle}><h2>{props.title}</h2><div className={props.carousel ? 'landing-testimonial-carousel' : undefined} style={{ ...gridStyle, display: props.carousel ? 'flex' : 'grid', overflowX: props.carousel ? 'auto' : undefined, scrollSnapType: props.carousel ? 'x mandatory' : undefined, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>{(props.items ?? []).map((item, index) => <blockquote key={`${item.name}-${index}`} style={{ ...cardStyle, flex: props.carousel ? '0 0 min(85%, 360px)' : undefined, scrollSnapAlign: 'start', margin: 0, border: props.cardStyle === 'minimal' ? 0 : cardStyle.border, boxShadow: props.cardStyle === 'shadow' ? '0 12px 30px rgba(20,20,30,.1)' : 'none' }}>{item.companyLogo && <img loading="lazy" src={item.companyLogo} alt={item.company || ''} style={{ maxWidth: 100, height: 34, objectFit: 'contain' }} />}<div aria-label={`${Math.min(5, Math.max(1, Number(item.rating) || 5))} trên 5 sao`} style={{ color: '#f5a623', letterSpacing: 2 }}>{'★'.repeat(Math.min(5, Math.max(1, Number(item.rating) || 5)))}</div><p>“{item.quote}”</p><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>{item.avatar && <img loading="lazy" src={item.avatar} alt={item.name || ''} style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' }} />}<div><strong>{item.name}</strong><div>{[item.role, item.company].filter(Boolean).join(' · ')}</div></div></div></blockquote>)}</div></section>
-    case 'logos': return <section style={{ ...sectionStyle, textAlign: 'center' }}><h2>{props.title}</h2><div style={{ display: 'flex', flexWrap: 'wrap', gap: 30, alignItems: 'center', justifyContent: 'center' }}>{(props.images ?? []).map((image, index) => {
-      const logo = <img className={props.grayscale ? 'landing-logo-grayscale' : undefined} loading="lazy" src={image.url} alt={image.alt || ''} style={{ maxWidth: 160, height: Math.max(24, Number(props.logoHeight) || 64), objectFit: 'contain' }} />
-      return image.link ? <a key={`${image.url}-${index}`} href={safeUrl(image.link)} target={image.openInNewTab ? '_blank' : undefined} rel={image.openInNewTab ? 'noopener noreferrer' : undefined} title={image.alt || undefined}>{logo}</a> : <span key={`${image.url}-${index}`} title={image.alt || undefined}>{logo}</span>
-    })}</div></section>
+    case 'logos': {
+      const textMode = props.displayMode === 'text'
+      const items = textMode ? (props.partners ?? []) : (props.images ?? [])
+      return (
+        <section
+          className="landing-partners"
+          style={{
+            ...sectionStyle,
+            maxWidth: 'none',
+            paddingTop: 52,
+            paddingBottom: 52,
+            textAlign: 'center',
+            background: props.background || '#F3EEE1',
+            '--partner-columns': Math.max(1, Math.min(8, Number(props.columns) || 5)),
+            '--partner-mobile-columns': Math.max(1, Math.min(3, Number(props.mobileColumns) || 2)),
+          }}
+        >
+          {props.title && (
+            <h2 style={{ margin: '0 0 28px', color: props.titleColor || '#726C5C', fontFamily: 'var(--landing-mono-font, monospace)', fontSize: Math.max(10, Number(props.titleFontSize) || 12), fontWeight: 500, letterSpacing: '.1em', textTransform: 'uppercase' }}>
+              {props.title}
+            </h2>
+          )}
+          <div className="landing-partner-grid" style={{ display: 'grid', gap: '26px 20px', alignItems: 'center', gridTemplateColumns: 'repeat(var(--partner-columns), minmax(0, 1fr))' }}>
+            {items.map((item, index) => {
+              if (textMode) {
+                const name = <span style={{ color: props.textColor || '#374873', fontFamily: 'var(--landing-display-font, serif)', fontSize: Math.max(12, Number(props.textFontSize) || 20), fontWeight: 600 }}>{item.name}</span>
+                return item.url
+                  ? <a key={`${item.name}-${index}`} href={safeUrl(item.url)} style={{ textDecoration: 'none' }}>{name}</a>
+                  : <span key={`${item.name}-${index}`}>{name}</span>
+              }
+              const logo = <img className={props.grayscale ? 'landing-logo-grayscale' : undefined} loading="lazy" src={item.url} alt={item.alt || ''} style={{ maxWidth: 160, height: Math.max(24, Number(props.logoHeight) || 64), objectFit: 'contain' }} />
+              return item.link ? <a key={`${item.url}-${index}`} href={safeUrl(item.link)} target={item.openInNewTab ? '_blank' : undefined} rel={item.openInNewTab ? 'noopener noreferrer' : undefined} title={item.alt || undefined}>{logo}</a> : <span key={`${item.url}-${index}`} title={item.alt || undefined}>{logo}</span>
+            })}
+          </div>
+        </section>
+      )
+    }
     case 'stats': return <section style={{ ...sectionStyle, ...gridStyle, maxWidth: 'none', color: props.textColor || '#16161a', background: props.background || '#fff', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>{(props.items ?? []).map((item, index) => <AnimatedStat key={`${item.label}-${index}`} item={item} animate={Boolean(props.animate)} />)}</section>
     case 'map': {
       const mapUrl = safeUrl(props.embedUrl, '')
@@ -341,8 +733,8 @@ export const ExtendedBlockRenderer = ({ section, primaryColor = '#6550d8', rende
     case 'postList':
     case 'teamList': return <DataList props={props} type={section.type} />
     case 'countdown': return <Countdown props={props} />
-    case 'popup': return <Popup props={props} blockId={section.id} />
-    case 'tabs': return <InteractiveTabs items={props.items} variant={props.style} blockId={section.id} />
+    case 'popup': return <Popup props={props} blockId={section.id} renderNestedBlock={renderNestedBlock} />
+    case 'tabs': return <InteractiveTabs items={props.items} variant={props.style} blockId={section.id} renderNestedBlock={renderNestedBlock} appearance={props} />
     case 'timeline': return <section className="landing-timeline" style={sectionStyle}><h2>{props.title}</h2><div style={{ position: 'relative' }}>{(props.items ?? []).map((item, index) => <div className="landing-timeline-item" key={`${item.time}-${index}`} style={{ position: 'relative', display: 'grid', gridTemplateColumns: '120px 24px 1fr', gap: 12, padding: '0 0 26px' }}><strong>{item.time}</strong><span className="landing-timeline-dot" aria-hidden="true" style={{ position: 'relative', zIndex: 1, width: 14, height: 14, marginTop: 3, border: `3px solid ${primaryColor}`, borderRadius: '50%', background: '#fff' }} /><div><h3 style={{ margin: 0 }}>{item.title}</h3><p style={{ marginBottom: 0 }}>{item.description}</p></div>{index < (props.items?.length ?? 0) - 1 && <span className="landing-timeline-line" aria-hidden="true" style={{ position: 'absolute', top: 17, bottom: 0, left: 138, width: 2, background: '#dedee8' }} />}</div>)}</div></section>
     default: return null
   }
