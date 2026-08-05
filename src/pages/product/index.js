@@ -88,7 +88,7 @@ const Index = () => {
       }
     }
     for (const iSkus of item.skus || []) {
-      let item = { id: iSkus?.id, name: iSkus.name, skuPrices: iSkus.skuPrices || [] }
+      let item = { id: iSkus?.id, name: iSkus.name, note: iSkus?.note, skuPrices: iSkus.skuPrices || [] }
       let details = [];
       for (const detail of iSkus.skuDetails || []) {
         details.push({ id: detail?.id, attributedId: detail.attributedId, attributedValueId: detail.attributedValueId });
