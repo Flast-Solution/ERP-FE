@@ -94,6 +94,12 @@ const FormListCascader = ({ field, dataInOptions }) => {
           <FormListPriceRange />
         </FormListAddtion>
       </Col>
+      <Col md={24} xs={24} style={{ marginTop: 12 }}>
+        <FormInput
+          name={[name, 'note']}
+          placeholder={"Ghi chú"}
+        />
+      </Col>
     </Row>
   )
 }
@@ -125,12 +131,6 @@ const FormListPriceRange = ({ field }) => {
           name={[name, 'price']}
           required
           placeholder={"Giá bán / Chi phí"}
-        />
-      </Col>
-      <Col md={24} xs={24} style={{ marginTop: 12 }}>
-        <FormInput
-          name={[name, 'note']}
-          placeholder={"Ghi chú"}
         />
       </Col>
     </Row>

@@ -66,7 +66,7 @@ const Product = ({ closeModal, data }) => {
         dRe.attrValues = itemAttrValues;
       }
       for (const iSkus of ( data?.skus || [] )) {
-        let item = { id: iSkus?.id, name: iSkus?.name, skuPrices: iSkus?.skuPrices || [] }
+        let item = { id: iSkus?.id, name: iSkus?.name, note: iSkus?.note, skuPrices: iSkus?.skuPrices || [] }
         let details = [];
         for (const detail of iSkus?.sku) {
           details.push([detail.attributedId, detail.attributedValueId]);
