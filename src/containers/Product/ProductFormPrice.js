@@ -127,6 +127,12 @@ const FormListPriceRange = ({ field }) => {
           placeholder={"Giá bán / Chi phí"}
         />
       </Col>
+      <Col md={24} xs={24} style={{ marginTop: 12 }}>
+        <FormInput
+          name={[name, 'note']}
+          placeholder={"Ghi chú"}
+        />
+      </Col>
     </Row>
   )
 }

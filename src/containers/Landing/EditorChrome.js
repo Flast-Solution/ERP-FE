@@ -32,6 +32,7 @@ export function EditorChrome() {
   const undo = useEditorStore((s) => s.undo)
   const redo = useEditorStore((s) => s.redo)
   const busy = useEditorStore((s) => s.busy)
+  const building = useEditorStore((s) => s.building)
   const historyIndex = useEditorStore((s) => s.historyIndex)
   const historyLength = useEditorStore((s) => s.history.length)
   const setConfigOpen = useEditorStore((s) => s.setConfigOpen)
@@ -128,8 +129,8 @@ export function EditorChrome() {
 
       <BarRight>
         <AgentStatus status={status} />
-        <Button variant="text" size="small" onClick={() => saveDraft()}>Lưu nháp</Button>
-        <Button variant="text" size="small" onClick={publish}>Xuất bản</Button>
+        <Button variant="text" size="small" loading={building} disabled={building} onClick={() => saveDraft()}>Lưu nháp</Button>
+        <Button variant="text" size="small" loading={building} disabled={building} onClick={publish}>Xuất bản</Button>
         <Avatar>A</Avatar>
       </BarRight>
     </Bar>

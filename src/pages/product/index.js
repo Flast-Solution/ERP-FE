@@ -40,7 +40,7 @@ import useWorkflowProgressDrawer from '@/containers/Order/List/hooks/useWorkflow
 import { PRODUCT_WORKFLOW_ENTITY_TYPE } from '@/containers/Order/List/constants';
 import { enrichEntitiesWithWorkflowData } from '@/containers/Order/List/services/workflowApi';
 
-const PRODUCT_API_PATH = 'erp/solr/fetch-product';
+const PRODUCT_API_PATH = 'erp/product/fetch';
 
 const Index = () => {
 
