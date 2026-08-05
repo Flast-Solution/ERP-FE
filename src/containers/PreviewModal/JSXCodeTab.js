@@ -81,7 +81,7 @@ const JSXCodeTab = ({
 
     const handleBuildEvent = (event) => {
       const payload = event.detail ?? {}
-      const payloadComponentId = payload.component_id ?? payload.componentId
+      const payloadComponentId = payload.component_id ?? payload?.data?.component_id
       if (!payloadComponentId || payloadComponentId !== buildingComponentIdRef.current) return
 
       const log = payload.log ?? payload.message ?? ''
@@ -148,7 +148,7 @@ const JSXCodeTab = ({
         entryFilename,
         jsxCode: buildJsxCode,
       })
-      const url = response.previewUrl
+      const url = response.url
       const status = response.status ?? ''
       setPreviewUrl(url)
       if (url || status === 'done' || status === 'success') {

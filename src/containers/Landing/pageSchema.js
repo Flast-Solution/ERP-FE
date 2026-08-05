@@ -5,7 +5,19 @@ export const DEFAULT_PAGE_SCHEMA = {
   name: 'Trang chủ flast.vn',
   theme: {
     primaryColor: '#7c5cff',
+    secondaryColor: '#d9a441',
+    surfaceColor: '#ffffff',
+    surfaceAltColor: '#f7f5ff',
+    textColor: '#16161a',
+    mutedColor: '#6f6f82',
     fontFamily: 'Inter, sans-serif',
+    displayFontFamily: 'Inter, sans-serif',
+    monoFontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+    fontStylesheetUrl: '',
+    containerWidth: '1180',
+    borderRadius: '12',
+    sectionSpacingDesktop: '40',
+    sectionSpacingMobile: '24',
   },
   seo: {
     meta: [
@@ -113,7 +125,9 @@ export const normalizePageSchema = schema => {
     ...source,
     schemaVersion: Number.isInteger(source.schemaVersion) ? source.schemaVersion : 1,
     name: typeof source.name === 'string' ? source.name : 'Trang chưa đặt tên',
-    theme: isPlainObject(source.theme) ? source.theme : clonePageSchema(DEFAULT_PAGE_SCHEMA.theme),
+    theme: isPlainObject(source.theme)
+      ? { ...clonePageSchema(DEFAULT_PAGE_SCHEMA.theme), ...source.theme }
+      : clonePageSchema(DEFAULT_PAGE_SCHEMA.theme),
     seo: isPlainObject(source.seo) && Array.isArray(source.seo.meta)
       ? source.seo
       : clonePageSchema(DEFAULT_PAGE_SCHEMA.seo),
@@ -172,8 +186,13 @@ export const validatePageSchema = schema => {
 
     const nestedGroups = [
       ...(Array.isArray(section.props.blocks) ? [section.props.blocks] : []),
+      ...(Array.isArray(section.props.visualBlocks) ? [section.props.visualBlocks] : []),
+      ...(Array.isArray(section.props.contentBlocks) ? [section.props.contentBlocks] : []),
       ...(Array.isArray(section.props.columns)
         ? section.props.columns.map(column => Array.isArray(column?.blocks) ? column.blocks : [])
+        : []),
+      ...(section.type === 'tabs' && Array.isArray(section.props.items)
+        ? section.props.items.map(item => Array.isArray(item?.blocks) ? item.blocks : [])
         : []),
     ]
     nestedGroups.forEach((blocks, groupIndex) => blocks.forEach((block, blockIndex) => (

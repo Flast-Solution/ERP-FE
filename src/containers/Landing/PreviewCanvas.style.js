@@ -4,10 +4,60 @@ import { t } from '@/css/landing'
 export const Page = styled.div`
   position: relative;
   min-height: 100%;
-  font-family: ${t.fontSans};
-  color: #16161a;
-  background: #fff;
+  font-family: var(--landing-font, ${t.fontSans});
+  color: var(--landing-text, #16161a);
+  background: var(--landing-surface, #fff);
   scroll-behavior: smooth;
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--landing-display-font, inherit);
+  }
+
+  code,
+  pre {
+    font-family: var(--landing-mono-font, monospace);
+  }
+
+  > .landing-section-shell {
+    box-sizing: border-box;
+    width: 100%;
+    padding-right: var(--section-padding-desktop, 0);
+    padding-left: var(--section-padding-desktop, 0);
+    margin-bottom: var(--landing-section-spacing-desktop, 0);
+    overflow: clip;
+  }
+
+  > .landing-divider-section { margin-bottom: 0; }
+
+  > .landing-section-shell[data-block-type='popup'] { overflow: visible; }
+
+  > .landing-hide-desktop { display: none; }
+
+  > [data-entrance-animation='fade'],
+  > [data-entrance-animation='fade-up'],
+  > [data-entrance-animation='zoom'] {
+    animation: landing-section-enter .55s ease both;
+  }
+
+  > [data-entrance-animation='fade-up'] { --landing-enter-y: 18px; }
+  > [data-entrance-animation='zoom'] { --landing-enter-scale: .97; }
+
+  @keyframes landing-section-enter {
+    from {
+      opacity: 0;
+      transform: translateY(var(--landing-enter-y, 0)) scale(var(--landing-enter-scale, 1));
+    }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    > [data-entrance-animation] { animation: none !important; }
+  }
 
   > [id] {
     scroll-margin-top: 16px;
@@ -75,6 +125,19 @@ export const Page = styled.div`
     align-items: stretch;
   }
 
+  &[data-device='mobile'] > .landing-section-shell {
+    padding-right: var(--section-padding-mobile, 0);
+    padding-left: var(--section-padding-mobile, 0);
+    margin-bottom: var(--landing-section-spacing-mobile, 0);
+  }
+
+  &[data-device='mobile'] > .landing-hide-desktop { display: block; }
+  &[data-device='mobile'] > .landing-hide-mobile { display: none; }
+
+  &[data-device='mobile'] .landing-hero-inner[data-split='true'] {
+    grid-template-columns: 1fr;
+  }
+
   &[data-device='mobile'] .landing-banner {
     height: var(--banner-mobile-height) !important;
   }
@@ -126,7 +189,29 @@ export const Page = styled.div`
     left: 6px !important;
   }
 
+  &[data-device='mobile'] .landing-partner-grid {
+    grid-template-columns: repeat(var(--partner-mobile-columns, 2), minmax(0, 1fr)) !important;
+  }
+
+  &[data-device='mobile'] .landing-divider-editor-zone {
+    padding-top: var(--divider-mobile-space-top, 16px);
+    padding-right: var(--divider-mobile-space-right, 16px);
+    padding-bottom: var(--divider-mobile-space-bottom, 16px);
+    padding-left: var(--divider-mobile-space-left, 16px);
+  }
+
   @media (max-width: 600px) {
+    > .landing-section-shell {
+      padding-right: var(--section-padding-mobile, 0);
+      padding-left: var(--section-padding-mobile, 0);
+      margin-bottom: var(--landing-section-spacing-mobile, 0);
+    }
+
+    > .landing-hide-desktop { display: block; }
+    > .landing-hide-mobile { display: none; }
+
+    .landing-hero-inner[data-split='true'] { grid-template-columns: 1fr; }
+
     .landing-features-grid,
     .landing-pricing-plans {
       grid-template-columns: repeat(var(--features-mobile-columns, 1), minmax(0, 1fr));
@@ -189,6 +274,13 @@ export const Page = styled.div`
     .landing-timeline-dot { grid-column: 1; grid-row: 1 / span 2; }
     .landing-timeline-item > div { grid-column: 2; }
     .landing-timeline-line { left: 6px !important; }
+    .landing-partner-grid { grid-template-columns: repeat(var(--partner-mobile-columns, 2), minmax(0, 1fr)) !important; }
+    .landing-divider-editor-zone {
+      padding-top: var(--divider-mobile-space-top, 16px);
+      padding-right: var(--divider-mobile-space-right, 16px);
+      padding-bottom: var(--divider-mobile-space-bottom, 16px);
+      padding-left: var(--divider-mobile-space-left, 16px);
+    }
   }
 
   @media (min-width: 601px) and (max-width: 900px) {
@@ -231,16 +323,12 @@ export const Page = styled.div`
 
   .landing-divider-editor-zone {
     position: relative;
-    min-height: 44px;
+    padding-top: var(--divider-space-top, 22px);
+    padding-right: var(--divider-space-right, 32px);
+    padding-bottom: var(--divider-space-bottom, 22px);
+    padding-left: var(--divider-space-left, 32px);
   }
 
-  .landing-divider-editor-zone > span {
-    display: block;
-    margin-bottom: 8px;
-    color: #777789;
-    font-size: 10px;
-    text-align: center;
-  }
 `
 
 export const Nav = styled.header`
@@ -304,23 +392,19 @@ export const MobileMenuButton = styled.button`
 `
 
 export const MobileDrawerBackdrop = styled.button`
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  height: 100vh;
-  height: 100dvh;
-  z-index: 50;
+  position: fixed;
+  inset: 0;
+  z-index: 9990;
   border: 0;
   background: rgba(15, 17, 24, 0.46);
   cursor: pointer;
 `
 
 export const MobileDrawer = styled.aside`
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
-  z-index: 51;
+  z-index: 9991;
   display: flex;
   flex-direction: column;
   width: min(82%, 320px);
@@ -486,6 +570,27 @@ export const HeroOverlay = styled.div`
   inset: 0;
   z-index: -1;
   pointer-events: none;
+`
+
+export const HeroInner = styled.div.attrs({ className: 'landing-hero-inner' })`
+  position: relative;
+  z-index: 1;
+  display: grid;
+  align-items: center;
+  gap: clamp(28px, 6vw, 72px);
+  width: min(100%, var(--landing-container-width, 1180px));
+  margin: 0 auto;
+
+  &[data-split='true'] { grid-template-columns: minmax(0, 1fr) minmax(260px, .9fr); }
+  &[data-split='true'][data-visual-position='left'] > .landing-hero-content { order: 2; }
+  &[data-split='true'][data-visual-position='left'] > .landing-hero-visual { order: 1; }
+`
+
+export const HeroVisual = styled.div`
+  min-width: 0;
+  color: var(--hero-text-color, #16161a);
+
+  > div + div { margin-top: 16px; }
 `
 
 export const HeroContent = styled.div`
@@ -659,7 +764,8 @@ export const PriceHead = styled.div`
 
   p {
     margin: 0;
-    color: #b4b4c0;
+    color: var(--pricing-desc-color, #b4b4c0);
+    opacity: var(--pricing-desc-opacity, 1);
     font-size: 14px;
   }
 `
@@ -720,7 +826,7 @@ export const PlanTag = styled.span`
 export const PlanName = styled.span`
   font-size: 13px;
   font-weight: 600;
-  color: #b4b4c0;
+  color: var(--plan-name-color, #b4b4c0);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 `
@@ -733,7 +839,7 @@ export const PlanPrice = styled.span`
 
 export const PlanSub = styled.span`
   font-size: 13px;
-  color: #8a8a96;
+  color: var(--plan-muted, #8a8a96);
   margin-bottom: 8px;
 `
 
@@ -754,6 +860,7 @@ export const PlanBenefits = styled.ul`
   padding: 0;
   list-style: none;
   font-size: 12px;
+  color: var(--plan-muted, inherit);
   opacity: .88;
 `
 
@@ -876,9 +983,11 @@ export const ContentImage = styled.img`
 `
 
 export const ImageCaption = styled.p`
-  margin: 8px 0 0;
+  margin: 0;
+  padding: 9px 12px;
   color: #8a8a96;
   font-size: 12px;
+  line-height: 1.45;
   text-align: center;
 `
 
@@ -959,6 +1068,54 @@ export const BannerSlide = styled.div`
     height: 100%;
     object-fit: cover;
   }
+`
+
+export const BannerTicker = styled.div`
+  width: 100%;
+  overflow: hidden;
+  padding: 9px 0;
+  color: var(--ticker-color, #faf7ef);
+  background: var(--ticker-background, #232d4b);
+  white-space: nowrap;
+
+  &[data-pause-on-hover='true']:hover > div { animation-play-state: paused; }
+`
+
+export const BannerTickerTrack = styled.div`
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  animation: landing-ticker var(--ticker-duration, 28s) linear infinite;
+  animation-direction: var(--ticker-direction, normal);
+
+  @keyframes landing-ticker {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation-play-state: paused;
+  }
+`
+
+export const BannerTickerGroup = styled.div`
+  display: flex;
+  flex: none;
+`
+
+export const BannerTickerItem = styled.a`
+  display: inline-flex;
+  align-items: center;
+  gap: 34px;
+  padding: 0 34px;
+  color: inherit;
+  font-family: var(--landing-mono-font, monospace);
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-decoration: none;
+  text-transform: uppercase;
+
+  b { color: var(--ticker-accent, #d9a441); font-weight: 400; }
 `
 
 export const BannerEmpty = styled.div`

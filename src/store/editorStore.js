@@ -14,6 +14,7 @@ import {
 } from '@/containers/Landing/landingRepository'
 import useChatStore from '@/containers/AIChatbot/useChatStore'
 import { buildLandingPage } from '@/containers/Landing/landingBuildService'
+import WebPageService, { buildWebPagePayload } from '@/services/WebPageService'
 
 /* Dữ liệu mặc định — ràng buộc API cho từng phần tử trên trang */
 const DEFAULT_API = {}
@@ -72,6 +73,8 @@ export const useEditorStore = create((set, get) => ({
   configOpen: false,
   initializedPage: false,
   currentPageId: 'landing-home',
+  /** Id trang trên server (sau create). null → lần lưu phải gọi create, không phải update. */
+  remotePageId: null,
   currentPageSlug: '/',
 
   /* Bản nháp trang và lịch sử chỉnh sửa */
@@ -110,9 +113,16 @@ export const useEditorStore = create((set, get) => ({
           name: mode === 'create' ? 'Trang mới' : DEFAULT_PAGE_SCHEMA.name,
         }
 
+    // Chỉ update khi đã có remoteId từ API. UUID local / landing-home → create.
+    const isApiPageId = pageId !== 'landing-home' && /^\d+$/.test(String(pageId))
+    const remotePageId = page?.remoteId != null && page.remoteId !== ''
+      ? page.remoteId
+      : isApiPageId ? Number(pageId) : null
+
     set({
       initializedPage: true,
       currentPageId: pageId,
+      remotePageId,
       currentPageSlug: page?.slug ?? '/',
       originalSchema: clonePageSchema(schema),
       draftSchema: clonePageSchema(schema),
@@ -332,19 +342,48 @@ export const useEditorStore = create((set, get) => ({
         pageId: current.currentPageId,
         schema,
         sessionId,
+        allowHtmlFallback: true,
       })
+      if (!build?.url) {
+        throw new Error('Build thành công nhưng server chưa trả URL micro-frontend.')
+      }
+
+      const remotePage = current.remotePageId
+        ? await WebPageService.update(buildWebPagePayload({
+          id: current.remotePageId,
+          name: schema.name,
+          slug: current.currentPageSlug,
+          title: schema.name,
+          schema,
+          build,
+        }))
+        : await WebPageService.create(buildWebPagePayload({
+          name: schema.name,
+          slug: current.currentPageSlug,
+          title: schema.name,
+          schema,
+          build,
+        }))
+
+      const nextId = remotePage.id
       const saved = saveLandingPage({
-        id: current.currentPageId,
+        id: nextId,
         schema,
-        slug: current.currentPageSlug,
+        slug: remotePage.slug || current.currentPageSlug,
         status: 'DRAFT',
         build,
+        remoteId: nextId,
       })
-      set({ lastSavedAt: savedAt })
-      get()._showToast('Đã build và lưu bản nháp.')
+      set({
+        currentPageId: nextId,
+        remotePageId: nextId,
+        currentPageSlug: saved.slug,
+        lastSavedAt: savedAt,
+      })
+      get()._showToast('Đã build và lưu trang.')
       return saved
     } catch (error) {
-      get()._showToast(error?.message || 'Không build được Landing Page.')
+      get()._showToast(error?.message || 'Không build/lưu được Landing Page.')
       return null
     } finally {
       set({ building: false })
@@ -360,12 +399,6 @@ export const useEditorStore = create((set, get) => ({
       return
     }
     const current = get()
-    const publishPayload = {
-      pageId: current.currentPageId,
-      slug: current.currentPageSlug,
-      schema,
-      publishedAt,
-    }
     const version = {
       id: `${Date.now()}`,
       publishedAt,
@@ -381,29 +414,60 @@ export const useEditorStore = create((set, get) => ({
         pageId: current.currentPageId,
         schema,
         sessionId,
+        allowHtmlFallback: true,
       })
-      publishPayload.build = build
-      console.log('[LandingEditor][Publish] payload:', publishPayload)
-      writeStorage(PUBLISHED_STORAGE_KEY, publishPayload)
-      writeStorage(VERSION_STORAGE_KEY, versions)
-      writeStorage(DRAFT_STORAGE_KEY, { schema, savedAt: publishedAt })
-      saveLandingPage({
-        id: current.currentPageId,
+      if (!build?.url) {
+        throw new Error('Build thành công nhưng server chưa trả URL micro-frontend.')
+      }
+
+      const remotePage = current.remotePageId
+        ? await WebPageService.update(buildWebPagePayload({
+          id: current.remotePageId,
+          name: schema.name,
+          slug: current.currentPageSlug,
+          title: schema.name,
+          schema,
+          build,
+        }))
+        : await WebPageService.create(buildWebPagePayload({
+          name: schema.name,
+          slug: current.currentPageSlug,
+          title: schema.name,
+          schema,
+          build,
+        }))
+
+      const nextId = remotePage.id
+      writeStorage(PUBLISHED_STORAGE_KEY, {
+        pageId: nextId,
+        slug: remotePage.slug || current.currentPageSlug,
         schema,
-        slug: current.currentPageSlug,
-        status: 'PUBLISHED',
         publishedAt,
         build,
       })
+      writeStorage(VERSION_STORAGE_KEY, versions)
+      writeStorage(DRAFT_STORAGE_KEY, { schema, savedAt: publishedAt })
+      saveLandingPage({
+        id: nextId,
+        schema,
+        slug: remotePage.slug || current.currentPageSlug,
+        status: 'PUBLISHED',
+        publishedAt,
+        build,
+        remoteId: nextId,
+      })
       set({
+        currentPageId: nextId,
+        remotePageId: nextId,
+        currentPageSlug: remotePage.slug || current.currentPageSlug,
         originalSchema: schema,
         versions,
         publishedAt,
         lastSavedAt: publishedAt,
       })
-      get()._showToast('Đã build và xuất bản phiên bản mới.')
+      get()._showToast('Đã build và xuất bản trang.')
     } catch (error) {
-      get()._showToast(error?.message || 'Không build được Landing Page.')
+      get()._showToast(error?.message || 'Không build/xuất bản được Landing Page.')
     } finally {
       set({ building: false })
     }

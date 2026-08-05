@@ -19,6 +19,13 @@ const getTitle = schema => (
   || 'Landing page'
 )
 
+const getFontStylesheet = schema => {
+  const value = String(schema?.theme?.fontStylesheetUrl ?? '').trim()
+  return /^https:\/\//i.test(value)
+    ? `<link rel="stylesheet" href="${escapeAttribute(value)}">`
+    : ''
+}
+
 const readStyle = style => {
   if (style.textContent) return style.textContent
   try {
@@ -41,16 +48,39 @@ const capturePreviewMarkup = () => {
   clone.querySelectorAll('.is-selected, .is-active').forEach(node => {
     node.classList.remove('is-selected', 'is-active')
   })
+  // Overlay portal vào frame/body — gắn lại vào markup export nếu nằm ngoài preview root.
+  const overlaySelector = '[data-popup="true"], [data-popup-launcher], [data-mobile-menu-backdrop="true"], [data-mobile-menu-drawer="true"]'
+  const overlayHosts = [
+    document.querySelector('[data-landing-frame="true"]'),
+    document.body,
+  ].filter(Boolean)
+  const seen = new Set()
+  overlayHosts.forEach(host => {
+    host.querySelectorAll(overlaySelector).forEach(node => {
+      if (seen.has(node) || source.contains(node)) return
+      seen.add(node)
+      clone.appendChild(node.cloneNode(true))
+    })
+  })
   clone.removeAttribute('data-landing-preview')
   clone.removeAttribute('data-device')
   return clone.outerHTML
 }
 
-export const generateLandingHtml = schema => {
+export const generateLandingHtml = (schema, { allowFallback = false } = {}) => {
   const markup = capturePreviewMarkup()
-  if (!markup) throw new Error('Không tìm thấy nội dung Preview để sinh HTML.')
+  if (!markup && !allowFallback) {
+    throw new Error('Không tìm thấy nội dung Preview để sinh HTML.')
+  }
+  const safeMarkup = markup || [
+    '<div style="padding:48px 24px;font-family:system-ui,sans-serif;color:#16161a">',
+    `<h1 style="margin:0 0 12px">${escapeAttribute(getTitle(schema))}</h1>`,
+    '<p style="margin:0;color:#6f6f82">Trang đang được thiết kế trong Landing Editor.</p>',
+    '</div>',
+  ].join('')
   const css = captureStyledCss()
   const metaTags = buildMetaTags(schema)
+  const fontStylesheet = getFontStylesheet(schema)
   return `<!doctype html>
 <html lang="vi">
 <head>
@@ -58,6 +88,7 @@ export const generateLandingHtml = schema => {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeAttribute(getTitle(schema))}</title>
   ${metaTags}
+  ${fontStylesheet}
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; min-height: 100%; }
@@ -66,15 +97,34 @@ export const generateLandingHtml = schema => {
   </style>
 </head>
 <body>
-  ${markup}
+  ${safeMarkup}
   <script>
     (() => {
       const focusableSelector = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
       document.querySelectorAll('[data-landing-navbar="true"]').forEach(navbar => {
         const trigger = navbar.querySelector('[data-mobile-menu-trigger="true"]');
-        const backdrop = navbar.parentElement?.querySelector('[data-mobile-menu-backdrop="true"]');
-        const drawer = navbar.parentElement?.querySelector('[data-mobile-menu-drawer="true"]');
+        const menuId = trigger?.dataset.mobileMenuId || navbar.dataset.mobileMenuId || '';
+        const findMenuNode = (attr) => {
+          if (menuId) {
+            const scoped = document.querySelector('[' + attr + '="true"][data-mobile-menu-id="' + CSS.escape(menuId) + '"]');
+            if (scoped) return scoped;
+          }
+          return navbar.parentElement?.querySelector('[' + attr + '="true"]')
+            || document.querySelector('[' + attr + '="true"]');
+        };
+        const backdrop = findMenuNode('data-mobile-menu-backdrop');
+        const drawer = findMenuNode('data-mobile-menu-drawer');
         if (!trigger || !backdrop || !drawer) return;
+
+        if (backdrop.parentElement !== document.body) document.body.appendChild(backdrop);
+        if (drawer.parentElement !== document.body) document.body.appendChild(drawer);
+        backdrop.style.position = 'fixed';
+        backdrop.style.inset = '0';
+        backdrop.style.zIndex = '9990';
+        drawer.style.position = 'fixed';
+        drawer.style.top = '0';
+        drawer.style.left = '0';
+        drawer.style.zIndex = '9991';
 
         let previousOverflow = '';
         const getFocusable = () => Array.from(drawer.querySelectorAll(focusableSelector));
@@ -220,18 +270,88 @@ export const generateLandingHtml = schema => {
       document.querySelectorAll('[data-popup="true"]').forEach(popup => {
         popup.hidden = true;
         popup.style.display = 'none';
-        const key = 'landing-popup-' + (popup.closest('[id]')?.id || Math.random());
-        if (popup.dataset.showOnce === 'true' && window.sessionStorage.getItem(key)) return;
-        window.setTimeout(() => {
+        // Đưa overlay ra body để position:fixed gắn viewport, không bị section cha (transform) kẹt.
+        if (popup.parentElement !== document.body) document.body.appendChild(popup);
+        popup.style.position = 'fixed';
+        popup.style.inset = '0';
+        popup.style.zIndex = '10000';
+        const popupId = popup.dataset.popupId || popup.closest('[id]')?.id || String(Math.random());
+        document.querySelectorAll('[data-popup-launcher="' + CSS.escape(popupId) + '"]').forEach(button => {
+          if (button.parentElement !== document.body) document.body.appendChild(button);
+          button.style.position = 'fixed';
+          button.style.zIndex = '10001';
+        });
+        const key = 'landing-popup-' + popupId;
+        const frequency = popup.dataset.frequency || 'always';
+        const storedValue = frequency === 'day' ? window.localStorage.getItem(key) : window.sessionStorage.getItem(key);
+        if (storedValue && (frequency !== 'day' || Date.now() - Number(storedValue) < 86400000)) return;
+        let previousOverflow = '';
+        let returnFocus = null;
+        const focusables = () => Array.from(popup.querySelectorAll(focusableSelector));
+        const open = () => {
+          returnFocus = document.activeElement;
+          previousOverflow = document.body.style.overflow;
           popup.hidden = false;
           popup.style.display = 'grid';
-          popup.querySelector(focusableSelector)?.focus();
-          if (popup.dataset.showOnce === 'true') window.sessionStorage.setItem(key, 'shown');
-        }, Math.max(0, Number(popup.dataset.delay) || 0) * 1000);
-        const close = () => { popup.hidden = true; popup.style.display = 'none'; };
+          popup.style.position = 'fixed';
+          popup.style.inset = '0';
+          popup.style.zIndex = '10000';
+          if (popup.dataset.lockScroll !== 'false') document.body.style.overflow = 'hidden';
+          window.requestAnimationFrame(() => focusables()[0]?.focus());
+        };
+        const close = () => {
+          popup.hidden = true;
+          popup.style.display = 'none';
+          document.body.style.overflow = previousOverflow;
+          if (frequency === 'session') window.sessionStorage.setItem(key, String(Date.now()));
+          if (frequency === 'day') window.localStorage.setItem(key, String(Date.now()));
+          returnFocus?.focus?.();
+        };
+        const triggerType = popup.dataset.triggerType || 'delay';
+        if (triggerType === 'delay') {
+          window.setTimeout(open, Math.max(0, Number(popup.dataset.delay) || 0) * 1000);
+        } else if (triggerType === 'scroll') {
+          const onScroll = () => {
+            const total = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+            if ((window.scrollY / total) * 100 >= Math.max(0, Number(popup.dataset.scrollPercent) || 50)) {
+              window.removeEventListener('scroll', onScroll);
+              open();
+            }
+          };
+          window.addEventListener('scroll', onScroll, { passive: true });
+        } else if (triggerType === 'exit_intent') {
+          const onExit = event => {
+            if (event.clientY > 0) return;
+            document.removeEventListener('mouseout', onExit);
+            open();
+          };
+          document.addEventListener('mouseout', onExit);
+        }
+        document.querySelectorAll('[data-popup-launcher="' + CSS.escape(popupId) + '"]').forEach(button => button.addEventListener('click', open));
         popup.querySelector('[data-popup-close]')?.addEventListener('click', close);
-        popup.addEventListener('click', event => { if (event.target === popup) close(); });
-        popup.addEventListener('keydown', event => { if (event.key === 'Escape') close(); });
+        popup.addEventListener('click', event => {
+          if (popup.dataset.closeOverlay === 'false') return;
+          if (event.target === popup || event.target?.dataset?.popupBackdrop === 'true') close();
+        });
+        popup.addEventListener('keydown', event => {
+          if (event.key === 'Escape' && popup.dataset.closeEscape !== 'false') {
+            event.preventDefault();
+            close();
+            return;
+          }
+          if (event.key !== 'Tab') return;
+          const elements = focusables();
+          if (!elements.length) return;
+          const first = elements[0];
+          const last = elements[elements.length - 1];
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          }
+        });
       });
 
       document.querySelectorAll('[data-gallery-lightbox="true"]').forEach(lightbox => {

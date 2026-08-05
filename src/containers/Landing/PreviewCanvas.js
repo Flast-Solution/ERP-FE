@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useEditorStore } from '@/store/editorStore'
 import {
   Page, Nav, Brand, BrandLogo, NavLinks, CtaSm,
@@ -6,7 +7,7 @@ import {
   MobileMenuButton, MobileDrawerBackdrop, MobileDrawer, MobileDrawerHead,
   MobileDrawerLinks, MobileDrawerActions,
   BlockTitle,
-  Hero, HeroMedia, HeroOverlay, HeroContent,
+  Hero, HeroMedia, HeroOverlay, HeroContent, HeroInner, HeroVisual,
   Eyebrow, HeroTitle, HeroDesc, HeroActions, CtaPrimary, CtaGhost,
   FeaturesGrid, FeatCard, FeatIcon, FeatTitle, FeatDesc,
   FeatImage, FeatCta,
@@ -18,9 +19,11 @@ import {
   ContentBlock, ContentHeading, ContentText, ContentImage, ImageCaption,
   ContentButtonWrap, ContentButton, DividerBlock, SpacerBlock, UnknownBlock,
   Banner, BannerTrack, BannerSlide, BannerEmpty, BannerArrow, BannerDots, BannerDot,
+  BannerTicker, BannerTickerTrack, BannerTickerGroup, BannerTickerItem,
 } from './PreviewCanvas.style'
 import { EditableHighlight } from './EditableHighlight'
 import { ExtendedBlockRenderer, isExtendedBlock, sanitizeHtml } from './ExtendedBlockRenderer'
+import { getLandingOverlayRoot } from './landingOverlayRoot'
 
 const BoltIcon = () => (
   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
@@ -50,7 +53,93 @@ const formatPlanPrice = (price, currency) => {
   return unit && value && !value.includes(unit) ? `${value}${unit}` : value
 }
 
-const NavbarBlock = ({ props, primaryColor }) => {
+const normalizeAnchorId = value => String(value ?? '')
+  .trim()
+  .replace(/^#/, '')
+  .replace(/[^a-zA-Z0-9_-]+/g, '-')
+
+const getSectionBackgroundImage = props => {
+  const layers = []
+  if (props.sectionBackgroundPattern === 'woven') {
+    layers.push('repeating-linear-gradient(45deg, rgba(35,45,75,.055) 0 2px, transparent 2px 14px)', 'repeating-linear-gradient(-45deg, rgba(35,45,75,.055) 0 2px, transparent 2px 14px)')
+  } else if (props.sectionBackgroundPattern === 'grid') {
+    layers.push('linear-gradient(rgba(35,45,75,.06) 1px, transparent 1px)', 'linear-gradient(90deg, rgba(35,45,75,.06) 1px, transparent 1px)')
+  } else if (props.sectionBackgroundPattern === 'dots') {
+    layers.push('radial-gradient(circle, rgba(35,45,75,.12) 1px, transparent 1.5px)')
+  }
+  if (props.sectionBackgroundImage) layers.push(`url("${String(props.sectionBackgroundImage).replace(/"/g, '%22')}")`)
+  return layers.length ? layers.join(', ') : undefined
+}
+
+const getSectionPresentation = (props, theme) => {
+  const maxWidth = Number(props.sectionMaxWidth) || 0
+  const desktopPadding = Math.max(0, Number(props.sectionPaddingDesktop) || 0)
+  const mobilePadding = Math.max(0, Number(props.sectionPaddingMobile) || 0)
+  return {
+    className: [
+      'landing-section-shell',
+      props.hideOnDesktop && 'landing-hide-desktop',
+      props.hideOnMobile && 'landing-hide-mobile',
+    ].filter(Boolean).join(' '),
+    style: {
+      '--section-padding-desktop': `${desktopPadding}px`,
+      '--section-padding-mobile': `${mobilePadding}px`,
+      maxWidth: maxWidth > 0 ? `${maxWidth}px` : undefined,
+      marginRight: maxWidth > 0 ? 'auto' : undefined,
+      marginLeft: maxWidth > 0 ? 'auto' : undefined,
+      color: props.sectionTextColor || undefined,
+      backgroundColor: props.sectionBackground || undefined,
+      backgroundImage: getSectionBackgroundImage(props),
+      backgroundPosition: props.sectionBackgroundImage ? 'center' : undefined,
+      backgroundSize: props.sectionBackgroundImage ? 'cover' : props.sectionBackgroundPattern === 'dots' ? '14px 14px' : props.sectionBackgroundPattern === 'grid' ? '24px 24px' : undefined,
+      borderRadius: maxWidth > 0 ? `${Math.max(0, Number(theme?.borderRadius) || 0)}px` : undefined,
+    },
+    animation: props.entranceAnimation || 'none',
+  }
+}
+
+const nestedBoxShadows = {
+  none: 'none',
+  soft: '0 8px 24px rgba(20, 20, 30, .08)',
+  medium: '0 14px 36px rgba(20, 20, 30, .14)',
+  strong: '0 20px 52px rgba(20, 20, 30, .22)',
+}
+
+const nestedBoxNumber = (value, fallback = 0) => {
+  if (value == null || value === '') return fallback
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
+const getNestedBlockStyle = props => {
+  const borderWidth = Math.max(0, nestedBoxNumber(props.boxBorderWidth, 0))
+  return {
+    boxSizing: 'border-box',
+    height: props.fillContainer ? '100%' : undefined,
+    marginTop: `${Math.max(0, nestedBoxNumber(props.boxMarginTop, 0))}px`,
+    marginRight: `${Math.max(0, nestedBoxNumber(props.boxMarginRight, 0))}px`,
+    marginBottom: `${Math.max(0, nestedBoxNumber(props.boxMarginBottom, 0))}px`,
+    marginLeft: `${Math.max(0, nestedBoxNumber(props.boxMarginLeft, 0))}px`,
+    paddingTop: `${Math.max(0, nestedBoxNumber(props.boxPaddingTop, 0))}px`,
+    paddingRight: `${Math.max(0, nestedBoxNumber(props.boxPaddingRight, 0))}px`,
+    paddingBottom: `${Math.max(0, nestedBoxNumber(props.boxPaddingBottom, 0))}px`,
+    paddingLeft: `${Math.max(0, nestedBoxNumber(props.boxPaddingLeft, 0))}px`,
+    background: props.boxBackground || 'transparent',
+    border: borderWidth > 0
+      ? `${borderWidth}px ${props.boxBorderStyle || 'solid'} ${props.boxBorderColor || '#e8e8ee'}`
+      : 'none',
+    borderRadius: `${Math.max(0, nestedBoxNumber(props.boxBorderRadius, 0))}px`,
+    boxShadow: nestedBoxShadows[props.boxShadow] || 'none',
+  }
+}
+
+const renderNestedBlockFrame = (section, primaryColor) => (
+  <div className="landing-nested-block" style={getNestedBlockStyle(section?.props ?? {})}>
+    {renderBlock(section, primaryColor)}
+  </div>
+)
+
+const NavbarBlock = ({ props, primaryColor, menuId = 'navbar' }) => {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuButtonRef = useRef(null)
   const drawerRef = useRef(null)
@@ -125,10 +214,70 @@ const NavbarBlock = ({ props, primaryColor }) => {
     </Brand>
   )
 
+  const portalTarget = getLandingOverlayRoot()
+  const mobileMenu = (
+    <>
+      <MobileDrawerBackdrop
+        type="button"
+        aria-label="Đóng menu"
+        data-mobile-menu-backdrop="true"
+        data-mobile-menu-id={menuId}
+        data-open={menuOpen ? 'true' : 'false'}
+        hidden={!menuOpen}
+        onClick={() => setMenuOpen(false)}
+      />
+      <MobileDrawer
+        ref={drawerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menu điều hướng"
+        aria-hidden={!menuOpen}
+        data-mobile-menu-drawer="true"
+        data-mobile-menu-id={menuId}
+        data-open={menuOpen ? 'true' : 'false'}
+        hidden={!menuOpen}
+        style={{ background: navBackground, color: navTextColor }}
+      >
+        <MobileDrawerHead>
+          {brand}
+          <button
+            type="button"
+            aria-label="Đóng menu"
+            data-mobile-menu-close="true"
+            style={{ color: navTextColor }}
+            onClick={() => setMenuOpen(false)}
+          >×</button>
+        </MobileDrawerHead>
+        <MobileDrawerLinks style={{ color: navTextColor }}>
+          {(props.links ?? []).map((link, index) => (
+            <a href={link.url || '#'} key={`${link.label}-mobile-${index}`} onClick={() => setMenuOpen(false)}>
+              {link.label}
+            </a>
+          ))}
+        </MobileDrawerLinks>
+        <MobileDrawerActions>
+          {actions.map((action, index) => (
+            <a
+              key={`${action.label}-mobile-${index}`}
+              href={action.url || '#'}
+              target={action.openInNewTab ? '_blank' : undefined}
+              rel={action.openInNewTab ? 'noopener noreferrer' : undefined}
+              style={{ background: primaryColor }}
+              onClick={() => setMenuOpen(false)}
+            >
+              {action.label}
+            </a>
+          ))}
+        </MobileDrawerActions>
+      </MobileDrawer>
+    </>
+  )
+
   return (
     <>
       <Nav
         data-landing-navbar="true"
+        data-mobile-menu-id={menuId}
         $sticky={Boolean(props.sticky)}
         style={{ background: navBackground, color: navTextColor }}
       >
@@ -155,6 +304,7 @@ const NavbarBlock = ({ props, primaryColor }) => {
           ref={menuButtonRef}
           className="landing-mobile-menu-button"
           data-mobile-menu-trigger="true"
+          data-mobile-menu-id={menuId}
           type="button"
           aria-label="Mở menu"
           aria-expanded={menuOpen}
@@ -164,58 +314,7 @@ const NavbarBlock = ({ props, primaryColor }) => {
           <span />
         </MobileMenuButton>
       </Nav>
-
-      <MobileDrawerBackdrop
-        type="button"
-        aria-label="Đóng menu"
-        data-mobile-menu-backdrop="true"
-        data-open={menuOpen ? 'true' : 'false'}
-        hidden={!menuOpen}
-        onClick={() => setMenuOpen(false)}
-      />
-      <MobileDrawer
-        ref={drawerRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Menu điều hướng"
-        aria-hidden={!menuOpen}
-        data-mobile-menu-drawer="true"
-        data-open={menuOpen ? 'true' : 'false'}
-        hidden={!menuOpen}
-        style={{ background: navBackground, color: navTextColor }}
-      >
-            <MobileDrawerHead>
-              {brand}
-              <button
-                type="button"
-                aria-label="Đóng menu"
-                data-mobile-menu-close="true"
-                style={{ color: navTextColor }}
-                onClick={() => setMenuOpen(false)}
-              >×</button>
-            </MobileDrawerHead>
-            <MobileDrawerLinks style={{ color: navTextColor }}>
-              {(props.links ?? []).map((link, index) => (
-                <a href={link.url || '#'} key={`${link.label}-mobile-${index}`} onClick={() => setMenuOpen(false)}>
-                  {link.label}
-                </a>
-              ))}
-            </MobileDrawerLinks>
-            <MobileDrawerActions>
-              {actions.map((action, index) => (
-                <a
-                  key={`${action.label}-mobile-${index}`}
-                  href={action.url || '#'}
-                  target={action.openInNewTab ? '_blank' : undefined}
-                  rel={action.openInNewTab ? 'noopener noreferrer' : undefined}
-                  style={{ background: primaryColor }}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  {action.label}
-                </a>
-              ))}
-            </MobileDrawerActions>
-      </MobileDrawer>
+      {portalTarget ? createPortal(mobileMenu, portalTarget) : mobileMenu}
     </>
   )
 }
@@ -239,6 +338,45 @@ const BannerSlider = ({ props }) => {
     }, intervalMs)
     return () => window.clearInterval(timer)
   }, [images.length, intervalMs, paused, props.autoplay])
+
+  if (props.displayMode === 'ticker') {
+    const announcements = Array.isArray(props.announcements)
+      ? props.announcements.filter(item => String(item?.text ?? '').trim())
+      : []
+    const renderGroup = group => (
+      <BannerTickerGroup aria-hidden={group === 'duplicate'} key={group}>
+        {announcements.map((item, index) => (
+          <BannerTickerItem
+            as={item.url ? 'a' : 'span'}
+            href={item.url || undefined}
+            key={`${group}-${item.text}-${index}`}
+          >
+            <span>{item.text}</span>
+            <b aria-hidden="true">{props.tickerSeparator || '◆'}</b>
+          </BannerTickerItem>
+        ))}
+      </BannerTickerGroup>
+    )
+
+    return (
+      <BannerTicker
+        data-banner-ticker="true"
+        data-pause-on-hover={Boolean(props.pauseOnHover)}
+        style={{
+          '--ticker-duration': `${Math.max(5, Number(props.tickerSpeed) || 28)}s`,
+          '--ticker-direction': props.tickerDirection === 'ltr' ? 'reverse' : 'normal',
+          '--ticker-background': props.tickerBackground || '#232D4B',
+          '--ticker-color': props.tickerTextColor || '#FAF7EF',
+          '--ticker-accent': props.tickerAccentColor || '#D9A441',
+        }}
+      >
+        {announcements.length
+          ? <BannerTickerTrack>{renderGroup('primary')}{renderGroup('duplicate')}</BannerTickerTrack>
+          : <span>Thêm nội dung để hiển thị dòng chữ chạy.</span>
+        }
+      </BannerTicker>
+    )
+  }
 
   if (!images.length) {
     return (
@@ -332,7 +470,7 @@ const renderBlock = (section, primaryColor) => {
 
   switch (section?.type) {
     case 'navbar':
-      return <NavbarBlock props={props} primaryColor={primaryColor} />
+      return <NavbarBlock props={props} primaryColor={primaryColor} menuId={section.id || 'navbar'} />
 
     case 'hero': {
       const heroLayout = ['left', 'center', 'right'].includes(props.layout) ? props.layout : 'center'
@@ -340,6 +478,8 @@ const renderBlock = (section, primaryColor) => {
       const hasBackgroundImage = backgroundType === 'image' && Boolean(props.backgroundImageUrl)
       const hasBackgroundVideo = backgroundType === 'video' && Boolean(props.backgroundVideoUrl)
       const overlayOpacity = Math.min(100, Math.max(0, Number(props.overlayOpacity) || 0)) / 100
+      const visualBlocks = props.visualBlocks ?? []
+      const splitLayout = Boolean(props.splitLayout)
 
       return (
         <Hero
@@ -379,34 +519,45 @@ const renderBlock = (section, primaryColor) => {
               style={{ background: props.overlayColor || '#000000', opacity: overlayOpacity }}
             />
           )}
-          <HeroContent className="landing-hero-content">
-            <Eyebrow style={{ color: props.textColor || primaryColor }}>{props.eyebrow}</Eyebrow>
-            <HeroTitle>{props.title}</HeroTitle>
-            <HeroDesc>{props.description}</HeroDesc>
-            <HeroActions data-hero-actions="true">
-              {props.primaryButtonText && (
-                <CtaPrimary
-                  as="a"
-                  href={props.primaryButtonUrl || '#'}
-                  target={props.primaryButtonOpenInNewTab ? '_blank' : undefined}
-                  rel={props.primaryButtonOpenInNewTab ? 'noopener noreferrer' : undefined}
-                  style={{ background: primaryColor }}
-                >
-                  {props.primaryButtonText}
-                </CtaPrimary>
+          <HeroInner data-split={splitLayout ? 'true' : 'false'} data-visual-position={props.visualPosition || 'right'}>
+            <HeroContent className="landing-hero-content">
+              {props.eyebrow?.trim() && (
+                <Eyebrow style={{ color: props.textColor || primaryColor }}>{props.eyebrow}</Eyebrow>
               )}
-              {props.secondaryButtonText && (
-                <CtaGhost
-                  as="a"
-                  href={props.secondaryButtonUrl || '#'}
-                  target={props.secondaryButtonOpenInNewTab ? '_blank' : undefined}
-                  rel={props.secondaryButtonOpenInNewTab ? 'noopener noreferrer' : undefined}
-                >
-                  {props.secondaryButtonText}
-                </CtaGhost>
-              )}
-            </HeroActions>
-          </HeroContent>
+              {props.title?.trim() && <HeroTitle>{props.title}</HeroTitle>}
+              {props.description?.trim() && <HeroDesc>{props.description}</HeroDesc>}
+              <HeroActions data-hero-actions="true">
+                {props.primaryButtonText && (
+                  <CtaPrimary
+                    as="a"
+                    href={props.primaryButtonUrl || '#'}
+                    target={props.primaryButtonOpenInNewTab ? '_blank' : undefined}
+                    rel={props.primaryButtonOpenInNewTab ? 'noopener noreferrer' : undefined}
+                    style={{ background: primaryColor }}
+                  >
+                    {props.primaryButtonText}
+                  </CtaPrimary>
+                )}
+                {props.secondaryButtonText && (
+                  <CtaGhost
+                    as="a"
+                    href={props.secondaryButtonUrl || '#'}
+                    target={props.secondaryButtonOpenInNewTab ? '_blank' : undefined}
+                    rel={props.secondaryButtonOpenInNewTab ? 'noopener noreferrer' : undefined}
+                  >
+                    {props.secondaryButtonText}
+                  </CtaGhost>
+                )}
+              </HeroActions>
+            </HeroContent>
+            {splitLayout && (
+              <HeroVisual className="landing-hero-visual" aria-hidden={visualBlocks.length === 0}>
+                {visualBlocks.map(child => (
+                  <div key={child.id}>{renderNestedBlockFrame(child, primaryColor)}</div>
+                ))}
+              </HeroVisual>
+            )}
+          </HeroInner>
         </Hero>
       )
     }
@@ -415,6 +566,7 @@ const renderBlock = (section, primaryColor) => {
       return <BannerSlider props={props} />
 
     case 'heading': {
+      if (!String(props.text ?? '').trim()) return null
       const tag = ['h1', 'h2', 'h3'].includes(props.level) ? props.level : 'h2'
       return (
         <ContentBlock
@@ -436,7 +588,8 @@ const renderBlock = (section, primaryColor) => {
       )
     }
 
-    case 'text':
+    case 'text': {
+      if (!String(props.text ?? '').replace(/<[^>]*>/g, '').trim()) return null
       return (
         <ContentBlock>
           <ContentText
@@ -446,8 +599,10 @@ const renderBlock = (section, primaryColor) => {
           />
         </ContentBlock>
       )
+    }
 
     case 'image': {
+      const fillContainer = Boolean(props.fillContainer)
       const image = (
         <ContentImage
           className="landing-content-image"
@@ -459,18 +614,34 @@ const renderBlock = (section, primaryColor) => {
             aspectRatio: props.aspectRatio === 'auto' ? 'auto' : (props.aspectRatio || 'auto'),
             objectFit: props.objectFit || 'cover',
             objectPosition: `${props.focalX ?? 50}% ${props.focalY ?? 50}%`,
+            flex: fillContainer ? '1 1 auto' : undefined,
+            height: fillContainer ? '100%' : undefined,
+            minHeight: fillContainer ? 0 : undefined,
+            maxHeight: fillContainer ? 'none' : undefined,
             '--image-width': `${Math.min(100, Math.max(5, Number(props.width) || 100))}%`,
             '--image-mobile-width': `${Math.min(100, Math.max(5, Number(props.mobileWidth) || 100))}%`,
           }}
         />
       )
       return (
-        <ContentBlock>
+        <ContentBlock
+          className={fillContainer ? 'landing-image-fill-container' : undefined}
+          style={fillContainer ? { display: 'flex', flexDirection: 'column', height: '100%', padding: 0 } : undefined}
+        >
           {props.link
             ? <a href={props.link} target={props.openInNewTab ? '_blank' : undefined} rel={props.openInNewTab ? 'noopener noreferrer' : undefined}>{image}</a>
             : image
           }
-          {props.caption && <ImageCaption>{props.caption}</ImageCaption>}
+          {props.caption && (
+            <ImageCaption
+              style={{
+                color: props.captionColor || '#8a8a96',
+                background: props.captionBackground || 'transparent',
+              }}
+            >
+              {props.caption}
+            </ImageCaption>
+          )}
         </ContentBlock>
       )
     }
@@ -533,7 +704,7 @@ const renderBlock = (section, primaryColor) => {
               )}
               <FeatTitle>{item.title}</FeatTitle>
               <FeatDesc>{item.description}</FeatDesc>
-              {item.buttonText && (
+              {props.showButtons !== false && item.buttonText && (
                 <FeatCta
                   href={item.buttonUrl || '#'}
                   target={item.buttonOpenInNewTab ? '_blank' : undefined}
@@ -557,6 +728,9 @@ const renderBlock = (section, primaryColor) => {
             background: props.background || '#0e0e10',
             color: props.textColor || '#ffffff',
             '--pricing-columns': Math.max(1, Math.min(5, Number(props.columns) || 3)),
+            ...(props.textColor
+              ? { '--pricing-desc-color': props.textColor, '--pricing-desc-opacity': '0.72' }
+              : {}),
           }}
         >
           <PriceHead>
@@ -564,61 +738,98 @@ const renderBlock = (section, primaryColor) => {
             <p>{props.description}</p>
           </PriceHead>
           <Plans className="landing-pricing-plans">
-            {(props.plans ?? []).map((plan, index) => (
-              <Plan key={`${plan.name}-${index}`} $hot={plan.featured}>
-                {plan.featured && <PlanTag style={{ background: primaryColor }}>Phổ biến</PlanTag>}
-                {plan.imageUrl ? (
-                  <PlanMedia src={plan.imageUrl} alt={plan.name || `Gói ${index + 1}`} />
-                ) : plan.icon && plan.icon !== 'none' ? (
-                  <PlanIcon style={{ color: primaryColor }}>
-                    <BlockIcon name={plan.icon} />
-                  </PlanIcon>
-                ) : null}
-                <PlanName>{plan.name}</PlanName>
-                <div>
-                  <PlanPrice>{formatPlanPrice(plan.price, props.currency)}</PlanPrice>
-                  <PlanCycle>{props.billingCycle}</PlanCycle>
-                </div>
-                <PlanSub>{plan.description}</PlanSub>
-                <PlanBenefits>
-                  {(plan.benefits ?? []).map((benefit, benefitIndex) => (
-                    <li key={`${benefit.text}-${benefitIndex}`}>✓ {benefit.text}</li>
-                  ))}
-                </PlanBenefits>
-                {plan.featured
-                  ? (
-                    <PlanCtaPrimary
-                      as="a"
-                      href={plan.buttonUrl || '#'}
-                      target={plan.buttonOpenInNewTab ? '_blank' : undefined}
-                      rel={plan.buttonOpenInNewTab ? 'noopener noreferrer' : undefined}
-                      style={{ background: primaryColor }}
-                    >
-                      {plan.buttonText || 'Chọn gói'}
-                    </PlanCtaPrimary>
-                  )
-                  : (
-                    <PlanCtaGhost
-                      as="a"
-                      href={plan.buttonUrl || '#'}
-                      target={plan.buttonOpenInNewTab ? '_blank' : undefined}
-                      rel={plan.buttonOpenInNewTab ? 'noopener noreferrer' : undefined}
-                    >
-                      {plan.buttonText || 'Chọn gói'}
-                    </PlanCtaGhost>
-                  )
-                }
-              </Plan>
-            ))}
+            {(props.plans ?? []).map((plan, index) => {
+              const accent = plan.accentColor || primaryColor
+              const buttonBackground = plan.buttonBackground || (plan.featured ? accent : undefined)
+              const buttonTextColor = plan.buttonTextColor || (buttonBackground ? '#ffffff' : undefined)
+              const planStyle = {
+                ...(plan.background ? { background: plan.background } : {}),
+                ...(plan.textColor ? { color: plan.textColor } : {}),
+                ...(plan.borderColor ? { borderColor: plan.borderColor } : {}),
+                ...(plan.mutedColor || plan.textColor
+                  ? {
+                    '--plan-muted': plan.mutedColor || plan.textColor,
+                    '--plan-name-color': plan.mutedColor || plan.textColor,
+                  }
+                  : {}),
+              }
+              const buttonStyle = {
+                ...(buttonBackground ? { background: buttonBackground, borderColor: buttonBackground } : {}),
+                ...(buttonTextColor ? { color: buttonTextColor } : {}),
+                ...(!plan.featured && !plan.buttonBackground && (plan.borderColor || plan.textColor)
+                  ? { borderColor: plan.borderColor || plan.textColor, color: plan.textColor || undefined }
+                  : {}),
+              }
+
+              return (
+                <Plan key={`${plan.name}-${index}`} $hot={plan.featured} style={planStyle}>
+                  {plan.featured && <PlanTag style={{ background: accent }}>Phổ biến</PlanTag>}
+                  {plan.imageUrl ? (
+                    <PlanMedia src={plan.imageUrl} alt={plan.name || `Gói ${index + 1}`} />
+                  ) : plan.icon && plan.icon !== 'none' ? (
+                    <PlanIcon style={{ color: accent, background: `${accent}22` }}>
+                      <BlockIcon name={plan.icon} />
+                    </PlanIcon>
+                  ) : null}
+                  <PlanName>{plan.name}</PlanName>
+                  <div>
+                    <PlanPrice>{formatPlanPrice(plan.price, props.currency)}</PlanPrice>
+                    <PlanCycle>{props.billingCycle}</PlanCycle>
+                  </div>
+                  <PlanSub>{plan.description}</PlanSub>
+                  <PlanBenefits>
+                    {(plan.benefits ?? []).map((benefit, benefitIndex) => (
+                      <li key={`${benefit.text}-${benefitIndex}`}>✓ {benefit.text}</li>
+                    ))}
+                  </PlanBenefits>
+                  {plan.featured
+                    ? (
+                      <PlanCtaPrimary
+                        as="a"
+                        href={plan.buttonUrl || '#'}
+                        target={plan.buttonOpenInNewTab ? '_blank' : undefined}
+                        rel={plan.buttonOpenInNewTab ? 'noopener noreferrer' : undefined}
+                        style={buttonStyle}
+                      >
+                        {plan.buttonText || 'Chọn gói'}
+                      </PlanCtaPrimary>
+                    )
+                    : (
+                      <PlanCtaGhost
+                        as="a"
+                        href={plan.buttonUrl || '#'}
+                        target={plan.buttonOpenInNewTab ? '_blank' : undefined}
+                        rel={plan.buttonOpenInNewTab ? 'noopener noreferrer' : undefined}
+                        style={buttonStyle}
+                      >
+                        {plan.buttonText || 'Chọn gói'}
+                      </PlanCtaGhost>
+                    )
+                  }
+                </Plan>
+              )
+            })}
           </Plans>
         </Pricing>
       )
 
     case 'divider':
       return (
-        <ContentBlock className="landing-divider-editor-zone">
-          <span data-landing-editor-only="true">Đường phân cách · {props.width || 100}%</span>
+        <ContentBlock
+          className="landing-divider-editor-zone"
+          style={{
+            '--divider-space-top': `${Math.max(0, Number(props.spaceTop ?? 22) || 0)}px`,
+            '--divider-space-bottom': `${Math.max(0, Number(props.spaceBottom ?? 22) || 0)}px`,
+            '--divider-space-left': `${Math.max(0, Number(props.spaceLeft ?? 32) || 0)}px`,
+            '--divider-space-right': `${Math.max(0, Number(props.spaceRight ?? 32) || 0)}px`,
+            '--divider-mobile-space-top': `${Math.max(0, Number(props.mobileSpaceTop ?? 16) || 0)}px`,
+            '--divider-mobile-space-bottom': `${Math.max(0, Number(props.mobileSpaceBottom ?? 16) || 0)}px`,
+            '--divider-mobile-space-left': `${Math.max(0, Number(props.mobileSpaceLeft ?? 16) || 0)}px`,
+            '--divider-mobile-space-right': `${Math.max(0, Number(props.mobileSpaceRight ?? 16) || 0)}px`,
+          }}
+        >
           <DividerBlock
+            aria-label="Đường phân cách"
             style={{
               borderColor: props.color,
               width: `${Math.min(100, Math.max(1, Number(props.width) || 100))}%`,
@@ -672,7 +883,7 @@ const renderBlock = (section, primaryColor) => {
           <ExtendedBlockRenderer
             section={section}
             primaryColor={primaryColor}
-            renderNestedBlock={child => renderBlock(child, primaryColor)}
+            renderNestedBlock={child => renderNestedBlockFrame(child, primaryColor)}
           />
         )
       }
@@ -688,12 +899,47 @@ export function PreviewCanvas() {
   const openEdit = useEditorStore((state) => state.openEdit)
   const primaryColor = schema?.theme?.primaryColor
 
+  useEffect(() => {
+    const url = String(schema?.theme?.fontStylesheetUrl ?? '').trim()
+    const id = 'landing-editor-font-stylesheet'
+    let link = document.getElementById(id)
+    if (!url) {
+      link?.remove()
+      return undefined
+    }
+    if (!link) {
+      link = document.createElement('link')
+      link.id = id
+      link.rel = 'stylesheet'
+      document.head.appendChild(link)
+    }
+    link.href = url
+    return undefined
+  }, [schema?.theme?.fontStylesheetUrl])
+
   return (
     <Page
       className="patch-light"
       data-landing-preview="true"
       data-device={device}
-      style={{ fontFamily: schema?.theme?.fontFamily }}
+      style={{
+        fontFamily: schema?.theme?.fontFamily,
+        color: schema?.theme?.textColor || '#16161a',
+        background: schema?.theme?.surfaceColor || '#ffffff',
+        '--landing-primary': primaryColor || '#7c5cff',
+        '--landing-font': schema?.theme?.fontFamily || 'Inter, sans-serif',
+        '--landing-secondary': schema?.theme?.secondaryColor || '#d9a441',
+        '--landing-surface': schema?.theme?.surfaceColor || '#ffffff',
+        '--landing-surface-alt': schema?.theme?.surfaceAltColor || '#f7f5ff',
+        '--landing-text': schema?.theme?.textColor || '#16161a',
+        '--landing-muted': schema?.theme?.mutedColor || '#6f6f82',
+        '--landing-display-font': schema?.theme?.displayFontFamily || schema?.theme?.fontFamily,
+        '--landing-mono-font': schema?.theme?.monoFontFamily || 'monospace',
+        '--landing-container-width': `${Math.max(320, Number(schema?.theme?.containerWidth) || 1180)}px`,
+        '--landing-radius': `${Math.max(0, Number(schema?.theme?.borderRadius) || 0)}px`,
+        '--landing-section-spacing-desktop': `${Math.max(0, Number(schema?.theme?.sectionSpacingDesktop) || 0)}px`,
+        '--landing-section-spacing-mobile': `${Math.max(0, Number(schema?.theme?.sectionSpacingMobile) || 0)}px`,
+      }}
       onClickCapture={event => {
         if (viewMode !== 'edit') return
         if (event.target.closest?.('[data-landing-editor-only="true"]')) return
@@ -703,13 +949,18 @@ export function PreviewCanvas() {
         }
       }}
     >
-      {(schema?.sections ?? []).map(section => (
-        <EditableHighlight
+      {(schema?.sections ?? []).map(section => {
+        const presentation = getSectionPresentation(section.props ?? {}, schema?.theme)
+        return (
+          <EditableHighlight
           key={section.id}
           elementId={section.id}
+          domId={normalizeAnchorId(section.props?.anchorId) || section.id}
+          className={`${presentation.className}${section.type === 'divider' ? ' landing-divider-section' : ''}`}
+          data-entrance-animation={presentation.animation}
           style={section.type === 'navbar' && section.props?.sticky
-            ? { position: 'sticky', top: 0, zIndex: 40 }
-            : undefined
+            ? { ...presentation.style, position: 'sticky', top: 0, zIndex: 40 }
+            : presentation.style
           }
           data-block-type={section.type}
           data-has-block-title={Boolean(
@@ -726,8 +977,9 @@ export function PreviewCanvas() {
             </BlockTitle>
           )}
           {renderBlock(section, primaryColor)}
-        </EditableHighlight>
-      ))}
+          </EditableHighlight>
+        )
+      })}
     </Page>
   )
 }

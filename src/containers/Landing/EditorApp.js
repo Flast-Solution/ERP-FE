@@ -82,7 +82,11 @@ function EditorContent() {
       <Workspace>
         {viewMode === 'edit' && <BlockNavigator />}
         <Stage onClick={(e) => { if (e.target === e.currentTarget) close() }}>
-          <Frame $mobile={device === 'mobile'} style={{ display: viewMode !== 'html' ? 'block' : 'none' }}>
+          <Frame
+            $mobile={device === 'mobile'}
+            data-landing-frame="true"
+            style={{ display: viewMode !== 'html' ? 'block' : 'none' }}
+          >
             <PreviewCanvas />
           </Frame>
           <HtmlSourceView schema={draftSchema} active={viewMode === 'html'} />

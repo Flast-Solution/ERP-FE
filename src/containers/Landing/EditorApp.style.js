@@ -32,6 +32,9 @@ export const Stage = styled.main`
 `
 
 export const Frame = styled.div`
+  position: relative;
+  /* Tạo containing block cho position:fixed — overlay/menu nằm trong khung preview */
+  transform: translateZ(0);
   width: 100%;
   max-width: ${({ $mobile }) => ($mobile ? '400px' : '1280px')};
   align-self: flex-start;

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet'
 import { useNavigate } from 'react-router-dom'
 import { Button, Checkbox, Drawer, Form, Input, Popconfirm, Select, Space, Table, Tag, message } from 'antd'
@@ -11,7 +11,10 @@ import {
   saveWebPage,
   WEB_CONTENT_TYPES,
 } from '@/containers/Landing/landingRepository'
+import { buildLandingPage } from '@/containers/Landing/landingBuildService'
 import { clonePageSchema, DEFAULT_PAGE_SCHEMA } from '@/containers/Landing/pageSchema'
+import useChatStore from '@/containers/AIChatbot/useChatStore'
+import WebPageService, { buildWebPagePayload } from '@/services/WebPageService'
 import { Header, PageName, PageShell, TableCard, Toolbar } from './List.style'
 
 const formatDate = value => {
@@ -20,12 +23,98 @@ const formatDate = value => {
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('vi-VN')
 }
 
+const slugify = value => String(value || '')
+  .replace(/đ/g, 'd')
+  .replace(/Đ/g, 'D')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-+|-+$/g, '')
+
+const inferContentType = item => {
+  const configs = item?.configs ?? []
+  if (configs.some(cfg => cfg.tag === 'landing-page')) {
+    return WEB_CONTENT_TYPES.LANDING
+  }
+  if (configs.length > 0) {
+    return WEB_CONTENT_TYPES.MICRO_FRONTEND
+  }
+  return null
+}
+
+const normalizeApiPage = item => {
+  const landingConfig = (item.configs ?? []).find(cfg => cfg.tag === 'landing-page')
+  const buildUrl = landingConfig?.urlBuild
+    || (item.configs ?? []).find(cfg => cfg.urlBuild)?.urlBuild
+    || null
+
+  return {
+    ...item,
+    __source: 'api',
+    contentType: inferContentType(item),
+    remoteId: item.id,
+    build: buildUrl ? { url: buildUrl } : undefined,
+    status: buildUrl ? 'PUBLISHED' : 'DRAFT',
+  }
+}
+
+const getPreviewPath = record => {
+  const slug = String(record.slug ?? '').trim()
+  if (slug && slug !== '/') {
+    return slug.startsWith('/') ? slug : `/${slug}`
+  }
+  return `/m/${record.id}`
+}
+
+const openEditor = (record, navigate) => {
+  saveWebPage({
+    id: record.id,
+    name: record.name,
+    slug: record.slug,
+    remoteId: record.id,
+    contentType: record.contentType || inferContentType(record),
+    status: record.status,
+    build: record.build,
+    authenticationRequired: Boolean(record.authenticationRequired),
+  })
+  navigate(`/landing/edit?id=${encodeURIComponent(record.id)}`)
+}
+
 const LandingList = () => {
   const navigate = useNavigate()
   const [keyword, setKeyword] = useState('')
-  const [pages, setPages] = useState(() => listLandingPages())
+  const [pages, setPages] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 })
   const [createOpen, setCreateOpen] = useState(false)
+  const [createSubmitting, setCreateSubmitting] = useState(false)
   const [form] = Form.useForm()
+
+  const loadPages = useCallback(async (page = 1, limit = 10) => {
+    setLoading(true)
+    try {
+      const result = await WebPageService.fetch({ page, limit })
+      setPages(result.items.map(normalizeApiPage))
+      setPagination(current => ({
+        ...current,
+        current: page,
+        pageSize: Number(result.page?.pageSize || limit),
+        total: Number(result.page?.totalElements ?? result.page?.total ?? result.items.length),
+      }))
+    } catch (error) {
+      const localPages = listLandingPages()
+      setPages(localPages)
+      setPagination(current => ({ ...current, current: 1, total: localPages.length }))
+      message.error(error?.message || 'Không tải được danh sách trang.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadPages(1, 10)
+  }, [loadPages])
 
   const dataSource = useMemo(() => {
     const normalized = keyword.trim().toLowerCase()
@@ -36,29 +125,80 @@ const LandingList = () => {
     ))
   }, [keyword, pages])
 
-  const createPage = values => {
-    const id = createLandingPageId()
+  const createPage = async values => {
+    const temporaryPageId = createLandingPageId()
+    const generatedSlug = slugify(values.name) || `page-${temporaryPageId}`
     const contentType = values.contentType
-    saveWebPage({
-      id,
-      name: values.name,
-      slug: `/m/${id}`,
-      status: 'DRAFT',
-      authenticationRequired: values.authenticationRequired,
-      contentType,
-      schema: contentType === WEB_CONTENT_TYPES.LANDING
-        ? { ...clonePageSchema(DEFAULT_PAGE_SCHEMA), name: values.name }
-        : undefined,
-      mfeConfig: contentType === WEB_CONTENT_TYPES.MICRO_FRONTEND
-        ? { components: [], drawers: [] }
-        : undefined,
-    })
-    setCreateOpen(false)
-    form.resetFields()
-    navigate(`/landing/edit?mode=create&id=${encodeURIComponent(id)}`)
+    const schema = contentType === WEB_CONTENT_TYPES.LANDING
+      ? { ...clonePageSchema(DEFAULT_PAGE_SCHEMA), name: values.name }
+      : undefined
+    setCreateSubmitting(true)
+    try {
+      let build = null
+
+      // Landing: giống form saveAfterBuild — build xong có url mới create
+      if (contentType === WEB_CONTENT_TYPES.LANDING) {
+        build = await buildLandingPage({
+          pageId: temporaryPageId,
+          schema,
+          sessionId: useChatStore.getState().getSessionId('form_builder'),
+          allowHtmlFallback: true,
+        })
+        if (!build?.url) {
+          message.error('Build thành công nhưng server chưa trả URL micro-frontend.')
+          return
+        }
+      }
+
+      const createdPage = contentType === WEB_CONTENT_TYPES.LANDING
+        ? await WebPageService.create(buildWebPagePayload({
+          name: values.name,
+          slug: generatedSlug,
+          title: values.name,
+          schema,
+          build,
+          authenticationRequired: values.authenticationRequired,
+        }))
+        : await WebPageService.create({
+          name: values.name,
+          slug: generatedSlug,
+          title: values.name,
+          authenticationRequired: Boolean(values.authenticationRequired),
+          configs: [],
+          seos: [],
+          breadcrumds: [],
+        })
+
+      const id = createdPage.id
+      saveWebPage({
+        ...createdPage,
+        id,
+        name: createdPage.name || values.name,
+        slug: createdPage.slug || generatedSlug,
+        status: 'DRAFT',
+        authenticationRequired: values.authenticationRequired,
+        contentType,
+        remoteId: id,
+        schema: schema
+          ? { ...schema, name: createdPage.name || values.name }
+          : undefined,
+        build,
+        mfeConfig: contentType === WEB_CONTENT_TYPES.MICRO_FRONTEND
+          ? { components: [], drawers: [] }
+          : undefined,
+      })
+      setCreateOpen(false)
+      form.resetFields()
+      message.success('Đã tạo trang mới.')
+      navigate(`/landing/edit?mode=edit&id=${encodeURIComponent(id)}`)
+    } catch (error) {
+      message.error(error?.message || 'Không tạo được trang.')
+    } finally {
+      setCreateSubmitting(false)
+    }
   }
 
-  const refresh = () => setPages(listLandingPages())
+  const refresh = () => loadPages(pagination.current, pagination.pageSize)
 
   const removePage = id => {
     deleteWebPage(id)
@@ -105,16 +245,20 @@ const LandingList = () => {
       width: 160,
       render: (_, record) => record.contentType === WEB_CONTENT_TYPES.MICRO_FRONTEND
         ? <Tag color="blue">Micro Frontend</Tag>
-        : <Tag>Landing Editor</Tag>,
+        : record.contentType === WEB_CONTENT_TYPES.LANDING
+          ? <Tag>Landing Editor</Tag>
+          : <Tag>Chưa xác định</Tag>,
     },
     {
       title: 'Thành phần',
       key: 'componentCount',
       width: 110,
       align: 'center',
-      render: (_, record) => record.contentType === WEB_CONTENT_TYPES.MICRO_FRONTEND
-        ? (record.mfeConfig?.components?.length ?? 0)
-        : (record.schema?.sections?.length ?? 0),
+      render: (_, record) => Array.isArray(record.configs)
+        ? record.configs.length
+        : record.contentType === WEB_CONTENT_TYPES.MICRO_FRONTEND
+          ? (record.mfeConfig?.components?.length ?? 0)
+          : (record.schema?.sections?.length ?? 0),
     },
     {
       title: 'Trạng thái',
@@ -124,7 +268,9 @@ const LandingList = () => {
       render: status => (
         status === 'PUBLISHED'
           ? <Tag color="green">Đã xuất bản</Tag>
-          : <Tag color="gold">Bản nháp</Tag>
+          : status === 'DRAFT'
+            ? <Tag color="gold">Bản nháp</Tag>
+            : <Tag>Chưa có dữ liệu</Tag>
       ),
     },
     {
@@ -141,11 +287,36 @@ const LandingList = () => {
       align: 'center',
       render: (_, record) => (
         <Space size={2}>
-          <Button type="text" title="Xem trước" icon={<EyeOutlined />} onClick={() => window.open(`/m/${record.id}`, '_blank')} />
-          <Button type="text" title="Chỉnh sửa" icon={<EditOutlined />} onClick={() => navigate(`/landing/edit?id=${encodeURIComponent(record.id)}`)} />
-          <Button type="text" title="Sao chép" icon={<CopyOutlined />} onClick={() => duplicatePage(record)} />
-          <Popconfirm title="Xóa trang này?" onConfirm={() => removePage(record.id)}>
-            <Button danger type="text" title="Xóa" icon={<DeleteOutlined />} />
+          <Button
+            type="text"
+            title="Xem trước"
+            icon={<EyeOutlined />}
+            onClick={() => window.open(getPreviewPath(record), '_blank')}
+          />
+          <Button
+            type="text"
+            title="Chỉnh sửa"
+            icon={<EditOutlined />}
+            onClick={() => openEditor(record, navigate)}
+          />
+          <Button
+            type="text"
+            title="Sao chép"
+            icon={<CopyOutlined />}
+            onClick={() => duplicatePage(record)}
+          />
+          <Popconfirm
+            title="Xóa trang này?"
+            disabled={record.__source === 'api'}
+            onConfirm={() => removePage(record.id)}
+          >
+            <Button
+              danger
+              type="text"
+              disabled={record.__source === 'api'}
+              title={record.__source === 'api' ? 'Chưa có API xóa trang' : 'Xóa'}
+              icon={<DeleteOutlined />}
+            />
           </Popconfirm>
         </Space>
       ),
@@ -181,7 +352,12 @@ const LandingList = () => {
           rowKey="id"
           columns={columns}
           dataSource={dataSource}
-          pagination={{ pageSize: 10, showSizeChanger: false }}
+          loading={loading}
+          pagination={{
+            ...pagination,
+            showSizeChanger: false,
+            onChange: (page, pageSize) => loadPages(page, pageSize),
+          }}
         />
       </TableCard>
       <Drawer
@@ -190,7 +366,7 @@ const LandingList = () => {
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         destroyOnClose
-        extra={<Button type="primary" onClick={() => form.submit()}>Tiếp tục</Button>}
+        extra={<Button type="primary" loading={createSubmitting} disabled={createSubmitting} onClick={() => form.submit()}>Tiếp tục</Button>}
       >
         <Form
           form={form}

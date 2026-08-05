@@ -58,7 +58,7 @@ const LandingPage = ({ page }) => {
   const setViewMode = useEditorStore(state => state.setViewMode)
   useEffect(() => {
     initializePage({ id: page.id, mode: 'edit' })
-    setViewMode('preview')
+    setViewMode('runtime')
   }, [initializePage, page.id, setViewMode])
   return <PreviewCanvas />
 }

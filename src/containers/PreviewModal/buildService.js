@@ -126,23 +126,22 @@ export const prepareJsxForRemoteBuild = (code = '') => {
   return hoistOneLineImports(jsx)
 }
 
-export const getBuildPreviewUrl = (data = {}) => (
-  data?.previewUrl
-  ?? data?.preview_url
-  ?? data?.url
-  ?? data?.data?.url
-  ?? data?.data?.previewUrl
-  ?? data?.data?.preview_url
-  ?? ''
-)
+/**
+ * Response build thành công:
+ * {
+ *   errorCode: 200, success: true, message: "...",
+ *   data: { component_id: "...", url: "https://.../remoteEntry.js" }
+ * }
+ */
+export const getBuildPreviewUrl = (payload = {}) => {
+  const url = payload?.data?.url
+  return typeof url === 'string' ? url.trim() : ''
+}
 
-const getBuildComponentId = (data = {}, fallback = '') => (
-  data?.component_id
-  ?? data?.componentId
-  ?? data?.data?.component_id
-  ?? data?.data?.componentId
-  ?? fallback
-)
+const getBuildComponentId = (payload = {}, fallback = '') => {
+  const id = payload?.data?.component_id
+  return typeof id === 'string' && id.trim() ? id.trim() : fallback
+}
 
 const isGeneratedWorkflowFormCode = (code = '') => (
   /forwardRef\(\(\{[\s\S]*submitSignal[\s\S]*useImperativeHandle/.test(code)
@@ -185,9 +184,18 @@ export const buildMicroFrontend = async ({ sessionId, componentId, entryFilename
     throw new Error(detail ?? data?.message ?? data?.error ?? `Build preview failed: ${response.status}`)
   }
 
+  const url = getBuildPreviewUrl(data)
+  const resolvedComponentId = getBuildComponentId(data, componentId)
+  if (!url) {
+    throw new Error('Build thành công nhưng response thiếu data.url.')
+  }
+
   return {
-    ...data,
-    componentId: getBuildComponentId(data, componentId),
-    previewUrl: getBuildPreviewUrl(data),
+    success: data.success,
+    errorCode: data.errorCode,
+    message: data.message,
+    data: data.data,
+    url,
+    component_id: resolvedComponentId,
   }
 }
