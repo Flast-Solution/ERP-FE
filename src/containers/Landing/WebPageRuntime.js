@@ -1,96 +1,24 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Alert, Button, Drawer, Empty, Skeleton, Spin } from 'antd'
-import axios from 'axios'
+import { Alert, Button, Empty, Skeleton } from 'antd'
 import { useParams } from 'react-router-dom'
 import { getTokenPayload } from '@/utils/authUtils'
-import { loadRemoteFromUrl } from '@/utils/loadRemote'
 import { useEditorStore } from '@/store/editorStore'
 import { PreviewCanvas } from './PreviewCanvas'
 import { getLandingPage, WEB_CONTENT_TYPES } from './landingRepository'
-import { DATA_SOURCE_TYPES, normalizeMicroFrontendConfig } from './microFrontendSchema'
+import { normalizeMicroFrontendConfig } from './microFrontendSchema'
 import { WebDataContext } from './WebDataContext'
-
-const readPath = (source, path) => {
-  if (!path) return source
-  return String(path).split('.').reduce((value, key) => value?.[key], source)
-}
-
-const replaceVariables = (value, context) => {
-  if (Array.isArray(value)) return value.map(item => replaceVariables(item, context))
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, replaceVariables(item, context)]))
-  }
-  if (typeof value !== 'string') return value
-  return value.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_, path) => readPath(context, path.trim()) ?? '')
-}
-
-const remoteAlias = item => {
-  const source = `${item.key}-${item.remote?.url}`
-  let hash = 0
-  for (let index = 0; index < source.length; index += 1) hash = ((hash << 5) - hash) + source.charCodeAt(index)
-  return `web_${String(item.key || 'component').replace(/[^a-zA-Z0-9_]/g, '_')}_${Math.abs(hash)}`
-}
-
-const resolveComponentData = async (item, context) => {
-  const source = item.dataSource ?? {}
-  if (source.type === DATA_SOURCE_TYPES.STATIC) return source.staticData ?? null
-  if (source.type !== DATA_SOURCE_TYPES.API) return undefined
-
-  const endpoint = replaceVariables(source.endpoint, context)
-  const params = replaceVariables(source.params ?? {}, context)
-  const response = await axios.request({
-    url: endpoint,
-    method: source.method || 'GET',
-    ...(String(source.method || 'GET').toUpperCase() === 'GET' ? { params } : { data: params }),
-  })
-  return readPath(response.data, source.responsePath)
-}
-
-const RemoteSlot = ({ item, resolvedData, runtimeContext }) => {
-  const [Component, setComponent] = useState(null)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    let active = true
-    setComponent(null)
-    setError('')
-    loadRemoteFromUrl({
-      name: remoteAlias(item),
-      entry: item.remote?.url,
-      scope: item.remote?.scope,
-      module: item.remote?.module,
-    }).then(module => {
-      if (active) setComponent(() => module.default ?? module)
-    }).catch(reason => {
-      if (active) setError(reason?.message || 'Không tải được Micro Frontend.')
-    })
-    return () => { active = false }
-  }, [item])
-
-  if (error) return <Alert type="error" showIcon message={item.name} description={error} />
-  if (!Component) return <div style={{ padding: 28, textAlign: 'center' }}><Spin tip={`Đang tải ${item.name}...`} /></div>
-
-  const dataProp = item.dataSource?.propName
-  const props = {
-    ...(item.props ?? {}),
-    ...(dataProp ? { [dataProp]: resolvedData } : {}),
-    dataContext: runtimeContext,
-  }
-  return <Component {...props} />
-}
+import { RemoteComponentSlot, resolveRemoteComponentData } from './MicroFrontendRuntime'
 
 const RemotePage = ({ page }) => {
   const config = normalizeMicroFrontendConfig(page.mfeConfig)
-  const [hash, setHash] = useState(() => window.location.hash.slice(1))
   const [data, setData] = useState({})
   const [loading, setLoading] = useState(true)
   const [dataError, setDataError] = useState('')
   const query = useMemo(() => Object.fromEntries(new URLSearchParams(window.location.search)), [])
-  const drawer = config.drawers.find(item => item.hashId === hash)
-  const activeComponents = useMemo(() => [
-    ...config.components.filter(item => item.enabled !== false),
-    ...(drawer?.components ?? []).filter(item => item.enabled !== false),
-  ], [config.components, drawer?.components])
+  const activeComponents = useMemo(
+    () => config.components.filter(item => item.enabled !== false),
+    [config.components]
+  )
   const baseContext = useMemo(() => ({
     page: { id: page.id, name: page.name },
     route: { pageId: page.id },
@@ -99,16 +27,10 @@ const RemotePage = ({ page }) => {
   }), [page.id, page.name, query])
 
   useEffect(() => {
-    const onHashChange = () => setHash(window.location.hash.slice(1))
-    window.addEventListener('hashchange', onHashChange)
-    return () => window.removeEventListener('hashchange', onHashChange)
-  }, [])
-
-  useEffect(() => {
     let active = true
     setLoading(true)
     setDataError('')
-    Promise.all(activeComponents.map(async item => [item.key, await resolveComponentData(item, baseContext)]))
+    Promise.all(activeComponents.map(async item => [item.key, await resolveRemoteComponentData(item, baseContext)]))
       .then(entries => { if (active) setData(Object.fromEntries(entries)) })
       .catch(error => { if (active) setDataError(error?.message || 'Không tải được dữ liệu trang.') })
       .finally(() => { if (active) setLoading(false) })
@@ -117,7 +39,7 @@ const RemotePage = ({ page }) => {
 
   const runtimeContext = useMemo(() => ({ ...baseContext, components: data }), [baseContext, data])
   const renderComponents = components => components.filter(item => item.enabled !== false).map(item => (
-    <RemoteSlot key={item.key} item={item} resolvedData={data[item.key]} runtimeContext={runtimeContext} />
+    <RemoteComponentSlot key={item.key} item={item} resolvedData={data[item.key]} runtimeContext={runtimeContext} />
   ))
 
   if (dataError) return <Alert type="error" showIcon message="Lỗi tải dữ liệu trang" description={dataError} />
@@ -127,17 +49,6 @@ const RemotePage = ({ page }) => {
   return (
     <WebDataContext.Provider value={runtimeContext}>
       <main>{renderComponents(config.components)}</main>
-      <Drawer
-        title={drawer?.title}
-        width={Math.min(Number(drawer?.width || 750), window.innerWidth)}
-        open={Boolean(drawer)}
-        onClose={() => {
-          window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`)
-          setHash('')
-        }}
-      >
-        {drawer && renderComponents(drawer.components)}
-      </Drawer>
     </WebDataContext.Provider>
   )
 }

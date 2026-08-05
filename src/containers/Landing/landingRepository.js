@@ -104,6 +104,7 @@ export const saveLandingPage = ({
   slug = '/',
   status = 'DRAFT',
   publishedAt = null,
+  build,
 }) => {
   if (!id || !isPageSchema(schema)) return null
 
@@ -120,6 +121,7 @@ export const saveLandingPage = ({
     contentType: WEB_CONTENT_TYPES.LANDING,
     authenticationRequired: Boolean(previous?.authenticationRequired),
     schema: normalizePageSchema(schema),
+    build: build ?? previous?.build ?? null,
   }
   const nextPages = previous
     ? pages.map(page => String(page.id) === String(id) ? nextPage : page)

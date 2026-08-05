@@ -12,6 +12,8 @@ import {
   getLandingPage,
   saveLandingPage,
 } from '@/containers/Landing/landingRepository'
+import useChatStore from '@/containers/AIChatbot/useChatStore'
+import { buildLandingPage } from '@/containers/Landing/landingBuildService'
 
 /* Dữ liệu mặc định — ràng buộc API cho từng phần tử trên trang */
 const DEFAULT_API = {}
@@ -62,6 +64,7 @@ export const useEditorStore = create((set, get) => ({
   selected: null,
   value: '',
   busy: false,
+  building: false,
   status: 'idle',
   error: null,
   toast: null,
@@ -299,24 +302,56 @@ export const useEditorStore = create((set, get) => ({
     })
   },
 
-  saveDraft: ({ silent = false } = {}) => {
+  saveDraft: async ({ silent = false } = {}) => {
     const savedAt = new Date().toISOString()
     const current = get()
     writeStorage(DRAFT_STORAGE_KEY, {
       schema: current.draftSchema,
       savedAt,
     })
-    saveLandingPage({
+    const localPage = saveLandingPage({
       id: current.currentPageId,
       schema: current.draftSchema,
       slug: current.currentPageSlug,
       status: 'DRAFT',
     })
     set({ lastSavedAt: savedAt })
-    if (!silent) get()._showToast('Đã lưu bản nháp trên trình duyệt.')
+    if (silent) return localPage
+
+    const schema = normalizePageSchema(current.draftSchema)
+    const validationErrors = validatePageSchema(schema)
+    if (validationErrors.length) {
+      get()._showToast(validationErrors[0])
+      return null
+    }
+
+    set({ building: true })
+    try {
+      const sessionId = useChatStore.getState().getSessionId('form_builder')
+      const build = await buildLandingPage({
+        pageId: current.currentPageId,
+        schema,
+        sessionId,
+      })
+      const saved = saveLandingPage({
+        id: current.currentPageId,
+        schema,
+        slug: current.currentPageSlug,
+        status: 'DRAFT',
+        build,
+      })
+      set({ lastSavedAt: savedAt })
+      get()._showToast('Đã build và lưu bản nháp.')
+      return saved
+    } catch (error) {
+      get()._showToast(error?.message || 'Không build được Landing Page.')
+      return null
+    } finally {
+      set({ building: false })
+    }
   },
 
-  publish: () => {
+  publish: async () => {
     const publishedAt = new Date().toISOString()
     const schema = normalizePageSchema(get().draftSchema)
     const validationErrors = validatePageSchema(schema)
@@ -324,9 +359,10 @@ export const useEditorStore = create((set, get) => ({
       get()._showToast(validationErrors[0])
       return
     }
+    const current = get()
     const publishPayload = {
-      pageId: get().currentPageId,
-      slug: get().currentPageSlug,
+      pageId: current.currentPageId,
+      slug: current.currentPageSlug,
       schema,
       publishedAt,
     }
@@ -338,24 +374,39 @@ export const useEditorStore = create((set, get) => ({
     }
     const versions = [version, ...get().versions].slice(0, MAX_VERSIONS)
 
-    console.log('[LandingEditor][Publish] payload:', publishPayload)
-    writeStorage(PUBLISHED_STORAGE_KEY, publishPayload)
-    writeStorage(VERSION_STORAGE_KEY, versions)
-    writeStorage(DRAFT_STORAGE_KEY, { schema, savedAt: publishedAt })
-    saveLandingPage({
-      id: get().currentPageId,
-      schema,
-      slug: get().currentPageSlug,
-      status: 'PUBLISHED',
-      publishedAt,
-    })
-    set({
-      originalSchema: schema,
-      versions,
-      publishedAt,
-      lastSavedAt: publishedAt,
-    })
-    get()._showToast('Đã xuất bản phiên bản mới.')
+    set({ building: true })
+    try {
+      const sessionId = useChatStore.getState().getSessionId('form_builder')
+      const build = await buildLandingPage({
+        pageId: current.currentPageId,
+        schema,
+        sessionId,
+      })
+      publishPayload.build = build
+      console.log('[LandingEditor][Publish] payload:', publishPayload)
+      writeStorage(PUBLISHED_STORAGE_KEY, publishPayload)
+      writeStorage(VERSION_STORAGE_KEY, versions)
+      writeStorage(DRAFT_STORAGE_KEY, { schema, savedAt: publishedAt })
+      saveLandingPage({
+        id: current.currentPageId,
+        schema,
+        slug: current.currentPageSlug,
+        status: 'PUBLISHED',
+        publishedAt,
+        build,
+      })
+      set({
+        originalSchema: schema,
+        versions,
+        publishedAt,
+        lastSavedAt: publishedAt,
+      })
+      get()._showToast('Đã build và xuất bản phiên bản mới.')
+    } catch (error) {
+      get()._showToast(error?.message || 'Không build được Landing Page.')
+    } finally {
+      set({ building: false })
+    }
   },
 
   restoreVersion: (versionId) => {
