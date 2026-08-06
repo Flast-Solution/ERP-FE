@@ -1,4 +1,5 @@
 import { EXTENDED_LANDING_BLOCKS } from './extendedBlockRegistry'
+import { CUSTOM_JSX_TEMPLATE, CUSTOM_JSX_TYPE } from './customJsx'
 
 export const COMMON_BLOCK_DEFAULTS = {
   anchorId: '',
@@ -94,6 +95,40 @@ const createId = (type) => {
 }
 
 export const LANDING_BLOCKS = [
+  {
+    type: 'breadcrumb',
+    label: 'Breadcrumb',
+    icon: '›',
+    defaults: {
+      items: [{ id: 'c1', text: 'Trang chủ', url: '/' }],
+      separator: '/',
+      align: 'left',
+      background: 'transparent',
+      textColor: '#1677ff',
+    },
+    fields: [
+      {
+        name: 'items',
+        label: 'Các cấp điều hướng',
+        control: 'repeater',
+        itemFields: [
+          { name: 'text', label: 'Văn bản', control: 'text' },
+          { name: 'url', label: 'Đường dẫn', control: 'text' },
+        ],
+        itemDefaults: { id: '', text: 'Cấp mới', url: '/' },
+      },
+      { name: 'separator', label: 'Ký tự phân cách', control: 'text' },
+      {
+        name: 'align', label: 'Căn chỉnh', control: 'select', options: [
+          { label: 'Trái', value: 'left' },
+          { label: 'Giữa', value: 'center' },
+          { label: 'Phải', value: 'right' },
+        ],
+      },
+      { name: 'background', label: 'Màu nền', control: 'colorOptional' },
+      { name: 'textColor', label: 'Màu chữ', control: 'color' },
+    ],
+  },
   {
     type: 'navbar',
     label: 'Thanh điều hướng',
@@ -801,6 +836,22 @@ export const LANDING_BLOCKS = [
     ],
   },
   ...EXTENDED_LANDING_BLOCKS,
+  {
+    type: CUSTOM_JSX_TYPE,
+    label: 'Custom JSX',
+    icon: '</>',
+    custom: true,
+    defaults: {
+      name: 'Custom JSX block',
+      title: 'Custom JSX block',
+      source: CUSTOM_JSX_TEMPLATE,
+    },
+    fields: [
+      { name: 'name', label: 'Tên block', control: 'text' },
+      { name: 'title', label: 'Tiêu đề truyền vào props', control: 'text' },
+      { name: 'routePath', label: 'Route hiển thị (ví dụ /category/:category)', control: 'text' },
+    ],
+  },
 ]
 
 export const getLandingBlock = (type) => (

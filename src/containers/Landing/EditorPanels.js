@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import axios from 'axios'
-import { message } from 'antd'
+import { Alert, message } from 'antd'
 import JoditEditor from 'jodit-react'
 import { useEditorStore } from '@/store/editorStore'
 import {
@@ -493,6 +493,8 @@ export function BlockNavigator() {
   const selected = useEditorStore(state => state.selected)
   const openEdit = useEditorStore(state => state.openEdit)
   const addBlock = useEditorStore(state => state.addBlock)
+  const openCustomJsx = useEditorStore(state => state.openCustomJsx)
+  const removeOverlay = useEditorStore(state => state.removeOverlay)
 
   return (
     <Panel $width="230px">
@@ -522,7 +524,7 @@ export function BlockNavigator() {
         <Divider />
         <SectionLabel>Thêm block</SectionLabel>
         <Palette>
-          {LANDING_BLOCKS.map(block => (
+          {LANDING_BLOCKS.filter(block => !block.custom).map(block => (
             <PaletteButton
               type="button"
               key={block.type}
@@ -533,7 +535,31 @@ export function BlockNavigator() {
               <BlockName>{block.label}</BlockName>
             </PaletteButton>
           ))}
+          <PaletteButton
+            type="button"
+            style={{ gridColumn: '1 / -1' }}
+            onClick={() => openCustomJsx({ target: 'block' })}
+            title="Tải lên hoặc nhập source JSX"
+          >
+            <BlockIcon>&lt;/&gt;</BlockIcon>
+            <BlockName>Custom JSX</BlockName>
+          </PaletteButton>
         </Palette>
+
+        <Divider />
+        <SectionLabel>Drawer toàn cục</SectionLabel>
+        {(schema?.overlays ?? []).map(overlay => (
+          <div key={overlay.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 6, marginBottom: 6 }}>
+            <BlockRow type="button" onClick={() => openCustomJsx({ target: 'drawer', editingId: overlay.id })}>
+              <BlockIcon>▤</BlockIcon>
+              <BlockName>{overlay.props?.name || overlay.id}</BlockName>
+            </BlockRow>
+            <ActionButton type="button" $danger onClick={() => removeOverlay(overlay.id)}>×</ActionButton>
+          </div>
+        ))}
+        <ActionButton type="button" style={{ width: '100%' }} onClick={() => openCustomJsx({ target: 'drawer' })}>
+          + Thêm drawer JSX
+        </ActionButton>
       </PanelBody>
     </Panel>
   )
@@ -552,6 +578,7 @@ export function BlockInspector() {
   const removeBlock = useEditorStore(state => state.removeBlock)
   const moveBlock = useEditorStore(state => state.moveBlock)
   const restoreVersion = useEditorStore(state => state.restoreVersion)
+  const openCustomJsx = useEditorStore(state => state.openCustomJsx)
 
   const section = useMemo(
     () => schema?.sections?.find(item => item.id === selected) ?? null,
@@ -621,6 +648,24 @@ export function BlockInspector() {
               <EmptyHint>
                 Block này đang chứa dữ liệu dạng danh sách. Bạn có thể dùng AI để sửa nhanh nội dung chi tiết.
               </EmptyHint>
+            )}
+
+            {definition?.custom && (
+              <>
+                <Alert
+                  type="info"
+                  showIcon
+                  message={`Artifact: ${section.artifact?.version || 'chưa build'}`}
+                  style={{ marginBottom: 12 }}
+                />
+                <ActionButton
+                  type="button"
+                  style={{ width: '100%', marginBottom: 14 }}
+                  onClick={() => openCustomJsx({ target: 'block', editingId: section.id })}
+                >
+                  Sửa và build lại JSX
+                </ActionButton>
+              </>
             )}
 
             <Divider />

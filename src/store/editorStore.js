@@ -8,7 +8,9 @@ import {
 } from '@/containers/Landing/pageSchema'
 import { applyLandingPatch } from '@/containers/Landing/landingAi'
 import { createLandingBlock } from '@/containers/Landing/blockRegistry'
+import { CUSTOM_JSX_TYPE } from '@/containers/Landing/customJsx'
 import {
+  deleteWebPage,
   getLandingPage,
   saveLandingPage,
 } from '@/containers/Landing/landingRepository'
@@ -71,11 +73,15 @@ export const useEditorStore = create((set, get) => ({
   toast: null,
   files: [],
   configOpen: false,
+  customJsxOpen: false,
+  customJsxTarget: 'block',
+  customJsxEditingId: null,
   initializedPage: false,
   currentPageId: 'landing-home',
   /** Id trang trên server (sau create). null → lần lưu phải gọi create, không phải update. */
   remotePageId: null,
   currentPageSlug: '/',
+  currentPageAuthenticationRequired: false,
 
   /* Bản nháp trang và lịch sử chỉnh sửa */
   originalSchema: clonePageSchema(DEFAULT_PAGE_SCHEMA),
@@ -124,6 +130,7 @@ export const useEditorStore = create((set, get) => ({
       currentPageId: pageId,
       remotePageId,
       currentPageSlug: page?.slug ?? '/',
+      currentPageAuthenticationRequired: Boolean(page?.authenticationRequired),
       originalSchema: clonePageSchema(schema),
       draftSchema: clonePageSchema(schema),
       history: [clonePageSchema(schema)],
@@ -180,6 +187,9 @@ export const useEditorStore = create((set, get) => ({
     if (!block) return
 
     const current = get().draftSchema
+    if (type === 'breadcrumb') {
+      block.props.items = clonePageSchema(current.breadcrumbs ?? DEFAULT_CRUMBS)
+    }
     const sections = [...current.sections]
     const afterIndex = sections.findIndex(section => section.id === afterId)
     const insertIndex = afterIndex >= 0 ? afterIndex + 1 : sections.length
@@ -189,8 +199,111 @@ export const useEditorStore = create((set, get) => ({
     get()._showToast('Đã thêm block mới.')
   },
 
+  addCustomBlock: ({ name, source, routePath, apiSources, definitionId, artifact }, afterId) => {
+    const block = createLandingBlock(CUSTOM_JSX_TYPE)
+    if (!block) return
+    block.definitionId = definitionId
+    block.kind = 'jsx'
+    block.artifact = artifact
+    block.props = { ...block.props, name, title: name, source, routePath: routePath || '' }
+
+    const current = get().draftSchema
+    const sections = [...current.sections]
+    const afterIndex = sections.findIndex(section => section.id === afterId)
+    sections.splice(afterIndex >= 0 ? afterIndex + 1 : sections.length, 0, block)
+    const dataSources = { ...(current.dataSources ?? {}) }
+    if (apiSources?.length) dataSources[block.id] = clonePageSchema(apiSources)
+    get()._commitSchema({ ...current, sections, dataSources }, block.id)
+    get()._showToast('Đã build và thêm Custom JSX block.')
+  },
+
+  replaceBlockWithCustom: (id, { name, source, routePath, apiSources, definitionId, artifact }) => {
+    const current = get().draftSchema
+    const previous = current.sections.find(section => section.id === id)
+    if (!previous) return
+    const replacement = createLandingBlock(CUSTOM_JSX_TYPE)
+    if (!replacement) return
+    replacement.id = previous.id
+    replacement.definitionId = definitionId
+    replacement.kind = 'jsx'
+    replacement.artifact = artifact
+    replacement.props = {
+      ...replacement.props,
+      ...previous.props,
+      name,
+      title: name,
+      source,
+      routePath: routePath || '',
+    }
+    const sections = current.sections.map(section => section.id === id ? replacement : section)
+    const dataSources = { ...(current.dataSources ?? {}) }
+    if (apiSources?.length) dataSources[id] = clonePageSchema(apiSources)
+    else delete dataSources[id]
+    get()._commitSchema({ ...current, sections, dataSources }, id)
+    get()._showToast('Đã thay block được chọn bằng Custom JSX; ID và cấu hình API được giữ nguyên.')
+  },
+
+  updateCustomBlock: (id, { name, source, routePath, apiSources, definitionId, artifact }) => {
+    const current = get().draftSchema
+    const sections = current.sections.map(section => section.id === id
+      ? {
+          ...section,
+          definitionId: definitionId || section.definitionId,
+          kind: 'jsx',
+          artifact,
+          props: { ...section.props, name, source, routePath: routePath || '' },
+        }
+      : section)
+    const dataSources = { ...(current.dataSources ?? {}) }
+    if (apiSources?.length) dataSources[id] = clonePageSchema(apiSources)
+    else delete dataSources[id]
+    get()._commitSchema({ ...current, sections, dataSources }, id)
+    get()._showToast('Đã build lại Custom JSX block.')
+  },
+
+  addCustomOverlay: ({ overlayId, name, source, definitionId, artifact }) => {
+    const suffix = window.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const overlay = {
+      id: String(overlayId || `overlay-${suffix}`).trim(),
+      definitionId,
+      kind: 'drawer',
+      type: CUSTOM_JSX_TYPE,
+      artifact,
+      props: { name, title: name, source },
+    }
+    const current = get().draftSchema
+    get()._commitSchema({ ...current, overlays: [...(current.overlays ?? []), overlay] }, get().selected)
+    get()._showToast('Đã thêm drawer JSX toàn cục.')
+    return overlay.id
+  },
+
+  updateCustomOverlay: (id, { overlayId, name, source, definitionId, artifact }) => {
+    const current = get().draftSchema
+    const overlays = (current.overlays ?? []).map(overlay => overlay.id === id
+      ? {
+          ...overlay,
+          id: String(overlayId || id).trim(),
+          definitionId: definitionId || overlay.definitionId,
+          artifact,
+          props: { ...overlay.props, name, title: name, source },
+        }
+      : overlay)
+    get()._commitSchema({ ...current, overlays }, get().selected)
+    get()._showToast('Đã build lại drawer JSX.')
+  },
+
+  removeOverlay: id => {
+    const current = get().draftSchema
+    get()._commitSchema({
+      ...current,
+      overlays: (current.overlays ?? []).filter(overlay => overlay.id !== id),
+    }, get().selected)
+    get()._showToast('Đã xóa drawer/popup.')
+  },
+
   updateBlockProps: (id, values) => {
     const current = get().draftSchema
+    const target = current.sections.find(section => section.id === id)
     const sections = current.sections.map(section => (
       section.id === id
         ? {
@@ -202,7 +315,13 @@ export const useEditorStore = create((set, get) => ({
           }
         : section
     ))
-    get()._commitSchema({ ...current, sections }, id)
+    get()._commitSchema({
+      ...current,
+      sections,
+      ...(target?.type === 'breadcrumb' && Array.isArray(values.items)
+        ? { breadcrumbs: clonePageSchema(values.items) }
+        : {}),
+    }, id)
   },
 
   duplicateBlock: (id) => {
@@ -214,6 +333,11 @@ export const useEditorStore = create((set, get) => ({
     const copy = createLandingBlock(source.type)
     if (!copy) return
     copy.props = source.props
+    if (source.type === CUSTOM_JSX_TYPE) {
+      copy.definitionId = source.definitionId
+      copy.kind = source.kind
+      copy.artifact = source.artifact
+    }
 
     const sections = [...current.sections]
     sections.splice(sourceIndex + 1, 0, copy)
@@ -324,6 +448,7 @@ export const useEditorStore = create((set, get) => ({
       schema: current.draftSchema,
       slug: current.currentPageSlug,
       status: 'DRAFT',
+      authenticationRequired: current.currentPageAuthenticationRequired,
     })
     set({ lastSavedAt: savedAt })
     if (silent) return localPage
@@ -342,20 +467,20 @@ export const useEditorStore = create((set, get) => ({
         pageId: current.currentPageId,
         schema,
         sessionId,
-        allowHtmlFallback: true,
       })
       if (!build?.url) {
         throw new Error('Build thành công nhưng server chưa trả URL micro-frontend.')
       }
 
       const remotePage = current.remotePageId
-        ? await WebPageService.update(buildWebPagePayload({
+        ? await WebPageService.update(current.remotePageId, buildWebPagePayload({
           id: current.remotePageId,
           name: schema.name,
           slug: current.currentPageSlug,
           title: schema.name,
           schema,
           build,
+          authenticationRequired: current.currentPageAuthenticationRequired,
         }))
         : await WebPageService.create(buildWebPagePayload({
           name: schema.name,
@@ -363,6 +488,7 @@ export const useEditorStore = create((set, get) => ({
           title: schema.name,
           schema,
           build,
+          authenticationRequired: current.currentPageAuthenticationRequired,
         }))
 
       const nextId = remotePage.id
@@ -373,7 +499,9 @@ export const useEditorStore = create((set, get) => ({
         status: 'DRAFT',
         build,
         remoteId: nextId,
+        authenticationRequired: current.currentPageAuthenticationRequired,
       })
+      if (String(current.currentPageId) !== String(nextId)) deleteWebPage(current.currentPageId)
       set({
         currentPageId: nextId,
         remotePageId: nextId,
@@ -414,20 +542,20 @@ export const useEditorStore = create((set, get) => ({
         pageId: current.currentPageId,
         schema,
         sessionId,
-        allowHtmlFallback: true,
       })
       if (!build?.url) {
         throw new Error('Build thành công nhưng server chưa trả URL micro-frontend.')
       }
 
       const remotePage = current.remotePageId
-        ? await WebPageService.update(buildWebPagePayload({
+        ? await WebPageService.update(current.remotePageId, buildWebPagePayload({
           id: current.remotePageId,
           name: schema.name,
           slug: current.currentPageSlug,
           title: schema.name,
           schema,
           build,
+          authenticationRequired: current.currentPageAuthenticationRequired,
         }))
         : await WebPageService.create(buildWebPagePayload({
           name: schema.name,
@@ -435,6 +563,7 @@ export const useEditorStore = create((set, get) => ({
           title: schema.name,
           schema,
           build,
+          authenticationRequired: current.currentPageAuthenticationRequired,
         }))
 
       const nextId = remotePage.id
@@ -455,7 +584,9 @@ export const useEditorStore = create((set, get) => ({
         publishedAt,
         build,
         remoteId: nextId,
+        authenticationRequired: current.currentPageAuthenticationRequired,
       })
+      if (String(current.currentPageId) !== String(nextId)) deleteWebPage(current.currentPageId)
       set({
         currentPageId: nextId,
         remotePageId: nextId,
@@ -507,6 +638,12 @@ export const useEditorStore = create((set, get) => ({
 
   /* Modal cấu hình */
   setConfigOpen: (open) => set({ configOpen: open }),
+  openCustomJsx: ({ target = 'block', editingId = null } = {}) => set({
+    customJsxOpen: true,
+    customJsxTarget: target,
+    customJsxEditingId: editingId,
+  }),
+  closeCustomJsx: () => set({ customJsxOpen: false, customJsxEditingId: null }),
 
   saveConfig: (config) => {
     set({ apiConfig: config, configOpen: false })
@@ -521,7 +658,11 @@ export const useEditorStore = create((set, get) => ({
 
   saveCrumb: (crumbs) => {
     set({ crumbConfig: crumbs })
-    get()._commitSchema({ ...get().draftSchema, breadcrumbs: crumbs })
+    const current = get().draftSchema
+    const sections = current.sections.map(section => section.type === 'breadcrumb'
+      ? { ...section, props: { ...section.props, items: clonePageSchema(crumbs) } }
+      : section)
+    get()._commitSchema({ ...current, breadcrumbs: crumbs, sections })
   },
 
   /* Nội bộ */
@@ -535,6 +676,9 @@ export const useEditorStore = create((set, get) => ({
     ]
     set({
       draftSchema: clonePageSchema(normalizedSchema),
+      apiConfig: clonePageSchema(normalizedSchema.dataSources ?? {}),
+      seoConfig: clonePageSchema(normalizedSchema.seo?.meta ?? []),
+      crumbConfig: clonePageSchema(normalizedSchema.breadcrumbs ?? []),
       history: nextHistory,
       historyIndex: nextHistory.length - 1,
       selected,

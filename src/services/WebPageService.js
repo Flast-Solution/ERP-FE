@@ -10,12 +10,12 @@ const resolveListData = response => {
   }
 }
 
-const resolveCreatedPage = response => {
+const resolveSavedPage = (response, fallbackId) => {
   const data = response?.data ?? response
   const page = data?.data && (data.data.id !== undefined || data.data.uuid !== undefined)
     ? data.data
     : data
-  const id = page?.id ?? page?.uuid ?? page?.pageId
+  const id = page?.id ?? page?.uuid ?? page?.pageId ?? fallbackId
   if (id === undefined || id === null || id === '') {
     throw new Error(response?.message || 'API tạo trang chưa trả về id.')
   }
@@ -46,6 +46,17 @@ export const buildWebPagePayload = ({
   const pageSlug = slug || '/'
   const buildUrl = build?.url || ''
   const componentId = build?.component_id || ''
+  const apis = Object.entries(schema?.dataSources ?? {}).flatMap(([blockId, sources]) => (
+    (sources ?? []).map(source => ({ ...source, blockId }))
+  ))
+  const jsxArtifacts = [...(schema?.sections ?? []), ...(schema?.overlays ?? [])]
+    .filter(item => item?.type === 'customJsx' && item?.artifact?.entryUrl)
+    .map(item => ({
+      id: item.id,
+      definitionId: item.definitionId,
+      version: item.artifact.version,
+      url: item.artifact.entryUrl,
+    }))
 
   if (!buildUrl) {
     throw new Error('Thiếu url build — không gọi API create/update.')
@@ -63,8 +74,8 @@ export const buildWebPagePayload = ({
     configs: [{
       titles: pageName,
       tag: 'landing-page',
-      apis: [],
-      urlJsx: [],
+      apis,
+      urlJsx: jsxArtifacts,
       urlBuild: buildUrl,
     }],
     seos: schema?.seo?.meta ?? [],
@@ -85,13 +96,20 @@ const WebPageService = {
   async create(payload) {
     const response = await RequestUtils.Post(`${WEB_PAGE_VIEW_PATH}/create`, payload)
     assertSuccess(response, 'Không tạo được trang.')
-    return resolveCreatedPage(response)
+    return resolveSavedPage(response)
   },
 
-  async update(payload) {
-    const response = await RequestUtils.Post(`${WEB_PAGE_VIEW_PATH}/update`, payload)
+  async update(id, payload) {
+    if (id === undefined || id === null || id === '') {
+      throw new Error('Thiếu ID bản ghi cần cập nhật.')
+    }
+    const updatePayload = { ...payload, id }
+    const response = await RequestUtils.Post(
+      `${WEB_PAGE_VIEW_PATH}/update/${encodeURIComponent(id)}`,
+      updatePayload,
+    )
     assertSuccess(response, 'Không cập nhật được trang.')
-    return resolveCreatedPage(response)
+    return resolveSavedPage(response, id)
   },
 
   /**
@@ -109,7 +127,7 @@ const WebPageService = {
       authenticationRequired,
     })
     return id
-      ? this.update(payload)
+      ? this.update(id, payload)
       : this.create(payload)
   },
 }
