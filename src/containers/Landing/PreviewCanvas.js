@@ -24,6 +24,10 @@ import {
 import { EditableHighlight } from './EditableHighlight'
 import { ExtendedBlockRenderer, isExtendedBlock, sanitizeHtml } from './ExtendedBlockRenderer'
 import { getLandingOverlayRoot } from './landingOverlayRoot'
+import { CustomJsxBlockRenderer } from './CustomJsxBlockRenderer'
+import { CUSTOM_JSX_TYPE } from './customJsx'
+import { useWebData } from './WebDataContext'
+import { matchLandingRoute } from './landingRoutes'
 
 const BoltIcon = () => (
   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
@@ -469,6 +473,33 @@ const renderBlock = (section, primaryColor) => {
   const props = section?.props ?? {}
 
   switch (section?.type) {
+    case CUSTOM_JSX_TYPE:
+      return <CustomJsxBlockRenderer section={section} />
+
+    case 'breadcrumb':
+      return (
+        <nav
+          aria-label="Breadcrumb"
+          style={{
+            padding: '14px 24px',
+            background: props.background || 'transparent',
+            color: props.textColor || primaryColor,
+            textAlign: props.align || 'left',
+          }}
+        >
+          {(props.items ?? []).map((item, index) => (
+            <span key={item.id || `${item.text}-${index}`}>
+              {index > 0 && (
+                <span aria-hidden="true" style={{ margin: '0 8px', opacity: .55 }}>
+                  {props.separator || '/'}
+                </span>
+              )}
+              <a href={item.url || '#'} style={{ color: 'inherit' }}>{item.text}</a>
+            </span>
+          ))}
+        </nav>
+      )
+
     case 'navbar':
       return <NavbarBlock props={props} primaryColor={primaryColor} menuId={section.id || 'navbar'} />
 
@@ -891,12 +922,15 @@ const renderBlock = (section, primaryColor) => {
   }
 }
 
-export function PreviewCanvas() {
+export function PreviewCanvas({ schema: providedSchema, mode: providedMode } = {}) {
+  const runtime = useWebData()
   const selected = useEditorStore((state) => state.selected)
-  const schema = useEditorStore((state) => state.draftSchema)
+  const editorSchema = useEditorStore((state) => state.draftSchema)
   const device = useEditorStore((state) => state.device)
-  const viewMode = useEditorStore((state) => state.viewMode)
+  const editorViewMode = useEditorStore((state) => state.viewMode)
   const openEdit = useEditorStore((state) => state.openEdit)
+  const schema = providedSchema || editorSchema
+  const viewMode = providedMode || editorViewMode
   const primaryColor = schema?.theme?.primaryColor
 
   useEffect(() => {
@@ -949,7 +983,9 @@ export function PreviewCanvas() {
         }
       }}
     >
-      {(schema?.sections ?? []).map(section => {
+      {(schema?.sections ?? [])
+        .filter(section => viewMode !== 'runtime' || matchLandingRoute(section.props?.routePath, runtime.route?.pathname))
+        .map(section => {
         const presentation = getSectionPresentation(section.props ?? {}, schema?.theme)
         return (
           <EditableHighlight
@@ -963,6 +999,7 @@ export function PreviewCanvas() {
             : presentation.style
           }
           data-block-type={section.type}
+          data-block-id={section.id}
           data-has-block-title={Boolean(
             typeof section.props?.blockTitle === 'string' && section.props.blockTitle.trim(),
           )}

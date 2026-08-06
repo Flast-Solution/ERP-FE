@@ -1,7 +1,7 @@
 import { useEditorStore } from '@/store/editorStore'
 import { Button, Tooltip, Badge } from 'antd'
 import { useNavigate } from 'react-router-dom'
-import { Bolt, Undo, Redo, Monitor, Phone, Cursor, Gear, Code } from './icons'
+import { Bolt, Undo, Redo, Monitor, Phone, Cursor, Gear } from './icons'
 import {
   Bar, 
   BarGroup, 
@@ -89,14 +89,6 @@ export function EditorChrome() {
             title="Preview"
           >
             <Monitor />
-          </DeviceBtn>
-          <DeviceBtn
-            className={viewMode === 'html' ? 'is-on' : ''}
-            onClick={() => setViewMode('html')}
-            aria-label="HTML"
-            title="HTML"
-          >
-            <Code />
           </DeviceBtn>
         </DeviceToggle>
         <Sep />

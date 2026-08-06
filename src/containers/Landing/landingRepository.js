@@ -63,7 +63,6 @@ export const getLandingPage = id => (
 
 export const WEB_CONTENT_TYPES = {
   LANDING: 'LANDING_EDITOR',
-  MICRO_FRONTEND: 'MICRO_FRONTEND',
 }
 
 export const saveWebPage = page => {
@@ -107,6 +106,7 @@ export const saveLandingPage = ({
   publishedAt = null,
   build,
   remoteId,
+  authenticationRequired,
 }) => {
   if (!id || !isPageSchema(schema)) return null
 
@@ -121,7 +121,9 @@ export const saveLandingPage = ({
     updatedAt: new Date().toISOString(),
     publishedAt: publishedAt ?? previous?.publishedAt ?? null,
     contentType: WEB_CONTENT_TYPES.LANDING,
-    authenticationRequired: Boolean(previous?.authenticationRequired),
+    authenticationRequired: authenticationRequired == null
+      ? Boolean(previous?.authenticationRequired)
+      : Boolean(authenticationRequired),
     schema: normalizePageSchema(schema),
     build: build ?? previous?.build ?? null,
     // remoteId = id từ API create/update; thiếu → lần lưu sau phải create

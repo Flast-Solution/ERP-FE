@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { Suspense, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useLocation } from "react-router-dom";
 import { useStore } from '@flast-erp/core/components';
 import InAppNotify from '@/layouts/InAppNotify';
@@ -27,10 +27,6 @@ import ContainerLayouts from "@/layouts/ContainerLayout";
 import OrderService from '@/services/OrderService';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 /* import { useFlastRemote } from '@/hooks/useDynamicRemote'; */
-
-const GlobalMicroFrontendDrawerHost = React.lazy(
-    () => import('@/containers/Landing/GlobalMicroFrontendDrawerHost')
-);
 
 const MainLayout = (props) => {
 
@@ -60,9 +56,6 @@ const MainLayout = (props) => {
         <NotificationProvider userId={user?.id}>
             { /*MPage && <MPage /> */}
             {memoLayout}
-            <Suspense fallback={null}>
-                <GlobalMicroFrontendDrawerHost />
-            </Suspense>
             {menoInAppNotify}
         </NotificationProvider>
     )

@@ -166,14 +166,14 @@ export const shouldPreferGeneratedCode = ({ initialCode = '', generatedCode = ''
   return !initialHasNewUploadHelper
 }
 
-export const buildMicroFrontend = async ({ sessionId, componentId, entryFilename, jsxCode }) => {
+export const buildMicroFrontend = async ({ sessionId, componentId, entryFilename, jsxCode, files }) => {
   const response = await fetch('https://ai.flast.vn/build', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       session_id: sessionId,
       component_id: componentId,
-      files: { [entryFilename]: jsxCode },
+      files: files || { [entryFilename]: jsxCode },
       entry_filename: entryFilename,
     }),
   })

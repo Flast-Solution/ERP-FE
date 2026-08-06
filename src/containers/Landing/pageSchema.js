@@ -1,7 +1,7 @@
 import { getLandingBlock } from './blockRegistry'
 
 export const DEFAULT_PAGE_SCHEMA = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   name: 'Trang chủ flast.vn',
   theme: {
     primaryColor: '#7c5cff',
@@ -27,6 +27,7 @@ export const DEFAULT_PAGE_SCHEMA = {
   },
   breadcrumbs: [{ id: 'c1', text: 'Trang chủ', url: '/' }],
   dataSources: {},
+  overlays: [],
   sections: [
     {
       id: 'nav',
@@ -123,7 +124,7 @@ export const normalizePageSchema = schema => {
   const source = isPlainObject(schema) ? clonePageSchema(schema) : clonePageSchema(DEFAULT_PAGE_SCHEMA)
   return {
     ...source,
-    schemaVersion: Number.isInteger(source.schemaVersion) ? source.schemaVersion : 1,
+    schemaVersion: Number.isInteger(source.schemaVersion) ? source.schemaVersion : 2,
     name: typeof source.name === 'string' ? source.name : 'Trang chưa đặt tên',
     theme: isPlainObject(source.theme)
       ? { ...clonePageSchema(DEFAULT_PAGE_SCHEMA.theme), ...source.theme }
@@ -135,6 +136,7 @@ export const normalizePageSchema = schema => {
       ? source.breadcrumbs
       : clonePageSchema(DEFAULT_PAGE_SCHEMA.breadcrumbs),
     dataSources: isPlainObject(source.dataSources) ? source.dataSources : {},
+    overlays: Array.isArray(source.overlays) ? source.overlays : [],
     sections: Array.isArray(source.sections) ? source.sections : [],
   }
 }
@@ -207,6 +209,12 @@ export const validatePageSchema = schema => {
   else if (schema.breadcrumbs?.some(item => !isPlainObject(item) || typeof item.text !== 'string' || typeof item.url !== 'string')) errors.push('Mục breadcrumb không hợp lệ.')
   if (schema.dataSources != null && !isPlainObject(schema.dataSources)) errors.push('Nguồn dữ liệu không hợp lệ.')
   else if (Object.values(schema.dataSources ?? {}).some(sources => !Array.isArray(sources))) errors.push('Danh sách API của block không hợp lệ.')
+  if (schema.overlays != null && !Array.isArray(schema.overlays)) errors.push('Danh sách drawer/popup không hợp lệ.')
+  else if (schema.overlays?.some(item => !isPlainObject(item) || typeof item.id !== 'string' || !item.id.trim())) {
+    errors.push('Drawer/popup thiếu ID hợp lệ.')
+  } else if (new Set((schema.overlays ?? []).map(item => item.id)).size !== (schema.overlays ?? []).length) {
+    errors.push('ID drawer/popup không được trùng nhau.')
+  }
   return errors
 }
 

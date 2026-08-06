@@ -14,7 +14,7 @@ const WebPageRuntime = React.lazy(() => import('@/containers/Landing/WebPageRunt
 
 export const PublicWebConfig = {
   routes: [
-    { path: '/m/:pageId', element: <WebPageRuntime /> }
+    { path: '/m/:pageId/*', element: <WebPageRuntime /> }
   ]
 };
 

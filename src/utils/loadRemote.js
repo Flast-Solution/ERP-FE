@@ -19,7 +19,7 @@ import * as JoditReact      from "jodit-react"
 import * as QueryString     from "query-string"
 import * as ReactWaypoint   from "react-waypoint"
 import * as FlastErpCore    from "@flast-erp/core"
-import * as FlastWebRuntime from "@/containers/Landing/WebDataContext"
+import * as FlastWebRuntime from "@/containers/Landing/LandingRuntime"
 
 let initialized = false
 const registeredRemotes = new Set()
@@ -55,10 +55,10 @@ const SHARED_DEPS = {
     shareConfig: { singleton: true, requiredVersion: "^6.27.0" },
   },
   antd: {
-    version: "5.21.5",
+    version: "5.29.3",
     scope: "default",
     lib: () => Antd,
-    shareConfig: { singleton: true, requiredVersion: "^5.21.5" },
+    shareConfig: { singleton: true, requiredVersion: "^5.21.0" },
   },
   axios: {
     version: "0.27.2",
@@ -67,34 +67,34 @@ const SHARED_DEPS = {
     shareConfig: { singleton: true, requiredVersion: "^0.27.2" },
   },
   dayjs: {
-    version: "1.11.13",
+    version: "1.11.21",
     scope: "default",
     lib: () => Dayjs,
     shareConfig: { singleton: true, requiredVersion: "^1.11.13" },
   },
   lodash: {
-    version: "4.17.21",
+    version: "4.18.1",
     scope: "default",
     lib: () => Lodash,
-    shareConfig: { singleton: true, requiredVersion: "^4.17.21" },
+    shareConfig: { singleton: true, requiredVersion: "^4.17.0" },
   },
   "styled-components": {
-    version: "6.4.2",
+    version: "5.3.11",
     scope: "default",
     lib: () => StyledComponents,
-    shareConfig: { singleton: true, requiredVersion: "^6.4.2" },
+    shareConfig: { singleton: true, requiredVersion: "^5.3.5" },
   },
   i18next: {
-    version: "26.3.0",
+    version: "21.10.0",
     scope: "default",
     lib: () => I18next,
-    shareConfig: { singleton: true, requiredVersion: "^26.3.0" },
+    shareConfig: { singleton: true, requiredVersion: "^21.9.1" },
   },
   "react-i18next": {
-    version: "17.0.8",
+    version: "11.18.6",
     scope: "default",
     lib: () => ReactI18next,
-    shareConfig: { singleton: true, requiredVersion: "^17.0.8" },
+    shareConfig: { singleton: true, requiredVersion: "^11.18.5" },
   },
   moment: {
     version: "2.30.1",
@@ -103,16 +103,16 @@ const SHARED_DEPS = {
     shareConfig: { singleton: true, requiredVersion: "^2.30.1" },
   },
   "jodit-react": {
-    version: "5.2.31",
+    version: "5.3.21",
     scope: "default",
     lib: () => JoditReact,
     shareConfig: { singleton: true, requiredVersion: "^5.2.31" },
   },
   "query-string": {
-    version: "9.4.0",
+    version: "7.1.3",
     scope: "default",
     lib: () => QueryString,
-    shareConfig: { singleton: true, requiredVersion: "^9.4.0" },
+    shareConfig: { singleton: true, requiredVersion: "^7.1.1" },
   },
   "react-waypoint": {
     version: "10.3.0",
@@ -132,15 +132,15 @@ const SHARED_DEPS = {
     lib: () => FlastErpCore,
     shareConfig: { singleton: true, requiredVersion: "^1.0.23" },
   },
-  "@flast/web-runtime": {
-    version: "1.0.0",
-    scope: "default",
-    lib: () => FlastWebRuntime,
-    shareConfig: { singleton: true, requiredVersion: "^1.0.0" },
-  },
 }
 
 function ensureInit() {
+  // Landing artifact được build ở môi trường độc lập, vì vậy không thể import
+  // một package nội bộ chưa publish như @flast/web-runtime. Cung cấp runtime
+  // trực tiếp từ host trước khi Module Federation thực thi remote component.
+  if (typeof window !== "undefined") {
+    window.__FLAST_WEB_RUNTIME__ = FlastWebRuntime
+  }
   if (initialized) {
     return
   }

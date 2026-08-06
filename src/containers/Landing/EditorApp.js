@@ -3,14 +3,14 @@ import { ConfigProvider, App, theme } from 'antd'
 import { useLocation } from 'react-router-dom'
 import { useEditorStore } from '@/store/editorStore'
 import { EditorChrome } from './EditorChrome'
-import { PreviewCanvas } from './PreviewCanvas'
+import { LandingPageRenderer } from './LandingPageRenderer'
 import { ApiConfigModal } from './ApiConfigModal'
 import { Root, Workspace, Stage, Frame, Coach, CoachSpark, Toast } from './EditorApp.style'
 import { t } from '@/css/landing'
 import { EditPromptBar } from './EditPromptBar'
 import { useLandingAi } from './useLandingAi'
 import { BlockInspector, BlockNavigator } from './EditorPanels'
-import { HtmlSourceView } from './HtmlSourceView'
+import { CustomJsxModal } from './CustomJsxModal'
 
 const antdTheme = {
   algorithm: theme.defaultAlgorithm,
@@ -85,11 +85,9 @@ function EditorContent() {
           <Frame
             $mobile={device === 'mobile'}
             data-landing-frame="true"
-            style={{ display: viewMode !== 'html' ? 'block' : 'none' }}
           >
-            <PreviewCanvas />
+            <LandingPageRenderer schema={draftSchema} mode={viewMode} />
           </Frame>
-          <HtmlSourceView schema={draftSchema} active={viewMode === 'html'} />
         </Stage>
         {viewMode === 'edit' && <BlockInspector />}
       </Workspace>
@@ -119,6 +117,7 @@ function EditorContent() {
       {toast && <Toast>{toast}</Toast>}
 
       <ApiConfigModal />
+      <CustomJsxModal />
     </Root>
   )
 }

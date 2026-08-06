@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet'
 import { useNavigate } from 'react-router-dom'
-import { Button, Checkbox, Drawer, Form, Input, Popconfirm, Select, Space, Table, Tag, message } from 'antd'
+import { Button, Checkbox, Drawer, Form, Input, Popconfirm, Space, Table, Tag, message } from 'antd'
 import { CopyOutlined, DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
 import { BreadcrumbCustom } from '@flast-erp/core/components'
 import {
@@ -11,10 +11,8 @@ import {
   saveWebPage,
   WEB_CONTENT_TYPES,
 } from '@/containers/Landing/landingRepository'
-import { buildLandingPage } from '@/containers/Landing/landingBuildService'
 import { clonePageSchema, DEFAULT_PAGE_SCHEMA } from '@/containers/Landing/pageSchema'
-import useChatStore from '@/containers/AIChatbot/useChatStore'
-import WebPageService, { buildWebPagePayload } from '@/services/WebPageService'
+import WebPageService from '@/services/WebPageService'
 import { Header, PageName, PageShell, TableCard, Toolbar } from './List.style'
 
 const formatDate = value => {
@@ -32,16 +30,11 @@ const slugify = value => String(value || '')
   .replace(/[^a-z0-9]+/g, '-')
   .replace(/^-+|-+$/g, '')
 
-const inferContentType = item => {
-  const configs = item?.configs ?? []
-  if (configs.some(cfg => cfg.tag === 'landing-page')) {
-    return WEB_CONTENT_TYPES.LANDING
-  }
-  if (configs.length > 0) {
-    return WEB_CONTENT_TYPES.MICRO_FRONTEND
-  }
-  return null
-}
+const isLandingPage = item => (
+  item?.contentType === WEB_CONTENT_TYPES.LANDING
+  || Boolean(item?.schema)
+  || (item?.configs ?? []).some(cfg => cfg.tag === 'landing-page')
+)
 
 const normalizeApiPage = item => {
   const landingConfig = (item.configs ?? []).find(cfg => cfg.tag === 'landing-page')
@@ -52,7 +45,7 @@ const normalizeApiPage = item => {
   return {
     ...item,
     __source: 'api',
-    contentType: inferContentType(item),
+    contentType: WEB_CONTENT_TYPES.LANDING,
     remoteId: item.id,
     build: buildUrl ? { url: buildUrl } : undefined,
     status: buildUrl ? 'PUBLISHED' : 'DRAFT',
@@ -60,10 +53,6 @@ const normalizeApiPage = item => {
 }
 
 const getPreviewPath = record => {
-  const slug = String(record.slug ?? '').trim()
-  if (slug && slug !== '/') {
-    return slug.startsWith('/') ? slug : `/${slug}`
-  }
   return `/m/${record.id}`
 }
 
@@ -73,7 +62,7 @@ const openEditor = (record, navigate) => {
     name: record.name,
     slug: record.slug,
     remoteId: record.id,
-    contentType: record.contentType || inferContentType(record),
+    contentType: WEB_CONTENT_TYPES.LANDING,
     status: record.status,
     build: record.build,
     authenticationRequired: Boolean(record.authenticationRequired),
@@ -95,15 +84,19 @@ const LandingList = () => {
     setLoading(true)
     try {
       const result = await WebPageService.fetch({ page, limit })
-      setPages(result.items.map(normalizeApiPage))
+      const landingPages = result.items.filter(isLandingPage).map(normalizeApiPage)
+      // Public runtime đọc trang theo id từ repository cục bộ. Đồng bộ metadata
+      // API trước để tab demo mới có thể lấy schema cũ hoặc urlBuild fallback.
+      landingPages.forEach(apiPage => saveWebPage(apiPage))
+      setPages(landingPages)
       setPagination(current => ({
         ...current,
         current: page,
         pageSize: Number(result.page?.pageSize || limit),
-        total: Number(result.page?.totalElements ?? result.page?.total ?? result.items.length),
+        total: landingPages.length,
       }))
     } catch (error) {
-      const localPages = listLandingPages()
+      const localPages = listLandingPages().filter(isLandingPage)
       setPages(localPages)
       setPagination(current => ({ ...current, current: 1, total: localPages.length }))
       message.error(error?.message || 'Không tải được danh sách trang.')
@@ -125,72 +118,34 @@ const LandingList = () => {
     ))
   }, [keyword, pages])
 
-  const createPage = async values => {
+  const createPage = values => {
     const temporaryPageId = createLandingPageId()
     const generatedSlug = slugify(values.name) || `page-${temporaryPageId}`
-    const contentType = values.contentType
-    const schema = contentType === WEB_CONTENT_TYPES.LANDING
-      ? { ...clonePageSchema(DEFAULT_PAGE_SCHEMA), name: values.name }
-      : undefined
+    const schema = {
+      ...clonePageSchema(DEFAULT_PAGE_SCHEMA),
+      name: values.name,
+      seo: { meta: [] },
+      breadcrumbs: [],
+      dataSources: {},
+      overlays: [],
+      sections: [],
+    }
     setCreateSubmitting(true)
     try {
-      let build = null
-
-      // Landing: giống form saveAfterBuild — build xong có url mới create
-      if (contentType === WEB_CONTENT_TYPES.LANDING) {
-        build = await buildLandingPage({
-          pageId: temporaryPageId,
-          schema,
-          sessionId: useChatStore.getState().getSessionId('form_builder'),
-          allowHtmlFallback: true,
-        })
-        if (!build?.url) {
-          message.error('Build thành công nhưng server chưa trả URL micro-frontend.')
-          return
-        }
-      }
-
-      const createdPage = contentType === WEB_CONTENT_TYPES.LANDING
-        ? await WebPageService.create(buildWebPagePayload({
-          name: values.name,
-          slug: generatedSlug,
-          title: values.name,
-          schema,
-          build,
-          authenticationRequired: values.authenticationRequired,
-        }))
-        : await WebPageService.create({
-          name: values.name,
-          slug: generatedSlug,
-          title: values.name,
-          authenticationRequired: Boolean(values.authenticationRequired),
-          configs: [],
-          seos: [],
-          breadcrumds: [],
-        })
-
-      const id = createdPage.id
       saveWebPage({
-        ...createdPage,
-        id,
-        name: createdPage.name || values.name,
-        slug: createdPage.slug || generatedSlug,
+        id: temporaryPageId,
+        name: values.name,
+        slug: generatedSlug,
         status: 'DRAFT',
-        authenticationRequired: values.authenticationRequired,
-        contentType,
-        remoteId: id,
-        schema: schema
-          ? { ...schema, name: createdPage.name || values.name }
-          : undefined,
-        build,
-        mfeConfig: contentType === WEB_CONTENT_TYPES.MICRO_FRONTEND
-          ? { components: [], drawers: [] }
-          : undefined,
+        authenticationRequired: Boolean(values.authenticationRequired),
+        contentType: WEB_CONTENT_TYPES.LANDING,
+        remoteId: null,
+        schema,
       })
       setCreateOpen(false)
       form.resetFields()
-      message.success('Đã tạo trang mới.')
-      navigate(`/landing/edit?mode=edit&id=${encodeURIComponent(id)}`)
+      message.success('Đã tạo bản nháp trắng. Trang chỉ được build khi lưu hoặc xuất bản.')
+      navigate(`/landing/edit?mode=create&id=${encodeURIComponent(temporaryPageId)}`)
     } catch (error) {
       message.error(error?.message || 'Không tạo được trang.')
     } finally {
@@ -240,25 +195,12 @@ const LandingList = () => {
       render: value => <code>{value || '/'}</code>,
     },
     {
-      title: 'Loại nội dung',
-      key: 'contentType',
-      width: 160,
-      render: (_, record) => record.contentType === WEB_CONTENT_TYPES.MICRO_FRONTEND
-        ? <Tag color="blue">Micro Frontend</Tag>
-        : record.contentType === WEB_CONTENT_TYPES.LANDING
-          ? <Tag>Landing Editor</Tag>
-          : <Tag>Chưa xác định</Tag>,
-    },
-    {
-      title: 'Thành phần',
+      title: 'Số block',
       key: 'componentCount',
       width: 110,
       align: 'center',
-      render: (_, record) => Array.isArray(record.configs)
-        ? record.configs.length
-        : record.contentType === WEB_CONTENT_TYPES.MICRO_FRONTEND
-          ? (record.mfeConfig?.components?.length ?? 0)
-          : (record.schema?.sections?.length ?? 0),
+      render: (_, record) => record.schema?.sections?.length
+        ?? (Array.isArray(record.configs) ? record.configs.length : 0),
     },
     {
       title: 'Trạng thái',
@@ -330,7 +272,7 @@ const LandingList = () => {
       <Header>
         <div>
           <h1>Quản lý trang</h1>
-          <p>Tạo Landing Page hoặc lắp ghép trang từ các Micro Frontend.</p>
+          <p>Tạo và chỉnh sửa Landing Page bằng các block nội dung.</p>
         </div>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
           Thêm trang mới
@@ -361,7 +303,7 @@ const LandingList = () => {
         />
       </TableCard>
       <Drawer
-        title="Thêm trang WEB"
+        title="Thêm Landing Page"
         width={560}
         open={createOpen}
         onClose={() => setCreateOpen(false)}
@@ -371,17 +313,11 @@ const LandingList = () => {
         <Form
           form={form}
           layout="vertical"
-          initialValues={{ contentType: WEB_CONTENT_TYPES.LANDING, authenticationRequired: false }}
+          initialValues={{ authenticationRequired: false }}
           onFinish={createPage}
         >
           <Form.Item name="name" label="Tên trang" rules={[{ required: true, message: 'Vui lòng nhập tên trang.' }]}>
             <Input placeholder="Ví dụ: Trang giới thiệu sản phẩm" />
-          </Form.Item>
-          <Form.Item name="contentType" label="Loại nội dung" rules={[{ required: true }]}>
-            <Select options={[
-              { value: WEB_CONTENT_TYPES.LANDING, label: 'Landing Editor — thiết kế bằng block' },
-              { value: WEB_CONTENT_TYPES.MICRO_FRONTEND, label: 'Micro Frontend — lắp ghép component động' },
-            ]} />
           </Form.Item>
           <Form.Item name="authenticationRequired" valuePropName="checked">
             <Checkbox>Yêu cầu người dùng đăng nhập</Checkbox>
