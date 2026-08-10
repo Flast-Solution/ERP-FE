@@ -83,7 +83,8 @@ export const buildInitialLotValues = (lot, orderDetails = []) => {
     orderDetailKey: matchedDetail?.key ?? lotDetailRef,
     quantity: lot.total,
     prviderId: lot.prviderId,
-    workflowProcessId: lot.workflowProcessId ?? lot.processId ?? lot.workflowId ?? lot.process?.id ?? lot.workflowProcess?.id,
+    workflowProcessId: lot.workflowProcessId,
+    quanlityProcessId: lot.quanlityProcessId,
     plannedDate: lot.expectedDate ? moment(lot.expectedDate) : undefined,
     lotType: lot.type || DEFAULT_LOT_VALUES.lotType,
     priority: lot.priorityLevel || DEFAULT_LOT_VALUES.priority,
@@ -146,6 +147,21 @@ export const resolveWorkflowList = (response) => {
   return candidates.find(Array.isArray) ?? []
 }
 
+export const getWorkflowFlowType = (workflow = {}) => {
+  const process = workflow?.process ?? workflow
+  return process?.flowType ?? ''
+}
+
+export const filterWorkflowsByFlowType = (workflows = [], flowType) => {
+  const expectedType = String(flowType ?? '').trim().toUpperCase()
+  if (!expectedType) return workflows
+
+  return workflows.filter((workflow) => {
+    const currentType = String(getWorkflowFlowType(workflow)).trim().toUpperCase()
+    return !currentType || currentType === expectedType
+  })
+}
+
 export const buildLotPayload = ({
   lot,
   customerOrder,
@@ -163,6 +179,7 @@ export const buildLotPayload = ({
     prviderId: lot.prviderId ?? null,
     processId: lot.workflowProcessId ?? null,
     workflowProcessId: lot.workflowProcessId ?? null,
+    quanlityProcessId: lot.quanlityProcessId ?? null,
     expectedDate: lot.plannedDate
       ? moment(lot.plannedDate).format('YYYY-MM-DD HH:mm:ss')
       : null,

@@ -6,7 +6,10 @@ import {
   fetchWorkflowProcessDetail,
 } from '../services/workflowApi'
 import { ORDER_WORKFLOW_ENTITY_TYPE } from '../constants'
-import { getWorkflowInstanceProcessId } from '../utils/workflowMappers'
+import {
+  getWorkflowInstanceProcessId,
+  normalizeWorkflowInstance,
+} from '../utils/workflowMappers'
 
 const useWorkflowProgressDrawer = () => {
   const requestIdRef = useRef(0)
@@ -28,12 +31,35 @@ const useWorkflowProgressDrawer = () => {
     setLoading(true)
 
     try {
-      const instances = await fetchWorkflowInstancesByEntity({
-        entityName: options.entityName || ORDER_WORKFLOW_ENTITY_TYPE,
-        entityIds: [selectedDetail.id],
-      })
+      const suppliedInstances = Array.isArray(options.workflowInstances)
+        ? options.workflowInstances
+        : []
+      let fetchedInstances = []
+      try {
+        fetchedInstances = await fetchWorkflowInstancesByEntity({
+          entityName: options.entityName || ORDER_WORKFLOW_ENTITY_TYPE,
+          entityIds: [selectedDetail.id],
+        })
+      } catch (error) {
+        if (!suppliedInstances.length) throw error
+      }
+
+      const normalizedInstances = Array.from(new Map(
+        [...suppliedInstances, ...fetchedInstances]
+          .map(normalizeWorkflowInstance)
+          .map((instance, index) => [
+            String(instance?.id ?? `${getWorkflowInstanceProcessId(instance)}-${index}`),
+            instance,
+          ])
+      ).values())
+      const requestedProcessId = options.processId
+      const scopedInstances = requestedProcessId
+        ? normalizedInstances.filter(instance => (
+          String(getWorkflowInstanceProcessId(instance)) === String(requestedProcessId)
+        ))
+        : normalizedInstances
       const processIds = Array.from(new Set(
-        instances
+        scopedInstances
           .map(getWorkflowInstanceProcessId)
           .filter(processId => processId !== undefined && processId !== null && processId !== '')
       ))
@@ -47,7 +73,7 @@ const useWorkflowProgressDrawer = () => {
 
       if (requestIdRef.current !== requestId) return
       const processMap = new Map(processEntries)
-      setWorkflowInstances(instances.map(instance => ({
+      setWorkflowInstances(scopedInstances.map(instance => ({
         ...instance,
         workflowProcess: processMap.get(String(getWorkflowInstanceProcessId(instance))) ?? null,
       })))

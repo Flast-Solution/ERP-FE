@@ -13,9 +13,11 @@ import {
   LOT_WORKFLOW_ENTITY_TYPE,
   ORDER_WORKFLOW_ENTITY_TYPE,
 } from './progress/constants'
+import { useWorkflowDrawer } from '@/contexts/WorkflowDrawerContext'
 
 const OrderProgressPage = () => {
   const { user } = useGetMe()
+  const { openWorkflowDrawer } = useWorkflowDrawer()
   const [searchParams, setSearchParams] = useSearchParams()
   const changingScopeRef = useRef(false)
   const orderState = useOrderProgressOrder()
@@ -98,6 +100,22 @@ const OrderProgressPage = () => {
     setSearchParams(nextSearchParams, { replace: true })
     selectOrder()
   }, [searchParams, selectOrder, setSearchParams])
+
+  const handleOpenNcr = useCallback((lot) => {
+    const processId = lot?.quanlityProcessId
+    if (!lot?.id || !processId) return
+
+    openWorkflowDrawer(orderState.order, lot, {
+      entityName: LOT_WORKFLOW_ENTITY_TYPE,
+      entityType: LOT_WORKFLOW_ENTITY_TYPE,
+      entityLabel: 'NCR',
+      processId,
+      formOnly: true,
+      workflowInstances: lot?.ncrWorkflowInstance
+        ? [lot.ncrWorkflowInstance]
+        : [],
+    })
+  }, [openWorkflowDrawer, orderState.order])
 
   const workflowEntity = useMemo(() => (
     selectedLot
@@ -218,6 +236,7 @@ const OrderProgressPage = () => {
       orderWorkflowState={orderWorkflowState}
       onSelectLot={handleSelectLot}
       onSelectOrder={handleSelectOrder}
+      onOpenNcr={handleOpenNcr}
       workflowState={workflowState}
       submissionState={submissionState}
       formState={formState}

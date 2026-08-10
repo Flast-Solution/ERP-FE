@@ -20,6 +20,7 @@ const OrderProgressLayout = ({
   orderWorkflowState,
   onSelectLot,
   onSelectOrder,
+  onOpenNcr,
   workflowState,
   submissionState,
   formState,
@@ -109,6 +110,7 @@ const OrderProgressLayout = ({
                   selectedLot={selectedLot}
                   loading={loadingLots}
                   onSelect={onSelectLot}
+                  onOpenNcr={onOpenNcr}
                 />
 
                 {orderWorkflowState.workflowInstance ? (

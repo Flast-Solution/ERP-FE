@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { Table } from 'antd'
+import { Button, Table } from 'antd'
 import { InboxOutlined } from '@ant-design/icons'
 
 import { formatTime } from '@flast-erp/core/utils'
@@ -9,6 +9,7 @@ const OrderLotsSection = ({
   selectedLot,
   loading,
   onSelect,
+  onOpenNcr,
 }) => {
   const columns = useMemo(() => [
     {
@@ -37,6 +38,34 @@ const OrderLotsSection = ({
       render: (value) => value || '-',
     },
     {
+      title: 'NCR',
+      key: 'ncr',
+      width: 180,
+      render: (_, record) => {
+        const processId = record?.quanlityProcessId
+        if (!processId || !record?.ncrWorkflowInstance?.id) return '-'
+
+        const process = record?.ncrWorkflow
+        const workflowName = process?.name
+          ?? process?.processName
+          ?? `Workflow #${processId}`
+
+        return (
+          <Button
+            type="link"
+            size="small"
+            style={{ padding: 0, height: 'auto' }}
+            onClick={(event) => {
+              event.stopPropagation()
+              onOpenNcr(record)
+            }}
+          >
+            {workflowName}
+          </Button>
+        )
+      },
+    },
+    {
       title: 'Ngày nhập lô',
       dataIndex: 'expectedDate',
       key: 'expectedDate',
@@ -51,7 +80,7 @@ const OrderLotsSection = ({
       align: 'right',
       render: (value) => value ?? 0,
     },
-  ], [])
+  ], [onOpenNcr])
 
   return (
     <div className="workflow-progress-section">

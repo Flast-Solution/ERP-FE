@@ -26,6 +26,7 @@ import InAppNotify from '@/layouts/InAppNotify';
 import ContainerLayouts from "@/layouts/ContainerLayout";
 import OrderService from '@/services/OrderService';
 import { NotificationProvider } from '@/contexts/NotificationContext';
+import { WorkflowDrawerProvider } from '@/contexts/WorkflowDrawerContext';
 /* import { useFlastRemote } from '@/hooks/useDynamicRemote'; */
 
 const MainLayout = (props) => {
@@ -54,9 +55,11 @@ const MainLayout = (props) => {
     /* const MPage = useFlastRemote("component_001", "MPage", "environment-form") */
     return (
         <NotificationProvider userId={user?.id}>
-            { /*MPage && <MPage /> */}
-            {memoLayout}
-            {menoInAppNotify}
+            <WorkflowDrawerProvider>
+                { /*MPage && <MPage /> */}
+                {memoLayout}
+                {menoInAppNotify}
+            </WorkflowDrawerProvider>
         </NotificationProvider>
     )
 }

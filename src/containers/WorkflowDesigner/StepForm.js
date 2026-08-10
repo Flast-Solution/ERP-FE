@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react'
-import { Form, Tag, Button, message } from 'antd'
+import { Form, Tag, Button, Checkbox, message } from 'antd'
 import { DeleteOutlined, RightOutlined } from '@ant-design/icons'
 import { InAppEvent } from '@flast-erp/core/utils'
 import { HASH_POPUP } from '@/configs/constant'
-import { FormInput } from '@flast-erp/core/components'
+import {
+  FormInput,
+  FormSelectInfiniteBusinessUser,
+} from '@flast-erp/core/components'
 import { useNodes, useStepTypes, useUpdateNodeData } from '@/hooks/useWorkflowStore'
 import { ACTION_TYPES } from '@/store/workflowConstants'
 import { isStepTypeMatch, resolveStepTypeConfig, slugifyCode } from '@/utils/workflowValidators'
@@ -98,6 +101,8 @@ const StepForm = ({ node }) => {
       name: node.data.name ?? node.data.label,
       code: node.data.code,
       type: node.data.type,
+      config: node.data.config ?? {},
+      saveSubmitLog: node.data.saveSubmitLog ?? false,
     })
     /* eslint-disable-next-line */
   }, [node.id])
@@ -239,6 +244,23 @@ const StepForm = ({ node }) => {
                 <FieldHint>
                   Dùng trong API và conditions. Không đổi sau khi xuất bản.
                 </FieldHint>
+
+                <FormSelectInfiniteBusinessUser
+                  name={['config', 'assigneeId']}
+                  label="Người thực hiện"
+                  placeholder="Chọn người thực hiện"
+                  initialFilter={{ page: 1, limit: 10 }}
+                  allowClear
+                />
+
+                <Form.Item
+                  name="saveSubmitLog"
+                  valuePropName="checked"
+                  initialValue={false}
+                  style={{ marginBottom: 16 }}
+                >
+                  <Checkbox>Lưu log submit</Checkbox>
+                </Form.Item>
 
                 {/* Loại bước — pill radio */}
                 <Form.Item name="type" label="Nhóm bước" style={{ marginBottom: 0 }}>

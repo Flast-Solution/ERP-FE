@@ -1,7 +1,9 @@
 const LEGACY_FORM_IMPORT_RE = /import\s+(\w+)\s+from\s+['"](?:@\/)?(?:form-flast|components\/form)\/(\w+)['"]\s*;?\s*\n?/g
 const DEEP_CORE_FORM_IMPORT_RE = /import\s+(\w+)\s+from\s+['"]@flast-erp\/core\/components\/form\/(\w+)['"]\s*;?\s*\n?/g
 const CORE_COMPONENTS_BARREL_RE = /^\s*import\s+\{([^}]+)\}\s+from\s+['"]@flast-erp\/core\/components['"]\s*;?\s*\n?/gm
-const ONE_LINE_IMPORT_RE = /^\s*import\s+[^;\n]+;?\s*$/gm
+const IMPORT_DECLARATION_RE = /^\s*import(?:\s+[\s\S]*?\s+from\s+)?\s*['"][^'"\r\n]+['"]\s*;?[ \t]*(?:\r?\n|$)/gm
+const MARKDOWN_FENCE_START_RE = /^\s*```(?:jsx|js|javascript|tsx|typescript|react)?[ \t]*\r?\n/i
+const MARKDOWN_FENCE_END_RE = /\r?\n```[ \t]*\s*$/
 
 const KNOWN_CORE_FORM_COMPONENTS = [
   'FormInput',
@@ -58,16 +60,22 @@ const collectNamedImports = (set, importList = '') => {
   })
 }
 
-const insertAfterFirstImport = (code, line) => {
-  const match = code.match(/^import\s+[^;]+;?\s*\n/)
-  if (!match) return `${line}${code}`
-  const index = match.index + match[0].length
-  return `${code.slice(0, index)}${line}${code.slice(index)}`
+const stripMarkdownCodeFence = (code = '') => {
+  const source = String(code).replace(/^\uFEFF/, '').trim()
+  const hasStartFence = MARKDOWN_FENCE_START_RE.test(source)
+  const hasEndFence = MARKDOWN_FENCE_END_RE.test(source)
+
+  if (!hasStartFence && !hasEndFence) return source
+
+  return source
+    .replace(MARKDOWN_FENCE_START_RE, '')
+    .replace(MARKDOWN_FENCE_END_RE, '')
+    .trim()
 }
 
-const hoistOneLineImports = (code = '') => {
+const hoistImportDeclarations = (code = '') => {
   const imports = []
-  const body = String(code).replace(ONE_LINE_IMPORT_RE, match => {
+  const body = String(code).replace(IMPORT_DECLARATION_RE, match => {
     const line = match.trim().replace(/;$/, '')
     if (line) imports.push(line)
     return ''
@@ -78,7 +86,7 @@ const hoistOneLineImports = (code = '') => {
 }
 
 export const normalizeBuildJsxCode = (code = '') => {
-  let jsx = String(code)
+  let jsx = stripMarkdownCodeFence(code)
   const components = new Set()
 
   jsx = jsx.replace(CORE_COMPONENTS_BARREL_RE, (_, names) => {
@@ -100,7 +108,7 @@ export const normalizeBuildJsxCode = (code = '') => {
 
   if (components.size > 0) {
     const barrel = `import { ${[...components].sort().join(', ')} } from '@flast-erp/core/components'\n`
-    jsx = insertAfterFirstImport(jsx, barrel)
+    jsx = `${barrel}${jsx}`
   }
 
   return jsx
@@ -123,7 +131,7 @@ export const prepareJsxForRemoteBuild = (code = '') => {
     return `import { ${names.join(', ')} } from '@flast-erp/core/components'\n`
   })
 
-  return hoistOneLineImports(jsx)
+  return hoistImportDeclarations(jsx)
 }
 
 /**
