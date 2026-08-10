@@ -25,6 +25,26 @@ const normalizeRolesToArray = (roles) => {
 
 const firstArray = (...values) => values.find(Array.isArray) ?? []
 
+const normalizeStepConfig = (config) => {
+  if (config && typeof config === 'object' && !Array.isArray(config)) {
+    return config
+  }
+  if (typeof config !== 'string' || !config.trim()) return {}
+
+  try {
+    const parsed = JSON.parse(config)
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+  } catch (_) {
+    return {}
+  }
+}
+
+const removeSubmitLogFromConfig = (config) => Object.fromEntries(
+  Object.entries(normalizeStepConfig(config)).filter(([key]) => (
+    key !== 'saveSubmitLog' 
+  )),
+)
+
 const getStepActions = (step = {}) => firstArray(
   step.actions,
   step.stepActions,
@@ -131,6 +151,7 @@ export const jsonToFlow = (raw, stepTypes = []) => {
     const name = step.name ?? step.displayName ?? step.display_name ?? step.stepName ?? step.step_name ?? stepCode
     const typeValue = getStepProcessTypeRef(step)
     const nodeId = getStepNodeId(step)
+    const rawConfig = normalizeStepConfig(step.config)
     const nodeData = {
         ...DEFAULT_STEP,
         id: step.id ?? null,
@@ -144,6 +165,8 @@ export const jsonToFlow = (raw, stepTypes = []) => {
         description: step.description ?? '',
         sortOrder: step.sortOrder ?? step.sort_order ?? null,
         enabled: step.enabled ?? true,
+        config: removeSubmitLogFromConfig(rawConfig),
+        saveSubmitLog: step.saveSubmitLog ?? false,
         forms: normalizeStepForms(step),
         actions: getStepActions(step).map(deserializeAction),
     }
@@ -564,6 +587,8 @@ const serializeStep = (node, index, stepTypes = [], edges = []) => {
     position: node.position,
     sortOrder: node.data?.sortOrder ?? index,
     enabled: node.data?.enabled ?? true,
+    config: removeSubmitLogFromConfig(node.data?.config),
+    saveSubmitLog: node.data?.saveSubmitLog ?? false,
     form: serializeFormId(node.data?.forms ?? []),
     actions: (node.data?.actions ?? []).map(serializeAction),
   }

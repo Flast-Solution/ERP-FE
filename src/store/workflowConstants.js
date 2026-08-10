@@ -200,5 +200,6 @@ export const DEFAULT_STEP = {
   code: 'new_step',
   type: '',
   description: '',
+  config: {},
   actions: [],
 }

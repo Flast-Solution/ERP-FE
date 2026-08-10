@@ -11,6 +11,7 @@ import {
 import { InspectionResultList } from '../InspectionResults'
 
 const WorkflowFormSection = ({
+  bare = false,
   order,
   selectedLot,
   workflowEntity,
@@ -40,29 +41,8 @@ const WorkflowFormSection = ({
     submitCurrentForm,
   } = formState
 
-  return (
-    <div className="workflow-progress-section">
-      <div className="workflow-progress-section-head">
-        <div className="workflow-progress-section-title">
-          <FormOutlined className="workflow-progress-section-icon" />
-          <span>
-            {currentFormName || 'Form bắt buộc tại bước'}
-            {selectedLot?.code ? ` - Lô ${selectedLot.code}` : ''}
-          </span>
-          {isReviewingSubmission && (
-            <Tag color="blue">Đang xem lại</Tag>
-          )}
-        </div>
-        {isReviewingSubmission ? (
-          <Button type="link" onClick={onBack}>
-            Quay lại bước hiện tại
-          </Button>
-        ) : null}
-      </div>
-
-      {isReviewingSubmission && !displaySubmission && (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Bước này chưa có dữ liệu đã gửi" />
-      )}
+  const remoteFormContent = (
+    <>
       {!remoteEntry && !isReviewingSubmission && (
         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Bước hiện tại chưa có remoteEntry form" />
       )}
@@ -110,6 +90,37 @@ const WorkflowFormSection = ({
           </RemoteFormBoundary>
         </div>
       )}
+    </>
+  )
+
+  if (bare) {
+    return remoteFormContent
+  }
+
+  return (
+    <div className="workflow-progress-section">
+      <div className="workflow-progress-section-head">
+        <div className="workflow-progress-section-title">
+          <FormOutlined className="workflow-progress-section-icon" />
+          <span>
+            {currentFormName || 'Form bắt buộc tại bước'}
+            {selectedLot?.code ? ` - Lô ${selectedLot.code}` : ''}
+          </span>
+          {isReviewingSubmission && (
+            <Tag color="blue">Đang xem lại</Tag>
+          )}
+        </div>
+        {isReviewingSubmission ? (
+          <Button type="link" onClick={onBack}>
+            Quay lại bước hiện tại
+          </Button>
+        ) : null}
+      </div>
+
+      {isReviewingSubmission && !displaySubmission && (
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Bước này chưa có dữ liệu đã gửi" />
+      )}
+      {remoteFormContent}
       {remoteEntry && RemoteForm && !isReviewingSubmission ? (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
           <Button
