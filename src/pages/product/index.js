@@ -27,7 +27,7 @@ import Filter from './Filter';
 import { Button, Dropdown, Space, Tooltip } from 'antd';
 import { ApartmentOutlined, EyeOutlined } from '@ant-design/icons';
 import { f5List, InAppEvent } from "@flast-erp/core/utils";
-import { GATEWAY, HASH_MODAL } from 'configs';
+import { HASH_MODAL } from 'configs';
 import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils';
 import ProductAttrService from '@/services/ProductAttrService';
 import { cloneDeep } from 'lodash';
@@ -39,6 +39,7 @@ import useWorkflowModal from '@/containers/Order/List/hooks/useWorkflowModal';
 import useWorkflowProgressDrawer from '@/containers/Order/List/hooks/useWorkflowProgressDrawer';
 import { PRODUCT_WORKFLOW_ENTITY_TYPE } from '@/containers/Order/List/constants';
 import { enrichEntitiesWithWorkflowData } from '@/containers/Order/List/services/workflowApi';
+import { getProductImagePreviewUrl } from '@/containers/Product/productImages';
 
 const PRODUCT_API_PATH = 'erp/product/fetch';
 
@@ -126,11 +127,11 @@ const Index = () => {
       dataIndex: 'image',
       width: 150,
       ellipsis: true,
-      render: (image) => image ? (
+      render: (image) => getProductImagePreviewUrl(image) ? (
         <CustomImage
           preview={false}
           width={50}
-          src={String(GATEWAY).concat(image)}
+          src={getProductImagePreviewUrl(image)}
           alt='image'
         />
       ) : ('Chưa có')

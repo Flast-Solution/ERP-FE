@@ -4,11 +4,19 @@ import { RequestUtils } from '@flast-erp/core/utils'
 import {
   EMPTY_FILTERS,
   MANUFACTURE_FETCH_API,
+  MANUFACTURE_SAVE_API,
+  MANUFACTURE_STATUS_MAP,
+  MANUFACTURE_STATUS_LIST_API,
   PRODUCTION_PAGE_SIZE,
   USER_LIST_API,
   USER_PAGE_SIZE,
 } from '../constants'
-import { buildProductionOrderQuery, mapManufactureOrder } from '../utils'
+import {
+  buildManufacturePayload,
+  buildProductionOrderQuery,
+  mapManufactureOrder,
+  mergeManufactureStatuses,
+} from '../utils'
 
 const fetchUserNameMap = async (userIds = []) => {
   const unresolvedIds = new Set(userIds.filter(id => id != null).map(String))
@@ -51,6 +59,8 @@ export const useProductionOrders = () => {
     total: 0,
   })
   const [filters, setFilters] = useState(EMPTY_FILTERS)
+  const [statusOptions, setStatusOptions] = useState([])
+  const [updatingStatusId, setUpdatingStatusId] = useState(null)
   const requestIdRef = useRef(0)
 
   const fetchProductionOrders = useCallback(async (searchFilters = {}, page = 1) => {
@@ -64,14 +74,29 @@ export const useProductionOrders = () => {
       const embedded = response?.data?.embedded ?? []
       const pageData = response?.data?.page
       let userNameMap = new Map()
-      try {
-        userNameMap = await fetchUserNameMap(embedded.map(record => record?.createdBy))
-      } catch {
+      let manufactureStatuses = mergeManufactureStatuses()
+      const [userResult, statusResult] = await Promise.allSettled([
+        fetchUserNameMap(embedded.map(record => record?.createdBy)),
+        RequestUtils.Get(MANUFACTURE_STATUS_LIST_API, { type: 'MANUFACTURE' }),
+      ])
+      if (userResult.status === 'fulfilled') {
+        userNameMap = userResult.value
+      } else {
         message.warning('Không tải được tên người tạo lệnh.')
       }
+      if (statusResult.status === 'fulfilled') {
+        manufactureStatuses = mergeManufactureStatuses(statusResult.value?.data ?? [])
+      } else {
+        message.warning('Không tải được danh mục trạng thái mở rộng.')
+      }
       if (requestId !== requestIdRef.current) return
+      setStatusOptions(manufactureStatuses.map(status => ({
+        value: status.id,
+        label: status.name,
+        color: status.color,
+      })))
       setOrders(embedded.map((record) => ({
-        ...mapManufactureOrder(record),
+        ...mapManufactureOrder(record, manufactureStatuses),
         createdByName: userNameMap.get(String(record?.createdBy)),
       })))
       setPagination({
@@ -115,11 +140,58 @@ export const useProductionOrders = () => {
     fetchProductionOrders(filters, pagination.current)
   ), [fetchProductionOrders, filters, pagination])
 
+  const updateProductionOrderStatus = useCallback(async (record, nextStatus) => {
+    if (!record?.id || String(record.manufactureStatus) === String(nextStatus)) return
+
+    setUpdatingStatusId(record.id)
+    try {
+      const payload = buildManufacturePayload({
+        productionOrder: {
+          ...record,
+          manufactureStatus: nextStatus,
+        },
+        materialConfirmation: {
+          confirmedBy: record.confirmedBy,
+          allocations: Array.isArray(record.outbound) ? record.outbound : [],
+        },
+        isEdit: true,
+      })
+      const response = await RequestUtils.Post(MANUFACTURE_SAVE_API, payload)
+      const isSuccess = response?.errorCode === 200 || response?.success
+      if (!isSuccess) {
+        throw new Error(response?.message || 'Cập nhật trạng thái thất bại.')
+      }
+
+      const selectedStatus = statusOptions.find(option => (
+        String(option.value) === String(nextStatus)
+      ))
+      setOrders(current => current.map(order => (
+        String(order.id) !== String(record.id)
+          ? order
+          : {
+            ...order,
+            manufactureStatus: nextStatus,
+            manufactureStatusLabel: selectedStatus?.label ?? `Trạng thái #${nextStatus}`,
+            manufactureStatusColor: selectedStatus?.color ?? null,
+            status: MANUFACTURE_STATUS_MAP[nextStatus] ?? 'custom',
+          }
+      )))
+      message.success(response?.message || 'Đã cập nhật trạng thái lệnh sản xuất.')
+    } catch (error) {
+      message.error(error?.message || 'Cập nhật trạng thái thất bại.')
+    } finally {
+      setUpdatingStatusId(null)
+    }
+  }, [statusOptions])
+
   return {
     orders,
     ordersLoading,
     pagination,
     filters,
+    statusOptions,
+    updatingStatusId,
+    updateProductionOrderStatus,
     updateFilter,
     applyFilters,
     clearFilters,
