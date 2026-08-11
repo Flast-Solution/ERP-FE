@@ -33,6 +33,20 @@ export const createDocumentNode = (type, dataSchema = []) => {
   switch (type) {
     case COMPONENT_TYPES.TEXT:
       return { ...common, content: 'Nhập nội dung văn bản', style: { ...common.style, fontSize: 16 } }
+    case COMPONENT_TYPES.RICH_TEXT:
+      return {
+        ...common,
+        content: '<strong>Tiêu đề</strong><br />Nội dung: {{ field.path }}',
+        style: { ...common.style, whiteSpace: 'pre-wrap' },
+      }
+    case COMPONENT_TYPES.CONTAINER:
+      return {
+        ...common,
+        layout: { ...common.layout, minHeight: 180 },
+        children: [],
+        grid: { columns: 12, rows: null, rowHeight: 80, columnGap: 0, rowGap: 0 },
+        style: { ...common.style, padding: 8, marginBottom: 0, borderWidth: 1, borderColor: '#94a3b8' },
+      }
     case COMPONENT_TYPES.DATA_FIELD:
       return {
         ...common,
@@ -50,6 +64,9 @@ export const createDocumentNode = (type, dataSchema = []) => {
         source: firstCollection,
         columns: createDefaultColumns(dataSchema),
         repeatHeader: true,
+        headerRows: [],
+        summaryRows: [],
+        tableStyle: { borderWidth: 1, borderColor: '#111827', headerBackgroundColor: '#f3f4f6', cellPadding: 8 },
         style: { ...common.style, padding: 0 },
       }
     case COMPONENT_TYPES.IMAGE:

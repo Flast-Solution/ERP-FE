@@ -23,7 +23,7 @@ const OrderEvaluate = ({ data, closeModal }) => {
             defects: values.defects
         }
         try {
-            const {errorCode} = await RequestUtils.Post('/qms/qc-defect/sync', param);
+            const {errorCode} = await RequestUtils.Post('/erp/qc-defect/sync', param);
             InAppEvent.normalInfo(errorCode === SUCCESS_CODE ? 'Cập nhât thành công !' : 'Cập nhât thất bại !');
         } catch (error) {
             InAppEvent.normalError('Cập nhât thất bại !');

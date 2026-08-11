@@ -104,8 +104,9 @@ export const CanvasViewport = styled.main`
 `
 
 export const A4Page = styled.div`
-  width: 794px;
-  min-height: 1123px;
+  position: relative;
+  width: ${props => props.$customWidth ? `${props.$customWidth}px` : props.$orientation === 'landscape' ? '1123px' : '794px'};
+  min-height: ${props => props.$customHeight ? `${props.$customHeight}px` : props.$orientation === 'landscape' ? '794px' : '1123px'};
   margin: 0 auto 28px;
   padding: ${props => {
     const margin = props.$margin ?? {}
@@ -113,9 +114,33 @@ export const A4Page = styled.div`
   }};
   box-sizing: border-box;
   background: #fff;
+  font-family: "Times New Roman", Times, serif;
   box-shadow: 0 6px 24px rgba(15, 23, 42, 0.12);
   border: 1px solid ${props => props.$over ? '#6366f1' : '#e5e7eb'};
   transition: border-color 150ms ease;
+`
+
+export const ImportedPageLabel = styled.div`
+  position: absolute;
+  top: -24px;
+  left: 0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+`
+
+export const AbsoluteNodeFrame = styled.div`
+  position: absolute;
+  min-width: 1px;
+  min-height: 1px;
+  box-sizing: border-box;
+  outline: ${props => props.$selected ? '2px solid #6366f1' : '1px solid transparent'};
+  outline-offset: 1px;
+  cursor: move;
+
+  &:hover {
+    outline-color: ${props => props.$selected ? '#6366f1' : '#c7d2fe'};
+  }
 `
 
 export const A4ContentGrid = styled.div`
@@ -123,7 +148,7 @@ export const A4ContentGrid = styled.div`
   grid-template-columns: repeat(${props => props.$columns ?? 12}, minmax(0, 1fr));
   column-gap: ${props => props.$columnGap ?? 12}px;
   row-gap: ${props => props.$rowGap ?? 8}px;
-  align-items: start;
+  align-items: stretch;
 `
 
 export const EmptyCanvas = styled.div`
@@ -143,6 +168,7 @@ export const CanvasNodeFrame = styled.div`
   position: relative;
   min-width: 0;
   width: 100%;
+  height: 100%;
   opacity: ${props => props.$dragging ? 0.45 : 1};
   outline: ${props => props.$selected ? '2px solid #6366f1' : '1px solid transparent'};
   outline-offset: 2px;
@@ -231,10 +257,12 @@ export const TablePlaceholder = styled.table`
 
   th, td {
     padding: 8px;
-    border: 1px solid #d1d5db;
+    border: 1px solid currentColor;
   }
 
   th { background: #f3f4f6; }
+
+  tfoot td { font-weight: 700; }
 `
 
 export const CodePreview = styled.pre`

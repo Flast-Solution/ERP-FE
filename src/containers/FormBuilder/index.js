@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { Button, message, Popconfirm, Dropdown } from 'antd'
+import { Button, message, Popconfirm, Dropdown, Select } from 'antd'
 import {
   CloseOutlined,
   EditOutlined,
@@ -54,7 +54,15 @@ import {
   PreviewMainBtn,
   PreviewChevronBtn,
   AIAgentBtn,
+  DisplayModeControl,
+  DisplayModeLabel,
 } from './index.style'
+
+const DISPLAY_MODE_OPTIONS = [
+  { value: 'NORMAL', label: 'Hiển thị bình thường' },
+  { value: 'MODAL', label: 'Modal' },
+  { value: 'DRAWER', label: 'Drawer' },
+]
 
 const FieldTypeDragGhost = ({ type }) => {
   const meta = FIELD_TYPE_MAP[type]
@@ -348,6 +356,7 @@ const FormBuilder = ({
           ...basePayload.meta,
           ...buildMeta,
         },
+        displayMode: basePayload.meta?.displayMode ?? 'NORMAL',
         jsx_code: saveJsxCode || fallbackJsxCode,
         ...buildMeta,
       }
@@ -446,6 +455,18 @@ const FormBuilder = ({
 
           {/* Right — CTAs + Save */}
           <ToolbarRight>
+
+            <DisplayModeControl>
+              <DisplayModeLabel>Kiểu hiển thị</DisplayModeLabel>
+              <Select
+                aria-label="Kiểu hiển thị form"
+                value={templateMeta.displayMode ?? 'NORMAL'}
+                options={DISPLAY_MODE_OPTIONS}
+                onChange={displayMode => setTemplateMeta({ displayMode })}
+                popupMatchSelectWidth={false}
+                style={{ width: 172 }}
+              />
+            </DisplayModeControl>
 
             {/* Preview split button */}
             <PreviewButton onPreview={handlePreview} />
