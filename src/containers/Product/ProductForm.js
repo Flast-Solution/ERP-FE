@@ -37,6 +37,7 @@ import { PRODUCT_CURRENCIES, PRODUCT_STATUS } from '@/configs/localData';
 import { FormListStyles } from "@/css/global";
 import FormInfiniteQcProduct from '@/components/FormInfiniteQcProduct';
 import ProductImagesUpload from './ProductImagesUpload';
+import ProductFilesUpload from './ProductFilesUpload';
 
 const ProductForm = () => {
   return (
@@ -123,6 +124,10 @@ const ProductForm = () => {
 
       <Col md={24} xs={24}>
         <ProductImagesUpload />
+      </Col>
+
+      <Col md={24} xs={24}>
+        <ProductFilesUpload />
       </Col>
 
       <Col md={24} xs={24}>

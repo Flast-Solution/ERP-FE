@@ -28,6 +28,10 @@ import { arrayEmpty, arrayNotEmpty, f5List } from '@flast-erp/core/utils';
 import ProductForm from './ProductForm';
 import ProductAttrService from '@/services/ProductAttrService';
 import { cloneDeep } from 'lodash';
+import {
+  serializeProductAssets,
+  splitProductAssets,
+} from './productImages';
 
 /**
  * @param [ {id: 10384, attributedId: 10023, attributedValueId: 10085}, ... ] oldSku
@@ -46,13 +50,6 @@ const GenerateSkuDetailsOnSubmit = (oldSku, newSku) => {
   return details;
 }
 const log = (value) => console.log('[container.product.index] ', value);
-
-const normalizeProductImages = (product) => {
-  if (Array.isArray(product?.images)) return product.images;
-  if (product?.images) return [product.images];
-  if (product?.image) return [product.image];
-  return [];
-}
 
 const Product = ({ closeModal, data }) => {
 
@@ -81,9 +78,11 @@ const Product = ({ closeModal, data }) => {
         item.sku = details;
         skus.push(item);
       }
+      const productAssets = splitProductAssets(data);
       setRecord({
         ...data,
-        images: normalizeProductImages(data),
+        image: productAssets.images,
+        file: productAssets.files,
         skus,
         dRe
       });
@@ -108,9 +107,20 @@ const Product = ({ closeModal, data }) => {
       propertyValueId: item?.attributedValueId,
     })) || [];
 
+    const {
+      images: legacyImages,
+      image,
+      files: legacyFiles,
+      attachments: legacyAttachments,
+      file,
+      ...productValues
+    } = values;
     const body = {
-      ...values,
-      images: normalizeProductImages(values),
+      ...productValues,
+      image: serializeProductAssets({
+        images: image ?? legacyImages,
+        files: file ?? legacyFiles ?? legacyAttachments,
+      }),
       listProperties: newListProperties,
       skus: skusAdd
     }

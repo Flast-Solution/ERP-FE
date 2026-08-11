@@ -9,10 +9,22 @@ import {
   FormHidden,
   FormInputNumber,
   FormSelect,
+  FormSelectAPI,
 } from '@flast-erp/core/components';
 import { formatMoney } from '@flast-erp/core/utils';
 import ProductionPage from './styles';
 import { createSnowflakeId } from '@/utils/snowflake';
+import {
+  MANUFACTURE_STATUS_LIST_API,
+  MANUFACTURE_STATUS_SAVE_API,
+} from './production-order-list/constants';
+import { mergeManufactureStatuses } from './production-order-list/utils';
+
+const MANUFACTURE_STATUS_FILTER = { type: 'MANUFACTURE' };
+const MANUFACTURE_STATUS_CREATE_DEFAULTS = {
+  color: '#64748b',
+  entityType: 'MANUFACTURE',
+};
 
 const formatOrderDate = (value) => {
   if (!value) return '-';
@@ -183,7 +195,11 @@ const CreateOrder = ({
           form={form}
           disabled={readOnly}
           layout="vertical"
-          initialValues={{ ...initialValues, productionOrderCode }}
+          initialValues={{
+            ...initialValues,
+            productionOrderCode,
+            manufactureStatus: initialValues?.manufactureStatus ?? 0,
+          }}
           onFinish={handleSubmit}
         >
           <FormHidden name="productionOrderCode" />
@@ -195,6 +211,23 @@ const CreateOrder = ({
               </div>
               <div className="production-info-grid">
                 <ReadonlyField label="Mã lệnh SX" value={productionOrderCode} mono />
+                <div className="production-info-field">
+                  <FormSelectAPI
+                    required
+                    name="manufactureStatus"
+                    label="Trạng thái"
+                    placeholder="Chọn hoặc thêm trạng thái"
+                    apiPath={MANUFACTURE_STATUS_LIST_API.replace(/^\//, '')}
+                    apiAddNewItem={MANUFACTURE_STATUS_SAVE_API.replace(/^\//, '')}
+                    filter={MANUFACTURE_STATUS_FILTER}
+                    createDefaultValues={MANUFACTURE_STATUS_CREATE_DEFAULTS}
+                    onData={mergeManufactureStatuses}
+                    valueProp="id"
+                    titleProp="name"
+                    searchKey="name"
+                    popupMatchSelectWidth={false}
+                  />
+                </div>
                 <div className="production-info-field">
                   <FormSelect
                     required

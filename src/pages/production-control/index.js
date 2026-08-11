@@ -17,6 +17,9 @@ const ProductionOrderList = () => {
     ordersLoading,
     pagination,
     filters,
+    statusOptions,
+    updatingStatusId,
+    updateProductionOrderStatus,
     updateFilter,
     applyFilters,
     clearFilters,
@@ -66,6 +69,7 @@ const ProductionOrderList = () => {
       <ProductionOrderListShell>
         <ProductionOrderFilters
           filters={filters}
+          statusOptions={statusOptions}
           loading={ordersLoading}
           onUpdateFilter={updateFilter}
           onApply={applyFilters}
@@ -88,6 +92,9 @@ const ProductionOrderList = () => {
           loading={ordersLoading}
           onView={record => openExistingOrder(record, 'view')}
           onEdit={record => openExistingOrder(record, 'edit')}
+          statusOptions={statusOptions}
+          updatingStatusId={updatingStatusId}
+          onStatusChange={updateProductionOrderStatus}
         />
 
         <div className="production-list-pagination-bottom">

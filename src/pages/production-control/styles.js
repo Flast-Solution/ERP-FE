@@ -89,6 +89,7 @@ export const ProductionOrderListShell = styled.div`
   .production-status.running { color: #a16207; background: #fef3c7; border: 1px solid #fde68a; }
   .production-status.completed { color: #15803d; background: #dcfce7; border: 1px solid #bbf7d0; }
   .production-status.new { color: #475569; background: #f1f5f9; border: 1px solid #dbe3ec; }
+  .production-status.custom { color: #475569; background: #f8fafc; border: 1px solid #cbd5e1; }
 
   @media (max-width: 1000px) {
     .production-list-filter-actions {

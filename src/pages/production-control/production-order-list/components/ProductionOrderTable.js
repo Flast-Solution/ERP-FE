@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { Button, Space, Table, Tooltip } from 'antd'
+import { Button, Select, Space, Table, Tooltip } from 'antd'
 import { EditOutlined, EyeOutlined } from '@ant-design/icons'
 import {
   formatListDate,
@@ -9,7 +9,13 @@ import {
   getProductionQuantity,
 } from '../utils'
 
-const getProductionOrderColumns = ({ onView, onEdit }) => [
+const getProductionOrderColumns = ({
+  onView,
+  onEdit,
+  onStatusChange,
+  statusOptions,
+  updatingStatusId,
+}) => [
   {
     title: 'Mã lệnh SX',
     dataIndex: 'productionOrderCode',
@@ -78,11 +84,24 @@ const getProductionOrderColumns = ({ onView, onEdit }) => [
     title: 'Trạng thái',
     dataIndex: 'status',
     key: 'status',
-    width: 120,
-    render: value => (
-      <span className={`production-status ${value || 'new'}`}>
-        {value === 'running' ? 'Đang chạy' : value === 'completed' ? 'Hoàn thành' : 'Mới tạo'}
-      </span>
+    width: 175,
+    render: (_, record) => (
+      <div onClick={event => event.stopPropagation()}>
+        <Select
+          value={record.manufactureStatus}
+          options={statusOptions}
+          loading={String(updatingStatusId) === String(record.id)}
+          disabled={updatingStatusId != null}
+          onChange={nextStatus => onStatusChange(record, nextStatus)}
+          optionRender={option => (
+            <span style={{ color: option.data?.color || undefined }}>
+              {option.label}
+            </span>
+          )}
+          style={{ width: '100%' }}
+          aria-label={`Thay đổi trạng thái lệnh ${record.productionOrderCode}`}
+        />
+      </div>
     ),
   },
   {
@@ -125,10 +144,19 @@ const ProductionOrderTable = ({
   loading = false,
   onView,
   onEdit,
+  onStatusChange,
+  statusOptions = [],
+  updatingStatusId,
 }) => {
   const columns = useMemo(
-    () => getProductionOrderColumns({ onView, onEdit }),
-    [onView, onEdit],
+    () => getProductionOrderColumns({
+      onView,
+      onEdit,
+      onStatusChange,
+      statusOptions,
+      updatingStatusId,
+    }),
+    [onView, onEdit, onStatusChange, statusOptions, updatingStatusId],
   )
 
   return (

@@ -1,5 +1,24 @@
 import dayjs from 'dayjs'
-import { MANUFACTURE_STATUS_MAP, PRODUCTION_PAGE_SIZE } from './constants'
+import {
+  MANUFACTURE_STATUS_MAP,
+  MANUFACTURE_SYSTEM_STATUSES,
+  PRODUCTION_PAGE_SIZE,
+} from './constants'
+
+export const mergeManufactureStatuses = (apiStatuses = []) => {
+  const merged = new Map(
+    MANUFACTURE_SYSTEM_STATUSES.map(status => [String(status.id), status]),
+  )
+
+  if (Array.isArray(apiStatuses)) {
+    apiStatuses.forEach((status) => {
+      if (status?.id == null || !status?.name) return
+      merged.set(String(status.id), status)
+    })
+  }
+
+  return Array.from(merged.values())
+}
 
 export const formatListDate = (value) => {
   if (!value) return '-'
@@ -88,7 +107,7 @@ export const buildManufacturePayload = ({ productionOrder = {}, materialConfirma
   }
 }
 
-export const mapManufactureOrder = (record) => {
+export const mapManufactureOrder = (record, manufactureStatuses = MANUFACTURE_SYSTEM_STATUSES) => {
   const order = record?.order
   const orderDetails = Array.isArray(order?.details) ? order.details : []
   const manufactureDetails = Array.isArray(record?.details) ? record.details : []
@@ -122,6 +141,10 @@ export const mapManufactureOrder = (record) => {
   const editDeadline = record?.dateEnd && dayjs(record.dateEnd).isValid()
     ? dayjs(record.dateEnd)
     : undefined
+  const manufactureStatusValue = record?.status ?? 0
+  const manufactureStatus = manufactureStatuses.find(status => (
+    String(status?.id) === String(manufactureStatusValue)
+  ))
 
   return {
     ...record,
@@ -141,9 +164,11 @@ export const mapManufactureOrder = (record) => {
         deadline: editDeadline,
       },
     ])),
-    manufactureStatus: record?.status,
+    manufactureStatus: manufactureStatusValue,
+    manufactureStatusLabel: manufactureStatus?.name ?? `Trạng thái #${manufactureStatusValue}`,
+    manufactureStatusColor: manufactureStatus?.color ?? null,
     confirmedBy: record?.confirmedBy ?? null,
-    status: MANUFACTURE_STATUS_MAP[record?.status] ?? 'new',
+    status: MANUFACTURE_STATUS_MAP[manufactureStatusValue] ?? 'custom',
   }
 }
 
