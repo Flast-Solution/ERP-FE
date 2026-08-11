@@ -42,6 +42,44 @@ import {
 
 const EMPTY_COMMENTS = []
 
+const findCrossingRange = (ranges, minimumTop, target) => ranges.reduce((selected, range) => {
+  const crossesBoundary = range.top > minimumTop && range.top < target && range.bottom > target
+  return crossesBoundary && (!selected || range.top > selected.top) ? range : selected
+}, null)
+
+const getPdfPageSlices = (root, canvasHeight, pagePixelHeight) => {
+  const rootRect = root.getBoundingClientRect()
+  const scaleY = canvasHeight / Math.max(rootRect.height, 1)
+  const protectedRanges = Array.from(root.querySelectorAll('[data-pdf-avoid-break="true"], tbody tr, tfoot tr'))
+    .map((element) => {
+      const rect = element.getBoundingClientRect()
+      return {
+        top: Math.max(0, Math.round((rect.top - rootRect.top) * scaleY)),
+        bottom: Math.min(canvasHeight, Math.round((rect.bottom - rootRect.top) * scaleY)),
+      }
+    })
+    .filter(range => range.bottom > range.top)
+
+  const slices = []
+  let offset = 0
+  while (offset < canvasHeight) {
+    const target = Math.min(offset + pagePixelHeight, canvasHeight)
+    if (target === canvasHeight) {
+      slices.push({ offset, height: target - offset })
+      break
+    }
+    const crossingRange = findCrossingRange(
+      protectedRanges,
+      offset + pagePixelHeight * 0.35,
+      target,
+    )
+    const cutAt = crossingRange?.top ?? target
+    slices.push({ offset, height: cutAt - offset })
+    offset = cutAt > offset ? cutAt : target
+  }
+  return slices
+}
+
 const getInitials = (name) => String(name ?? 'Bạn')
   .trim()
   .split(/\s+/)
@@ -184,9 +222,11 @@ const GeneratedDocumentViewer = ({
       })
       const pagePixelHeight = Math.max(1, Math.floor(canvas.width * pageHeight / pageWidth))
       let pageIndex = 0
+      const pageSlices = getPdfPageSlices(documentRef.current, canvas.height, pagePixelHeight)
 
-      for (let offsetY = 0; offsetY < canvas.height; offsetY += pagePixelHeight) {
-        const sliceHeight = Math.min(pagePixelHeight, canvas.height - offsetY)
+      for (const pageSlice of pageSlices) {
+        const offsetY = pageSlice.offset
+        const sliceHeight = pageSlice.height
         const pageCanvas = document.createElement('canvas')
         const pageContext = pageCanvas.getContext('2d')
 
@@ -327,11 +367,12 @@ const GeneratedDocumentViewer = ({
                 </div>
               ) : null}
               {template ? (
-                <PageZoom $zoom={zoom}>
+                <PageZoom $zoom={zoom} $orientation={orientation}>
                   <A4Page
                     ref={documentRef}
                     className="generated-document-page"
                     $margin={template.page?.margin}
+                    $orientation={orientation}
                   >
                     <A4ContentGrid
                       $columns={template.layout?.columns}
@@ -341,6 +382,7 @@ const GeneratedDocumentViewer = ({
                       {(template.nodes ?? []).map(node => (
                         <div
                           key={node.id}
+                          data-pdf-avoid-break={node.layout?.avoidPageBreak === false ? undefined : 'true'}
                           style={{
                             gridColumn: node.layout?.startNewRow
                               ? `1 / span ${node.layout?.columnSpan ?? 12}`

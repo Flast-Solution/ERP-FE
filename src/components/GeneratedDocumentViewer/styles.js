@@ -112,8 +112,8 @@ export const DocumentCanvas = styled.div`
 `
 
 export const PageZoom = styled.div`
-  width: ${props => 794 * props.$zoom}px;
-  min-height: ${props => 1123 * props.$zoom}px;
+  width: ${props => (props.$orientation === 'landscape' ? 1123 : 794) * props.$zoom}px;
+  min-height: ${props => (props.$orientation === 'landscape' ? 794 : 1123) * props.$zoom}px;
   margin: 0 auto;
 
   .generated-document-page {

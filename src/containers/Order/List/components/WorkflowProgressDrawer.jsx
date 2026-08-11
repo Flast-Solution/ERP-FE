@@ -34,6 +34,7 @@ const WorkflowProgressDrawer = ({
           orderDetail={orderDetail}
           workflowInstance={instance}
           entityType={entityType}
+          entityLabel={entityLabel}
           formOnly={formOnly}
         />
       ),
@@ -51,7 +52,13 @@ const WorkflowProgressDrawer = ({
         <div>
           <Text className="workflow-detail-drawer__eyebrow">TIẾN TRÌNH WORKFLOW</Text>
           <Title level={4}>
-            {entityLabel} {orderDetail?.code ?? order?.code ?? orderDetail?.name ?? order?.name ?? ''}
+            {entityLabel} {orderDetail?.code
+              ?? order?.code
+              ?? orderDetail?.customerName
+              ?? order?.customerName
+              ?? orderDetail?.name
+              ?? order?.name
+              ?? (orderDetail?.id ? `#${orderDetail.id}` : '')}
           </Title>
         </div>
       )}

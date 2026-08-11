@@ -32,19 +32,30 @@ const DocumentTemplateEditorPage = () => {
       setLoadError('')
       try {
         const requestedTemplateId = templateId || sourceTemplateId
-        if (!requestedTemplateId) {
-          throw new Error('Chưa chọn hạng mục chứng từ')
-        }
-
-        const [templateResponse, entityResponse] = await Promise.all([
-          DocumentTemplateService.fetchTemplates(),
-          DocumentTemplateService.fetchAllEntities(),
-        ])
-        if (Number(templateResponse?.errorCode) !== SUCCESS_CODE || !Array.isArray(templateResponse?.data)) {
-          throw new Error(templateResponse?.message || 'Không tải được danh sách template')
-        }
+        const entityResponse = await DocumentTemplateService.fetchAllEntities()
         if (!Array.isArray(entityResponse)) {
           throw new Error('Không tải được danh sách nguồn dữ liệu')
+        }
+
+        // Tạo mới: mở designer trống, không cần chọn hạng mục
+        if (!requestedTemplateId) {
+          if (!mounted) return
+          const schemaData = buildDocumentSchemaFromEntityFields(
+            entityResponse,
+            { code: null, name: 'Mẫu chứng từ' },
+          )
+          setRecord(null)
+          setSourceTemplate(null)
+          setSchema(schemaData)
+          setDataSchema(normalizeDocumentSchema(schemaData))
+          setPreviewData({})
+          setInitialTemplate(createEmptyTemplate({ name: 'Mẫu chứng từ', documentType: 'invoice' }))
+          return
+        }
+
+        const templateResponse = await DocumentTemplateService.fetchTemplates()
+        if (Number(templateResponse?.errorCode) !== SUCCESS_CODE || !Array.isArray(templateResponse?.data)) {
+          throw new Error(templateResponse?.message || 'Không tải được danh sách template')
         }
         const templateSource = templateResponse.data.find(item => String(item.templateId) === String(requestedTemplateId))
         if (!templateSource) throw new Error('Không tìm thấy template đã chọn')

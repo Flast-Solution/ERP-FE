@@ -4,7 +4,7 @@
  * Zustand store cho Form Builder.
  *
  * State:
- *   templateMeta   — thông tin FormTemplate (id, name, domain, description, enabled)
+ *   templateMeta   — thông tin FormTemplate (id, name, domain, description, enabled, displayMode)
  *   fields         — mảng FormTemplateField đang build, theo thứ tự canvas
  *   selectedId     — id field đang được chọn trong canvas (highlight + hiện panel phải)
  *   dirtyFieldKeys — Set<string> các field_key đã tồn tại trong DB (id != null)
@@ -285,6 +285,7 @@ const useFormBuilderStore = create(
       domain     : '',
       description: '',
       enabled    : true,
+      displayMode: 'NORMAL',
     },
 
     fields    : [],       // FormTemplateField[]
@@ -314,6 +315,7 @@ const useFormBuilderStore = create(
           domain     : template.domain,
           description: template.description ?? '',
           enabled    : template.enabled ?? true,
+          displayMode: template.displayMode ?? 'NORMAL',
         };
 
         state.fields = normalizeFieldList(
@@ -575,7 +577,14 @@ const useFormBuilderStore = create(
 
     reset() {
       set(state => {
-        state.templateMeta  = { id: null, name: '', domain: '', description: '', enabled: true };
+        state.templateMeta  = {
+          id: null,
+          name: '',
+          domain: '',
+          description: '',
+          enabled: true,
+          displayMode: 'NORMAL',
+        };
         state.fields        = [];
         state.selectedId    = null;
         state.savedFieldKeys = new Set();

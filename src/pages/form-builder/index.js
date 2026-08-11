@@ -170,6 +170,7 @@ const BuilderPage = () => {
         domain: template.domain ?? '',
         description: template.description ?? '',
         enabled: template.enabled ?? true,
+        displayMode: template.displayMode ?? template.displayType ?? template.viewType ?? 'NORMAL',
       },
       fields: enrichTemplateFieldsFromCode(template),
       code,

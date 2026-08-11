@@ -21,7 +21,7 @@ const Shipment = ({ data, closeModal }) => {
             inspectionDate: moment(values.inspectionDate).format('YYYY-MM-DD HH:mm:ss')
         }
         try {
-            const { errorCode, message } = await RequestUtils.Post('/qms/qc-inspection-batch/save', param);
+            const { errorCode, message } = await RequestUtils.Post('/erp/qc-inspection-batch/save', param);
             if (errorCode) {
                 f5List('erp/order/fetch');
                 closeModal && closeModal();

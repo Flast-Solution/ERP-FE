@@ -9,6 +9,7 @@ import WorkflowFormSection from '@/pages/order/progress/components/WorkflowFormS
 import WorkflowDrawerSteps from './WorkflowDrawerSteps'
 import WorkflowOrderDetailCard from './WorkflowOrderDetailCard'
 import WorkflowProductCard from './WorkflowProductCard'
+import WorkflowEntityCard from './WorkflowEntityCard'
 
 const { Text, Title } = Typography
 
@@ -17,6 +18,7 @@ const WorkflowInstanceContent = ({
   orderDetail,
   workflowInstance,
   entityType = 'order',
+  entityLabel,
   formOnly = false,
 }) => {
   const { user } = useGetMe()
@@ -137,8 +139,9 @@ const WorkflowInstanceContent = ({
     <div className="workflow-detail-drawer__tab-content">
       {entityType === 'product'
         ? <WorkflowProductCard product={orderDetail ?? order} />
-        : <WorkflowOrderDetailCard order={order} orderDetail={orderDetail} />
-      }
+        : entityType === 'order'
+          ? <WorkflowOrderDetailCard order={order} orderDetail={orderDetail} />
+          : <WorkflowEntityCard entity={orderDetail ?? order} entityLabel={entityLabel} />}
 
       <section className="workflow-detail-drawer__block">
         <div className="workflow-detail-drawer__process-head">

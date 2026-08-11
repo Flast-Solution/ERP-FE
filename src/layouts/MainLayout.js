@@ -27,6 +27,7 @@ import ContainerLayouts from "@/layouts/ContainerLayout";
 import OrderService from '@/services/OrderService';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { WorkflowDrawerProvider } from '@/contexts/WorkflowDrawerContext';
+import HashFormDrawer from '@/contexts/HashFormDrawer';
 /* import { useFlastRemote } from '@/hooks/useDynamicRemote'; */
 
 const MainLayout = (props) => {
@@ -59,6 +60,7 @@ const MainLayout = (props) => {
                 { /*MPage && <MPage /> */}
                 {memoLayout}
                 {menoInAppNotify}
+                <HashFormDrawer />
             </WorkflowDrawerProvider>
         </NotificationProvider>
     )

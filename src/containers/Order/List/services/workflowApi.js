@@ -19,8 +19,11 @@ import {
   normalizeWorkflowInstance,
 } from '../utils/workflowMappers'
 
-export const fetchWorkflowList = async () => {
-  const response = await RequestUtils.Get(WORKFLOW_FILTER_API, {})
+export const fetchWorkflowList = async (flowType) => {
+  const api = flowType
+    ? `${WORKFLOW_FILTER_API}&flowType=${encodeURIComponent(flowType)}`
+    : WORKFLOW_FILTER_API
+  const response = await RequestUtils.Get(api, {})
   return resolveWorkflowList(response)
 }
 
