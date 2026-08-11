@@ -90,10 +90,18 @@ const ListWareHouse = () => {
     }
   ];
 
-  const onData = useCallback((values) => {
-    const newData = { embedded: values, page: { pageSize: 10, total: 1 } }
-    return newData;
-  }, []);
+    const onData = useCallback((values) => {
+        // Kiểm tra nếu có embedded và không rỗng
+        if (values?.embedded && values.embedded.length > 0) {
+            return values; // Trả về nguyên values vì đã đúng format
+        }
+
+        // Fallback
+        return {
+            embedded: [],
+            page: { pageSize: 10, total: 0 }
+        };
+    }, []);
 
   const beforeSubmitFilter = useCallback((values) => {
     dateFormatOnSubmit(values, ['from', 'to']);
@@ -112,7 +120,7 @@ const ListWareHouse = () => {
     const endpoint = isEditing ? '/warehouse/update-stock' : '/warehouse/created-stock';
     const data = await RequestUtils.Post(endpoint, payload);
     if (data.errorCode) {
-      f5List('warehouse/fetch-stock');
+      f5List('erp/warehouse/fetch-stock-filter');
       setIsOpen(false);
       InAppEvent.normalSuccess(isEditing ? 'Cập nhật kho thành công' : 'Tạo kho thành công');
     }
@@ -133,7 +141,7 @@ const ListWareHouse = () => {
         filter={<LeadFilter />}
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
-        apiPath={'warehouse/fetch-stock'}
+        apiPath={'erp/warehouse/fetch-stock-filter'}
         customClickCreate={onCreateLead}
         columns={CUSTOM_ACTION}
       />
@@ -184,7 +192,7 @@ const ListWareHouse = () => {
                 <FormInput
                   maxLength={255}
                   name="area"
-                  label="Khu vực"
+                  label="Diện tích"
                   placeholder="Nhập khu vực"
                   required
                 />

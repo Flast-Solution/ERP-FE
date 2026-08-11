@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { message } from 'antd'
 
 import { RequestUtils } from '@flast-erp/core/utils'
@@ -24,8 +24,10 @@ export const useWorkflowProgress = ({
   order,
   orderId,
   user,
+  loadingWorkflowInstance = false,
   syncWorkflowInstance,
 }) => {
+  const previewRequestIdRef = useRef(0)
   const [workflowPreview, setWorkflowPreview] = useState(null)
   const [workflowProcessDetail, setWorkflowProcessDetail] = useState(null)
   const [workflowProcessSteps, setWorkflowProcessSteps] = useState([])
@@ -38,11 +40,19 @@ export const useWorkflowProgress = ({
   const instanceId = workflowInstance?.id
 
   const fetchWorkflowPreview = useCallback(async ({ silent = false, keepPrevious = false } = {}) => {
+    const requestId = previewRequestIdRef.current + 1
+    previewRequestIdRef.current = requestId
+
     if (!instanceId) {
       if (!keepPrevious) {
         setWorkflowPreview(null)
       }
+      setLoadingPreview(false)
       return null
+    }
+
+    if (!keepPrevious) {
+      setWorkflowPreview(null)
     }
 
     if (!silent) {
@@ -51,6 +61,7 @@ export const useWorkflowProgress = ({
 
     try {
       const response = await RequestUtils.Get(WORKFLOW_PREVIEW_API, { instanceId })
+      if (previewRequestIdRef.current !== requestId) return null
       const preview = response?.data ?? null
       setWorkflowPreview(preview)
 
@@ -61,13 +72,14 @@ export const useWorkflowProgress = ({
 
       return preview
     } catch (error) {
+      if (previewRequestIdRef.current !== requestId) return null
       if (!keepPrevious) {
         setWorkflowPreview(null)
       }
       message.error(error?.message || 'Không tải được tiến trình workflow.')
       return null
     } finally {
-      if (!silent) {
+      if (!silent && previewRequestIdRef.current === requestId) {
         setLoadingPreview(false)
       }
     }
@@ -159,6 +171,7 @@ export const useWorkflowProgress = ({
       return {
         ...definitionStep,
         ...step,
+        formUrl: step?.formUrl ?? definitionStep?.formUrl ?? null,
         formTemplate: step?.formTemplate ?? definitionStep?.formTemplate ?? null,
       }
     })
@@ -327,7 +340,7 @@ export const useWorkflowProgress = ({
     backToCurrentStep,
     transitioning,
     advanceWorkflow,
-    loadingPreview,
+    loadingPreview: loadingPreview || loadingWorkflowInstance,
     refreshWorkflow: fetchWorkflowPreview,
     instanceId,
   }

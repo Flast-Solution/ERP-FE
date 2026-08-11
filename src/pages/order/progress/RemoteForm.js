@@ -3,7 +3,7 @@ import { Alert } from 'antd'
 import { loadRemote } from '@/utils/loadRemote'
 import { buildRemoteAlias, normalizeRemoteContainerName } from './utils'
 
-export const getRemoteConfigFromEntry = (remoteEntry, remoteComponentId, remoteVersionKey) => {
+export const getRemoteConfigFromEntry = (remoteEntry) => {
   if (!remoteEntry) {
     return null
   }
@@ -18,11 +18,13 @@ export const getRemoteConfigFromEntry = (remoteEntry, remoteComponentId, remoteV
       return null
     }
 
-    const entryGlobalName = normalizeRemoteContainerName(remoteComponentId || remoteEntryComponentId)
-    const componentId = buildRemoteAlias(entryGlobalName, remoteVersionKey)
+    // Tên container phải ổn định theo remoteEntry. Không tạo alias theo step hoặc
+    // submission vì nhiều alias cùng trỏ vào một webpack global sẽ làm hỏng cache
+    // module federation khi chuyển qua lại giữa các form.
+    const entryGlobalName = normalizeRemoteContainerName(remoteEntryComponentId)
 
     return {
-      componentId,
+      componentId: entryGlobalName,
       entryGlobalName,
       remoteBaseUrl: url.origin,
       remoteEntryComponentId,
@@ -32,14 +34,14 @@ export const getRemoteConfigFromEntry = (remoteEntry, remoteComponentId, remoteV
   }
 }
 
-export const useRemoteForm = (remoteEntry, remoteComponentId, remoteVersionKey) => {
-  const remoteRequestKey = buildRemoteAlias(remoteEntry, remoteComponentId, remoteVersionKey)
+export const useRemoteForm = (remoteEntry, remoteVersionKey) => {
+  const remoteRequestKey = buildRemoteAlias(remoteEntry, remoteVersionKey)
   const [ loadedRemote, setLoadedRemote ] = useState({ key: null, Component: null })
   const [ loading, setLoading ] = useState(false)
   const [ error, setError ] = useState('')
 
   useEffect(() => {
-    const remoteConfig = getRemoteConfigFromEntry(remoteEntry, remoteComponentId, remoteVersionKey)
+    const remoteConfig = getRemoteConfigFromEntry(remoteEntry)
     let mounted = true
 
     setLoadedRemote({ key: null, Component: null })
@@ -57,8 +59,7 @@ export const useRemoteForm = (remoteEntry, remoteComponentId, remoteVersionKey) 
       'MPage',
       remoteConfig.remoteBaseUrl,
       remoteConfig.remoteEntryComponentId,
-      remoteConfig.entryGlobalName,
-      remoteVersionKey
+      remoteConfig.entryGlobalName
     )
       .then(mod => {
         const RemoteComponent = mod?.default ?? mod
@@ -88,7 +89,7 @@ export const useRemoteForm = (remoteEntry, remoteComponentId, remoteVersionKey) 
     return () => {
       mounted = false
     }
-  }, [remoteEntry, remoteComponentId, remoteVersionKey, remoteRequestKey])
+  }, [remoteEntry, remoteVersionKey, remoteRequestKey])
 
   return {
     Component: loadedRemote.key === remoteRequestKey ? loadedRemote.Component : null,

@@ -28,6 +28,9 @@ const TaskCalendar = React.lazy(() => import('@/pages/task/MyCalendar'));
 const ProfilePage = React.lazy(() => import('@/pages/profile'));
 const GeneralConfigPage = React.lazy(() => import('@/pages/generalConfig'));
 const ProviderPage = React.lazy(() => import('@/pages/provider'));
+const DocumentTemplateListPage = React.lazy(() => import('@/pages/document-template'));
+const DocumentTemplateEditorPage = React.lazy(() => import('@/pages/document-template/Editor'));
+const NotificationsPage = React.lazy(() => import('@/pages/notifications'));
 
 export const CommonConfig = {
     auth: authRoles.user,
@@ -36,6 +39,10 @@ export const CommonConfig = {
         { path: '/profile', element: <ProfilePage /> },
         { path: '/system/general-config', element: <GeneralConfigPage /> },
         { path: '/provider', element: <ProviderPage /> },
+        { path: '/system/document-templates', element: <DocumentTemplateListPage /> },
+        { path: '/system/document-templates/create', element: <DocumentTemplateEditorPage /> },
+        { path: '/system/document-templates/:templateId/edit', element: <DocumentTemplateEditorPage /> },
+        { path: '/notifications', element: <NotificationsPage /> },
         { path: '/task', element: <TaskPage /> },
         { path: '/task/calendar/:id', element: <TaskCalendar /> }
     ]

@@ -1,7 +1,9 @@
 const LEGACY_FORM_IMPORT_RE = /import\s+(\w+)\s+from\s+['"](?:@\/)?(?:form-flast|components\/form)\/(\w+)['"]\s*;?\s*\n?/g
 const DEEP_CORE_FORM_IMPORT_RE = /import\s+(\w+)\s+from\s+['"]@flast-erp\/core\/components\/form\/(\w+)['"]\s*;?\s*\n?/g
 const CORE_COMPONENTS_BARREL_RE = /^\s*import\s+\{([^}]+)\}\s+from\s+['"]@flast-erp\/core\/components['"]\s*;?\s*\n?/gm
-const ONE_LINE_IMPORT_RE = /^\s*import\s+[^;\n]+;?\s*$/gm
+const IMPORT_DECLARATION_RE = /^\s*import(?:\s+[\s\S]*?\s+from\s+)?\s*['"][^'"\r\n]+['"]\s*;?[ \t]*(?:\r?\n|$)/gm
+const MARKDOWN_FENCE_START_RE = /^\s*```(?:jsx|js|javascript|tsx|typescript|react)?[ \t]*\r?\n/i
+const MARKDOWN_FENCE_END_RE = /\r?\n```[ \t]*\s*$/
 
 const KNOWN_CORE_FORM_COMPONENTS = [
   'FormInput',
@@ -58,16 +60,22 @@ const collectNamedImports = (set, importList = '') => {
   })
 }
 
-const insertAfterFirstImport = (code, line) => {
-  const match = code.match(/^import\s+[^;]+;?\s*\n/)
-  if (!match) return `${line}${code}`
-  const index = match.index + match[0].length
-  return `${code.slice(0, index)}${line}${code.slice(index)}`
+const stripMarkdownCodeFence = (code = '') => {
+  const source = String(code).replace(/^\uFEFF/, '').trim()
+  const hasStartFence = MARKDOWN_FENCE_START_RE.test(source)
+  const hasEndFence = MARKDOWN_FENCE_END_RE.test(source)
+
+  if (!hasStartFence && !hasEndFence) return source
+
+  return source
+    .replace(MARKDOWN_FENCE_START_RE, '')
+    .replace(MARKDOWN_FENCE_END_RE, '')
+    .trim()
 }
 
-const hoistOneLineImports = (code = '') => {
+const hoistImportDeclarations = (code = '') => {
   const imports = []
-  const body = String(code).replace(ONE_LINE_IMPORT_RE, match => {
+  const body = String(code).replace(IMPORT_DECLARATION_RE, match => {
     const line = match.trim().replace(/;$/, '')
     if (line) imports.push(line)
     return ''
@@ -78,7 +86,7 @@ const hoistOneLineImports = (code = '') => {
 }
 
 export const normalizeBuildJsxCode = (code = '') => {
-  let jsx = String(code)
+  let jsx = stripMarkdownCodeFence(code)
   const components = new Set()
 
   jsx = jsx.replace(CORE_COMPONENTS_BARREL_RE, (_, names) => {
@@ -100,7 +108,7 @@ export const normalizeBuildJsxCode = (code = '') => {
 
   if (components.size > 0) {
     const barrel = `import { ${[...components].sort().join(', ')} } from '@flast-erp/core/components'\n`
-    jsx = insertAfterFirstImport(jsx, barrel)
+    jsx = `${barrel}${jsx}`
   }
 
   return jsx
@@ -123,26 +131,25 @@ export const prepareJsxForRemoteBuild = (code = '') => {
     return `import { ${names.join(', ')} } from '@flast-erp/core/components'\n`
   })
 
-  return hoistOneLineImports(jsx)
+  return hoistImportDeclarations(jsx)
 }
 
-export const getBuildPreviewUrl = (data = {}) => (
-  data?.previewUrl
-  ?? data?.preview_url
-  ?? data?.url
-  ?? data?.data?.url
-  ?? data?.data?.previewUrl
-  ?? data?.data?.preview_url
-  ?? ''
-)
+/**
+ * Response build thành công:
+ * {
+ *   errorCode: 200, success: true, message: "...",
+ *   data: { component_id: "...", url: "https://.../remoteEntry.js" }
+ * }
+ */
+export const getBuildPreviewUrl = (payload = {}) => {
+  const url = payload?.data?.url
+  return typeof url === 'string' ? url.trim() : ''
+}
 
-const getBuildComponentId = (data = {}, fallback = '') => (
-  data?.component_id
-  ?? data?.componentId
-  ?? data?.data?.component_id
-  ?? data?.data?.componentId
-  ?? fallback
-)
+const getBuildComponentId = (payload = {}, fallback = '') => {
+  const id = payload?.data?.component_id
+  return typeof id === 'string' && id.trim() ? id.trim() : fallback
+}
 
 const isGeneratedWorkflowFormCode = (code = '') => (
   /forwardRef\(\(\{[\s\S]*submitSignal[\s\S]*useImperativeHandle/.test(code)
@@ -167,14 +174,14 @@ export const shouldPreferGeneratedCode = ({ initialCode = '', generatedCode = ''
   return !initialHasNewUploadHelper
 }
 
-export const buildMicroFrontend = async ({ sessionId, componentId, entryFilename, jsxCode }) => {
+export const buildMicroFrontend = async ({ sessionId, componentId, entryFilename, jsxCode, files }) => {
   const response = await fetch('https://ai.flast.vn/build', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       session_id: sessionId,
       component_id: componentId,
-      files: { [entryFilename]: jsxCode },
+      files: files || { [entryFilename]: jsxCode },
       entry_filename: entryFilename,
     }),
   })
@@ -185,9 +192,18 @@ export const buildMicroFrontend = async ({ sessionId, componentId, entryFilename
     throw new Error(detail ?? data?.message ?? data?.error ?? `Build preview failed: ${response.status}`)
   }
 
+  const url = getBuildPreviewUrl(data)
+  const resolvedComponentId = getBuildComponentId(data, componentId)
+  if (!url) {
+    throw new Error('Build thành công nhưng response thiếu data.url.')
+  }
+
   return {
-    ...data,
-    componentId: getBuildComponentId(data, componentId),
-    previewUrl: getBuildPreviewUrl(data),
+    success: data.success,
+    errorCode: data.errorCode,
+    message: data.message,
+    data: data.data,
+    url,
+    component_id: resolvedComponentId,
   }
 }

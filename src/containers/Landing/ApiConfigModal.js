@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
-import { Button, Tag, Tooltip } from 'antd'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { Button, Dropdown, Tag, Tooltip, message } from 'antd'
 import {
   SettingOutlined,
   DeleteOutlined,
@@ -13,8 +13,12 @@ import {
   CloseOutlined,
   BuildOutlined,
   BranchesOutlined,
+  AppstoreAddOutlined,
 } from '@ant-design/icons'
 import { useEditorStore } from '@/store/editorStore'
+import useChatStore from '@/containers/AIChatbot/useChatStore'
+import { LANDING_BLOCKS } from './blockRegistry'
+import { compileCustomJsx, createCustomDefinitionId, validateCustomJsxSource } from './customJsx'
 import { Dialog } from './Dialog'
 import { IconButton } from './IconButton'
 import {
@@ -49,13 +53,6 @@ const METHODS = ['GET', 'POST', 'PUT', 'DELETE']
 const METHOD_COLOR = { GET: '#34d399', POST: '#60a5fa', PUT: '#fbbf24', DELETE: '#f87171' }
 const META_PRESETS = ['title', 'description', 'keywords', 'og:title', 'og:description', 'og:image', 'twitter:card', 'robots', 'canonical']
 
-const COMPONENTS = [
-  { id: 'nav', label: 'Thanh điều hướng' },
-  { id: 'hero', label: 'Khối Hero' },
-  { id: 'features', label: 'Lưới tính năng' },
-  { id: 'pricing', label: 'Bảng giá' },
-]
-
 const TABS = [
   { id: 'api', label: 'API', icon: <ApiOutlined />, subtitle: (n) => `Gán nguồn dữ liệu cho từng phần tử · ${n} API` },
   { id: 'seo', label: 'SEO', icon: <SearchOutlined />, subtitle: (n) => `Thẻ meta SEO · ${n} thẻ` },
@@ -64,16 +61,21 @@ const TABS = [
 
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
 
-export function ApiConfigModal({ onBuild }) {
+export function ApiConfigModal() {
 
   const open = useEditorStore((s) => s.configOpen)
   const setConfigOpen = useEditorStore((s) => s.setConfigOpen)
   const apiConfig = useEditorStore((s) => s.apiConfig)
   const seoConfig = useEditorStore((s) => s.seoConfig)
   const crumbConfig = useEditorStore((s) => s.crumbConfig)
+  const sections = useEditorStore((s) => s.draftSchema?.sections ?? [])
   const saveConfig = useEditorStore((s) => s.saveConfig)
   const saveSeo = useEditorStore((s) => s.saveSeo)
   const saveCrumb = useEditorStore((s) => s.saveCrumb)
+  const selected = useEditorStore((s) => s.selected)
+  const addBlock = useEditorStore((s) => s.addBlock)
+  const openCustomJsx = useEditorStore((s) => s.openCustomJsx)
+  const replaceBlockWithCustom = useEditorStore((s) => s.replaceBlockWithCustom)
 
   const [tab, setTab] = useState('api')
   const [draft, setDraft] = useState(apiConfig)
@@ -81,6 +83,14 @@ export function ApiConfigModal({ onBuild }) {
   const [crumbDraft, setCrumbDraft] = useState(crumbConfig)
   const [codeDraft, setCodeDraft] = useState({})
   const [copiedId, setCopiedId] = useState(null)
+  const [buildingId, setBuildingId] = useState(null)
+  const components = useMemo(() => sections.map((section, index) => {
+    const definition = LANDING_BLOCKS.find(block => block.type === section.type)
+    return {
+      id: section.id,
+      label: `${index + 1}. ${definition?.label || section.type}`,
+    }
+  }), [sections])
 
   const fileInputs = useRef({})
   
@@ -93,6 +103,7 @@ export function ApiConfigModal({ onBuild }) {
     setCodeDraft({})
     setTab('api')
     setCopiedId(null)
+    setBuildingId(null)
   }, [open, apiConfig, seoConfig, crumbConfig])
 
   /* API */
@@ -129,23 +140,23 @@ export function ApiConfigModal({ onBuild }) {
 
   /* Code JSX (đầu vào cho Build) */
   const pickCode = (cid) => fileInputs.current[cid]?.click()
-  const onCodeFiles = (cid, e) => {
-
-    const selected = Array.from(e.target.files || [])
-    const files = selected.map((file) => ({
-      id: `${uid()}-${file.name}`,
-      name: file.name,
-    }))
-
-    if (files.length > 0) {
-      setCodeDraft((draft) => {
-        const current = draft[cid] || []
-        return { ...draft, [cid]: [...current, ...files] }
-      })
-    }
-
-    /* Reset để chọn lại đúng file vừa xoá vẫn kích hoạt onChange */
+  const onCodeFiles = async (cid, e) => {
+    const file = e.target.files?.[0]
     e.target.value = ''
+    if (!file) return
+    if (file.size > 256 * 1024) {
+      message.error('File JSX không được vượt quá 256KB.')
+      return
+    }
+    try {
+      const source = await file.text()
+      setCodeDraft((draft) => ({
+        ...draft,
+        [cid]: [{ id: `${uid()}-${file.name}`, name: file.name, source }],
+      }))
+    } catch (_) {
+      message.error('Không đọc được nội dung file JSX.')
+    }
   }
 
   const removeCode = (cid, fid) => {
@@ -154,6 +165,57 @@ export function ApiConfigModal({ onBuild }) {
       const next = current.filter((file) => file.id !== fid)
       return { ...draft, [cid]: next }
     })
+  }
+
+  const buildAndReplace = async (componentId, files) => {
+    const sourceFile = files?.[0]
+    if (!sourceFile?.source) {
+      message.error('Hãy tải một file JSX trước khi build.')
+      return
+    }
+    const sources = draft[componentId] || []
+    if (sources.some(source => !String(source.key || '').trim() || !String(source.url || '').trim())) {
+      message.error('Mỗi API phải có key và URL trước khi build.')
+      return
+    }
+    const keys = sources.map(source => String(source.key).trim())
+    if (new Set(keys).size !== keys.length) {
+      message.error('Key API trong cùng một block không được trùng nhau.')
+      return
+    }
+    const errors = validateCustomJsxSource(sourceFile.source)
+    if (errors.length) {
+      message.error(errors[0])
+      return
+    }
+
+    const name = sourceFile.name.replace(/\.(?:jsx?|tsx?)$/i, '') || 'Custom JSX block'
+    setBuildingId(componentId)
+    try {
+      const definitionId = createCustomDefinitionId(name)
+      const artifact = await compileCustomJsx({
+        name,
+        source: sourceFile.source,
+        definitionId,
+        sessionId: useChatStore.getState().getSessionId('form_builder'),
+      })
+      // Build ngay trong modal cũng phải commit API đang nhập. Nếu không, modal
+      // đóng sau khi thay block và cấu hình draft sẽ bị mất.
+      saveConfig(draft)
+      replaceBlockWithCustom(componentId, {
+        name,
+        source: sourceFile.source,
+        definitionId,
+        artifact,
+      })
+      setCodeDraft((current) => ({ ...current, [componentId]: [] }))
+      setConfigOpen(false)
+      message.success('Đã build và thay thế block bằng JSX mới.')
+    } catch (error) {
+      message.error(error?.message || 'Build JSX thất bại.')
+    } finally {
+      setBuildingId(null)
+    }
   }
 
   /* SEO */
@@ -199,6 +261,21 @@ export function ApiConfigModal({ onBuild }) {
 
   const activeTab = TABS.find((t) => t.id === tab)
   const subtitle = activeTab.subtitle(tabCount[tab])
+  const blockMenu = {
+    items: LANDING_BLOCKS.map(block => ({
+      key: block.type,
+      label: `${block.icon || '□'}  ${block.label}`,
+    })),
+    onClick: ({ key }) => {
+      const definition = LANDING_BLOCKS.find(block => block.type === key)
+      if (definition?.custom) {
+        setConfigOpen(false)
+        openCustomJsx({ target: 'block' })
+        return
+      }
+      addBlock(key, selected)
+    },
+  }
 
   return (
     <Dialog
@@ -238,7 +315,27 @@ export function ApiConfigModal({ onBuild }) {
       {/* API */}
       {tab === 'api' && (
         <ApiCfg>
-          {COMPONENTS.map((c) => {
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <EmptyNote style={{ padding: 0 }}>
+              Thêm block trước, sau đó gán một hoặc nhiều API cho block đó.
+            </EmptyNote>
+            <Dropdown menu={blockMenu} trigger={['click']} placement="bottomRight">
+              <Button type="primary" size="small" icon={<AppstoreAddOutlined />}>
+                Thêm block
+              </Button>
+            </Dropdown>
+          </div>
+          {components.length === 0 && (
+            <div style={{ padding: '28px 16px', border: '1px dashed #d9d9e3', borderRadius: 10, textAlign: 'center' }}>
+              <EmptyNote style={{ marginBottom: 10 }}>
+                Trang chưa có block. Nhấn “Thêm block” để bắt đầu cấu hình.
+              </EmptyNote>
+              <Dropdown menu={blockMenu} trigger={['click']}>
+                <Button icon={<PlusOutlined />}>Chọn block đầu tiên</Button>
+              </Dropdown>
+            </div>
+          )}
+          {components.map((c) => {
             const list = draft[c.id] || []
             const files = codeDraft[c.id] || []
             return (
@@ -255,8 +352,8 @@ export function ApiConfigModal({ onBuild }) {
                       <ApiRow key={api.id}>
                         <KeyInput
                           value={api.key || ''}
-                          placeholder="key"
-                          title="Khóa xác định dữ liệu lấy từ endpoint này"
+                          placeholder="vd: menuItems"
+                          title="JSX nhận kết quả tại data[key], ví dụ data.menuItems"
                           onChange={(e) => updateApi(c.id, api.id, { key: e.target.value })}
                         />
                         <MethodWrap $color={METHOD_COLOR[api.method]}>
@@ -328,7 +425,8 @@ export function ApiConfigModal({ onBuild }) {
                     variant="solid"
                     icon={<BuildOutlined />}
                     disabled={files.length === 0}
-                    onClick={() => onBuild?.(c.id, files)}
+                    loading={buildingId === c.id}
+                    onClick={() => buildAndReplace(c.id, files)}
                   >
                     Build
                   </Button>
@@ -337,7 +435,6 @@ export function ApiConfigModal({ onBuild }) {
                     ref={(el) => { fileInputs.current[c.id] = el }}
                     type="file"
                     accept=".js,.jsx,.ts,.tsx"
-                    multiple
                     style={{ display: 'none' }}
                     onChange={(e) => onCodeFiles(c.id, e)}
                   />

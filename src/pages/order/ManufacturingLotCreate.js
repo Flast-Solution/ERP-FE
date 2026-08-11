@@ -72,6 +72,16 @@ const ManufacturingLotCreate = () => {
     }))
   ), [data.workflows])
 
+  const errorWorkflowOptions = useMemo(() => (
+    data.errorWorkflows.map((workflow) => {
+      const process = workflow?.process ?? workflow
+      return {
+        value: process.id,
+        label: `${process.name || '(Chưa đặt tên)'}${process.processKey ? ` - ${process.processKey}` : ''}`,
+      }
+    }).filter(option => option.value !== undefined && option.value !== null)
+  ), [data.errorWorkflows])
+
   useEffect(() => {
     setActiveLot((previous) => {
       if (!previous?.id) return previous
@@ -189,9 +199,11 @@ const ManufacturingLotCreate = () => {
                   form={form}
                   productOptions={productOptions}
                   workflowOptions={workflowOptions}
+                  errorWorkflowOptions={errorWorkflowOptions}
                   providerOptions={data.providerOptions}
                   loadingProviders={data.loadingProviders}
                   workflowLoading={data.workflowLoading}
+                  errorWorkflowLoading={data.errorWorkflowLoading}
                   isEditing={isEditing}
                   validateLotQuantity={validateLotQuantity}
                 />

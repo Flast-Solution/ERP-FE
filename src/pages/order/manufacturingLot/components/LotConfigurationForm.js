@@ -23,9 +23,11 @@ const LotConfigurationForm = ({
   form,
   productOptions,
   workflowOptions,
+  errorWorkflowOptions,
   providerOptions,
   loadingProviders,
   workflowLoading,
+  errorWorkflowLoading,
   isEditing,
   validateLotQuantity,
 }) => (
@@ -107,6 +109,22 @@ const LotConfigurationForm = ({
                       loading={workflowLoading}
                       placeholder="Chọn workflow"
                       options={workflowOptions}
+                      optionFilterProp="label"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    name={[field.name, 'quanlityProcessId']}
+                    label="Quy trình xử lý lỗi"
+                    rules={[{ required: true, message: 'Vui lòng chọn quy trình xử lý lỗi' }]}
+                  >
+                    <Select
+                      allowClear
+                      showSearch
+                      loading={errorWorkflowLoading}
+                      placeholder="Chọn quy trình xử lý lỗi"
+                      options={errorWorkflowOptions}
                       optionFilterProp="label"
                     />
                   </Form.Item>

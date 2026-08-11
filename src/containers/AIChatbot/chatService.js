@@ -131,6 +131,24 @@ export class ChatSession {
     /* Không gọi _resetAnswerStream() vì message sau sẽ tiếp tục chảy qua SSE bình thường */
   }
 
+  async sendContext(context) {
+    const formContext = typeof context === 'string'
+      ? context
+      : JSON.stringify(context)
+    const res = await fetch(`${BASE_URL}/session/form-context`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_id: this.sessionId,
+        form_context: formContext,
+      }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.message ?? `Không gửi được AI context (${res.status})`)
+    }
+  }
+
   _resetAnswerStream() {
     this._llmsBuffer     = ''
     this._answerStarted  = false
@@ -171,6 +189,30 @@ export class ChatSession {
     }
 
     return ''
+  }
+
+  _flushDisplayChunk() {
+    if (!this._llmsBuffer) {
+      return ''
+    }
+
+    const bufferedText = this._llmsBuffer
+    this._llmsBuffer = ''
+
+    const answerIndex = bufferedText.indexOf('[ANSWER]')
+    if (answerIndex !== -1) {
+      this._answerStarted = true
+      return bufferedText
+        .slice(answerIndex + '[ANSWER]'.length)
+        .replace(/^\s+/, '')
+    }
+
+    if (this._hasThinkMarker) {
+      return ''
+    }
+
+    this._answerStarted = true
+    return stripAnswerPrefix(bufferedText)
   }
 
   async sendSchemaUpdate({
@@ -346,6 +388,12 @@ export class ChatSession {
     const eventData = dataLines.join('\n')
     const payload = parseEventData(eventData)
     const shouldLog = hasPayloadData(payload) || eventData.trim().length > 0
+    logSSE('event', {
+      sessionId: this.sessionId,
+      event: eventName,
+      rawData: eventData,
+      payload,
+    })
 
     switch (eventName) {
       case 'llms': {
@@ -374,6 +422,10 @@ export class ChatSession {
       case 'done': {
         if (shouldLog) {
           logSSE('done', { sessionId: this.sessionId, payload })
+        }
+        const pendingText = this._flushDisplayChunk()
+        if (pendingText) {
+          this._onChunk?.(pendingText)
         }
         this._onDone?.()
         break

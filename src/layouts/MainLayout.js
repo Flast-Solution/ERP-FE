@@ -25,6 +25,8 @@ import { useStore } from '@flast-erp/core/components';
 import InAppNotify from '@/layouts/InAppNotify';
 import ContainerLayouts from "@/layouts/ContainerLayout";
 import OrderService from '@/services/OrderService';
+import { NotificationProvider } from '@/contexts/NotificationContext';
+import { WorkflowDrawerProvider } from '@/contexts/WorkflowDrawerContext';
 /* import { useFlastRemote } from '@/hooks/useDynamicRemote'; */
 
 const MainLayout = (props) => {
@@ -42,7 +44,7 @@ const MainLayout = (props) => {
     }, []);
 
     const memoLayout = useMemo(() => {
-        const isLanding = pathname.startsWith('/landing/edit');
+        const isLanding = pathname.startsWith('/landing/edit') || pathname.startsWith('/m/');
         const Layout = ContainerLayouts[isLanding 
             ? 'LandingLayout' 
             : (user?.id ? 'PrivateLayout' : 'GuestLayout')
@@ -51,11 +53,15 @@ const MainLayout = (props) => {
     }, [user, props, pathname]);
 
     /* const MPage = useFlastRemote("component_001", "MPage", "environment-form") */
-    return <>
-        { /*MPage && <MPage /> */}
-        {memoLayout}
-        {menoInAppNotify}
-    </>
+    return (
+        <NotificationProvider userId={user?.id}>
+            <WorkflowDrawerProvider>
+                { /*MPage && <MPage /> */}
+                {memoLayout}
+                {menoInAppNotify}
+            </WorkflowDrawerProvider>
+        </NotificationProvider>
+    )
 }
 
 export default MainLayout;

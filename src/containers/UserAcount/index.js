@@ -60,10 +60,10 @@ const UserAccount = ({ data }) => {
       userProfiles: newDataUserInfo
     }
     if (Object.keys(data)?.length > 0) {
-      const { message } = await RequestUtils.Post('/user/update', dataUpdate, {id: data.id});
+      const { message } = await RequestUtils.Post('/auth/user-bussiness/save-user', dataUpdate, {id: data.id});
       InAppEvent.normalSuccess(message);
     } else {
-      const { message } = await RequestUtils.Post('/user/create', dataUpdate);
+      const { message } = await RequestUtils.Post('/auth/user-bussiness/save-user', dataUpdate);
       InAppEvent.normalSuccess(message);
     }
     f5List("user/list");

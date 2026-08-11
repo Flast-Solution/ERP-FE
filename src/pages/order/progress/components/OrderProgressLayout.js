@@ -1,5 +1,5 @@
 import React from 'react'
-import { Breadcrumb, Col, Row, Spin } from 'antd'
+import { Breadcrumb, Col, Empty, Row, Spin } from 'antd'
 import { Helmet } from 'react-helmet'
 
 import { workflowFixedPanelStyle } from '../constants'
@@ -8,6 +8,7 @@ import { WorkflowProgressPanel } from '../WorkflowPanel'
 import CustomerInfoSection from './CustomerInfoSection'
 import OrderInfoSection from './OrderInfoSection'
 import OrderLotsSection from './OrderLotsSection'
+import WorkflowContextSection from './WorkflowContextSection'
 import WorkflowFormSection from './WorkflowFormSection'
 import InspectionSection from './InspectionSection'
 import WorkflowHistorySection from './WorkflowHistorySection'
@@ -15,6 +16,11 @@ import WorkflowHistorySection from './WorkflowHistorySection'
 const OrderProgressLayout = ({
   orderState,
   lotState,
+  workflowEntity,
+  orderWorkflowState,
+  onSelectLot,
+  onSelectOrder,
+  onOpenNcr,
   workflowState,
   submissionState,
   formState,
@@ -24,7 +30,6 @@ const OrderProgressLayout = ({
     lots,
     selectedLot,
     loadingLots,
-    selectLot,
   } = lotState
   const {
     workflow,
@@ -90,33 +95,50 @@ const OrderProgressLayout = ({
                   </Row>
                 </div>
 
+                <WorkflowContextSection
+                  order={order}
+                  selectedLot={selectedLot}
+                  workflowInstances={orderWorkflowState.workflowInstances}
+                  selectedInstanceId={orderWorkflowState.selectedInstanceId}
+                  loading={orderWorkflowState.loadingWorkflowInstance}
+                  onSelectOrder={onSelectOrder}
+                  onSelectWorkflow={orderWorkflowState.selectWorkflowInstance}
+                />
+
                 <OrderLotsSection
                   lots={lots}
                   selectedLot={selectedLot}
                   loading={loadingLots}
-                  onSelect={selectLot}
+                  onSelect={onSelectLot}
+                  onOpenNcr={onOpenNcr}
                 />
 
-                <WorkflowFormSection
-                  order={order}
-                  selectedLot={selectedLot}
-                  displayStep={displayStep}
-                  displayForm={displayForm}
-                  displaySubmission={displaySubmission}
-                  displaySubmissionValues={displaySubmissionValues}
-                  inspectionResults={inspectionResults}
-                  viewingStepCode={viewingStepCode}
-                  isReviewingSubmission={isReviewingSubmission}
-                  onBack={backToCurrentStep}
-                  formState={formState}
-                />
+                {orderWorkflowState.workflowInstance ? (
+                  <>
+                    <WorkflowFormSection
+                      order={order}
+                      selectedLot={selectedLot}
+                      workflowEntity={workflowEntity}
+                      workflowInstance={orderWorkflowState.workflowInstance}
+                      displayStep={displayStep}
+                      displayForm={displayForm}
+                      displaySubmission={displaySubmission}
+                      displaySubmissionValues={displaySubmissionValues}
+                      inspectionResults={inspectionResults}
+                      viewingStepCode={viewingStepCode}
+                      isReviewingSubmission={isReviewingSubmission}
+                      onBack={backToCurrentStep}
+                      formState={formState}
+                    />
 
-                <InspectionSection
-                  data={inspectionResults}
-                  onOpenForm={reviewInspectionResult}
-                />
+                    <InspectionSection
+                      data={inspectionResults}
+                      onOpenForm={reviewInspectionResult}
+                    />
 
-                <WorkflowHistorySection data={histories} />
+                    <WorkflowHistorySection data={histories} />
+                  </>
+                ) : null}
               </div>
             </Col>
 
@@ -125,28 +147,37 @@ const OrderProgressLayout = ({
                 className="workflow-progress-fixed-panel"
                 style={workflowFixedPanelStyle}
               >
-                <WorkflowProgressPanel
-                  workflow={workflow}
-                  steps={steps}
-                  currentStep={currentStep}
-                  currentStepCode={currentStepCode}
-                  processTypeLabelMap={processTypeLabelMap}
-                  completedRefs={completedRefs}
-                  submittedRefs={submittedRefs}
-                  submissions={submissions}
-                  selectedStepCode={viewingStepCode}
-                  onStepClick={reviewStep}
-                  currentForm={currentForm}
-                  hasCurrentSubmission={hasCurrentSubmission}
-                  transitioning={transitioning}
-                  onAdvance={() => advanceWorkflow({
-                    currentSubmission,
-                    currentForm,
-                  })}
-                  transitionOptions={stepTransitionOptions}
-                  selectedToStepCode={selectedToStepCode}
-                  onToStepCodeChange={setSelectedToStepCode}
-                />
+                {orderWorkflowState.workflowInstance ? (
+                  <WorkflowProgressPanel
+                    workflow={workflow}
+                    steps={steps}
+                    currentStep={currentStep}
+                    currentStepCode={currentStepCode}
+                    processTypeLabelMap={processTypeLabelMap}
+                    completedRefs={completedRefs}
+                    submittedRefs={submittedRefs}
+                    submissions={submissions}
+                    selectedStepCode={viewingStepCode}
+                    onStepClick={reviewStep}
+                    currentForm={currentForm}
+                    hasCurrentSubmission={hasCurrentSubmission}
+                    transitioning={transitioning}
+                    onAdvance={() => advanceWorkflow({
+                      currentSubmission,
+                      currentForm,
+                    })}
+                    transitionOptions={stepTransitionOptions}
+                    selectedToStepCode={selectedToStepCode}
+                    onToStepCodeChange={setSelectedToStepCode}
+                  />
+                ) : (
+                  <div className="workflow-progress-empty-panel">
+                    <Empty
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                      description="Chọn đối tượng đã được gắn workflow để xem tiến trình"
+                    />
+                  </div>
+                )}
               </div>
             </Col>
           </Row>

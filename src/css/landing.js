@@ -177,6 +177,16 @@ export const shadow = {
   blurScrim: '4px',
 }
 
+export const lightShadow = {
+  sm: '0 1px 2px rgba(16, 16, 24, 0.08)',
+  md: '0 4px 12px rgba(16, 16, 24, 0.09), 0 1px 2px rgba(16, 16, 24, 0.06)',
+  lg: '0 12px 32px rgba(16, 16, 24, 0.11), 0 2px 6px rgba(16, 16, 24, 0.06)',
+  xl: '0 24px 60px rgba(16, 16, 24, 0.13), 0 4px 12px rgba(16, 16, 24, 0.07)',
+  edgeHighlight: 'inset 0 1px 0 rgba(255,255,255,0.85)',
+  ringFocus: '0 0 0 3px rgba(124, 92, 255, 0.24)',
+  glowAgent: '0 0 0 1px rgba(124, 92, 255, 0.18), 0 6px 20px rgba(124, 92, 255, 0.16)',
+}
+
 export const motion = {
   easeOut:   'cubic-bezier(0.2, 0.8, 0.2, 1)',
   easeInOut: 'cubic-bezier(0.45, 0, 0.2, 1)',
@@ -222,10 +232,11 @@ export const typography = {
 
 /* Shorthand object để dùng trực tiếp trong styled-components */
 export const t = {
-  ...darkTheme,
+  ...lightTheme,
   ...spacing,
   ...radius,
   ...shadow,
+  ...lightShadow,
   ...motion,
   ...typography,
 }

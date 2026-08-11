@@ -25,6 +25,26 @@ const normalizeRolesToArray = (roles) => {
 
 const firstArray = (...values) => values.find(Array.isArray) ?? []
 
+const normalizeStepConfig = (config) => {
+  if (config && typeof config === 'object' && !Array.isArray(config)) {
+    return config
+  }
+  if (typeof config !== 'string' || !config.trim()) return {}
+
+  try {
+    const parsed = JSON.parse(config)
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+  } catch (_) {
+    return {}
+  }
+}
+
+const removeSubmitLogFromConfig = (config) => Object.fromEntries(
+  Object.entries(normalizeStepConfig(config)).filter(([key]) => (
+    key !== 'saveSubmitLog' 
+  )),
+)
+
 const getStepActions = (step = {}) => firstArray(
   step.actions,
   step.stepActions,
@@ -131,6 +151,7 @@ export const jsonToFlow = (raw, stepTypes = []) => {
     const name = step.name ?? step.displayName ?? step.display_name ?? step.stepName ?? step.step_name ?? stepCode
     const typeValue = getStepProcessTypeRef(step)
     const nodeId = getStepNodeId(step)
+    const rawConfig = normalizeStepConfig(step.config)
     const nodeData = {
         ...DEFAULT_STEP,
         id: step.id ?? null,
@@ -144,6 +165,8 @@ export const jsonToFlow = (raw, stepTypes = []) => {
         description: step.description ?? '',
         sortOrder: step.sortOrder ?? step.sort_order ?? null,
         enabled: step.enabled ?? true,
+        config: removeSubmitLogFromConfig(rawConfig),
+        saveSubmitLog: step.saveSubmitLog ?? false,
         forms: normalizeStepForms(step),
         actions: getStepActions(step).map(deserializeAction),
     }
@@ -404,15 +427,81 @@ const getTransitionStepRef = (transition = {}, direction) => {
   return value != null ? String(value) : ''
 }
 
-const normalizeProcess = (process = {}) => ({
-  ...process,
-  id: process?.id ?? null,
-  processKey: process?.processKey ?? process?.process_key ?? process?.key ?? process?.code ?? '',
-  name: process?.name ?? 'Untitled',
-  code: process?.code ?? process?.processKey ?? process?.process_key ?? 'untitled',
-  description: process?.description ?? '',
-  flowType: process?.flowType ?? process?.flow_type ?? '',
+const normalizeStatusConfiguration = (item = {}) => ({
+  stepProcessIds: firstArray(
+    item.stepProcessIds,
+    item.stepTypeIds,
+    item.listStepProcessId,
+    item.list_step_process_id,
+  ),
+  statusName: item.statusName ?? item.text ?? '',
+  scope: item.scope ?? 'current',
+  color: item.color ?? null,
 })
+
+export const normalizeProcessStatusConfigurations = (value) => {
+  if (Array.isArray(value)) {
+    return value.map(normalizeStatusConfiguration)
+  }
+
+  if (value && typeof value === 'object') {
+    const items = firstArray(value.items, value.configurations, value.listStatus)
+    return items.map(normalizeStatusConfiguration)
+  }
+
+  if (typeof value !== 'string' || !value.trim()) {
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(value)
+    return normalizeProcessStatusConfigurations(parsed)
+  } catch (_) {
+    const configurations = []
+    const itemPattern = /ProcessUpdateItem\[listStepProcessId=\[([^\]]*)\],\s*text=([\s\S]*?),\s*color=([^\]]*)\]/g
+    let match = itemPattern.exec(value)
+
+    while (match) {
+      const stepProcessIds = match[1]
+        .split(',')
+        .map(item => item.trim())
+        .filter(Boolean)
+        .map(item => {
+          const numberValue = Number(item)
+          return Number.isSafeInteger(numberValue) ? numberValue : item
+        })
+      const rawColor = match[3].trim()
+
+      configurations.push({
+        stepProcessIds,
+        statusName: match[2].trim(),
+        scope: 'current',
+        color: rawColor === 'null' ? null : rawColor,
+      })
+      match = itemPattern.exec(value)
+    }
+
+    return configurations
+  }
+}
+
+const normalizeProcess = (process = {}) => {
+  const configuredStatuses = Array.isArray(process?.statusConfigurations)
+    && process.statusConfigurations.length > 0
+    ? process.statusConfigurations
+    : (process?.listStatus ?? process?.list_status)
+
+  return {
+    ...process,
+    id: process?.id ?? null,
+    processKey: process?.processKey ?? process?.process_key ?? process?.key ?? process?.code ?? '',
+    name: process?.name ?? 'Untitled',
+    code: process?.code ?? process?.processKey ?? process?.process_key ?? 'untitled',
+    description: process?.description ?? '',
+    flowType: process?.flowType ?? process?.flow_type ?? '',
+    statusConfigurations: normalizeProcessStatusConfigurations(configuredStatuses),
+  }
+}
 
 /*
   Keep legacy shape in comments for quick mental mapping:
@@ -498,6 +587,8 @@ const serializeStep = (node, index, stepTypes = [], edges = []) => {
     position: node.position,
     sortOrder: node.data?.sortOrder ?? index,
     enabled: node.data?.enabled ?? true,
+    config: removeSubmitLogFromConfig(node.data?.config),
+    saveSubmitLog: node.data?.saveSubmitLog ?? false,
     form: serializeFormId(node.data?.forms ?? []),
     actions: (node.data?.actions ?? []).map(serializeAction),
   }

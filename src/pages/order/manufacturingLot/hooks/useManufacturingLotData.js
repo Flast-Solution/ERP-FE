@@ -5,11 +5,14 @@ import { useEffectAsync } from '@flast-erp/core/hooks'
 import { RequestUtils, arrayNotEmpty } from '@flast-erp/core/utils'
 import OrderService from '@/services/OrderService'
 import {
+  ERROR_WORKFLOW_FILTER_API,
+  ERROR_WORKFLOW_TYPE,
   ORDER_LOTS_FIND_API,
   PROVIDER_FETCH_API,
   WORKFLOW_FILTER_API,
 } from '../constants'
 import {
+  filterWorkflowsByFlowType,
   normalizeOrderDetail,
   resolveOrderLots,
   resolveProviderList,
@@ -20,11 +23,13 @@ export const useManufacturingLotData = (orderId) => {
   const [paymentDetails, setPaymentDetails] = useState([])
   const [providerOptions, setProviderOptions] = useState([])
   const [workflows, setWorkflows] = useState([])
+  const [errorWorkflows, setErrorWorkflows] = useState([])
   const [createdLots, setCreatedLots] = useState([])
 
   const [loadingOrderInfo, setLoadingOrderInfo] = useState(false)
   const [loadingProviders, setLoadingProviders] = useState(false)
   const [workflowLoading, setWorkflowLoading] = useState(false)
+  const [errorWorkflowLoading, setErrorWorkflowLoading] = useState(false)
 
   const loadCreatedLots = useCallback(async () => {
     if (!orderId) {
@@ -91,6 +96,22 @@ export const useManufacturingLotData = (orderId) => {
   }, [])
 
   useEffectAsync(async () => {
+    setErrorWorkflowLoading(true)
+    try {
+      const response = await RequestUtils.Get(ERROR_WORKFLOW_FILTER_API, {})
+      setErrorWorkflows(filterWorkflowsByFlowType(
+        resolveWorkflowList(response),
+        ERROR_WORKFLOW_TYPE,
+      ))
+    } catch (error) {
+      message.error('Không tải được danh sách quy trình xử lý lỗi.')
+      setErrorWorkflows([])
+    } finally {
+      setErrorWorkflowLoading(false)
+    }
+  }, [])
+
+  useEffectAsync(async () => {
     if (!orderId) {
       setCreatedLots([])
       return
@@ -107,10 +128,12 @@ export const useManufacturingLotData = (orderId) => {
     paymentDetails,
     providerOptions,
     workflows,
+    errorWorkflows,
     createdLots,
     loadingOrderInfo,
     loadingProviders,
     workflowLoading,
+    errorWorkflowLoading,
     loadCreatedLots,
     setCreatedLots,
   }

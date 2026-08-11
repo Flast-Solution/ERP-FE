@@ -49,6 +49,7 @@ import {
   BuildOutlined,
   DeliveredProcedureOutlined,
   FileWordOutlined,
+  FileAddOutlined,
   SolutionOutlined,
   CalendarOutlined,
   BookOutlined,
@@ -183,13 +184,14 @@ function SideBar() {
       getItem(<Link to="/post">Trang tin tức</Link>, 'post', <span> - </span>),
       getItem(<Link to="/faq">Faq</Link>, 'faq', <span> - </span>),
       getItem(<Link to="/tag">Quản lý Tag</Link>, 'tag', <span> - </span>),
-      getItem(<Link to="/landing/edit">Quản lý trang</Link>, 'page', <span> - </span>)
+      getItem(<Link to="/landing">Quản lý trang</Link>, 'page', <span> - </span>)
     ]),
     getItem('Tài khoản', 'tai_khoan', <UserOutlined />, [
       ...(canManageBusinessUnits
         ? [getItem(<Link to="/system/business-units">Đơn vị sử dụng</Link>, 'business_units', <BankOutlined />)]
         : []),
       getItem(<Link to="/system/general-config">Cấu hình chung</Link>, 'general_config', <SettingOutlined />),
+      getItem(<Link to="/system/document-templates">Tạo chứng từ</Link>, 'document_templates', <FileAddOutlined />),
       getItem(<Link to="/user/group">Team</Link>, 'user_group', <TeamOutlined />),
       getItem(<Link to="/user/list-system">Tài khoản hệ thống</Link>, 'user_system', <SettingOutlined />)
     ]),

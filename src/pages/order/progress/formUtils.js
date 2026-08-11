@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { toNumberOrNull } from './utils'
 import { coerceGuardValue } from './guards'
 
@@ -45,9 +46,45 @@ export const buildFieldDisplayItems = (values = {}, fields = []) => {
   })
 }
 
-export const normalizeSubmissionValue = (value) => {
+const getFieldInputType = (field = {}) => String(
+  field.inputType ?? field.type ?? field.component ?? '',
+).toLowerCase()
+
+const normalizeTemporalString = (value, inputType) => {
+  const text = String(value ?? '').trim()
+  if (!text) return null
+
+  const vietnameseDateTime = text.match(
+    /^(\d{2})[/-](\d{2})[/-](\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/,
+  )
+  const normalizedText = vietnameseDateTime
+    ? `${vietnameseDateTime[3]}-${vietnameseDateTime[2]}-${vietnameseDateTime[1]}${vietnameseDateTime[4]
+      ? ` ${vietnameseDateTime[4].padStart(2, '0')}:${vietnameseDateTime[5]}:${vietnameseDateTime[6] ?? '00'}`
+      : ''}`
+    : text.replace(/^(\d{4})\/(\d{2})\/(\d{2})/, '$1-$2-$3')
+
+  const parsed = dayjs(normalizedText)
+  if (!parsed.isValid()) return value
+
+  return parsed.format(inputType === 'datetime' ? 'YYYY-MM-DD HH:mm:ss' : 'YYYY-MM-DD')
+}
+
+export const normalizeSubmissionValue = (value, field) => {
   if (value === undefined || value === '') {
     return null
+  }
+  const inputType = getFieldInputType(field)
+  if (inputType === 'date' || inputType === 'datetime') {
+    if (
+      value
+      && typeof value === 'object'
+      && typeof value.format === 'function'
+      && typeof value.isValid === 'function'
+    ) {
+      if (!value.isValid()) return null
+      return value.format(inputType === 'datetime' ? 'YYYY-MM-DD HH:mm:ss' : 'YYYY-MM-DD')
+    }
+    return normalizeTemporalString(value, inputType)
   }
   if (value && typeof value === 'object' && typeof value.toISOString === 'function' && typeof value.isValid === 'function') {
     return value.isValid() ? value.toISOString() : null
@@ -79,13 +116,34 @@ export const collectFormFieldKeys = (fields = []) => (
   }, [])
 )
 
+const collectFormFields = (fields = []) => (
+  fields.reduce((result, field) => {
+    result.push(field)
+    const children = Array.isArray(field?.children) ? field.children : []
+    if (children.length) {
+      result.push(...collectFormFields(children))
+    }
+    return result
+  }, [])
+)
+
 export const normalizeSubmissionValues = (values = {}, currentForm) => {
-  const normalizedValues = normalizeSubmissionValue(values) ?? {}
-  const payloadValues = normalizedValues && typeof normalizedValues === 'object' && !Array.isArray(normalizedValues)
-    ? { ...normalizedValues }
+  const formFields = collectFormFields(getFormFields(currentForm))
+  const fieldsByKey = new Map(
+    formFields
+      .filter(field => field?.fieldKey)
+      .map(field => [field.fieldKey, field]),
+  )
+  const payloadValues = values && typeof values === 'object' && !Array.isArray(values)
+    ? Object.fromEntries(
+      Object.entries(values).map(([key, value]) => [
+        key,
+        normalizeSubmissionValue(value, fieldsByKey.get(key)),
+      ]),
+    )
     : {}
 
-  collectFormFieldKeys(getFormFields(currentForm)).forEach((key) => {
+  collectFormFieldKeys(formFields).forEach((key) => {
     if (!Object.prototype.hasOwnProperty.call(payloadValues, key)) {
       payloadValues[key] = null
     }

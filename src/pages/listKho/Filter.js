@@ -27,16 +27,22 @@ const Filter = () => {
    <Row gutter={16}>
       <Col xl={6} lg={6} md={6} xs={24}>
         <FormInput
-          name={'customerMobile'}
-          placeholder="Số điện thoại"
+          name={'name'}
+          placeholder="Tên kho"
         />
       </Col>
       <Col xl={6} lg={6} md={6} xs={24}>
         <FormInput
-          name={'customerEmail'}
-          placeholder="Email"
+          name={'address'}
+          placeholder="Địa chỉ"
         />
       </Col>
+       <Col xl={6} lg={6} md={6} xs={24}>
+           <FormInput
+               name={'mobile'}
+               placeholder="Số điện thoại"
+           />
+       </Col>
     </Row>
   );
 }

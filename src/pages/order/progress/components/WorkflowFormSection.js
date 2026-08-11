@@ -11,8 +11,11 @@ import {
 import { InspectionResultList } from '../InspectionResults'
 
 const WorkflowFormSection = ({
+  bare = false,
   order,
   selectedLot,
+  workflowEntity,
+  workflowInstance,
   displayStep,
   displayForm,
   displaySubmission,
@@ -38,6 +41,62 @@ const WorkflowFormSection = ({
     submitCurrentForm,
   } = formState
 
+  const remoteFormContent = (
+    <>
+      {!remoteEntry && !isReviewingSubmission && (
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Bước hiện tại chưa có remoteEntry form" />
+      )}
+      {!remoteEntry && isReviewingSubmission && displaySubmission && (
+        <InspectionResultList
+          data={inspectionResults.filter((item) => isSameStepRef(item?.stepCode, viewingStepCode))}
+        />
+      )}
+      {remoteEntry && loadingRemote && <Spin />}
+      {remoteEntry && remoteError && <RemoteFormErrorFallback message={remoteError} />}
+      {remoteEntry && RemoteForm && (
+        <div ref={remoteFormContainerRef}>
+          <RemoteFormBoundary key={remoteRenderKey} remoteKey={remoteRenderKey}>
+            <RemoteFormHost
+              key={remoteRenderKey}
+              ref={isReviewingSubmission ? undefined : remoteFormRef}
+              Component={RemoteForm}
+              allowSubmit={!isReviewingSubmission}
+              order={order}
+              record={order}
+              data={order}
+              lot={selectedLot}
+              entity={workflowEntity}
+              entityType={workflowEntity?.entityType}
+              entityId={workflowEntity?.entityId}
+              workflowInstance={workflowInstance}
+              workflowInstanceId={workflowInstance?.id}
+              step={displayStep}
+              formTemplate={displayForm}
+              submission={displaySubmission}
+              initialValues={displaySubmissionValues}
+              values={displaySubmissionValues}
+              defaultValues={displaySubmissionValues}
+              readOnly={isReviewingSubmission}
+              disabled={isReviewingSubmission}
+              canSubmit={!isReviewingSubmission}
+              showSubmit={!isReviewingSubmission}
+              hideSubmit={isReviewingSubmission}
+              submitDisabled={isReviewingSubmission}
+              hideTitle
+              showTitle={false}
+              onSubmit={isReviewingSubmission ? undefined : handleRemoteFormSubmit}
+              onSubmitError={isReviewingSubmission ? undefined : handleRemoteFormSubmitError}
+            />
+          </RemoteFormBoundary>
+        </div>
+      )}
+    </>
+  )
+
+  if (bare) {
+    return remoteFormContent
+  }
+
   return (
     <div className="workflow-progress-section">
       <div className="workflow-progress-section-head">
@@ -61,47 +120,7 @@ const WorkflowFormSection = ({
       {isReviewingSubmission && !displaySubmission && (
         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Bước này chưa có dữ liệu đã gửi" />
       )}
-      {!remoteEntry && !isReviewingSubmission && (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Bước hiện tại chưa có remoteEntry form" />
-      )}
-      {!remoteEntry && isReviewingSubmission && displaySubmission && (
-        <InspectionResultList
-          data={inspectionResults.filter((item) => isSameStepRef(item?.stepCode, viewingStepCode))}
-        />
-      )}
-      {remoteEntry && loadingRemote && <Spin />}
-      {remoteEntry && remoteError && <RemoteFormErrorFallback message={remoteError} />}
-      {remoteEntry && RemoteForm && (
-        <div ref={remoteFormContainerRef}>
-          <RemoteFormBoundary key={remoteRenderKey} remoteKey={remoteRenderKey}>
-            <RemoteFormHost
-              key={remoteRenderKey}
-              ref={isReviewingSubmission ? undefined : remoteFormRef}
-              Component={RemoteForm}
-              allowSubmit={!isReviewingSubmission}
-              order={order}
-              record={order}
-              data={order}
-              step={displayStep}
-              formTemplate={displayForm}
-              submission={displaySubmission}
-              initialValues={displaySubmissionValues}
-              values={displaySubmissionValues}
-              defaultValues={displaySubmissionValues}
-              readOnly={isReviewingSubmission}
-              disabled={isReviewingSubmission}
-              canSubmit={!isReviewingSubmission}
-              showSubmit={!isReviewingSubmission}
-              hideSubmit={isReviewingSubmission}
-              submitDisabled={isReviewingSubmission}
-              hideTitle
-              showTitle={false}
-              onSubmit={isReviewingSubmission ? undefined : handleRemoteFormSubmit}
-              onSubmitError={isReviewingSubmission ? undefined : handleRemoteFormSubmitError}
-            />
-          </RemoteFormBoundary>
-        </div>
-      )}
+      {remoteFormContent}
       {remoteEntry && RemoteForm && !isReviewingSubmission ? (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
           <Button

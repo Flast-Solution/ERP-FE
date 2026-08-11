@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import { Button, Col, Form, message, Row, Space, Tag } from 'antd';
+import { Button, Col, Form, message, Row, Space, Tag, Tooltip } from 'antd';
+import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons';
 import {
   BreadcrumbCustom,
   CustomButton,
@@ -26,12 +27,46 @@ const emptyToNull = (value) => {
   return value;
 };
 
+const EMPTY_FACTORY = { name: '', address: '' };
+
+const normalizeFactoryInfo = (value) => {
+  if (typeof value === 'string') {
+    const normalizedValue = value.trim();
+    if (!normalizedValue) return [{ ...EMPTY_FACTORY }];
+
+    try {
+      return normalizeFactoryInfo(JSON.parse(normalizedValue));
+    } catch (error) {
+      return [{ name: normalizedValue, address: '' }];
+    }
+  }
+
+  const values = Array.isArray(value) ? value : value && typeof value === 'object' ? [value] : [];
+  const factories = values.map(item => ({
+    name: String(item?.name ?? '').trim(),
+    address: String(item?.address ?? '').trim(),
+  }));
+
+  return factories.length ? factories : [{ ...EMPTY_FACTORY }];
+};
+
+const buildFactoryInfo = (value) => (
+  (Array.isArray(value) ? value : [])
+    .map(item => ({
+      name: String(item?.name ?? '').trim(),
+      address: String(item?.address ?? '').trim(),
+    }))
+    .filter(item => item.name || item.address)
+);
+
 const buildProviderPayload = (values = {}) => ({
   id: values.id,
   geolocation: emptyToNull(values.geolocation),
   code: emptyToNull(values.code),
   name: emptyToNull(values.name),
+  mst: emptyToNull(values.mst),
   representative: emptyToNull(values.representative),
+  position: emptyToNull(values.position),
   phoneContact: emptyToNull(values.phoneContact),
   email: emptyToNull(values.email),
   emailManufacture: emptyToNull(values.emailManufacture),
@@ -39,22 +74,24 @@ const buildProviderPayload = (values = {}) => ({
   bankCode: emptyToNull(values.bankCode),
   bankName: emptyToNull(values.bankName),
   bankOwner: emptyToNull(values.bankOwner),
+  factoryInfo: buildFactoryInfo(values.factoryInfo),
+  paymentTerms: emptyToNull(values.paymentTerms),
   strengths: emptyToNull(values.strengths),
   note: emptyToNull(values.note),
   status: values.status ?? 1,
 });
 
-const ProviderForm = ({ record, onCancel, onSaved }) => {
+const ProviderForm = ({ record, onCancel, onSaved, disabled = false }) => {
   const [form] = Form.useForm();
 
   const initialValues = useMemo(() => ({
     status: 1,
     ...record,
+    factoryInfo: normalizeFactoryInfo(record?.factoryInfo),
   }), [record]);
 
   const onSubmit = async (values) => {
     const payload = buildProviderPayload(values);
-    console.log('[Provider] submit payload', payload);
 
     const response = await RequestUtils.Post('/provider/save', payload);
     const isSuccess = response?.errorCode === 200 || response?.success;
@@ -72,20 +109,39 @@ const ProviderForm = ({ record, onCancel, onSaved }) => {
     <Form
       form={form}
       layout="vertical"
+      disabled={disabled}
       initialValues={initialValues}
       onFinish={onSubmit}
       style={{ marginTop: 20 }}
     >
       <FormHidden name="id" />
       <Row gutter={16}>
-        <Col md={12} xs={24}>
+        <Col md={8} xs={24}>
           <FormInput
             name="code"
             label="Mã nhà cung cấp"
             placeholder="Nhập mã nhà cung cấp"
           />
         </Col>
-        <Col md={12} xs={24}>
+        <Col md={8} xs={24}>
+          <FormInput
+            name="mst"
+            label="Mã số thuế"
+            placeholder="Nhập mã số thuế"
+          />
+        </Col>
+        <Col md={8} xs={24}>
+          <FormSelect
+            required
+            name="status"
+            label="Trạng thái"
+            placeholder="Chọn trạng thái"
+            resourceData={STATUS_OPTIONS}
+            valueProp="id"
+            titleProp="name"
+          />
+        </Col>
+        <Col md={24} xs={24}>
           <FormInput
             required
             name="name"
@@ -98,6 +154,13 @@ const ProviderForm = ({ record, onCancel, onSaved }) => {
             name="representative"
             label="Người đại diện"
             placeholder="Nhập người đại diện"
+          />
+        </Col>
+        <Col md={12} xs={24}>
+          <FormInput
+            name="position"
+            label="Chức vụ"
+            placeholder="Nhập chức vụ"
           />
         </Col>
         <Col md={12} xs={24}>
@@ -119,6 +182,13 @@ const ProviderForm = ({ record, onCancel, onSaved }) => {
             name="emailManufacture"
             label="Email sản xuất"
             placeholder="Nhập email sản xuất"
+          />
+        </Col>
+        <Col md={12} xs={24}>
+          <FormInput
+            name="geolocation"
+            label="Geolocation"
+            placeholder="Nhập geolocation"
           />
         </Col>
         <Col md={24} xs={24}>
@@ -149,25 +219,75 @@ const ProviderForm = ({ record, onCancel, onSaved }) => {
             placeholder="Nhập chủ tài khoản"
           />
         </Col>
+        <Col span={24}>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>Thông tin nhà máy sản xuất</div>
+          <Form.List name="factoryInfo">
+            {(fields, { add, remove }) => (
+              <Space direction="vertical" size={12} style={{ display: 'flex', marginBottom: 16 }}>
+                {fields.map((field, index) => (
+                  <div
+                    key={field.key}
+                    style={{
+                      padding: '16px 16px 0',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: 8,
+                      background: '#fafafa',
+                    }}
+                  >
+                    <Row gutter={12} align="middle">
+                      <Col md={10} xs={24}>
+                        <FormInput
+                          name={[field.name, 'name']}
+                          label={`Tên nhà máy ${index + 1}`}
+                          placeholder="Nhập tên nhà máy"
+                        />
+                      </Col>
+                      <Col md={disabled ? 14 : 12} xs={24}>
+                        <FormInput
+                          name={[field.name, 'address']}
+                          label="Địa chỉ"
+                          placeholder="Nhập địa chỉ nhà máy"
+                        />
+                      </Col>
+                      {!disabled && (
+                        <Col md={2} xs={24}>
+                          <Tooltip title="Xóa nhà máy">
+                            <Button
+                              danger
+                              type="text"
+                              icon={<DeleteOutlined />}
+                              aria-label={`Xóa nhà máy ${index + 1}`}
+                              onClick={() => remove(field.name)}
+                            />
+                          </Tooltip>
+                        </Col>
+                      )}
+                    </Row>
+                  </div>
+                ))}
+                {!disabled && (
+                  <Button
+                    type="dashed"
+                    icon={<PlusOutlined />}
+                    onClick={() => add({ ...EMPTY_FACTORY })}
+                    block
+                  >
+                    Thêm nhà máy
+                  </Button>
+                )}
+              </Space>
+            )}
+          </Form.List>
+        </Col>
         <Col md={12} xs={24}>
-          <FormSelect
-            required
-            name="status"
-            label="Trạng thái"
-            placeholder="Chọn trạng thái"
-            resourceData={STATUS_OPTIONS}
-            valueProp="id"
-            titleProp="name"
+          <FormTextArea
+            name="paymentTerms"
+            label="Điều khoản thanh toán"
+            placeholder="Nhập điều khoản thanh toán"
+            rows={3}
           />
         </Col>
         <Col md={12} xs={24}>
-          <FormInput
-            name="geolocation"
-            label="Geolocation"
-            placeholder="Nhập geolocation"
-          />
-        </Col>
-        <Col md={24} xs={24}>
           <FormTextArea
             name="strengths"
             label="Thế mạnh"
@@ -175,7 +295,7 @@ const ProviderForm = ({ record, onCancel, onSaved }) => {
             rows={3}
           />
         </Col>
-        <Col md={24} xs={24}>
+        <Col md={12} xs={24}>
           <FormTextArea
             name="note"
             label="Ghi chú"
@@ -183,17 +303,19 @@ const ProviderForm = ({ record, onCancel, onSaved }) => {
             rows={3}
           />
         </Col>
-        <Col md={24} xs={24}>
-          <Space style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button onClick={onCancel}>Huỷ</Button>
-            <CustomButton
-              htmlType="submit"
-              title="Lưu"
-              color="primary"
-              variant="solid"
-            />
-          </Space>
-        </Col>
+        {!disabled && (
+          <Col md={24} xs={24}>
+            <Space style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Button onClick={onCancel}>Huỷ</Button>
+              <CustomButton
+                htmlType="submit"
+                title="Lưu"
+                color="primary"
+                variant="solid"
+              />
+            </Space>
+          </Col>
+        )}
       </Row>
     </Form>
   );
@@ -201,16 +323,25 @@ const ProviderForm = ({ record, onCancel, onSaved }) => {
 
 const ProviderPage = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerMode, setDrawerMode] = useState('create');
   const [editingRecord, setEditingRecord] = useState({});
   const title = 'Nhà cung cấp';
 
   const openForm = (record = {}) => {
     setEditingRecord(record || {});
+    setDrawerMode(record?.id ? 'edit' : 'create');
+    setDrawerOpen(true);
+  };
+
+  const openDetail = (record) => {
+    setEditingRecord(record || {});
+    setDrawerMode('view');
     setDrawerOpen(true);
   };
 
   const closeForm = () => {
     setDrawerOpen(false);
+    setDrawerMode('create');
     setEditingRecord({});
   };
 
@@ -274,15 +405,29 @@ const ProviderPage = () => {
     {
       title: 'Thao tác',
       fixed: 'right',
-      width: 110,
-      render: record => (
-        <Button
-          type="primary"
-          size="small"
-          onClick={() => openForm(record)}
-        >
-          Sửa
-        </Button>
+      width: 120,
+      align: 'center',
+      render: (_, record) => (
+        <Space size={4}>
+          <Tooltip title="Xem chi tiết">
+            <Button
+              type="text"
+              size="small"
+              icon={<EyeOutlined />}
+              aria-label="Xem chi tiết"
+              onClick={() => openDetail(record)}
+            />
+          </Tooltip>
+          <Tooltip title="Chỉnh sửa">
+            <Button
+              type="text"
+              size="small"
+              icon={<EditOutlined />}
+              aria-label="Chỉnh sửa"
+              onClick={() => openForm(record)}
+            />
+          </Tooltip>
+        </Space>
       ),
     },
   ];
@@ -310,11 +455,16 @@ const ProviderPage = () => {
         width={750}
         open={drawerOpen}
         onClose={closeForm}
-        title={editingRecord?.id ? `Cập nhật nhà cung cấp #${editingRecord.id}` : 'Tạo mới nhà cung cấp'}
+        title={drawerMode === 'view'
+          ? `Chi tiết nhà cung cấp${editingRecord?.code ? ` - ${editingRecord.code}` : ''}`
+          : editingRecord?.id
+            ? `Cập nhật nhà cung cấp #${editingRecord.id}`
+            : 'Tạo mới nhà cung cấp'}
       >
         <ProviderForm
-          key={editingRecord?.id || 'create'}
+          key={`${drawerMode}-${editingRecord?.id || 'create'}`}
           record={editingRecord}
+          disabled={drawerMode === 'view'}
           onCancel={closeForm}
           onSaved={onSaved}
         />

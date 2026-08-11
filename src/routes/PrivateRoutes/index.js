@@ -60,7 +60,7 @@ import { NewfeedConfig } from './NewFeedConfig';
 import { DragDropConfig } from './DragDropOrderConfig';
 
 /* Web */
-import { WebConfig } from './WebConfig';
+import { PublicWebConfig, WebConfig } from './WebConfig';
 import { WorkflowDesignerConfig } from './WorkflowDesignerConfig';
 import { ProductionControlConfig } from './ProductionControlConfig';
 
@@ -68,6 +68,7 @@ import { ProductionControlConfig } from './ProductionControlConfig';
 import { HRConfig } from './HRConfig';
 
 const routeConfigs = [
+    PublicWebConfig,
     LoginConfig,
     KpiConfig,
     ProductConfig,

@@ -1,0 +1,77 @@
+import React from 'react'
+import { Drawer, Empty, Spin, Tabs, Typography } from 'antd'
+
+import { workflowProgressPageStyles } from '@/pages/order/progress/styles'
+import { getWorkflowInstanceProcessId } from '../utils/workflowMappers'
+import WorkflowInstanceContent from './WorkflowInstanceContent'
+import './WorkflowProgressDrawer.less'
+
+const { Text, Title } = Typography
+
+const WorkflowProgressDrawer = ({
+  open,
+  loading,
+  order,
+  orderDetail,
+  workflowInstances,
+  onClose,
+  entityLabel = 'Mã',
+  entityType = 'order',
+  formOnly = false,
+}) => {
+  const items = workflowInstances.map((instance, index) => {
+    const processId = getWorkflowInstanceProcessId(instance)
+    const workflowName = instance?.workflowProcess?.name
+      ?? instance?.process?.name
+      ?? `Workflow #${processId ?? index + 1}`
+
+    return {
+      key: String(instance?.id ?? `${processId}-${index}`),
+      label: workflowName,
+      children: (
+        <WorkflowInstanceContent
+          order={order}
+          orderDetail={orderDetail}
+          workflowInstance={instance}
+          entityType={entityType}
+          formOnly={formOnly}
+        />
+      ),
+    }
+  })
+
+  return (
+    <Drawer
+      className="workflow-detail-drawer"
+      open={open}
+      onClose={onClose}
+      width="min(750px, calc(100vw - 16px))"
+      destroyOnHidden
+      title={formOnly ? undefined : (
+        <div>
+          <Text className="workflow-detail-drawer__eyebrow">TIẾN TRÌNH WORKFLOW</Text>
+          <Title level={4}>
+            {entityLabel} {orderDetail?.code ?? order?.code ?? orderDetail?.name ?? order?.name ?? ''}
+          </Title>
+        </div>
+      )}
+    >
+      <style>{workflowProgressPageStyles}</style>
+      <Spin spinning={loading}>
+        {!loading && items.length === 0 ? (
+          <Empty description={`${entityLabel} này chưa có workflow`} />
+        ) : formOnly ? (
+          items[0]?.children ?? null
+        ) : (
+          <Tabs
+            items={items}
+            destroyOnHidden
+            className="workflow-detail-drawer__tabs"
+          />
+        )}
+      </Spin>
+    </Drawer>
+  )
+}
+
+export default WorkflowProgressDrawer

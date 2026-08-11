@@ -47,6 +47,13 @@ const GenerateSkuDetailsOnSubmit = (oldSku, newSku) => {
 }
 const log = (value) => console.log('[container.product.index] ', value);
 
+const normalizeProductImages = (product) => {
+  if (Array.isArray(product?.images)) return product.images;
+  if (product?.images) return [product.images];
+  if (product?.image) return [product.image];
+  return [];
+}
+
 const Product = ({ closeModal, data }) => {
 
   const [ record, setRecord ] = useState({});
@@ -66,7 +73,7 @@ const Product = ({ closeModal, data }) => {
         dRe.attrValues = itemAttrValues;
       }
       for (const iSkus of ( data?.skus || [] )) {
-        let item = { id: iSkus?.id, name: iSkus?.name, skuPrices: iSkus?.skuPrices || [] }
+        let item = { id: iSkus?.id, name: iSkus?.name, note: iSkus?.note, skuPrices: iSkus?.skuPrices || [] }
         let details = [];
         for (const detail of iSkus?.sku) {
           details.push([detail.attributedId, detail.attributedValueId]);
@@ -74,7 +81,12 @@ const Product = ({ closeModal, data }) => {
         item.sku = details;
         skus.push(item);
       }
-      setRecord({ ...data, skus, dRe });
+      setRecord({
+        ...data,
+        images: normalizeProductImages(data),
+        skus,
+        dRe
+      });
     })();
     return () => ProductAttrService.empty();
   }, [ data ]);
@@ -98,6 +110,7 @@ const Product = ({ closeModal, data }) => {
 
     const body = {
       ...values,
+      images: normalizeProductImages(values),
       listProperties: newListProperties,
       skus: skusAdd
     }
