@@ -30,8 +30,8 @@ import {
 import { RequestUtils } from '@flast-erp/core/utils';
 
 const PRODUCT_STATUS_OPTIONS = [
-  { id: 1, name: 'Kích hoạt' },
-  { id: 0, name: 'Ngưng' }
+  { id: '1', name: 'Kích hoạt' },
+  { id: '0', name: 'Ngưng' }
 ];
 
 const ProductFilter = () => {

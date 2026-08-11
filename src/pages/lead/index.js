@@ -123,6 +123,12 @@ const LeadPage = () => {
       ellipsis: true
     },
     {
+          title: "Trạng thái",
+          dataIndex: 'status',
+          width: 100,
+          ellipsis: true
+    },
+    {
       title: "Cơ hội",
       width: 100,
       fixed: 'right',

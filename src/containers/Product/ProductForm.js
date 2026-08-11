@@ -42,7 +42,7 @@ const ProductForm = () => {
   return (
     <Row gutter={16} style={{ marginTop: 20 }}>
       <FormHidden name={'id'} />
-      <Col md={24} xs={24}>
+      <Col md={12} xs={24}>
         <FormInput
           required
           label="Tên sản phẩm"
@@ -50,6 +50,13 @@ const ProductForm = () => {
           placeholder={"Nhập tên sản phẩm"}
         />
       </Col>
+        <Col md={12} xs={24}>
+            <FormInput
+                label="Mã sản phẩm"
+                name="code"
+                placeholder={"Nhập tên sản phẩm"}
+            />
+        </Col>
 
       <Col md={12} xs={24}>
         <FormSelectAPI
