@@ -34,7 +34,8 @@ export const getRemoteConfigFromEntry = (remoteEntry) => {
   }
 }
 
-export const useRemoteForm = (remoteEntry, remoteVersionKey) => {
+export const useRemoteForm = (remoteEntry, remoteVersionKey, options = {}) => {
+  const forceReload = Boolean(options.forceReload)
   const remoteRequestKey = buildRemoteAlias(remoteEntry, remoteVersionKey)
   const [ loadedRemote, setLoadedRemote ] = useState({ key: null, Component: null })
   const [ loading, setLoading ] = useState(false)
@@ -59,7 +60,8 @@ export const useRemoteForm = (remoteEntry, remoteVersionKey) => {
       'MPage',
       remoteConfig.remoteBaseUrl,
       remoteConfig.remoteEntryComponentId,
-      remoteConfig.entryGlobalName
+      remoteConfig.entryGlobalName,
+      forceReload ? remoteVersionKey : ''
     )
       .then(mod => {
         const RemoteComponent = mod?.default ?? mod
@@ -89,7 +91,7 @@ export const useRemoteForm = (remoteEntry, remoteVersionKey) => {
     return () => {
       mounted = false
     }
-  }, [remoteEntry, remoteVersionKey, remoteRequestKey])
+  }, [forceReload, remoteEntry, remoteVersionKey, remoteRequestKey])
 
   return {
     Component: loadedRemote.key === remoteRequestKey ? loadedRemote.Component : null,

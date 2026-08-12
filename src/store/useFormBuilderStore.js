@@ -286,6 +286,7 @@ const useFormBuilderStore = create(
       description: '',
       enabled    : true,
       displayMode: 'NORMAL',
+      microFrontendUrl: '',
     },
 
     fields    : [],       // FormTemplateField[]
@@ -316,6 +317,9 @@ const useFormBuilderStore = create(
           description: template.description ?? '',
           enabled    : template.enabled ?? true,
           displayMode: template.displayMode ?? 'NORMAL',
+          microFrontendUrl: template.microFrontendUrl
+            ?? template.sourceComponent?.microFrontendUrl
+            ?? '',
         };
 
         state.fields = normalizeFieldList(
@@ -584,6 +588,7 @@ const useFormBuilderStore = create(
           description: '',
           enabled: true,
           displayMode: 'NORMAL',
+          microFrontendUrl: '',
         };
         state.fields        = [];
         state.selectedId    = null;

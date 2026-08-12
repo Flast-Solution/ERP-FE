@@ -1,5 +1,5 @@
 import { useContext, useEffect, useMemo, useState } from 'react'
-import { Button, Col, Form, Input, Radio, Row, Select, message } from 'antd'
+import { Button, Form, Input, Radio, Select, message } from 'antd'
 
 import {
   FormContextCustom,
@@ -65,33 +65,46 @@ const resolveConfigOptions = (items, aliases) => items
   .map(normalizeOption)
   .filter(Boolean)
 
+const ASSET_BASE_URL = 'http://view.user.flast.vn/assets/icons'
+
+const LeadLabel = ({ children, required = false }) => (
+  <span className="label">
+    {children}
+    {required ? <span className="req">*</span> : null}
+  </span>
+)
+
 const LeadSection = ({ number, title, children }) => (
-  <section className="lead-form-section">
-    <div className="lead-form-section__head">
-      <span className="lead-form-section__number">{number}</span>
-      <h3 className="lead-form-section__title">{title}</h3>
+  <section className="pl-section">
+    <div className="pl-section__head">
+      <span className="pl-section__num">{number}</span>
+      <h2 className="t-h3" style={{ margin: 0 }}>{title}</h2>
     </div>
     {children}
   </section>
 )
 
-const LeadInput = ({ name, label, required, ...props }) => (
+const LeadInput = ({ name, label, code, required, fieldClassName = '', ...props }) => (
   <Form.Item
     name={name}
-    label={label}
-    rules={required ? [{ required: true, message: `Vui lòng nhập ${String(label).toLowerCase()}` }] : []}
+    label={<LeadLabel code={code} required={required}>{label}</LeadLabel>}
+    required={false}
+    className={`pl-field ${fieldClassName}`.trim()}
+    rules={required && !props.disabled ? [{ required: true, message: `Vui lòng nhập ${String(label).toLowerCase()}` }] : []}
   >
-    <Input {...props} />
+    <Input className="pl-input" {...props} />
   </Form.Item>
 )
 
-const LeadSelect = ({ name, label, required, options = [], ...props }) => (
+const LeadSelect = ({ name, label, code, required, options = [], fieldClassName = '', ...props }) => (
   <Form.Item
     name={name}
-    label={label}
-    rules={required ? [{ required: true, message: `Vui lòng chọn ${String(label).toLowerCase()}` }] : []}
+    label={<LeadLabel code={code} required={required}>{label}</LeadLabel>}
+    required={false}
+    className={`pl-field ${fieldClassName}`.trim()}
+    rules={required && !props.disabled ? [{ required: true, message: `Vui lòng chọn ${String(label).toLowerCase()}` }] : []}
   >
-    <Select options={options} optionFilterProp="label" showSearch allowClear {...props} />
+    <Select className="pl-select" options={options} optionFilterProp="label" showSearch allowClear {...props} />
   </Form.Item>
 )
 
@@ -169,38 +182,56 @@ const LeadForm = ({ listServices = [], listSale = [], submitting = false }) => {
 
   return (
     <LeadFormShell>
+      <link rel="stylesheet" href="http://view.user.flast.vn/colors_and_type.css" />
+      <link rel="stylesheet" href="http://view.user.flast.vn/pipe_lead.css" />
       <FormHidden name="id" />
 
       <LeadSection number="1" title="Thông tin Lead">
-        <Form.Item name="customerType" label="Loại khách hàng" initialValue="INDIVIDUAL">
-          <Radio.Group className="lead-customer-type" optionType="button" buttonStyle="solid">
-            <Radio.Button value="INDIVIDUAL">Cá nhân</Radio.Button>
-            <Radio.Button value="BUSINESS">Doanh nghiệp</Radio.Button>
+        <Form.Item
+          name="customerType"
+          label={<LeadLabel code="customer_type">Loại khách hàng</LeadLabel>}
+          initialValue="INDIVIDUAL"
+          required={false}
+          className="pl-customer-type"
+        >
+          <Radio.Group className="pl-seg">
+            <Radio value="INDIVIDUAL" className={`pl-seg__opt ${customerType === 'INDIVIDUAL' ? 'is-active' : ''}`}>
+              <span className="" />
+              <img src={`${ASSET_BASE_URL}/user.svg`} alt="" />
+              <span className={customerType === 'INDIVIDUAL' ? 't-body-strong' : 't-body'}>Cá nhân</span>
+            </Radio>
+            <Radio value="BUSINESS" className={`pl-seg__opt ${customerType === 'BUSINESS' ? 'is-active' : ''}`}>
+              <span className="" />
+              <img src={`${ASSET_BASE_URL}/users.svg`} alt="" />
+              <span className={customerType === 'BUSINESS' ? 't-body-strong' : 't-body'}>Doanh nghiệp</span>
+            </Radio>
           </Radio.Group>
         </Form.Item>
-        <Row gutter={16}>
-          <Col md={12} xs={24}><LeadInput required name="customerName" label="Họ và tên" placeholder="Nhập họ và tên" /></Col>
-          <Col md={12} xs={24}><LeadInput required name="customerMobile" label="Điện thoại" placeholder="Nhập số điện thoại" /></Col>
-          <Col md={12} xs={24}><LeadInput name="customerEmail" label="Email" placeholder="Nhập email" /></Col>
-          <Col md={12} xs={24}><LeadInput name="birthday" label="Ngày sinh" placeholder="dd/mm/yyyy" /></Col>
-          <Col md={12} xs={24}><LeadSelect name="provinceName" label="Tỉnh / Thành phố" placeholder="Chọn Tỉnh / Thành phố" options={provinceOptions} /></Col>
-          <Col md={12} xs={24}><LeadInput name="customerFacebook" label="Facebook" placeholder="Nhập Facebook" /></Col>
-          <Col span={24}><LeadInput name="address" label="Địa chỉ" placeholder="Nhập địa chỉ" /></Col>
-        </Row>
-        {customerType === 'BUSINESS' ? (
-          <Row gutter={16}>
-            <Col span={24}><LeadInput required name="companyName" label="Tên doanh nghiệp" placeholder="Nhập tên doanh nghiệp" /></Col>
-            <Col md={12} xs={24}><LeadInput name="taxCode" label="Mã số thuế" placeholder="Nhập mã số thuế" /></Col>
-            <Col md={12} xs={24}><LeadInput required name="contactName" label="Người liên hệ" placeholder="Nhập người liên hệ" /></Col>
-            <Col md={12} xs={24}><LeadInput name="jobTitle" label="Chức vụ" placeholder="Nhập chức vụ" /></Col>
-            <Col md={12} xs={24}><LeadInput name="website" label="Website" placeholder="https://" /></Col>
-          </Row>
-        ) : null}
+        <div className="pl-grid">
+          <LeadInput required name="customerName" label="Họ và tên" code="contact_name" placeholder="Trần Thị Mai" />
+          <LeadInput required name="customerMobile" label="Điện thoại" code="phone" placeholder="0901 234 567" />
+          <LeadInput name="customerEmail" label="Email" code="email" placeholder="tranthimai@gmail.com" />
+          <LeadInput name="birthday" label="Ngày sinh (tùy chọn)" code="birthday" placeholder="12/06/1990" />
+          <LeadSelect name="provinceName" label="Tỉnh / Thành phố" code="province" placeholder="Chọn Tỉnh / Thành phố" options={provinceOptions} />
+          <LeadInput name="customerFacebook" label="Facebook" code="facebook" placeholder="Nhập Facebook" />
+          <LeadInput name="address" label="Địa chỉ" code="address" placeholder="123 Nguyễn Văn Cừ, P. An Hòa, Q. Ninh Kiều, TP. Cần Thơ" fieldClassName="full" />
+        </div>
+
+        <div className="t-caption lead-business-caption">
+          Doanh nghiệp — hiện khi chọn Doanh nghiệp ở trên
+        </div>
+        <div className={`pl-grid lead-business-grid ${customerType !== 'BUSINESS' ? 'is-disabled' : ''}`}>
+          <LeadInput required name="companyName" label="Tên doanh nghiệp" code="company_name" placeholder="Công ty TNHH Thực phẩm Sạch" disabled={customerType !== 'BUSINESS'} fieldClassName="full" />
+          <LeadInput name="taxCode" label="Mã số thuế" code="tax_code" placeholder="0315123456" disabled={customerType !== 'BUSINESS'} />
+          <LeadInput required name="contactName" label="Người liên hệ" code="contact_name" placeholder="Nguyễn Văn Hùng" disabled={customerType !== 'BUSINESS'} />
+          <LeadInput name="jobTitle" label="Chức vụ" code="job_title" placeholder="Giám đốc" disabled={customerType !== 'BUSINESS'} />
+          <LeadInput name="website" label="Website" code="website" placeholder="https://sachfood.vn" disabled={customerType !== 'BUSINESS'} />
+        </div>
       </LeadSection>
 
       <LeadSection number="2" title="Nhu cầu khách hàng">
-        <Row gutter={16}>
-          <Col span={24}>
+        <div className="pl-grid">
+          <div className="pl-field full lead-products-field">
             <FormSelectInfiniteProduct
               required
               mode="multiple"
@@ -210,60 +241,78 @@ const LeadForm = ({ listServices = [], listSale = [], submitting = false }) => {
               valueProp="id"
               titleProp="name"
             />
-          </Col>
-          <Col md={12} xs={24}><LeadSelect name="serviceId" label="Dịch vụ" placeholder="Chọn dịch vụ" options={serviceOptions} /></Col>
-          <Col md={12} xs={24}><LeadSelect required name="source" label="Nguồn Lead" placeholder="Chọn nguồn Lead" options={leadSourceOptions} /></Col>
-          <Col md={12} xs={24}><LeadInput name="quantityRange" label="Số lượng dự kiến" placeholder="Ví dụ: 200 - 500" /></Col>
-          <Col md={12} xs={24}><LeadInput name="budgetRange" label="Giá trị dự kiến" placeholder="Nhập khoảng ngân sách" /></Col>
-          <Col md={12} xs={24}>
-            <LeadSelect name="buyingTimeline" label="Thời gian mua dự kiến" placeholder="Chọn thời gian" options={[
-              { value: 'NOW', label: 'Ngay' },
-              { value: 'ONE_TO_THREE_MONTHS', label: 'Trong 1 - 3 tháng' },
-              { value: 'UNDEFINED', label: 'Chưa xác định' },
-            ]} />
-          </Col>
-          <Col md={12} xs={24}>
-            <LeadSelect name="interestLevel" label="Mức độ quan tâm" placeholder="Chọn mức độ" options={[
-              { value: 'HIGH', label: 'Cao' },
-              { value: 'MEDIUM', label: 'Trung bình' },
-              { value: 'LOW', label: 'Thấp' },
-            ]} />
-          </Col>
-          <Col span={24}>
-            <Form.Item name="noted" label="Ghi chú">
-              <Input.TextArea rows={4} maxLength={500} showCount placeholder="Nhập ghi chú" />
-            </Form.Item>
-          </Col>
-        </Row>
+          </div>
+          <LeadSelect name="serviceId" label="Dịch vụ" code="service" placeholder="Chọn dịch vụ" options={serviceOptions} />
+          <LeadSelect required name="source" label="Nguồn Lead" code="source" placeholder="Chọn nguồn Lead" options={leadSourceOptions} />
+          <LeadInput name="quantityRange" label="Số lượng dự kiến" code="quantity_range" placeholder="200 - 500 kg" />
+          <LeadInput name="budgetRange" label="Giá trị dự kiến" code="budget_range" placeholder="50.000.000 - 100.000.000 đ" />
+          <LeadSelect name="buyingTimeline" label="Thời gian mua dự kiến" code="buying_timeline" placeholder="Chọn thời gian" options={[
+            { value: 'NOW', label: 'Ngay' },
+            { value: 'ONE_TO_THREE_MONTHS', label: 'Trong 1 - 3 tháng' },
+            { value: 'UNDEFINED', label: 'Chưa xác định' },
+          ]} />
+          <Form.Item
+            name="noted"
+            label={<LeadLabel code="notes">Ghi chú</LeadLabel>}
+            className="pl-field full pl-field--counted"
+          >
+            <Input.TextArea className="pl-textarea" rows={4} maxLength={500} showCount placeholder="Nhập ghi chú" />
+          </Form.Item>
+        </div>
 
-        <FormFileUpload
-          name="fileUrls"
-          label="Hình ảnh thông tin khách hàng"
-          accept="image/*"
-          folder="lead/images"
-          image
-          maxSizeMB={8}
-        />
+        <div className="pl-field full lead-upload-field">
+          <FormFileUpload
+            name="fileUrls"
+            label="Hình ảnh thông tin khách hàng"
+            accept="image/*"
+            folder="lead/images"
+            image
+            maxSizeMB={8}
+          />
+        </div>
       </LeadSection>
 
       <LeadSection number="3" title="Thông tin phụ trách & trạng thái">
-        <Row gutter={16}>
-          <Col md={8} xs={24}><LeadSelect required name="saleId" label="Nhân viên phụ trách" placeholder="Chọn nhân viên" options={saleOptions} /></Col>
-          <Col md={8} xs={24} className="lead-readonly">
-            <LeadSelect disabled name="status" label="Trạng thái Lead" placeholder="Hệ thống tự xác định" options={leadStatuses} loading={loadingConfigs} />
-            <div className="lead-field-hint">Trạng thái được cập nhật qua luồng xử lý Lead.</div>
-          </Col>
-          <Col md={8} xs={24} className="lead-readonly"><LeadInput disabled name="inTime" label="Ngày tạo" placeholder="Tự sinh khi tạo Lead" /></Col>
-          <Col md={12} xs={24} className="lead-readonly"><LeadInput disabled name="lastContactedAt" label="Ngày liên hệ gần nhất" placeholder="Chưa có" /></Col>
-          <Col md={12} xs={24} className="lead-readonly"><LeadInput disabled name="nextAppointmentAt" label="Lịch hẹn tiếp theo" placeholder="Chưa có" /></Col>
-        </Row>
+        <div className="pl-grid pl-grid--3">
+          <div>
+            <LeadSelect required name="saleId" label="Nhân viên phụ trách" code="owner_id" placeholder="Chọn nhân viên" options={saleOptions} />
+            <div className="field-help">Gán tự động theo quy tắc phân bổ, có thể đổi tay.</div>
+          </div>
+          <div className="lead-readonly">
+            <LeadSelect disabled name="status" label="Trạng thái Lead" code="stage" placeholder="Hệ thống tự xác định" options={leadStatuses} loading={loadingConfigs} />
+            <div className="field-help">Luôn khởi tạo ở NEW — đổi qua action tương ứng sau khi tạo.</div>
+          </div>
+          <LeadSelect name="interestLevel" label="Mức độ quan tâm" code="interest_level" placeholder="Chọn mức độ" options={[
+            { value: 'HIGH', label: 'Cao' },
+            { value: 'MEDIUM', label: 'Trung bình' },
+            { value: 'LOW', label: 'Thấp' },
+          ]} />
+          <LeadInput disabled name="inTime" label="Ngày tạo" code="created_at" placeholder="Tự sinh khi tạo Lead" fieldClassName="lead-readonly" />
+          <LeadInput disabled name="lastContactedAt" label="Ngày liên hệ gần nhất" code="last_contacted_at" placeholder="Chưa có" fieldClassName="lead-readonly" />
+          <LeadInput disabled name="nextAppointmentAt" label="Lịch hẹn tiếp theo" code="next_appointment_at" placeholder="Chưa có" fieldClassName="lead-readonly" />
+        </div>
+
+        <div className="pl-effect">
+          <div className="pl-effect__head">
+            <img src={`${ASSET_BASE_URL}/zap.svg`} alt="" />
+            <span className="t-body-strong">Sau khi lưu, hệ thống tự động</span>
+          </div>
+          <ul className="pl-effect__list">
+            <li><img src={`${ASSET_BASE_URL}/check.svg`} alt="" /> Tạo task liên hệ đầu tiên cho nhân viên phụ trách</li>
+            <li><img src={`${ASSET_BASE_URL}/check.svg`} alt="" /> Tính điểm lead (score) ban đầu từ nhu cầu + nguồn</li>
+            <li><img src={`${ASSET_BASE_URL}/check.svg`} alt="" /> Ghi lịch sử: — → NEW</li>
+          </ul>
+        </div>
       </LeadSection>
 
-      <div className="lead-form-actions">
-        <Button type="primary" danger loading={submitting} onClick={handleSave}>
-          Lưu Lead
-        </Button>
-      </div>
+      <footer className="pl-foot lead-form-actions">
+        <div className="pl-foot__actions">
+          <Button className="btn btn--primary" loading={submitting} onClick={handleSave}>
+            <img src={`${ASSET_BASE_URL}/save.svg`} alt="" width="14" height="14" />
+            Lưu Lead
+          </Button>
+        </div>
+      </footer>
     </LeadFormShell>
   )
 }

@@ -73,98 +73,119 @@ export const SKUContent = styled.div`
 `
 
 export const LeadFormShell = styled.div`
-  padding: 20px 4px 8px;
-  color: #20242c;
+  width: 100%;
+  padding: 0;
+  color: var(--fg-default);
 
-  .lead-form-section {
-    padding: 22px;
-    margin-bottom: 18px;
-    background: #fff;
-    border: 1px solid #e7eaf0;
-    border-radius: 14px;
-    box-shadow: 0 3px 14px rgba(23, 36, 59, 0.04);
+  .pl-section .ant-form-item,
+  .pl-customer-type {
+    margin-bottom: 0;
   }
 
-  .lead-form-section__head {
-    display: flex;
+  .pl-customer-type {
+    margin-bottom: var(--s-4);
+  }
+
+  .ant-form-item-label {
+    padding: 0 0 6px;
+  }
+
+  .ant-form-item-label > label {
+    width: 100%;
+    height: auto;
+    color: inherit;
+    font-weight: inherit;
+  }
+
+  .ant-form-item-label > label::after {
+    display: none;
+  }
+
+  .label .req {
+    margin-left: 2px;
+  }
+
+  .pl-seg__opt.ant-radio-wrapper {
+    margin-inline-end: 0;
+  }
+
+  .pl-seg__opt > .ant-radio {
+    display: none;
+  }
+
+  .pl-input.ant-input,
+  textarea.pl-textarea.ant-input {
+    box-shadow: none;
+  }
+
+  .pl-select.ant-select {
+    min-height: 36px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+  }
+
+  .pl-select.ant-select .ant-select-selector,
+  .lead-products-field .ant-select-selector {
+    min-height: 36px;
+    padding: 0 var(--s-3);
+    color: var(--fg-default);
+    background: var(--bg-canvas);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    box-shadow: none !important;
+  }
+
+  .pl-select.ant-select-single .ant-select-selector {
     align-items: center;
-    gap: 10px;
-    margin-bottom: 20px;
   }
 
-  .lead-form-section__number {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    color: #fff;
-    font-weight: 700;
-    background: #ff4d4f;
-    border-radius: 50%;
+  .lead-products-field .ant-form-item {
+    margin-bottom: 0;
   }
 
-  .lead-form-section__title {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 700;
+  .lead-business-caption {
+    margin: var(--s-4) 0 6px;
   }
 
-  .lead-customer-type .ant-radio-button-wrapper {
-    min-width: 150px;
-    text-align: center;
+  .lead-business-grid.is-disabled {
+    opacity: 0.55;
   }
 
-  .lead-field-hint {
-    margin-top: -14px;
-    margin-bottom: 16px;
-    color: #8c8c8c;
-    font-size: 12px;
+  .field-help {
+    margin-top: 6px;
+    color: var(--fg-subtle);
+    font-size: var(--fs-12);
   }
 
   .lead-readonly .ant-input,
   .lead-readonly .ant-select-selector {
-    color: #595959 !important;
-    background: #f5f6f8 !important;
-    border-color: #e2e5ea !important;
+    color: var(--fg-muted) !important;
+    background: var(--bg-sunken) !important;
+    border: 1px dashed var(--border-default) !important;
+    box-shadow: none !important;
   }
 
-  .lead-upload {
-    margin-top: 4px;
+  .lead-upload-field {
+    margin-top: var(--s-5);
   }
 
-  .lead-upload-list {
-    margin-top: 12px;
+  .lead-upload-field .ant-form-item {
+    margin-bottom: 0;
   }
 
   .lead-form-actions {
-    position: sticky;
-    bottom: -1px;
-    z-index: 2;
-    display: flex;
     justify-content: flex-end;
-    padding: 14px 0 4px;
-    background: linear-gradient(180deg, rgba(255,255,255,0), #fff 28%);
+    margin: 0;
   }
 
-  .ant-form-item-label > label {
-    font-weight: 600;
+  .lead-form-actions .ant-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
 
-  @media (max-width: 767px) {
-    padding-top: 8px;
-
-    .lead-form-section {
-      padding: 16px;
-    }
-
-    .lead-customer-type {
-      display: flex;
-    }
-
-    .lead-customer-type .ant-radio-button-wrapper {
-      flex: 1;
-      min-width: 0;
-    }
+  @media (max-width: 720px) {
+    padding: 0;
   }
 `
