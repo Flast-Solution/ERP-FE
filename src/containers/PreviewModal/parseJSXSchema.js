@@ -41,7 +41,7 @@ const readBalanced = (input, startIndex, openChar, closeChar) => {
       continue
     }
 
-    if (char === '"' || char === "'") {
+    if (char === '"' || char === "'" || char === '`') {
       inString = true
       stringQuote = char
       continue
@@ -400,7 +400,7 @@ const extractTopLevelCols = (content = '') => {
     const openIndex = content.indexOf('<Col', index)
     if (openIndex === -1) break
 
-    const tagEndIndex = content.indexOf('>', openIndex)
+    const tagEndIndex = findOpeningTagEnd(content, openIndex)
     if (tagEndIndex === -1) break
 
     const openTag = content.slice(openIndex, tagEndIndex + 1)
@@ -449,18 +449,72 @@ const extractTopLevelCols = (content = '') => {
   return cols
 }
 
-const COMPONENT_OPEN_TAG_RE = /^<([A-Z][A-Za-z0-9]*(?:\.[A-Z][A-Za-z0-9]*)*)\s*([\s\S]*?)(\/?)>/
+const COMPONENT_NAME_RE = /^<([A-Z][A-Za-z0-9]*(?:\.[A-Z][A-Za-z0-9]*)*)\b/
+
+const findOpeningTagEnd = (source = '', startIndex = 0) => {
+  let braceDepth = 0
+  let inString = false
+  let stringQuote = ''
+  let escaped = false
+
+  for (let index = startIndex; index < source.length; index += 1) {
+    const char = source[index]
+
+    if (inString) {
+      if (escaped) {
+        escaped = false
+        continue
+      }
+      if (char === '\\') {
+        escaped = true
+        continue
+      }
+      if (char === stringQuote) {
+        inString = false
+        stringQuote = ''
+      }
+      continue
+    }
+
+    if (char === '"' || char === "'" || char === '`') {
+      inString = true
+      stringQuote = char
+      continue
+    }
+
+    if (char === '{') {
+      braceDepth += 1
+      continue
+    }
+    if (char === '}') {
+      braceDepth = Math.max(0, braceDepth - 1)
+      continue
+    }
+    if (char === '>' && braceDepth === 0) {
+      return index
+    }
+  }
+
+  return -1
+}
 
 const extractComponentNode = (block = '') => {
   const trimmed = block.replace(/\{\/\*[\s\S]*?\*\/\}/g, '').trim()
   if (!trimmed.startsWith('<')) return null
 
-  const openTagMatch = trimmed.match(COMPONENT_OPEN_TAG_RE)
-  if (!openTagMatch) return null
+  const nameMatch = trimmed.match(COMPONENT_NAME_RE)
+  if (!nameMatch) return null
 
-  const componentName = openTagMatch[1]
-  const propsSource = openTagMatch[2] ?? ''
-  const isSelfClosing = openTagMatch[3] === '/'
+  const tagEndIndex = findOpeningTagEnd(trimmed, 0)
+  if (tagEndIndex === -1) return null
+
+  const componentName = nameMatch[1]
+  const openTag = trimmed.slice(0, tagEndIndex + 1)
+  const isSelfClosing = /\/\s*>$/.test(openTag)
+  const propsEndIndex = isSelfClosing
+    ? openTag.lastIndexOf('/')
+    : tagEndIndex
+  const propsSource = trimmed.slice(nameMatch[0].length, propsEndIndex)
 
   if (isSelfClosing) {
     return {
@@ -471,7 +525,6 @@ const extractComponentNode = (block = '') => {
     }
   }
 
-  const openTag = openTagMatch[0]
   const closeTag = `</${componentName}>`
   const startIndex = openTag.length
   const endIndex = trimmed.lastIndexOf(closeTag)
@@ -550,7 +603,7 @@ const extractDirectFieldBlocks = (content = '') => {
 
   while ((match = tagPattern.exec(content))) {
     const startIndex = match.index
-    const tagEndIndex = content.indexOf('>', startIndex)
+    const tagEndIndex = findOpeningTagEnd(content, startIndex)
     if (tagEndIndex === -1) break
 
     const openTag = content.slice(startIndex, tagEndIndex + 1)

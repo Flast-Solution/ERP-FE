@@ -47,19 +47,32 @@ const useWorkflowProgressDrawer = () => {
       const normalizedInstances = Array.from(new Map(
         [...suppliedInstances, ...fetchedInstances]
           .map(normalizeWorkflowInstance)
-          .map((instance, index) => [
-            String(instance?.id ?? `${getWorkflowInstanceProcessId(instance)}-${index}`),
+          .filter(Boolean)
+          .map(instance => [
+            String(instance.id),
             instance,
           ])
       ).values())
       const requestedProcessId = options.processId
-      const scopedInstances = requestedProcessId
-        ? normalizedInstances.filter(instance => (
-          String(getWorkflowInstanceProcessId(instance)) === String(requestedProcessId)
-        ))
-        : normalizedInstances
+      const requestedInstanceId = selectedDetail.workflowInstanceId
+      const scopedInstances = normalizedInstances.filter(instance => {
+        if (requestedInstanceId && String(instance.id) !== String(requestedInstanceId)) return false
+        if (requestedProcessId && String(instance.processId) !== String(requestedProcessId)) return false
+        return true
+      })
+      const effectiveInstances = scopedInstances.length > 0
+        ? scopedInstances
+        : (requestedProcessId && requestedInstanceId ? [{
+          id: requestedInstanceId,
+          processId: requestedProcessId,
+          entityId: selectedDetail.id,
+          entityType: options.entityName || ORDER_WORKFLOW_ENTITY_TYPE,
+          currentStepCode: null,
+          state: null,
+          process: null,
+        }] : [])
       const processIds = Array.from(new Set(
-        scopedInstances
+        effectiveInstances
           .map(getWorkflowInstanceProcessId)
           .filter(processId => processId !== undefined && processId !== null && processId !== '')
       ))
@@ -73,9 +86,9 @@ const useWorkflowProgressDrawer = () => {
 
       if (requestIdRef.current !== requestId) return
       const processMap = new Map(processEntries)
-      setWorkflowInstances(scopedInstances.map(instance => ({
+      setWorkflowInstances(effectiveInstances.map(instance => ({
         ...instance,
-        workflowProcess: processMap.get(String(getWorkflowInstanceProcessId(instance))) ?? null,
+        process: processMap.get(String(getWorkflowInstanceProcessId(instance))) ?? instance.process,
       })))
     } catch (error) {
       if (requestIdRef.current === requestId) {

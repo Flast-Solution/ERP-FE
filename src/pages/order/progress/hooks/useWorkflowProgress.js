@@ -23,8 +23,6 @@ import {
 
 export const useWorkflowProgress = ({
   workflowInstance,
-  order,
-  orderId,
   user,
   loadingWorkflowInstance = false,
   syncWorkflowInstance,
@@ -112,7 +110,7 @@ export const useWorkflowProgress = ({
   }, [fetchWorkflowPreview])
 
   const previewStepProcess = workflowPreview?.stepProcesses
-  const workflowProcessId = workflowPreview?.processInstance?.processId
+  const workflowProcessId = workflowInstance?.processId
 
   useEffect(() => {
     if (!workflowProcessId) {
@@ -168,13 +166,22 @@ export const useWorkflowProgress = ({
     const definitionStepMap = new Map(
       workflowProcessSteps.map((step) => [String(step?.stepCode), step]),
     )
+    const auxiliaryTargetCodes = new Set(
+      workflowProcessSteps.flatMap(step => (
+        getWorkflowStepButtons(step)
+          .filter(button => button?.type === 'OPEN_HIDDEN_STEP')
+          .map(button => String(button?.targetStepCode ?? ''))
+      )),
+    )
 
     const mergedPreviewSteps = previewSteps.map((step) => {
       const definitionStep = definitionStepMap.get(String(step?.stepCode))
       return {
         ...definitionStep,
         ...step,
-        hidden: step?.hidden ?? definitionStep?.hidden ?? false,
+        hidden: step?.hidden
+          ?? definitionStep?.hidden
+          ?? auxiliaryTargetCodes.has(String(step?.stepCode)),
         buttons: getWorkflowStepButtons({
           buttons: step?.buttons ?? definitionStep?.buttons,
         }),
@@ -188,17 +195,29 @@ export const useWorkflowProgress = ({
     })
 
     const previewCodes = new Set(mergedPreviewSteps.map(step => String(step?.stepCode)))
-    const hiddenDefinitionSteps = workflowProcessSteps
-      .filter(step => isWorkflowStepHidden(step) && !previewCodes.has(String(step?.stepCode)))
+    const missingDefinitionSteps = workflowProcessSteps
+      .filter(step => !previewCodes.has(String(step?.stepCode)))
       .map(step => ({
         ...step,
-        hidden: true,
+        hidden: isWorkflowStepHidden(step) || auxiliaryTargetCodes.has(String(step?.stepCode)),
         buttons: getWorkflowStepButtons(step),
         formTemplate: step?.formTemplate
           ?? (typeof step?.form === 'object' ? step.form : (step?.form ? { id: step.form } : null)),
       }))
 
-    return [...mergedPreviewSteps, ...hiddenDefinitionSteps]
+    return [...mergedPreviewSteps, ...missingDefinitionSteps]
+      .map((step, index) => ({ ...step, __workflowOrder: index }))
+      .sort((left, right) => {
+        const leftOrder = Number(left?.sortOrder)
+        const rightOrder = Number(right?.sortOrder)
+        const leftValid = Number.isFinite(leftOrder)
+        const rightValid = Number.isFinite(rightOrder)
+
+        if (leftValid && rightValid && leftOrder !== rightOrder) return leftOrder - rightOrder
+        if (leftValid !== rightValid) return leftValid ? -1 : 1
+        return left.__workflowOrder - right.__workflowOrder
+      })
+      .map(({ __workflowOrder, ...step }) => step)
   }, [workflowPreview?.stepProcessList, workflowProcessSteps])
 
   const steps = useMemo(
@@ -224,12 +243,14 @@ export const useWorkflowProgress = ({
   ), [workflowPreview?.stepTransitionList])
 
   const currentStepCode = workflowPreview?.processInstance?.currentStepCode
+    || workflowInstance?.currentStepCode
+    || steps[0]?.stepCode
 
   const currentStep = useMemo(() => {
-    if (!previewStepProcess) return null
+    if (!previewStepProcess) return findWorkflowStep(allSteps, currentStepCode)
     const definition = findWorkflowStep(allSteps, previewStepProcess?.stepCode)
     return definition ? { ...definition, ...previewStepProcess } : previewStepProcess
-  }, [allSteps, previewStepProcess])
+  }, [allSteps, currentStepCode, previewStepProcess])
 
   const displayStep = useMemo(() => {
     if (!viewingStepCode) return currentStep
@@ -315,12 +336,7 @@ export const useWorkflowProgress = ({
     }
 
     const payload = buildWorkflowTransitionPayload({
-      workflow,
-      workflowPreview,
       workflowInstance,
-      order,
-      orderId,
-      instanceId,
       currentSubmission,
       user,
       toStepCode: targetStepCode,
@@ -369,12 +385,7 @@ export const useWorkflowProgress = ({
   }, [
     stepTransitionOptions,
     selectedToStepCode,
-    workflow,
-    workflowPreview,
     workflowInstance,
-    order,
-    orderId,
-    instanceId,
     user,
     fetchWorkflowPreview,
     syncWorkflowInstance,

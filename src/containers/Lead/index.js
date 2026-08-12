@@ -44,18 +44,31 @@ const formatApiDate = (value) => {
   return parsed.isValid() ? parsed.format(API_DATE_FORMAT) : value;
 };
 
-const normalizeLeadRecord = (item = {}) => ({
-  ...item,
-  customerType: item.customerType ?? 'INDIVIDUAL',
-  productIds: Array.isArray(item.productIds)
-    ? item.productIds
-    : Array.isArray(item.products)
-      ? item.products.map(product => product?.id ?? product).filter(Boolean)
-      : (item.productId ? [item.productId] : []),
-  inTime: formatDisplayDate(item.inTime ?? item.createdDate ?? item.createdAt),
-  lastContactedAt: item.lastContactedAt ? formatDisplayDate(item.lastContactedAt) : undefined,
-  nextAppointmentAt: item.nextAppointmentAt ? formatDisplayDate(item.nextAppointmentAt) : undefined,
-});
+const normalizeLeadRecord = (item = {}) => {
+  const currentBusiness = item.business && typeof item.business === 'object'
+    ? item.business
+    : {};
+
+  return {
+    ...item,
+    customerType: item.customerType ?? 'INDIVIDUAL',
+    business: {
+      companyName: currentBusiness.companyName ?? item.companyName,
+      taxCode: currentBusiness.taxCode ?? item.taxCode,
+      contactName: currentBusiness.contactName ?? item.contactName,
+      jobTitle: currentBusiness.jobTitle ?? item.jobTitle,
+      website: currentBusiness.website ?? item.website,
+    },
+    productIds: Array.isArray(item.productIds)
+      ? item.productIds
+      : Array.isArray(item.products)
+        ? item.products.map(product => product?.id ?? product).filter(Boolean)
+        : (item.productId ? [item.productId] : []),
+    inTime: formatDisplayDate(item.inTime ?? item.createdDate ?? item.createdAt),
+    lastContactedAt: item.lastContactedAt ? formatDisplayDate(item.lastContactedAt) : undefined,
+    nextAppointmentAt: item.nextAppointmentAt ? formatDisplayDate(item.nextAppointmentAt) : undefined,
+  };
+};
 
 const NewLead = ({ closeModal, data }) => {
 
@@ -66,9 +79,34 @@ const NewLead = ({ closeModal, data }) => {
   const onSubmit = async (values) => {
     setSubmitting(true);
     try {
-      const body = { ...values };
+      const body = {
+        ...record,
+        ...values,
+        business: {
+          ...(record?.business ?? {}),
+          ...(values?.business ?? {}),
+        },
+      };
       delete body.fileUploads;
       delete body.productId;
+      delete body.companyName;
+      delete body.taxCode;
+      delete body.contactName;
+      delete body.jobTitle;
+      delete body.website;
+
+      if (body.customerType !== 'BUSINESS') {
+        delete body.business;
+      } else {
+        body.business = {
+          companyName: body.business?.companyName ?? null,
+          taxCode: body.business?.taxCode ?? null,
+          contactName: body.business?.contactName ?? null,
+          jobTitle: body.business?.jobTitle ?? null,
+          website: body.business?.website ?? null,
+        };
+      }
+
       const submitBody = {
         ...body,
         fileUrls: (Array.isArray(body.fileUrls) ? body.fileUrls : [])
@@ -96,7 +134,14 @@ const NewLead = ({ closeModal, data }) => {
     <RestEditModal
       isMergeRecordOnSubmit={true}
       updateRecord={(values) => {
-        setRecord(curvals => ({ ...curvals, ...values }))
+        setRecord(curvals => ({
+          ...curvals,
+          ...values,
+          business: {
+            ...(curvals?.business ?? {}),
+            ...(values?.business ?? {}),
+          },
+        }))
       }}
       onSubmit={onSubmit}
       record={record}

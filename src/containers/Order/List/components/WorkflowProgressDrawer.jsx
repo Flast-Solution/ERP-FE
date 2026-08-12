@@ -18,12 +18,11 @@ const WorkflowProgressDrawer = ({
   entityLabel = 'Mã',
   entityType = 'order',
   formOnly = false,
+  leadMode = false,
 }) => {
   const items = workflowInstances.map((instance, index) => {
     const processId = getWorkflowInstanceProcessId(instance)
-    const workflowName = instance?.workflowProcess?.name
-      ?? instance?.process?.name
-      ?? `Workflow #${processId ?? index + 1}`
+    const workflowName = instance?.process?.name ?? `Workflow #${processId ?? index + 1}`
 
     return {
       key: String(instance?.id ?? `${processId}-${index}`),
@@ -36,6 +35,7 @@ const WorkflowProgressDrawer = ({
           entityType={entityType}
           entityLabel={entityLabel}
           formOnly={formOnly}
+          leadMode={leadMode}
         />
       ),
     }
@@ -43,7 +43,7 @@ const WorkflowProgressDrawer = ({
 
   return (
     <Drawer
-      className="workflow-detail-drawer"
+      className={`workflow-detail-drawer${leadMode ? ' workflow-detail-drawer--lead' : ''}`}
       open={open}
       onClose={onClose}
       width="min(750px, calc(100vw - 16px))"
@@ -67,7 +67,7 @@ const WorkflowProgressDrawer = ({
       <Spin spinning={loading}>
         {!loading && items.length === 0 ? (
           <Empty description={`${entityLabel} này chưa có workflow`} />
-        ) : formOnly ? (
+        ) : formOnly || leadMode ? (
           items[0]?.children ?? null
         ) : (
           <Tabs

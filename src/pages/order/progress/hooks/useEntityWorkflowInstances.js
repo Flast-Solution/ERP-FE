@@ -6,50 +6,18 @@ import {
   WORKFLOW_INSTANCE_BY_ENTITY_API,
   WORKFLOW_PROCESS_FIND_API,
 } from '../constants'
+import { normalizeWorkflowInstance } from '@/containers/Order/List/utils/workflowMappers'
 
-const resolveWorkflowInstances = (response) => {
-  const payload = response?.data ?? response
-  const candidates = [
-    payload?.data,
-    payload?.embedded,
-    payload?.content,
-    payload?.items,
-    payload?.instances,
-    payload?.processInstances,
-    payload,
-  ]
-
-  const result = candidates.find(Array.isArray)
-  if (result) return result
-
-  return payload?.id || payload?.processInstance?.id ? [payload] : []
-}
-
-const normalizeWorkflowInstance = (instance = {}) => ({
-  ...instance,
-  ...(instance?.processInstance ?? {}),
-  process: instance?.process
-    ?? instance?.workflowProcess
-    ?? instance?.processInstance?.process
-    ?? null,
-})
-
-const getProcessId = instance => (
-  instance?.processId
-  ?? instance?.process?.id
-  ?? instance?.workflowProcess?.id
-)
-
-const getInstanceId = instance => (
-  instance?.id ?? instance?.processInstance?.id
+const resolveWorkflowInstances = response => (
+  Array.isArray(response?.data) ? response.data : []
 )
 
 const normalizeDistinctInstances = (instances = []) => Array.from(
   instances
     .map(normalizeWorkflowInstance)
-    .filter(instance => getInstanceId(instance))
+    .filter(Boolean)
     .reduce((result, instance) => {
-      const instanceId = String(getInstanceId(instance))
+      const instanceId = String(instance.id)
       result.set(instanceId, {
         ...(result.get(instanceId) ?? {}),
         ...instance,
@@ -123,7 +91,7 @@ export const useEntityWorkflowInstances = ({
       )
 
       const processIds = Array.from(new Set(
-        normalizedInstances.map(getProcessId).filter(Boolean),
+        normalizedInstances.map(instance => instance.processId).filter(Boolean),
       ))
       const processEntries = await Promise.all(
         processIds.map(async (processId) => {
@@ -143,18 +111,15 @@ export const useEntityWorkflowInstances = ({
       const processMap = new Map(processEntries)
       const enrichedInstances = normalizedInstances.map(instance => ({
         ...instance,
-        workflowProcess: processMap.get(String(getProcessId(instance)))
-          ?? instance?.workflowProcess
-          ?? instance?.process
-          ?? null,
+        process: processMap.get(String(instance.processId)) ?? instance.process,
       }))
       const rememberedInstanceId = selectedByEntityRef.current.get(entityKey)
       const nextInstanceId = [
         rememberedInstanceId,
         preferredInstanceIdRef.current,
-        getInstanceId(enrichedInstances[0]),
+        enrichedInstances[0]?.id,
       ].find(candidate => enrichedInstances.some(
-        instance => String(getInstanceId(instance)) === String(candidate),
+        instance => String(instance.id) === String(candidate),
       ))
 
       setWorkflowInstances(enrichedInstances)
@@ -164,7 +129,7 @@ export const useEntityWorkflowInstances = ({
       if (requestIdRef.current !== requestId) return
       const fallbackInstances = normalizeDistinctInstances(providedInstancesRef.current)
       if (fallbackInstances.length > 0) {
-        const fallbackInstanceId = getInstanceId(fallbackInstances[0])
+        const fallbackInstanceId = fallbackInstances[0].id
         setWorkflowInstances(fallbackInstances)
         setSelectedInstanceId(fallbackInstanceId)
         setLoadedEntityKey(entityKey)
@@ -188,10 +153,10 @@ export const useEntityWorkflowInstances = ({
   useEffect(() => {
     if (!preferredInstanceId || workflowInstances.length === 0) return
     const matched = workflowInstances.find(
-      instance => String(getInstanceId(instance)) === String(preferredInstanceId),
+      instance => String(instance.id) === String(preferredInstanceId),
     )
     if (matched) {
-      setSelectedInstanceId(getInstanceId(matched))
+      setSelectedInstanceId(matched.id)
     }
   }, [preferredInstanceId, workflowInstances])
 
@@ -211,7 +176,7 @@ export const useEntityWorkflowInstances = ({
 
   const workflowInstance = useMemo(() => (
     scopedWorkflowInstances.find(
-      instance => String(getInstanceId(instance)) === String(selectedInstanceId),
+      instance => String(instance.id) === String(selectedInstanceId),
     ) ?? null
   ), [scopedWorkflowInstances, selectedInstanceId])
 
@@ -219,12 +184,12 @@ export const useEntityWorkflowInstances = ({
     if (!processInstance || !selectedInstanceId) return
 
     setWorkflowInstances(current => current.map(instance => (
-      String(getInstanceId(instance)) === String(selectedInstanceId)
+      String(instance.id) === String(selectedInstanceId)
         ? {
           ...instance,
           ...processInstance,
-          id: getInstanceId(instance),
-          workflowProcess: instance?.workflowProcess ?? null,
+          id: instance.id,
+          process: instance.process,
         }
         : instance
     )))
