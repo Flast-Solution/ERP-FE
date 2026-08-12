@@ -241,12 +241,56 @@ const WorkflowAdvanceSection = ({
   disabled,
   loading,
   onAdvance,
+  stepButtons = [],
+  onStepButtonClick,
   transitionOptions = [],
   selectedToStepCode,
   onToStepCodeChange,
 }) => {
   const hasNextStep = transitionOptions.length > 0
   const buttonDisabled = disabled || loading || !hasNextStep || !selectedToStepCode
+
+  if (stepButtons.length > 0) {
+    return (
+      <div style={{ paddingTop: 24 }}>
+        <div
+          style={{
+            color: '#6b7280',
+            fontSize: 14,
+            fontWeight: 800,
+            letterSpacing: 1.4,
+            textTransform: 'uppercase',
+            marginBottom: 16,
+          }}
+        >
+          Thao tác
+        </div>
+        <Space direction="vertical" size={10} style={{ width: '100%' }}>
+          {stepButtons.map((button, index) => {
+            const styleType = String(button?.style ?? 'DEFAULT').toUpperCase()
+            const customDisabled = loading
+              || !button?.targetStepCode
+              || (Boolean(button?.requireSubmission) && disabled)
+
+            return (
+              <Button
+                key={button?.id ?? `${button?.type}-${button?.targetStepCode}-${index}`}
+                block
+                type={styleType === 'PRIMARY' ? 'primary' : 'default'}
+                danger={styleType === 'DANGER'}
+                disabled={customDisabled}
+                loading={loading}
+                onClick={customDisabled ? undefined : () => onStepButtonClick?.(button)}
+                style={{ height: 48, borderRadius: 8, fontSize: 15, fontWeight: 700 }}
+              >
+                {button?.label || `Button ${index + 1}`}
+              </Button>
+            )
+          })}
+        </Space>
+      </div>
+    )
+  }
 
   return (
     <div style={{ paddingTop: 24 }}>
@@ -310,6 +354,8 @@ export const WorkflowProgressPanel = ({
   hasCurrentSubmission,
   transitioning,
   onAdvance,
+  stepButtons,
+  onStepButtonClick,
   transitionOptions,
   selectedToStepCode,
   onToStepCodeChange,
@@ -365,6 +411,8 @@ export const WorkflowProgressPanel = ({
           disabled={!canAdvance}
           loading={transitioning}
           onAdvance={onAdvance}
+          stepButtons={stepButtons}
+          onStepButtonClick={onStepButtonClick}
           transitionOptions={transitionOptions}
           selectedToStepCode={selectedToStepCode}
           onToStepCodeChange={onToStepCodeChange}

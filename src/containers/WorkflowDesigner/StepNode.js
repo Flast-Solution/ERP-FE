@@ -23,6 +23,15 @@ import {
 const buildFooterBadges = (data) => {
   const badges = []
 
+  if (data.hidden) {
+    badges.push({ icon: '◌', label: 'Bước ẩn', key: 'hidden' })
+  }
+
+  const buttonCount = data.buttons?.length ?? 0
+  if (buttonCount > 0) {
+    badges.push({ icon: '▣', label: `${buttonCount} button`, key: 'buttons' })
+  }
+
   // Actions — group theo trigger
   const actions = data.actions ?? []
   if (actions.length > 0) {

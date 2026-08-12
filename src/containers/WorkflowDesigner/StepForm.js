@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { Form, Tag, Button, Checkbox, message } from 'antd'
-import { DeleteOutlined, RightOutlined } from '@ant-design/icons'
+import { Form, Tag, Button, Checkbox, Input, Select, message } from 'antd'
+import { DeleteOutlined, PlusOutlined, RightOutlined } from '@ant-design/icons'
 import { InAppEvent } from '@flast-erp/core/utils'
 import { HASH_POPUP } from '@/configs/constant'
 import {
@@ -35,6 +35,13 @@ import {
   SlidePane,
 } from './transitionForm.styles'
 import ActionDrawer from './ActionDrawer'
+
+const DEFAULT_SUBMIT_BUTTON = {
+  visible: true,
+  label: 'Cập nhật',
+  style: 'PRIMARY',
+  closeAfterSubmit: false,
+}
 
 const ActionSection = ({ title, trigger, actions, onAdd, onOpen, onRemove }) => {
   const filtered = actions.filter((a) => (a.trigger ?? 'on_enter') === trigger)
@@ -103,6 +110,9 @@ const StepForm = ({ node }) => {
       type: node.data.type,
       config: node.data.config ?? {},
       saveSubmitLog: node.data.saveSubmitLog ?? false,
+      hidden: node.data.hidden ?? false,
+      buttons: node.data.buttons ?? [],
+      submitButton: node.data.submitButton ?? { ...DEFAULT_SUBMIT_BUTTON },
     })
     /* eslint-disable-next-line */
   }, [node.id])
@@ -207,6 +217,12 @@ const StepForm = ({ node }) => {
   }
 
   const currentType = Form.useWatch('type', form)
+  const targetStepOptions = nodes
+    .filter((item) => item.id !== node.id)
+    .map((item) => ({
+      value: item.data?.code ?? item.id,
+      label: `${item.data?.name ?? item.data?.label ?? item.id}${item.data?.hidden ? ' (bước ẩn)' : ''}`,
+    }))
 
   return (
     <Form
@@ -262,6 +278,18 @@ const StepForm = ({ node }) => {
                   <Checkbox>Lưu log submit</Checkbox>
                 </Form.Item>
 
+                <Form.Item
+                  name="hidden"
+                  valuePropName="checked"
+                  initialValue={false}
+                  style={{ marginBottom: 16 }}
+                >
+                  <Checkbox>Bước ẩn</Checkbox>
+                </Form.Item>
+                <FieldHint>
+                  Bước ẩn không xuất hiện trong tiến trình và chỉ được mở bởi button của bước khác.
+                </FieldHint>
+
                 {/* Loại bước — pill radio */}
                 <Form.Item name="type" label="Nhóm bước" style={{ marginBottom: 0 }}>
                   <TypePillGroup>
@@ -277,6 +305,113 @@ const StepForm = ({ node }) => {
                     ))}
                   </TypePillGroup>
                 </Form.Item>
+              </Section>
+
+              <SectionDivider />
+
+              <Section>
+                <SectionHeader>
+                  <SectionTitle>Button của bước</SectionTitle>
+                </SectionHeader>
+                <FieldHint style={{ marginBottom: 12 }}>
+                  TRANSITION chuyển workflow; Mở bước ẩn chỉ hiển thị form và không đổi bước hiện tại.
+                </FieldHint>
+                <Form.List name="buttons">
+                  {(fields, { add, remove }) => (
+                    <>
+                      {fields.length === 0 && (
+                        <EmptyState>Chưa cấu hình button. Màn tiến trình tiếp tục dùng nút Hoàn thành mặc định.</EmptyState>
+                      )}
+                      {fields.map((field, index) => (
+                        <div
+                          key={field.key}
+                          style={{
+                            padding: 12,
+                            marginBottom: 10,
+                            border: '1px solid #f0f0f0',
+                            borderRadius: 8,
+                            background: '#fafafa',
+                          }}
+                        >
+                          <Form.Item name={[field.name, 'id']} hidden>
+                            <Input />
+                          </Form.Item>
+                          <Form.Item
+                            name={[field.name, 'label']}
+                            label={`Tên button ${index + 1}`}
+                            rules={[{ required: true, message: 'Nhập tên button' }]}
+                          >
+                            <Input placeholder="Ví dụ: Chuyển bước tiếp theo" />
+                          </Form.Item>
+                          <Form.Item
+                            name={[field.name, 'type']}
+                            label="Hành động"
+                            rules={[{ required: true, message: 'Chọn hành động' }]}
+                          >
+                            <Select
+                              options={[
+                                { value: 'TRANSITION', label: 'Chuyển workflow tới bước đích' },
+                                { value: 'OPEN_HIDDEN_STEP', label: 'Mở form của bước ẩn' },
+                              ]}
+                            />
+                          </Form.Item>
+                          <Form.Item
+                            name={[field.name, 'targetStepCode']}
+                            label="Bước đích"
+                            rules={[{ required: true, message: 'Chọn bước đích' }]}
+                          >
+                            <Select
+                              showSearch
+                              optionFilterProp="label"
+                              placeholder="Chọn bước đích"
+                              options={targetStepOptions}
+                            />
+                          </Form.Item>
+                          <Form.Item name={[field.name, 'style']} label="Kiểu hiển thị">
+                            <Select
+                              options={[
+                                { value: 'PRIMARY', label: 'Primary' },
+                                { value: 'DEFAULT', label: 'Mặc định' },
+                                { value: 'DANGER', label: 'Nguy hiểm' },
+                              ]}
+                            />
+                          </Form.Item>
+                          <Form.Item
+                            name={[field.name, 'requireSubmission']}
+                            valuePropName="checked"
+                            style={{ marginBottom: 8 }}
+                          >
+                            <Checkbox>Yêu cầu submit form hiện tại trước khi bấm</Checkbox>
+                          </Form.Item>
+                          <Button
+                            danger
+                            type="text"
+                            icon={<DeleteOutlined />}
+                            onClick={() => remove(field.name)}
+                          >
+                            Xoá button
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="dashed"
+                        block
+                        icon={<PlusOutlined />}
+                        onClick={() => add({
+                          id: `button_${Date.now()}`,
+                          label: '',
+                          type: 'TRANSITION',
+                          targetStepCode: null,
+                          style: 'DEFAULT',
+                          requireSubmission: true,
+                          order: fields.length,
+                        })}
+                      >
+                        Thêm button
+                      </Button>
+                    </>
+                  )}
+                </Form.List>
               </Section>
 
               <SectionDivider />
@@ -352,13 +487,68 @@ const StepForm = ({ node }) => {
                           onClick={() => {
                             const next = (node.data.forms ?? []).filter((_, j) => j !== i)
                             const values = form.getFieldsValue()
-                            updateNodeData(node.id, { ...values, label: values.name, actions, forms: next })
+                            form.setFieldValue('submitButton', { ...DEFAULT_SUBMIT_BUTTON })
+                            updateNodeData(node.id, {
+                              ...values,
+                              label: values.name,
+                              actions,
+                              forms: next,
+                              submitButton: { ...DEFAULT_SUBMIT_BUTTON },
+                            })
                           }}
                         />
                       </div>
                     </FormCard>
                     )
                   })
+                )}
+
+                {(node.data.forms ?? []).length > 0 && (
+                  <div
+                    style={{
+                      marginTop: 12,
+                      padding: 12,
+                      border: '1px solid #f0f0f0',
+                      borderRadius: 8,
+                      background: '#fafafa',
+                    }}
+                  >
+                    <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 12 }}>
+                      Cấu hình nút submit form
+                    </div>
+                    <Form.Item
+                      name={['submitButton', 'visible']}
+                      valuePropName="checked"
+                      initialValue={true}
+                      style={{ marginBottom: 12 }}
+                    >
+                      <Checkbox>Hiển thị nút submit</Checkbox>
+                    </Form.Item>
+                    <Form.Item
+                      name={['submitButton', 'label']}
+                      label="Tên nút"
+                      rules={[{ required: true, message: 'Nhập tên nút submit' }]}
+                    >
+                      <Input placeholder="Ví dụ: Lưu kết quả kiểm tra" />
+                    </Form.Item>
+                    <Form.Item name={['submitButton', 'style']} label="Kiểu hiển thị">
+                      <Select
+                        options={[
+                          { value: 'PRIMARY', label: 'Primary' },
+                          { value: 'DEFAULT', label: 'Mặc định' },
+                          { value: 'DANGER', label: 'Nguy hiểm' },
+                        ]}
+                      />
+                    </Form.Item>
+                    <Form.Item
+                      name={['submitButton', 'closeAfterSubmit']}
+                      valuePropName="checked"
+                      initialValue={false}
+                      style={{ marginBottom: 0 }}
+                    >
+                      <Checkbox>Đóng form và quay lại bước hiện tại sau khi submit</Checkbox>
+                    </Form.Item>
+                  </div>
                 )}
               </Section>
             </div>

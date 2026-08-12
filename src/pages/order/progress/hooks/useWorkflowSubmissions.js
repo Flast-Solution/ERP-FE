@@ -9,6 +9,7 @@ import {
 export const useWorkflowSubmissions = ({
   workflowPreview,
   steps,
+  allSteps = steps,
   currentStep,
   displayStep,
   stepTransitionList,
@@ -42,7 +43,7 @@ export const useWorkflowSubmissions = ({
         .map((submission) => submission?.templateId)
         .filter(Boolean)
         .map(String),
-      ...steps
+      ...allSteps
         .map((step) => step?.formTemplate?.id)
         .filter(Boolean)
         .map(String),
@@ -76,7 +77,7 @@ export const useWorkflowSubmissions = ({
     return () => {
       mounted = false
     }
-  }, [submissions, steps, previewFormTemplates, submissionTemplates])
+  }, [submissions, allSteps, previewFormTemplates, submissionTemplates])
 
   const currentForm = currentStep?.formTemplate ?? null
 

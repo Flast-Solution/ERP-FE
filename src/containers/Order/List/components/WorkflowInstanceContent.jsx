@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useCallback, useMemo } from 'react'
 import { Button, Select, Spin, Typography } from 'antd'
 
 import useGetMe from '@/hooks/useGetMe'
@@ -10,6 +10,7 @@ import WorkflowDrawerSteps from './WorkflowDrawerSteps'
 import WorkflowOrderDetailCard from './WorkflowOrderDetailCard'
 import WorkflowProductCard from './WorkflowProductCard'
 import WorkflowEntityCard from './WorkflowEntityCard'
+import { getStepSubmitButtonConfig } from '@/pages/order/progress/workflowHelpers'
 
 const { Text, Title } = Typography
 
@@ -38,19 +39,37 @@ const WorkflowInstanceContent = ({
   const submissionState = useWorkflowSubmissions({
     workflowPreview: workflowState.workflowPreview,
     steps: workflowState.steps,
+    allSteps: workflowState.allSteps,
     currentStep: workflowState.currentStep,
     displayStep: workflowState.displayStep,
     stepTransitionList: workflowState.stepTransitionList,
     processTypeMetaMap: workflowState.processTypeMetaMap,
   })
+  const displaySubmitButton = getStepSubmitButtonConfig(workflowState.displayStep)
+  const openedHiddenStepCode = workflowState.openedHiddenStepCode
+  const backToCurrentStep = workflowState.backToCurrentStep
+  const handleFormSubmitSuccess = useCallback(() => {
+    if (openedHiddenStepCode && displaySubmitButton.closeAfterSubmit) {
+      backToCurrentStep()
+    }
+  }, [
+    backToCurrentStep,
+    displaySubmitButton.closeAfterSubmit,
+    openedHiddenStepCode,
+  ])
   const formState = useWorkflowRemoteForm({
-    currentForm: submissionState.currentForm,
+    currentForm: workflowState.openedHiddenStepCode
+      ? submissionState.displayForm
+      : submissionState.currentForm,
     displayForm: submissionState.displayForm,
-    currentStep: workflowState.currentStep,
+    currentStep: workflowState.openedHiddenStepCode
+      ? workflowState.displayStep
+      : workflowState.currentStep,
     displayStep: workflowState.displayStep,
     displaySubmission: submissionState.displaySubmission,
     workflowPreview: workflowState.workflowPreview,
     refreshWorkflow: workflowState.refreshWorkflow,
+    onSubmitSuccess: handleFormSubmitSuccess,
   })
   const workflowName = workflowState.workflow?.name
     ?? workflowInstance?.workflowProcess?.name
@@ -66,6 +85,64 @@ const WorkflowInstanceContent = ({
     entityId: orderDetail?.id ?? order?.id,
     data: orderDetail ?? order,
   }), [entityType, order, orderDetail])
+
+  const advanceControls = workflowState.isReviewingSubmission ? null : (
+    workflowState.currentStepButtons.length > 0 ? (
+      <div className="workflow-detail-drawer__advance">
+        {workflowState.currentStepButtons.map((button, index) => {
+          const styleType = String(button?.style ?? 'DEFAULT').toUpperCase()
+          const disabled = workflowState.transitioning
+            || !button?.targetStepCode
+            || (Boolean(button?.requireSubmission) && !submissionState.hasCurrentSubmission)
+
+          return (
+            <Button
+              key={button?.id ?? `${button?.type}-${button?.targetStepCode}-${index}`}
+              type={styleType === 'PRIMARY' ? 'primary' : 'default'}
+              danger={styleType === 'DANGER'}
+              loading={workflowState.transitioning}
+              disabled={disabled}
+              onClick={() => {
+                if (button?.type === 'OPEN_HIDDEN_STEP') {
+                  workflowState.openHiddenStep(button.targetStepCode)
+                  return
+                }
+                workflowState.advanceWorkflow({
+                  currentSubmission: submissionState.currentSubmission,
+                  currentForm: submissionState.currentForm,
+                  toStepCode: button?.targetStepCode,
+                  requireSubmission: Boolean(button?.requireSubmission),
+                })
+              }}
+            >
+              {button?.label || `Button ${index + 1}`}
+            </Button>
+          )
+        })}
+      </div>
+    ) : workflowState.stepTransitionOptions.length > 0 ? (
+      <div className="workflow-detail-drawer__advance">
+        <Select
+          value={workflowState.selectedToStepCode}
+          onChange={workflowState.setSelectedToStepCode}
+          options={workflowState.stepTransitionOptions}
+          placeholder="Chọn bước tiếp theo"
+          disabled={workflowState.transitioning}
+        />
+        <Button
+          type="primary"
+          loading={workflowState.transitioning}
+          disabled={!canAdvance}
+          onClick={() => workflowState.advanceWorkflow({
+            currentSubmission: submissionState.currentSubmission,
+            currentForm: submissionState.currentForm,
+          })}
+        >
+          Hoàn thành
+        </Button>
+      </div>
+    ) : null
+  )
 
   if (workflowState.loadingPreview && !workflowState.workflowPreview) {
     return (
@@ -91,28 +168,7 @@ const WorkflowInstanceContent = ({
             onStepClick={workflowState.reviewStep}
           />
 
-          {!workflowState.isReviewingSubmission && workflowState.stepTransitionOptions.length > 0 ? (
-            <div className="workflow-detail-drawer__advance">
-              <Select
-                value={workflowState.selectedToStepCode}
-                onChange={workflowState.setSelectedToStepCode}
-                options={workflowState.stepTransitionOptions}
-                placeholder="Chọn bước tiếp theo"
-                disabled={workflowState.transitioning}
-              />
-              <Button
-                type="primary"
-                loading={workflowState.transitioning}
-                disabled={!canAdvance}
-                onClick={() => workflowState.advanceWorkflow({
-                  currentSubmission: submissionState.currentSubmission,
-                  currentForm: submissionState.currentForm,
-                })}
-              >
-                Hoàn thành
-              </Button>
-            </div>
-          ) : null}
+          {advanceControls}
         </section>
 
         <WorkflowFormSection
@@ -128,6 +184,7 @@ const WorkflowInstanceContent = ({
           inspectionResults={submissionState.inspectionResults}
           viewingStepCode={workflowState.viewingStepCode}
           isReviewingSubmission={workflowState.isReviewingSubmission}
+          isAuxiliaryStep={Boolean(workflowState.openedHiddenStepCode)}
           onBack={workflowState.backToCurrentStep}
           formState={formState}
         />
@@ -167,28 +224,7 @@ const WorkflowInstanceContent = ({
           onStepClick={workflowState.reviewStep}
         />
 
-        {!workflowState.isReviewingSubmission && workflowState.stepTransitionOptions.length > 0 ? (
-          <div className="workflow-detail-drawer__advance">
-            <Select
-              value={workflowState.selectedToStepCode}
-              onChange={workflowState.setSelectedToStepCode}
-              options={workflowState.stepTransitionOptions}
-              placeholder="Chọn bước tiếp theo"
-              disabled={workflowState.transitioning}
-            />
-            <Button
-              type="primary"
-              loading={workflowState.transitioning}
-              disabled={!canAdvance}
-              onClick={() => workflowState.advanceWorkflow({
-                currentSubmission: submissionState.currentSubmission,
-                currentForm: submissionState.currentForm,
-              })}
-            >
-              Hoàn thành
-            </Button>
-          </div>
-        ) : null}
+        {advanceControls}
       </section>
 
       <section className="workflow-detail-drawer__form-block">
@@ -204,6 +240,7 @@ const WorkflowInstanceContent = ({
           inspectionResults={submissionState.inspectionResults}
           viewingStepCode={workflowState.viewingStepCode}
           isReviewingSubmission={workflowState.isReviewingSubmission}
+          isAuxiliaryStep={Boolean(workflowState.openedHiddenStepCode)}
           onBack={workflowState.backToCurrentStep}
           formState={formState}
         />
