@@ -2,6 +2,55 @@ import { getStepProcessTypeLabel } from './processType'
 
 export const normalizeStepRef = (value) => String(value ?? '').trim()
 
+export const isWorkflowStepHidden = (step = {}) => {
+  const value = step?.hidden ?? step?.isHidden ?? step?.is_hidden
+  return value === true || value === 1 || String(value).toLowerCase() === 'true'
+}
+
+export const getWorkflowStepButtons = (step = {}) => {
+  let buttons = step?.buttons ?? step?.stepButtons ?? step?.step_buttons ?? []
+  if (typeof buttons === 'string' && buttons.trim()) {
+    try {
+      buttons = JSON.parse(buttons)
+    } catch (_) {
+      buttons = []
+    }
+  }
+  if (!Array.isArray(buttons)) return []
+
+  return buttons
+    .map((button, index) => ({
+      ...button,
+      id: button?.id ?? `button_${index + 1}`,
+      label: button?.label ?? button?.name ?? `Button ${index + 1}`,
+      type: button?.type ?? button?.actionType ?? button?.action_type ?? 'TRANSITION',
+      targetStepCode: button?.targetStepCode ?? button?.target_step_code ?? null,
+      style: button?.style ?? button?.buttonStyle ?? button?.button_style ?? 'DEFAULT',
+      requireSubmission: button?.requireSubmission ?? button?.require_submission ?? false,
+      order: Number(button?.order ?? index),
+    }))
+    .sort((left, right) => left.order - right.order)
+}
+
+export const getStepSubmitButtonConfig = (step = {}) => {
+  let config = step?.submitButton ?? step?.submit_button
+  if (typeof config === 'string' && config.trim()) {
+    try {
+      config = JSON.parse(config)
+    } catch (_) {
+      config = {}
+    }
+  }
+  if (!config || typeof config !== 'object' || Array.isArray(config)) config = {}
+
+  return {
+    visible: config.visible ?? true,
+    label: config.label ?? config.text ?? 'Cập nhật',
+    style: config.style ?? config.buttonStyle ?? config.button_style ?? 'PRIMARY',
+    closeAfterSubmit: config.closeAfterSubmit ?? config.close_after_submit ?? false,
+  }
+}
+
 export const isSameStepRef = (left, right) => {
   const normalizedLeft = normalizeStepRef(left)
   const normalizedRight = normalizeStepRef(right)
@@ -46,6 +95,9 @@ export const buildStepTransitionOptions = (transitions = [], steps = []) => (
     .map((transition) => {
       const value = getStepTransitionCode(transition)
       if (!value) return null
+
+      const step = steps.find((item) => item?.stepCode === value)
+      if (isWorkflowStepHidden(step)) return null
 
       return {
         value,

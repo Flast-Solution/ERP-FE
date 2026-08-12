@@ -14,6 +14,7 @@ import {
   ORDER_WORKFLOW_ENTITY_TYPE,
 } from './progress/constants'
 import { useWorkflowDrawer } from '@/contexts/WorkflowDrawerContext'
+import { getStepSubmitButtonConfig } from './progress/workflowHelpers'
 
 const OrderProgressPage = () => {
   const { user } = useGetMe()
@@ -189,21 +190,40 @@ const OrderProgressPage = () => {
   const submissionState = useWorkflowSubmissions({
     workflowPreview: workflowState.workflowPreview,
     steps: workflowState.steps,
+    allSteps: workflowState.allSteps,
     currentStep: workflowState.currentStep,
     displayStep: workflowState.displayStep,
     stepTransitionList: workflowState.stepTransitionList,
     processTypeMetaMap: workflowState.processTypeMetaMap,
   })
 
+  const displaySubmitButton = getStepSubmitButtonConfig(workflowState.displayStep)
+  const openedHiddenStepCode = workflowState.openedHiddenStepCode
+  const backToCurrentStep = workflowState.backToCurrentStep
+  const handleFormSubmitSuccess = useCallback(() => {
+    if (openedHiddenStepCode && displaySubmitButton.closeAfterSubmit) {
+      backToCurrentStep()
+    }
+  }, [
+    backToCurrentStep,
+    displaySubmitButton.closeAfterSubmit,
+    openedHiddenStepCode,
+  ])
+
   const formState = useWorkflowRemoteForm({
-    currentForm: submissionState.currentForm,
+    currentForm: workflowState.openedHiddenStepCode
+      ? submissionState.displayForm
+      : submissionState.currentForm,
     displayForm: submissionState.displayForm,
-    currentStep: workflowState.currentStep,
+    currentStep: workflowState.openedHiddenStepCode
+      ? workflowState.displayStep
+      : workflowState.currentStep,
     displayStep: workflowState.displayStep,
     displaySubmission: submissionState.displaySubmission,
     workflowPreview: workflowState.workflowPreview,
     refreshWorkflow: workflowState.refreshWorkflow,
     syncWorkflowInstance: orderWorkflowState.syncWorkflowInstance,
+    onSubmitSuccess: handleFormSubmitSuccess,
   })
 
   useEffect(() => {

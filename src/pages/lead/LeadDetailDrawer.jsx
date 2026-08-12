@@ -17,7 +17,7 @@ import { CHANNEL_SOURCE_MAP_KEYS } from '@/configs/localData'
 import './LeadDetailDrawer.less'
 
 const { Text, Title } = Typography
-const LEAD_STAGES = ['NEW', 'QUALIFYING', 'QUALIFIED', 'CONTACTED', 'NEGOTIATING', 'WON']
+const LEAD_STAGES = [ 'QUALIFYING', 'CONTACTED', 'NEGOTIATING', 'WON']
 
 const formatDateTime = value => {
   if (!value) return 'Chưa có'

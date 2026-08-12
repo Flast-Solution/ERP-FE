@@ -44,6 +44,9 @@ const OrderProgressLayout = ({
     setSelectedToStepCode,
     viewingStepCode,
     isReviewingSubmission,
+    openedHiddenStepCode,
+    currentStepButtons,
+    openHiddenStep,
     reviewStep,
     reviewInspectionResult,
     backToCurrentStep,
@@ -127,6 +130,7 @@ const OrderProgressLayout = ({
                       inspectionResults={inspectionResults}
                       viewingStepCode={viewingStepCode}
                       isReviewingSubmission={isReviewingSubmission}
+                      isAuxiliaryStep={Boolean(openedHiddenStepCode)}
                       onBack={backToCurrentStep}
                       formState={formState}
                     />
@@ -166,6 +170,19 @@ const OrderProgressLayout = ({
                       currentSubmission,
                       currentForm,
                     })}
+                    stepButtons={currentStepButtons}
+                    onStepButtonClick={(button) => {
+                      if (button?.type === 'OPEN_HIDDEN_STEP') {
+                        openHiddenStep(button.targetStepCode)
+                        return
+                      }
+                      advanceWorkflow({
+                        currentSubmission,
+                        currentForm,
+                        toStepCode: button?.targetStepCode,
+                        requireSubmission: Boolean(button?.requireSubmission),
+                      })
+                    }}
                     transitionOptions={stepTransitionOptions}
                     selectedToStepCode={selectedToStepCode}
                     onToStepCodeChange={setSelectedToStepCode}
