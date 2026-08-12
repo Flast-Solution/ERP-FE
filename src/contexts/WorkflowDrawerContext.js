@@ -41,6 +41,7 @@ export const WorkflowDrawerProvider = ({ children }) => {
         entityLabel={options.entityLabel}
         entityType={options.entityType}
         formOnly={options.formOnly}
+        leadMode={options.leadMode}
       />
     </WorkflowDrawerContext.Provider>
   )

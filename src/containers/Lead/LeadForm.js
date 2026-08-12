@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Form, Input, Radio, Select, message } from 'antd'
 
 import {
@@ -13,6 +13,8 @@ import FormFileUpload from '@/containers/PreviewModal/FormFileUpload'
 import { LeadFormShell } from './styles'
 
 const CONFIG_FETCH_API = '/erp/config/fetch'
+const WORKFLOW_FILTER_API = '/workflow/process/filter'
+const WORKFLOW_PAGE_SIZE = 10
 const LEAD_STATUS_KEYS = ['LEAD_STATUS', 'LEAD_STATUSES', 'STATUS_LEAD']
 
 const getResponseItems = (response) => {
@@ -65,6 +67,21 @@ const resolveConfigOptions = (items, aliases) => items
   .map(normalizeOption)
   .filter(Boolean)
 
+const getResponsePage = (response) => {
+  const payload = response?.data ?? response
+  return payload?.page ?? payload?.data?.page ?? {}
+}
+
+const mergeById = (currentItems, nextItems) => {
+  const itemsById = new Map()
+  ;[...currentItems, ...nextItems].forEach((item) => {
+    if (item?.id !== undefined && item?.id !== null) {
+      itemsById.set(String(item.id), item)
+    }
+  })
+  return Array.from(itemsById.values())
+}
+
 const ASSET_BASE_URL = 'http://view.user.flast.vn/assets/icons'
 
 const LeadLabel = ({ children, required = false }) => (
@@ -113,11 +130,66 @@ const LeadForm = ({ listServices = [], listSale = [], submitting = false }) => {
   const [provinces, setProvinces] = useState([])
   const [leadStatuses, setLeadStatuses] = useState([])
   const [loadingConfigs, setLoadingConfigs] = useState(false)
+  const [workflows, setWorkflows] = useState([])
+  const [loadingWorkflows, setLoadingWorkflows] = useState(false)
+  const workflowOffsetRef = useRef(0)
+  const workflowLoadingRef = useRef(false)
+  const workflowHasMoreRef = useRef(true)
+  const workflowItemsRef = useRef([])
   const customerType = Form.useWatch('customerType', form) ?? record?.customerType ?? 'INDIVIDUAL'
 
   useEffect(() => {
     RequestUtils.GetAsList('/province/find', { id: 0 }).then(setProvinces).catch(() => setProvinces([]))
   }, [])
+
+  const loadWorkflows = useCallback(async ({ reset = false } = {}) => {
+    if (workflowLoadingRef.current || (!reset && !workflowHasMoreRef.current)) return
+
+    const offset = reset ? 0 : workflowOffsetRef.current
+    workflowLoadingRef.current = true
+    setLoadingWorkflows(true)
+
+    try {
+      const response = await RequestUtils.Get(WORKFLOW_FILTER_API, {
+        limit: String(WORKFLOW_PAGE_SIZE),
+        offset: String(offset),
+        type: 'LEAD',
+      })
+      const nextItems = getResponseItems(response)
+      const pageInfo = getResponsePage(response)
+      const mergedItems = mergeById(
+        reset ? [] : workflowItemsRef.current,
+        nextItems,
+      )
+      workflowItemsRef.current = mergedItems
+      setWorkflows(mergedItems)
+
+      const totalElements = Number(pageInfo?.totalElements ?? pageInfo?.total_elements ?? 0)
+      const hasMore = totalElements > 0
+        ? mergedItems.length < totalElements
+        : nextItems.length >= WORKFLOW_PAGE_SIZE
+
+      workflowHasMoreRef.current = hasMore
+      workflowOffsetRef.current = offset + nextItems.length
+    } catch (_) {
+      if (reset) {
+        workflowItemsRef.current = []
+        setWorkflows([])
+      }
+      workflowHasMoreRef.current = false
+      message.error('Không tải được danh sách workflow.')
+    } finally {
+      workflowLoadingRef.current = false
+      setLoadingWorkflows(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    workflowOffsetRef.current = 0
+    workflowHasMoreRef.current = true
+    workflowItemsRef.current = []
+    loadWorkflows({ reset: true })
+  }, [loadWorkflows])
 
   useEffect(() => {
     let mounted = true
@@ -166,6 +238,18 @@ const LeadForm = ({ listServices = [], listSale = [], submitting = false }) => {
     value: item.id,
     label: item.fullName ?? item.name ?? item.username ?? `Nhân viên #${item.id}`,
   })), [listSale])
+  const workflowOptions = useMemo(() => workflows.map(item => ({
+    value: item.id,
+    label: item.name ?? item.processKey ?? item.code ?? `Workflow #${item.id}`,
+    disabled: item.enabled === false,
+  })), [workflows])
+
+  const handleWorkflowPopupScroll = useCallback((event) => {
+    const target = event.currentTarget
+    if (target.scrollTop + target.clientHeight >= target.scrollHeight - 24) {
+      loadWorkflows()
+    }
+  }, [loadWorkflows])
 
   const handleSave = async () => {
     try {
@@ -221,11 +305,11 @@ const LeadForm = ({ listServices = [], listSale = [], submitting = false }) => {
           Doanh nghiệp — hiện khi chọn Doanh nghiệp ở trên
         </div>
         <div className={`pl-grid lead-business-grid ${customerType !== 'BUSINESS' ? 'is-disabled' : ''}`}>
-          <LeadInput required name="companyName" label="Tên doanh nghiệp" code="company_name" placeholder="Công ty TNHH Thực phẩm Sạch" disabled={customerType !== 'BUSINESS'} fieldClassName="full" />
-          <LeadInput name="taxCode" label="Mã số thuế" code="tax_code" placeholder="0315123456" disabled={customerType !== 'BUSINESS'} />
-          <LeadInput required name="contactName" label="Người liên hệ" code="contact_name" placeholder="Nguyễn Văn Hùng" disabled={customerType !== 'BUSINESS'} />
-          <LeadInput name="jobTitle" label="Chức vụ" code="job_title" placeholder="Giám đốc" disabled={customerType !== 'BUSINESS'} />
-          <LeadInput name="website" label="Website" code="website" placeholder="https://sachfood.vn" disabled={customerType !== 'BUSINESS'} />
+          <LeadInput required name={['business', 'companyName']} label="Tên doanh nghiệp" code="company_name" placeholder="Công ty TNHH Thực phẩm Sạch" disabled={customerType !== 'BUSINESS'} fieldClassName="full" />
+          <LeadInput name={['business', 'taxCode']} label="Mã số thuế" code="tax_code" placeholder="0315123456" disabled={customerType !== 'BUSINESS'} />
+          <LeadInput required name={['business', 'contactName']} label="Người liên hệ" code="contact_name" placeholder="Nguyễn Văn Hùng" disabled={customerType !== 'BUSINESS'} />
+          <LeadInput name={['business', 'jobTitle']} label="Chức vụ" code="job_title" placeholder="Giám đốc" disabled={customerType !== 'BUSINESS'} />
+          <LeadInput name={['business', 'website']} label="Website" code="website" placeholder="https://sachfood.vn" disabled={customerType !== 'BUSINESS'} />
         </div>
       </LeadSection>
 
@@ -276,11 +360,20 @@ const LeadForm = ({ listServices = [], listSale = [], submitting = false }) => {
         <div className="pl-grid pl-grid--3">
           <div>
             <LeadSelect required name="saleId" label="Nhân viên phụ trách" code="owner_id" placeholder="Chọn nhân viên" options={saleOptions} />
-            <div className="field-help">Gán tự động theo quy tắc phân bổ, có thể đổi tay.</div>
+          </div>
+          <div>
+            <LeadSelect
+              name="workflowProcessId"
+              label="Work flow"
+              code="workflow_process_id"
+              placeholder="Chọn workflow"
+              options={workflowOptions}
+              loading={loadingWorkflows}
+              onPopupScroll={handleWorkflowPopupScroll}
+            />
           </div>
           <div className="lead-readonly">
             <LeadSelect disabled name="status" label="Trạng thái Lead" code="stage" placeholder="Hệ thống tự xác định" options={leadStatuses} loading={loadingConfigs} />
-            <div className="field-help">Luôn khởi tạo ở NEW — đổi qua action tương ứng sau khi tạo.</div>
           </div>
           <LeadSelect name="interestLevel" label="Mức độ quan tâm" code="interest_level" placeholder="Chọn mức độ" options={[
             { value: 'HIGH', label: 'Cao' },
@@ -309,7 +402,7 @@ const LeadForm = ({ listServices = [], listSale = [], submitting = false }) => {
         <div className="pl-foot__actions">
           <Button className="btn btn--primary" loading={submitting} onClick={handleSave}>
             <img src={`${ASSET_BASE_URL}/save.svg`} alt="" width="14" height="14" />
-            Lưu Lead
+            {record?.id ? 'Cập nhật Lead' : 'Lưu Lead'}
           </Button>
         </div>
       </footer>

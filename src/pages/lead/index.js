@@ -19,13 +19,13 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { RestList, BreadcrumbCustom, FormSelect, NoFooter } from '@flast-erp/core/components';
-import { ApartmentOutlined, EyeOutlined, InfoCircleOutlined, SelectOutlined, UserAddOutlined } from '@ant-design/icons';
+import { EyeOutlined, InfoCircleOutlined, UserAddOutlined } from '@ant-design/icons';
 import LeadFilter from './LeadFilter';
 import { useGetList } from "@flast-erp/core/hooks";
-import { Button, Dropdown, Form, Tag, Tooltip } from 'antd';
+import { Button, Form, Tag, Tooltip } from 'antd';
 import { RequestUtils, dateFormatOnSubmit, f5List } from '@flast-erp/core/utils';
 import { HASH_MODAL } from '@/configs';
 import { InAppEvent } from '@flast-erp/core/utils';
@@ -33,60 +33,20 @@ import { cloneDeep } from 'lodash';
 import ModaleStyles from './style';
 import { useNavigate } from "react-router-dom";
 import { CHANNEL_SOURCE_MAP_KEYS } from '@/configs/localData';
-import WorkflowAttachModal from '@/containers/Order/List/components/WorkflowAttachModal';
-import useWorkflowModal from '@/containers/Order/List/hooks/useWorkflowModal';
 import { LEAD_WORKFLOW_ENTITY_TYPE } from '@/containers/Order/List/constants';
 import { enrichEntitiesWithWorkflowData } from '@/containers/Order/List/services/workflowApi';
 import { useWorkflowDrawer } from '@/contexts/WorkflowDrawerContext';
-import LeadDetailDrawer from './LeadDetailDrawer';
 
 const LEAD_API_PATH = 'data/lists';
 
-const getLeadIdFromHash = () => {
-  if (typeof window === 'undefined') return null;
-  return window.location.hash.match(/^#(\d+)$/)?.[1] ?? null;
-};
-
-const replaceLeadHash = (leadId) => {
-  if (typeof window === 'undefined') return;
-  const hash = leadId ? `#${leadId}` : '';
-  window.history.replaceState(
-    window.history.state,
-    '',
-    `${window.location.pathname}${window.location.search}${hash}`,
-  );
-};
-
 const LeadPage = () => {
-
-  const {
-    workflowModalOpen,
-    workflowLoading,
-    workflowAttaching,
-    workflows,
-    selectedOrder,
-    selectedWorkflowEntityType,
-    workflowTargets,
-    selectedWorkflowIdsByTarget,
-    initialWorkflowIdsByTarget,
-    setWorkflowIdsForTarget,
-    canSubmit,
-    openWorkflowModal,
-    closeWorkflowModal,
-    handleAttachWorkflow,
-  } = useWorkflowModal({
-    onAttached: () => f5List(LEAD_API_PATH),
-  });
-
   const { openWorkflowDrawer } = useWorkflowDrawer();
 
   const [form] = Form.useForm();
   const [title] = useState("Danh sách Lead");
   const [listSale, setListSale] = useState([]);
   const [detailRecord, setDetailRecord] = useState({});
-  const [detailLead, setDetailLead] = useState(null);
   const [listServices, setlistServices] = useState([])
-  const leadRowsRef = useRef([]);
 
   useEffect(() => {
     RequestUtils.GetAsList('/service/list').then(setlistServices);
@@ -97,40 +57,11 @@ const LeadPage = () => {
     form.setFieldsValue({ saleId: detailRecord?.saleId })
   }, [form, detailRecord])
 
-  useEffect(() => {
-    const syncDetailLeadFromHash = () => {
-      const leadId = getLeadIdFromHash();
-      if (!leadId) {
-        setDetailLead(null);
-        return;
-      }
-      const matchedLead = leadRowsRef.current.find(item => String(item?.id) === leadId);
-      setDetailLead(matchedLead ?? null);
-    };
-
-    window.addEventListener('hashchange', syncDetailLeadFromHash);
-    window.addEventListener('popstate', syncDetailLeadFromHash);
-    return () => {
-      window.removeEventListener('hashchange', syncDetailLeadFromHash);
-      window.removeEventListener('popstate', syncDetailLeadFromHash);
-    };
-  }, []);
-
-  const openLeadDetail = useCallback((record) => {
-    setDetailLead(record);
-    replaceLeadHash(record?.id);
-  }, []);
-
-  const closeLeadDetail = useCallback(() => {
-    setDetailLead(null);
-    if (getLeadIdFromHash()) replaceLeadHash(null);
-  }, []);
-
   const onEdit = (item) => {
     let data = cloneDeep(item);
     InAppEvent.emit(HASH_MODAL, {
       hash: '#draw/lead.edit',
-      title: 'Cập nhật lead #' + item.id,
+      title: 'Chi tiết Lead #' + item.id,
       data: {
         record: data,
         listServices,
@@ -138,6 +69,22 @@ const LeadPage = () => {
       }
     });
   }
+
+  const openLeadProgress = useCallback((record) => {
+    const processId = record?.workflowProcessId;
+    if (!processId) {
+      InAppEvent.normalError('Lead chưa được cấu hình workflow.');
+      return;
+    }
+    openWorkflowDrawer(record, record, {
+      entityName: LEAD_WORKFLOW_ENTITY_TYPE,
+      entityLabel: 'Lead',
+      entityType: LEAD_WORKFLOW_ENTITY_TYPE,
+      processId,
+      workflowInstances: record?.workflowInstances ?? [],
+      leadMode: true,
+    });
+  }, [openWorkflowDrawer]);
 
   let navigate = useNavigate();
   const onCreateOpportunity = useCallback(({ id }) => {
@@ -223,48 +170,19 @@ const LeadPage = () => {
               setDetailRecord(record)
             }} />
           </Tooltip>
-          <Tooltip style={{ cursor: 'pointer' }} title={'Cập nhật'}>
-            <SelectOutlined style={{ color: '#1677ff', fontSize: 16 }} onClick={() => onEdit(record)} />
-          </Tooltip>
           <Tooltip style={{ cursor: 'pointer' }} title="Xem chi tiết Lead">
-            <InfoCircleOutlined style={{ color: '#7c3aed', fontSize: 16 }} onClick={() => openLeadDetail(record)} />
+            <EyeOutlined style={{ color: '#1677ff', fontSize: 16 }} onClick={() => onEdit(record)} />
           </Tooltip>
-          <Dropdown
-            trigger={['click']}
-            menu={{
-              items: [
-                {
-                  key: 'attach-workflow',
-                  icon: <ApartmentOutlined />,
-                  label: record?.workflowInstances?.length ? 'Gắn thêm workflow' : 'Gắn workflow',
-                },
-                record?.workflowInstances?.length ? {
-                  key: 'workflow-progress',
-                  icon: <EyeOutlined />,
-                  label: 'Xem tiến trình',
-                } : null,
-              ].filter(Boolean),
-              onClick: ({ key, domEvent }) => {
-                domEvent?.stopPropagation();
-                if (key === 'attach-workflow') {
-                  openWorkflowModal(record, LEAD_WORKFLOW_ENTITY_TYPE, { flowType: 'LEAD' });
-                }
-                if (key === 'workflow-progress') {
-                  openWorkflowDrawer(record, record, {
-                    entityName: LEAD_WORKFLOW_ENTITY_TYPE,
-                    entityLabel: 'Lead',
-                  });
-                }
-              },
-            }}
-          >
-            <Tooltip title={record?.workflowInstances?.length ? 'Nghiệp vụ workflow' : 'Gắn workflow'}>
-              <ApartmentOutlined
-                style={{ color: record?.workflowInstances?.length ? '#52c41a' : '#1677ff', fontSize: 16, cursor: 'pointer' }}
-                onClick={event => event.stopPropagation()}
-              />
-            </Tooltip>
-          </Dropdown>
+          <Tooltip style={{ cursor: 'pointer' }} title="Xem tiến trình Lead">
+            <InfoCircleOutlined
+              style={{
+                color: record?.workflowProcessId ? '#52c41a' : '#bfbfbf',
+                fontSize: 16,
+                cursor: record?.workflowProcessId ? 'pointer' : 'not-allowed',
+              }}
+              onClick={record?.workflowProcessId ? () => openLeadProgress(record) : undefined}
+            />
+          </Tooltip>
         </div>
       )
     }
@@ -276,14 +194,7 @@ const LeadPage = () => {
   }, []);
 
   const onData = useCallback(async (values) => {
-    const enrichedValues = await enrichEntitiesWithWorkflowData(values, LEAD_WORKFLOW_ENTITY_TYPE);
-    leadRowsRef.current = Array.isArray(enrichedValues?.embedded) ? enrichedValues.embedded : [];
-    const leadId = getLeadIdFromHash();
-    if (leadId) {
-      const matchedLead = leadRowsRef.current.find(item => String(item?.id) === leadId);
-      if (matchedLead) setDetailLead(matchedLead);
-    }
-    return enrichedValues;
+    return enrichEntitiesWithWorkflowData(values, LEAD_WORKFLOW_ENTITY_TYPE);
   }, []);
 
   const onCreateLead = () => InAppEvent.emit(HASH_MODAL, {
@@ -329,42 +240,6 @@ const LeadPage = () => {
         apiPath={LEAD_API_PATH}
         customClickCreate={onCreateLead}
         columns={CUSTOM_ACTION}
-      />
-
-      <WorkflowAttachModal
-        open={workflowModalOpen}
-        onCancel={closeWorkflowModal}
-        onOk={handleAttachWorkflow}
-        confirmLoading={workflowAttaching}
-        workflowTargets={workflowTargets}
-        selectedWorkflowIdsByTarget={selectedWorkflowIdsByTarget}
-        initialWorkflowIdsByTarget={initialWorkflowIdsByTarget}
-        setWorkflowIdsForTarget={setWorkflowIdsForTarget}
-        workflows={workflows}
-        workflowLoading={workflowLoading}
-        selectedOrder={selectedOrder}
-        selectedWorkflowEntityType={selectedWorkflowEntityType}
-        canSubmit={canSubmit}
-        entityLabel="Lead"
-      />
-
-      <LeadDetailDrawer
-        open={Boolean(detailLead?.id)}
-        lead={detailLead}
-        listSale={listSale}
-        onClose={closeLeadDetail}
-        onWorkflowAction={() => {
-          const record = detailLead;
-          closeLeadDetail();
-          if (record?.workflowInstances?.length) {
-            openWorkflowDrawer(record, record, {
-              entityName: LEAD_WORKFLOW_ENTITY_TYPE,
-              entityLabel: 'Lead',
-            });
-            return;
-          }
-          openWorkflowModal(record, LEAD_WORKFLOW_ENTITY_TYPE, { flowType: 'LEAD' });
-        }}
       />
 
       <ModaleStyles

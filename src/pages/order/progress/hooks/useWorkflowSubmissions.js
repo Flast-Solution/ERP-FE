@@ -33,6 +33,10 @@ export const useWorkflowSubmissions = ({
   useEffect(() => {
     const availableTemplateIds = new Set(
       previewFormTemplates
+        .filter((template) => (
+          template?.sourceComponent?.microFrontendUrl
+          || template?.microFrontendUrl
+        ))
         .map((template) => template?.id)
         .filter(Boolean)
         .map(String),
@@ -79,7 +83,11 @@ export const useWorkflowSubmissions = ({
     }
   }, [submissions, allSteps, previewFormTemplates, submissionTemplates])
 
-  const currentForm = currentStep?.formTemplate ?? null
+  const currentFormTemplateId = currentStep?.formTemplate?.id
+  const currentForm = formTemplates.find(template => (
+    Number(template?.id) === Number(currentFormTemplateId)
+    && (template?.sourceComponent?.microFrontendUrl || template?.microFrontendUrl)
+  )) ?? currentStep?.formTemplate ?? null
 
   const displayForm = useMemo(() => {
     if (displayStep?.stepCode === currentStep?.stepCode) {

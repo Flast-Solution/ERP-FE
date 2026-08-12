@@ -243,6 +243,66 @@
   }
 }
 
+.workflow-detail-drawer--lead {
+  .ant-drawer-body {
+    background: #fff;
+  }
+
+  .lead-workflow-detail {
+    background: #fff;
+
+    .pl-detail-page {
+      min-height: 100%;
+      background: #fff;
+    }
+
+    .pl-detail {
+      background: #fff;
+    }
+
+    .pl-tracker__step {
+      appearance: none;
+      border: 0;
+      font: inherit;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .pl-tracker__step.is-selected .pl-tracker__label {
+      text-decoration: underline;
+      text-underline-offset: 4px;
+    }
+
+    .pl-actions .ant-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .lead-workflow-form {
+      min-height: 80px;
+
+      // FormSelect nhận className ở root .ant-select, trong khi UI Kit cũng
+      // khai báo border cho .pl-select. Xóa khung ngoài và giữ border chuẩn
+      // của .ant-select-selector để không xuất hiện hai border lồng nhau.
+      .ant-select.pl-select {
+        padding: 0 !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+      }
+
+      .ant-select.pl-select:hover,
+      .ant-select.pl-select:focus,
+      .ant-select.pl-select:focus-within {
+        border: 0 !important;
+        box-shadow: none !important;
+      }
+    }
+  }
+}
+
 @media (max-width: 768px) {
   .workflow-detail-drawer {
     &__tab-content {

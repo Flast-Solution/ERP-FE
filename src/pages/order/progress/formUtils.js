@@ -174,23 +174,16 @@ export const buildWorkflowSubmissionPayload = ({
 export const resolveUserId = (user = {}) => toNumberOrNull(user?.id)
 
 export const buildWorkflowTransitionPayload = ({
-  workflow,
-  workflowPreview,
   workflowInstance,
-  order,
-  orderId,
-  instanceId,
   currentSubmission,
   user,
   toStepCode,
 }) => {
-  const processInstance = workflowPreview?.processInstance ?? workflowInstance ?? {}
-
   return {
-    processId: toNumberOrNull(workflow?.id ?? workflowPreview?.processId ?? processInstance?.processId),
-    processInstanceId: toNumberOrNull(processInstance?.id ?? instanceId),
-    entityType: processInstance?.entityType ?? order?.entityType ?? 'order',
-    entityId: toNumberOrNull(processInstance?.entityId ?? order?.entityId ?? order?.id ?? orderId),
+    processId: toNumberOrNull(workflowInstance?.processId),
+    processInstanceId: toNumberOrNull(workflowInstance?.id),
+    entityType: workflowInstance?.entityType,
+    entityId: toNumberOrNull(workflowInstance?.entityId),
     toStepCode: toStepCode || null,
     byUserId: resolveUserId(user),
     note: '',
