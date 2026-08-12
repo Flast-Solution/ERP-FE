@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { RestList, BreadcrumbCustom, FormSelect, NoFooter } from '@flast-erp/core/components';
 import { ApartmentOutlined, EyeOutlined, InfoCircleOutlined, SelectOutlined, UserAddOutlined } from '@ant-design/icons';
@@ -41,6 +41,21 @@ import { useWorkflowDrawer } from '@/contexts/WorkflowDrawerContext';
 import LeadDetailDrawer from './LeadDetailDrawer';
 
 const LEAD_API_PATH = 'data/lists';
+
+const getLeadIdFromHash = () => {
+  if (typeof window === 'undefined') return null;
+  return window.location.hash.match(/^#(\d+)$/)?.[1] ?? null;
+};
+
+const replaceLeadHash = (leadId) => {
+  if (typeof window === 'undefined') return;
+  const hash = leadId ? `#${leadId}` : '';
+  window.history.replaceState(
+    window.history.state,
+    '',
+    `${window.location.pathname}${window.location.search}${hash}`,
+  );
+};
 
 const LeadPage = () => {
 
@@ -71,6 +86,7 @@ const LeadPage = () => {
   const [detailRecord, setDetailRecord] = useState({});
   const [detailLead, setDetailLead] = useState(null);
   const [listServices, setlistServices] = useState([])
+  const leadRowsRef = useRef([]);
 
   useEffect(() => {
     RequestUtils.GetAsList('/service/list').then(setlistServices);
@@ -80,6 +96,35 @@ const LeadPage = () => {
   useEffect(() => {
     form.setFieldsValue({ saleId: detailRecord?.saleId })
   }, [form, detailRecord])
+
+  useEffect(() => {
+    const syncDetailLeadFromHash = () => {
+      const leadId = getLeadIdFromHash();
+      if (!leadId) {
+        setDetailLead(null);
+        return;
+      }
+      const matchedLead = leadRowsRef.current.find(item => String(item?.id) === leadId);
+      setDetailLead(matchedLead ?? null);
+    };
+
+    window.addEventListener('hashchange', syncDetailLeadFromHash);
+    window.addEventListener('popstate', syncDetailLeadFromHash);
+    return () => {
+      window.removeEventListener('hashchange', syncDetailLeadFromHash);
+      window.removeEventListener('popstate', syncDetailLeadFromHash);
+    };
+  }, []);
+
+  const openLeadDetail = useCallback((record) => {
+    setDetailLead(record);
+    replaceLeadHash(record?.id);
+  }, []);
+
+  const closeLeadDetail = useCallback(() => {
+    setDetailLead(null);
+    if (getLeadIdFromHash()) replaceLeadHash(null);
+  }, []);
 
   const onEdit = (item) => {
     let data = cloneDeep(item);
@@ -182,7 +227,7 @@ const LeadPage = () => {
             <SelectOutlined style={{ color: '#1677ff', fontSize: 16 }} onClick={() => onEdit(record)} />
           </Tooltip>
           <Tooltip style={{ cursor: 'pointer' }} title="Xem chi tiết Lead">
-            <InfoCircleOutlined style={{ color: '#7c3aed', fontSize: 16 }} onClick={() => setDetailLead(record)} />
+            <InfoCircleOutlined style={{ color: '#7c3aed', fontSize: 16 }} onClick={() => openLeadDetail(record)} />
           </Tooltip>
           <Dropdown
             trigger={['click']}
@@ -230,9 +275,16 @@ const LeadPage = () => {
     return values;
   }, []);
 
-  const onData = useCallback((values) => (
-    enrichEntitiesWithWorkflowData(values, LEAD_WORKFLOW_ENTITY_TYPE)
-  ), []);
+  const onData = useCallback(async (values) => {
+    const enrichedValues = await enrichEntitiesWithWorkflowData(values, LEAD_WORKFLOW_ENTITY_TYPE);
+    leadRowsRef.current = Array.isArray(enrichedValues?.embedded) ? enrichedValues.embedded : [];
+    const leadId = getLeadIdFromHash();
+    if (leadId) {
+      const matchedLead = leadRowsRef.current.find(item => String(item?.id) === leadId);
+      if (matchedLead) setDetailLead(matchedLead);
+    }
+    return enrichedValues;
+  }, []);
 
   const onCreateLead = () => InAppEvent.emit(HASH_MODAL, {
     hash: '#draw/lead.edit',
@@ -300,10 +352,10 @@ const LeadPage = () => {
         open={Boolean(detailLead?.id)}
         lead={detailLead}
         listSale={listSale}
-        onClose={() => setDetailLead(null)}
+        onClose={closeLeadDetail}
         onWorkflowAction={() => {
           const record = detailLead;
-          setDetailLead(null);
+          closeLeadDetail();
           if (record?.workflowInstances?.length) {
             openWorkflowDrawer(record, record, {
               entityName: LEAD_WORKFLOW_ENTITY_TYPE,

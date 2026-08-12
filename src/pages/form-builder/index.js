@@ -47,6 +47,13 @@ const getTemplateCode = (template = {}) => {
     ?? ''
 }
 
+const getTemplateRemoteUrl = (template = {}) => {
+  const sourceComponent = getTemplateSourceComponent(template)
+  return template.microFrontendUrl
+    ?? sourceComponent?.microFrontendUrl
+    ?? ''
+}
+
 const collectOptionsByFieldKey = (fields = [], map = new Map()) => {
   fields.forEach(field => {
     if (field?.fieldKey && Array.isArray(field?.config?.options) && field.config.options.length > 0) {
@@ -171,6 +178,7 @@ const BuilderPage = () => {
         description: template.description ?? '',
         enabled: template.enabled ?? true,
         displayMode: template.displayMode ?? template.displayType ?? template.viewType ?? 'NORMAL',
+        microFrontendUrl: getTemplateRemoteUrl(template),
       },
       fields: enrichTemplateFieldsFromCode(template),
       code,
