@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import { Helmet } from 'react-helmet';
 import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
 import LeadFilter from './LeadFilter';
@@ -32,9 +32,7 @@ import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import { cloneDeep } from 'lodash';
 import { CHANNEL_SOURCE_MAP_KEYS } from '@/configs/localData';
 
-const Lead3DayPage = () => {
-
-  const [title] = useState("Khách hàng 3 ngày chưa ra cơ hội bán hàng");
+export const Lead3DayContent = () => {
 
   const onEdit = (item) => {
     let title = 'Cập nhật tương tác khách hàng# ' + item.id;
@@ -131,24 +129,28 @@ const Lead3DayPage = () => {
   }, []);
 
   return (
+    <RestList
+      xScroll={1200}
+      onData={onData}
+      initialFilter={{ limit: 10, page: 1 }}
+      filter={<LeadFilter />}
+      beforeSubmitFilter={beforeSubmitFilter}
+      useGetAllQuery={useGetList}
+      hasCreate={false}
+      apiPath={'cs/3day-fetch'}
+      columns={CUSTOM_ACTION}
+    />
+  )
+}
+
+const Lead3DayPage = () => {
+  const title = 'Khách hàng 3 ngày chưa ra cơ hội bán hàng'
+
+  return (
     <div>
-      <Helmet>
-        <title>{title}</title>
-      </Helmet>
-      <BreadcrumbCustom
-        data={[{ title: 'Trang chủ' }, { title: title }]}
-      />
-      <RestList
-        xScroll={1200}
-        onData={onData}
-        initialFilter={{ limit: 10, page: 1 }}
-        filter={<LeadFilter />}
-        beforeSubmitFilter={beforeSubmitFilter}
-        useGetAllQuery={useGetList}
-        hasCreate={false}
-        apiPath={'cs/3day-fetch'}
-        columns={CUSTOM_ACTION}
-      />
+      <Helmet><title>{title}</title></Helmet>
+      <BreadcrumbCustom data={[{ title: 'Trang chủ' }, { title }]} />
+      <Lead3DayContent />
     </div>
   )
 }

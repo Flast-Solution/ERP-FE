@@ -19,206 +19,37 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Helmet } from 'react-helmet';
-import { RestList, BreadcrumbCustom, FormSelect, NoFooter } from '@flast-erp/core/components';
-import { EyeOutlined, InfoCircleOutlined, UserAddOutlined } from '@ant-design/icons';
-import LeadFilter from './LeadFilter';
-import { useGetList } from "@flast-erp/core/hooks";
-import { Button, Form, Tag, Tooltip } from 'antd';
-import { RequestUtils, dateFormatOnSubmit, f5List } from '@flast-erp/core/utils';
-import { HASH_MODAL } from '@/configs';
-import { InAppEvent } from '@flast-erp/core/utils';
-import { cloneDeep } from 'lodash';
-import ModaleStyles from './style';
-import { useNavigate } from "react-router-dom";
-import { CHANNEL_SOURCE_MAP_KEYS } from '@/configs/localData';
-import { LEAD_WORKFLOW_ENTITY_TYPE } from '@/containers/Order/List/constants';
-import { enrichEntitiesWithWorkflowData } from '@/containers/Order/List/services/workflowApi';
-import { useWorkflowDrawer } from '@/contexts/WorkflowDrawerContext';
+import { Menu } from 'antd';
+import { BreadcrumbCustom } from '@flast-erp/core/components';
+import { useSearchParams } from 'react-router-dom';
+import LeadList from './LeadList';
+import LeadReport from './LeadReport';
+import { Lead3DayContent } from '@/pages/lead3Day';
 
-const LEAD_API_PATH = 'data/lists';
+const LEAD_NAV_ITEMS = [
+  { key: 'list', label: 'Danh sách Lead' },
+  { key: 'three-day', label: 'Khách hàng 3 ngày chưa ra cơ hội bán hàng' },
+  { key: 'report', label: 'Báo cáo' },
+]
+
+const LEAD_TAB_TITLES = {
+  list: 'Danh sách Lead',
+  'three-day': 'Khách hàng 3 ngày chưa ra cơ hội bán hàng',
+  report: 'Báo cáo',
+}
 
 const LeadPage = () => {
-  const { openWorkflowDrawer } = useWorkflowDrawer();
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedTab = searchParams.get('tab')
+  const activeKey = LEAD_TAB_TITLES[requestedTab] ? requestedTab : 'list'
+  const title = useMemo(() => LEAD_TAB_TITLES[activeKey], [activeKey])
 
-  const [form] = Form.useForm();
-  const [title] = useState("Danh sách Lead");
-  const [listSale, setListSale] = useState([]);
-  const [detailRecord, setDetailRecord] = useState({});
-  const [listServices, setlistServices] = useState([])
-
-  useEffect(() => {
-    RequestUtils.GetAsList('/service/list').then(setlistServices);
-    RequestUtils.GetAsList('/user/list-name-id').then(setListSale);
-  }, [])
-
-  useEffect(() => {
-    form.setFieldsValue({ saleId: detailRecord?.saleId })
-  }, [form, detailRecord])
-
-  const onEdit = (item) => {
-    let data = cloneDeep(item);
-    InAppEvent.emit(HASH_MODAL, {
-      hash: '#draw/lead.edit',
-      title: 'Chi tiết Lead #' + item.id,
-      data: {
-        record: data,
-        listServices,
-        listSale
-      }
-    });
-  }
-
-  const openLeadProgress = useCallback((record) => {
-    const processId = record?.workflowProcessId;
-    if (!processId) {
-      InAppEvent.normalError('Lead chưa được cấu hình workflow.');
-      return;
-    }
-    openWorkflowDrawer(record, record, {
-      entityName: LEAD_WORKFLOW_ENTITY_TYPE,
-      entityLabel: 'Lead',
-      entityType: LEAD_WORKFLOW_ENTITY_TYPE,
-      processId,
-      workflowInstances: record?.workflowInstances ?? [],
-      leadMode: true,
-    });
-  }, [openWorkflowDrawer]);
-
-  let navigate = useNavigate();
-  const onCreateOpportunity = useCallback(({ id }) => {
-    navigate(RequestUtils.generateUrlGetParams("/sale/ban-hang", { dataId: id }));
-  }, [navigate]);
-
-  const CUSTOM_ACTION = [
-    {
-      title: "Create",
-      dataIndex: 'staff',
-      width: 150
-    },
-    {
-      title: "Khách hàng",
-      dataIndex: 'customerName',
-      width: 200,
-      ellipsis: true
-    },
-    {
-      title: "Số đ/t",
-      dataIndex: 'customerMobile',
-      width: 120,
-      ellipsis: true
-    },
-    {
-      title: "Dịch vụ",
-      dataIndex: 'serviceId',
-      width: 150,
-      ellipsis: true,
-      render: (serviceId) => {
-        const nameService = listServices.find(f => f.id === serviceId)
-        return <Tag color="orange">{nameService?.name || 'N/A'} </Tag>
-      }
-    },
-    {
-      title: "Nguồn",
-      dataIndex: 'source',
-      width: 170,
-      render: (source) => CHANNEL_SOURCE_MAP_KEYS[source]?.name
-    },
-    {
-      title: "Sản phẩm",
-      dataIndex: 'productName',
-      width: 200,
-      ellipsis: true
-    },
-    {
-      title: "Ngày",
-      dataIndex: 'inTime',
-      width: 150,
-      ellipsis: true,
-      render: (inTime) => dateFormatOnSubmit(inTime)
-    },
-    {
-      title: "Sale",
-      dataIndex: 'assignTo',
-      width: 100,
-      ellipsis: true
-    },
-    {
-      title: "Cơ hội",
-      width: 100,
-      fixed: 'right',
-      render: (record) => (
-        <Button
-          color="danger"
-          variant="dashed" onClick={() => onCreateOpportunity(record)}
-          size='small'
-        >
-          Tạo cơ hội
-        </Button>
-      )
-    },
-    {
-      title: "Thao tác",
-      width: 170,
-      fixed: 'right',
-      ellipsis: true,
-      render: (record) => (
-        <div style={{ display: 'flex', gap: 20 }}>
-          <Tooltip style={{ cursor: 'pointer' }} title="Chuyển sale">
-            <UserAddOutlined style={{ color: '#1677ff', fontSize: 16 }} onClick={() => {
-              setDetailRecord(record)
-            }} />
-          </Tooltip>
-          <Tooltip style={{ cursor: 'pointer' }} title="Xem chi tiết Lead">
-            <EyeOutlined style={{ color: '#1677ff', fontSize: 16 }} onClick={() => onEdit(record)} />
-          </Tooltip>
-          <Tooltip style={{ cursor: 'pointer' }} title="Xem tiến trình Lead">
-            <InfoCircleOutlined
-              style={{
-                color: record?.workflowProcessId ? '#52c41a' : '#bfbfbf',
-                fontSize: 16,
-                cursor: record?.workflowProcessId ? 'pointer' : 'not-allowed',
-              }}
-              onClick={record?.workflowProcessId ? () => openLeadProgress(record) : undefined}
-            />
-          </Tooltip>
-        </div>
-      )
-    }
-  ];
-
-  const beforeSubmitFilter = useCallback((values) => {
-    dateFormatOnSubmit(values, ['from', 'to']);
-    return values;
-  }, []);
-
-  const onData = useCallback(async (values) => {
-    return enrichEntitiesWithWorkflowData(values, LEAD_WORKFLOW_ENTITY_TYPE);
-  }, []);
-
-  const onCreateLead = () => InAppEvent.emit(HASH_MODAL, {
-    hash: '#draw/lead.edit',
-    title: 'Tạo mới Lead',
-    data: {
-      record: {},
-      listServices,
-      listSale
-    }
-  });
-
-  const onHandleSubmitSaleLead = async (value) => {
-    const data = await RequestUtils.Post('/data/re-assign', {}, {
-      dataId: detailRecord.id,
-      saleId: value.saleId
-    });
-    if (data?.errorCode === 200) {
-      f5List('data/lists');
-      InAppEvent.normalSuccess("Lead đã được chuyển.");
-      setDetailRecord({});
-    } else {
-      InAppEvent.normalError("Lỗi chuyển lead!");
-    }
+  const renderContent = () => {
+    if (activeKey === 'report') return <LeadReport />
+    if (activeKey === 'three-day') return <Lead3DayContent />
+    return <LeadList />
   }
 
   return (
@@ -227,52 +58,22 @@ const LeadPage = () => {
         <title>{title}</title>
       </Helmet>
       <BreadcrumbCustom
-        data={[{ title: 'Trang chủ' }, { title: title }]}
+        data={[{ title: 'Trang chủ' }, { title: 'Lead' }, { title }]}
       />
-
-      <RestList
-        xScroll={1200}
-        onData={onData}
-        initialFilter={{ limit: 10, page: 1 }}
-        filter={<LeadFilter />}
-        beforeSubmitFilter={beforeSubmitFilter}
-        useGetAllQuery={useGetList}
-        apiPath={LEAD_API_PATH}
-        customClickCreate={onCreateLead}
-        columns={CUSTOM_ACTION}
+      <Menu
+        mode="horizontal"
+        selectedKeys={[activeKey]}
+        items={LEAD_NAV_ITEMS}
+        onClick={({ key }) => {
+          if (key !== 'list') {
+            setSearchParams({ tab: key })
+            return
+          }
+          setSearchParams({})
+        }}
+        style={{ marginBottom: 16, background: 'transparent' }}
       />
-
-      <ModaleStyles
-        title={
-          <div style={{ color: '#fff' }}>
-            Chọn sale chăm sóc lead
-          </div>
-        }
-        open={(detailRecord?.id ?? 0) !== 0}
-        footer={<NoFooter />}
-        onCancel={() => setDetailRecord({})}
-      >
-        <div style={{ padding: 15 }}>
-          <Form
-            layout='vertical'
-            form={form}
-            onFinish={onHandleSubmitSaleLead}
-          >
-            <FormSelect
-              required={true}
-              label="Chọn sale"
-              name="saleId"
-              placeholder="Sale phụ trách"
-              resourceData={listSale || []}
-              valueProp="id"
-              titleProp="name"
-            />
-            <Form.Item style={{ display: 'flex', justifyContent: 'end', marginTop: 10 }}>
-              <Button type="primary" htmlType="submit"> Submit </Button>
-            </Form.Item>
-          </Form>
-        </div>
-      </ModaleStyles>
+      {renderContent()}
     </div>
   )
 }

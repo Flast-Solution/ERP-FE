@@ -14,7 +14,7 @@ import {
   ORDER_WORKFLOW_ENTITY_TYPE,
 } from './progress/constants'
 import { useWorkflowDrawer } from '@/contexts/WorkflowDrawerContext'
-import { getStepSubmitButtonConfig } from './progress/workflowHelpers'
+import { getFormSubmitButtonConfig } from '@/utils/formSubmitButton'
 
 const OrderProgressPage = () => {
   const { user } = useGetMe()
@@ -197,7 +197,7 @@ const OrderProgressPage = () => {
     processTypeMetaMap: workflowState.processTypeMetaMap,
   })
 
-  const displaySubmitButton = getStepSubmitButtonConfig(workflowState.displayStep)
+  const displaySubmitButton = getFormSubmitButtonConfig(submissionState.displayForm)
   const openedHiddenStepCode = workflowState.openedHiddenStepCode
   const backToCurrentStep = workflowState.backToCurrentStep
   const handleFormSubmitSuccess = useCallback(() => {

@@ -10,7 +10,7 @@ import WorkflowDrawerSteps from './WorkflowDrawerSteps'
 import WorkflowOrderDetailCard from './WorkflowOrderDetailCard'
 import WorkflowProductCard from './WorkflowProductCard'
 import WorkflowEntityCard from './WorkflowEntityCard'
-import { getStepSubmitButtonConfig } from '@/pages/order/progress/workflowHelpers'
+import { getFormSubmitButtonConfig } from '@/utils/formSubmitButton'
 
 const { Text, Title } = Typography
 const LEAD_ASSET_BASE_URL = 'http://view.user.flast.vn/assets/icons'
@@ -165,7 +165,7 @@ const WorkflowInstanceContent = ({
     stepTransitionList: workflowState.stepTransitionList,
     processTypeMetaMap: workflowState.processTypeMetaMap,
   })
-  const displaySubmitButton = getStepSubmitButtonConfig(workflowState.displayStep)
+  const displaySubmitButton = getFormSubmitButtonConfig(submissionState.displayForm)
   const openedHiddenStepCode = workflowState.openedHiddenStepCode
   const backToCurrentStep = workflowState.backToCurrentStep
   const handleFormSubmitSuccess = useCallback(() => {

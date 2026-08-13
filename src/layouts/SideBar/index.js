@@ -31,7 +31,6 @@ import {
   DollarCircleFilled,
   OrderedListOutlined,
   DeploymentUnitOutlined,
-  ScheduleOutlined,
   AppstoreOutlined,
   AuditOutlined,
   // OpenAIOutlined,
@@ -132,7 +131,6 @@ function SideBar() {
     getItem(<Link to="/task">Dự án</Link>, 'project_list', <PieChartOutlined />),
     getItem(<Link to="/lead">Lead</Link>, 'tong_lead', <FolderOpenOutlined />),
     getItem('Chăm sóc K.H', 'chua_cham_soc', <FolderOpenOutlined style={iconSize} />, [
-      getItem(<Link to="/customer-service/lead">Lead</Link>, "cs_lead", <ScheduleOutlined />),
       getItem(<Link to="/customer-service/co-hoi">Cơ hội</Link>, "cs_co_hoi", <AppstoreOutlined />),
       getItem(<Link to="/customer-service/don-hang">Đơn hàng</Link>, "cs_don_hang", <AuditOutlined />)
     ]),

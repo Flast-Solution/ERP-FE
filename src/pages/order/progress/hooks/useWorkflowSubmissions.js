@@ -26,22 +26,11 @@ export const useWorkflowSubmissions = ({
   ), [currentStep?.formTemplate])
 
   const formTemplates = useMemo(
-    () => [...previewFormTemplates, ...Object.values(submissionTemplates)],
+    () => [...Object.values(submissionTemplates), ...previewFormTemplates],
     [previewFormTemplates, submissionTemplates],
   )
 
   useEffect(() => {
-    const availableTemplateIds = new Set(
-      previewFormTemplates
-        .filter((template) => (
-          template?.sourceComponent?.microFrontendUrl
-          || template?.microFrontendUrl
-        ))
-        .map((template) => template?.id)
-        .filter(Boolean)
-        .map(String),
-    )
-
     const missingIds = Array.from(new Set([
       ...submissions
         .map((submission) => submission?.templateId)
@@ -51,7 +40,7 @@ export const useWorkflowSubmissions = ({
         .map((step) => step?.formTemplate?.id)
         .filter(Boolean)
         .map(String),
-    ])).filter((id) => !availableTemplateIds.has(id) && !submissionTemplates[id])
+    ])).filter((id) => !submissionTemplates[id])
 
     if (!missingIds.length) return undefined
 

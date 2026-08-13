@@ -72,7 +72,7 @@ const normalizeLeadRecord = (item = {}) => {
 
 const NewLead = ({ closeModal, data }) => {
 
-  const { record: item, listServices, listSale } = data;
+  const { record: item, listSale } = data;
   const [record, setRecord] = useState(() => normalizeLeadRecord(item));
   const [submitting, setSubmitting] = useState(false);
 
@@ -148,7 +148,6 @@ const NewLead = ({ closeModal, data }) => {
       closeModal={closeModal}
     >
       <LeadForm
-        listServices={listServices}
         listSale={listSale}
         submitting={submitting}
       />

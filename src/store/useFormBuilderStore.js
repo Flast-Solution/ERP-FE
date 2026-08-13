@@ -35,6 +35,7 @@ import { immer } from 'zustand/middleware/immer';
 import { nanoid } from 'nanoid';
 import { getDefaultConfig } from '@/utils/fieldTypes';
 import { slugifyFieldKey } from '@/utils/slugify';
+import { DEFAULT_FORM_SUBMIT_BUTTON, normalizeFormSubmitButton } from '@/utils/formSubmitButton';
 
 // ─── Factory: tạo field mới từ type ─────────────────────────────────────────
 
@@ -287,6 +288,7 @@ const useFormBuilderStore = create(
       enabled    : true,
       displayMode: 'NORMAL',
       microFrontendUrl: '',
+      submitButton: { ...DEFAULT_FORM_SUBMIT_BUTTON },
     },
 
     fields    : [],       // FormTemplateField[]
@@ -320,6 +322,7 @@ const useFormBuilderStore = create(
           microFrontendUrl: template.microFrontendUrl
             ?? template.sourceComponent?.microFrontendUrl
             ?? '',
+          submitButton: normalizeFormSubmitButton(template.submitButton),
         };
 
         state.fields = normalizeFieldList(
@@ -589,6 +592,7 @@ const useFormBuilderStore = create(
           enabled: true,
           displayMode: 'NORMAL',
           microFrontendUrl: '',
+          submitButton: { ...DEFAULT_FORM_SUBMIT_BUTTON },
         };
         state.fields        = [];
         state.selectedId    = null;

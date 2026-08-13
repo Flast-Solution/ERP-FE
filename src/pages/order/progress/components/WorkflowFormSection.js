@@ -1,8 +1,15 @@
 import React from 'react'
 import { Button, Empty, Spin, Tag } from 'antd'
-import { FormOutlined } from '@ant-design/icons'
+import {
+  CheckOutlined,
+  EditOutlined,
+  FormOutlined,
+  SaveOutlined,
+  SendOutlined,
+} from '@ant-design/icons'
 
-import { getStepSubmitButtonConfig, isSameStepRef } from '../workflowHelpers'
+import { isSameStepRef } from '../workflowHelpers'
+import { getFormSubmitButtonConfig } from '@/utils/formSubmitButton'
 import {
   RemoteFormBoundary,
   RemoteFormErrorFallback,
@@ -24,7 +31,6 @@ const WorkflowFormSection = ({
   viewingStepCode,
   isReviewingSubmission,
   isAuxiliaryStep,
-  submitButtonConfig,
   onBack,
   formState,
 }) => {
@@ -42,9 +48,21 @@ const WorkflowFormSection = ({
     handleRemoteFormSubmitError,
     submitCurrentForm,
   } = formState
-  const submitButton = submitButtonConfig ?? getStepSubmitButtonConfig(displayStep)
+  const submitButton = getFormSubmitButtonConfig(displayForm)
   const canSubmitForm = !isReviewingSubmission && submitButton.visible
-  const submitStyle = String(submitButton.style ?? 'PRIMARY').toUpperCase()
+  const submitType = String(submitButton.type ?? 'PRIMARY').toUpperCase()
+  const submitIcons = {
+    SAVE: <SaveOutlined />,
+    CHECK: <CheckOutlined />,
+    SEND: <SendOutlined />,
+    EDIT: <EditOutlined />,
+  }
+  const submitIcon = submitIcons[String(submitButton.icon ?? '').toUpperCase()] ?? null
+  const customColorStyle = submitButton.color ? {
+    backgroundColor: submitButton.color,
+    borderColor: submitButton.color,
+    color: '#fff',
+  } : undefined
 
   const remoteFormContent = (
     <>
@@ -84,12 +102,13 @@ const WorkflowFormSection = ({
               readOnly={isReviewingSubmission}
               disabled={isReviewingSubmission}
               canSubmit={canSubmitForm}
-              showSubmit={canSubmitForm}
-              hideSubmit={!canSubmitForm}
+              showSubmit={false}
+              hideSubmit
               submitDisabled={!canSubmitForm}
               submitLabel={submitButton.label}
               submitText={submitButton.label}
               submitButtonText={submitButton.label}
+              submitButtonConfig={submitButton}
               hideTitle
               showTitle={false}
               onSubmit={isReviewingSubmission ? undefined : handleRemoteFormSubmit}
@@ -135,8 +154,10 @@ const WorkflowFormSection = ({
       {remoteEntry && RemoteForm && canSubmitForm ? (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
           <Button
-            type={submitStyle === 'PRIMARY' ? 'primary' : 'default'}
-            danger={submitStyle === 'DANGER'}
+            type={submitType === 'PRIMARY' ? 'primary' : 'default'}
+            danger={submitType === 'DANGER'}
+            icon={submitIcon}
+            style={customColorStyle}
             loading={submittingForm}
             disabled={loadingRemote || Boolean(remoteError)}
             onClick={submitCurrentForm}
