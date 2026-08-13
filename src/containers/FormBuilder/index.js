@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { Button, message, Popconfirm, Dropdown, Select } from 'antd'
+import { Button, Checkbox, ColorPicker, Dropdown, Input, message, Popconfirm, Popover, Select } from 'antd'
 import {
   CloseOutlined,
   EditOutlined,
@@ -21,6 +21,7 @@ import {
   PlayCircleOutlined,
   FileTextOutlined,
   CaretDownOutlined,
+  SettingOutlined,
 } from '@ant-design/icons'
 import {
   DndContext,
@@ -36,6 +37,7 @@ import { SUCCESS_CODE } from '@/configs'
 import useFormBuilderStore from '@/store/useFormBuilderStore'
 import { FIELD_TYPE_MAP }  from '@/utils/fieldTypes'
 import { buildJSX } from '@/containers/PreviewModal/buildJSX'
+import { DEFAULT_FORM_SUBMIT_BUTTON, normalizeFormSubmitButton } from '@/utils/formSubmitButton'
 import FieldTypeList       from './FieldTypeList'
 import FieldCanvas, { CANVAS_DROPPABLE_ID } from './FieldCanvas'
 import FieldConfigPanel    from './FieldConfigPanel'
@@ -63,6 +65,103 @@ const DISPLAY_MODE_OPTIONS = [
   { value: 'MODAL', label: 'Modal' },
   { value: 'DRAWER', label: 'Drawer' },
 ]
+
+const SUBMIT_BUTTON_ICON_OPTIONS = [
+  { value: 'NONE', label: 'Không dùng icon' },
+  { value: 'SAVE', label: 'Lưu' },
+  { value: 'CHECK', label: 'Xác nhận' },
+  { value: 'SEND', label: 'Gửi' },
+  { value: 'EDIT', label: 'Cập nhật' },
+]
+
+const SUBMIT_BUTTON_TYPE_OPTIONS = [
+  { value: 'PRIMARY', label: 'Primary' },
+  { value: 'DEFAULT', label: 'Mặc định' },
+  { value: 'DANGER', label: 'Nguy hiểm' },
+]
+
+const SubmitButtonConfigControl = ({ value, onChange }) => {
+  const config = normalizeFormSubmitButton(value)
+  const update = patch => onChange({ ...config, ...patch })
+
+  return (
+    <Popover
+      trigger="click"
+      placement="bottomRight"
+      content={(
+        <div style={{ width: 300 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>
+            Nút submit của form
+          </div>
+          <Checkbox
+            checked={config.visible}
+            onChange={event => update({ visible: event.target.checked })}
+          >
+            Hiển thị nút submit
+          </Checkbox>
+
+          <div style={{ marginTop: 12, marginBottom: 4, fontSize: 12, color: '#595959' }}>
+            Tên nút
+          </div>
+          <Input
+            value={config.label}
+            placeholder="Ví dụ: Lưu kết quả"
+            onChange={event => update({ label: event.target.value })}
+          />
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
+            <div>
+              <div style={{ marginBottom: 4, fontSize: 12, color: '#595959' }}>Icon</div>
+              <Select
+                value={config.icon}
+                options={SUBMIT_BUTTON_ICON_OPTIONS}
+                onChange={icon => update({ icon })}
+                style={{ width: '100%' }}
+              />
+            </div>
+            <div>
+              <div style={{ marginBottom: 4, fontSize: 12, color: '#595959' }}>Loại nút</div>
+              <Select
+                value={config.type}
+                options={SUBMIT_BUTTON_TYPE_OPTIONS}
+                onChange={type => update({ type })}
+                style={{ width: '100%' }}
+              />
+            </div>
+          </div>
+
+          <div style={{ marginTop: 12, marginBottom: 4, fontSize: 12, color: '#595959' }}>
+            Màu tùy chỉnh
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <ColorPicker
+              value={config.color || '#1677ff'}
+              showText
+              onChange={(_, color) => update({ color })}
+            />
+            {config.color ? (
+              <Button type="link" size="small" onClick={() => update({ color: null })}>
+                Dùng màu mặc định
+              </Button>
+            ) : null}
+          </div>
+
+          <Checkbox
+            checked={config.closeAfterSubmit}
+            style={{ marginTop: 12 }}
+            onChange={event => update({ closeAfterSubmit: event.target.checked })}
+          >
+            Đóng sau khi submit thành công
+          </Checkbox>
+        </div>
+      )}
+    >
+      <Button size="small" icon={<SettingOutlined />}>
+        Nút submit
+      </Button>
+    </Popover>
+  )
+}
 
 const FieldTypeDragGhost = ({ type }) => {
   const meta = FIELD_TYPE_MAP[type]
@@ -339,6 +438,10 @@ const FormBuilder = ({
       const basePayload = saveSchema
         ? useFormBuilderStore.getState().toPayload()
         : toPayload()
+      const {
+        submitButton: submitButtonConfig,
+        ...baseMeta
+      } = basePayload.meta ?? {}
       const fallbackJsxCode = buildJSX({
         meta: saveMeta,
         fields: saveFields,
@@ -353,10 +456,11 @@ const FormBuilder = ({
       const payload = {
         ...basePayload,
         meta: {
-          ...basePayload.meta,
+          ...baseMeta,
           ...buildMeta,
         },
         displayMode: basePayload.meta?.displayMode ?? 'NORMAL',
+        submitButton: normalizeFormSubmitButton(submitButtonConfig),
         jsx_code: saveJsxCode || fallbackJsxCode,
         ...buildMeta,
       }
@@ -467,6 +571,11 @@ const FormBuilder = ({
                 style={{ width: 172 }}
               />
             </DisplayModeControl>
+
+            <SubmitButtonConfigControl
+              value={templateMeta.submitButton ?? DEFAULT_FORM_SUBMIT_BUTTON}
+              onChange={submitButton => setTemplateMeta({ submitButton })}
+            />
 
             {/* Preview split button */}
             <PreviewButton onPreview={handlePreview} />

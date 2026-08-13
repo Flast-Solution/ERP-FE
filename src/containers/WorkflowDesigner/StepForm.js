@@ -5,7 +5,6 @@ import { InAppEvent } from '@flast-erp/core/utils'
 import { HASH_POPUP } from '@/configs/constant'
 import {
   FormInput,
-  FormSelectInfiniteBusinessUser,
 } from '@flast-erp/core/components'
 import { useNodes, useStepTypes, useUpdateNodeData } from '@/hooks/useWorkflowStore'
 import { ACTION_TYPES } from '@/store/workflowConstants'
@@ -35,13 +34,6 @@ import {
   SlidePane,
 } from './transitionForm.styles'
 import ActionDrawer from './ActionDrawer'
-
-const DEFAULT_SUBMIT_BUTTON = {
-  visible: true,
-  label: 'Cập nhật',
-  style: 'PRIMARY',
-  closeAfterSubmit: false,
-}
 
 const ActionSection = ({ title, trigger, actions, onAdd, onOpen, onRemove }) => {
   const filtered = actions.filter((a) => (a.trigger ?? 'on_enter') === trigger)
@@ -102,17 +94,19 @@ const StepForm = ({ node }) => {
 
   useEffect(() => {
     const nextActions = node.data.actions ?? []
+    const config = Object.fromEntries(
+      Object.entries(node.data.config ?? {}).filter(([key]) => key !== 'assigneeId'),
+    )
     setActions(nextActions)
     setActiveAction(null)
     form.setFieldsValue({
       name: node.data.name ?? node.data.label,
       code: node.data.code,
       type: node.data.type,
-      config: node.data.config ?? {},
+      config,
       saveSubmitLog: node.data.saveSubmitLog ?? false,
       hidden: node.data.hidden ?? false,
       buttons: node.data.buttons ?? [],
-      submitButton: node.data.submitButton ?? { ...DEFAULT_SUBMIT_BUTTON },
     })
     /* eslint-disable-next-line */
   }, [node.id])
@@ -261,31 +255,31 @@ const StepForm = ({ node }) => {
                   Dùng trong API và conditions. Không đổi sau khi xuất bản.
                 </FieldHint>
 
-                <FormSelectInfiniteBusinessUser
-                  name={['config', 'assigneeId']}
-                  label="Người thực hiện"
-                  placeholder="Chọn người thực hiện"
-                  initialFilter={{ page: 1, limit: 10 }}
-                  allowClear
-                />
-
-                <Form.Item
-                  name="saveSubmitLog"
-                  valuePropName="checked"
-                  initialValue={false}
-                  style={{ marginBottom: 16 }}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                    columnGap: 16,
+                  }}
                 >
-                  <Checkbox>Lưu log submit</Checkbox>
-                </Form.Item>
+                  <Form.Item
+                    name="saveSubmitLog"
+                    valuePropName="checked"
+                    initialValue={false}
+                    style={{ marginBottom: 16 }}
+                  >
+                    <Checkbox>Lưu log submit</Checkbox>
+                  </Form.Item>
 
-                <Form.Item
-                  name="hidden"
-                  valuePropName="checked"
-                  initialValue={false}
-                  style={{ marginBottom: 16 }}
-                >
-                  <Checkbox>Bước ẩn</Checkbox>
-                </Form.Item>
+                  <Form.Item
+                    name="hidden"
+                    valuePropName="checked"
+                    initialValue={false}
+                    style={{ marginBottom: 16 }}
+                  >
+                    <Checkbox>Bước ẩn</Checkbox>
+                  </Form.Item>
+                </div>
                 <FieldHint>
                   Bước ẩn không xuất hiện trong tiến trình và chỉ được mở bởi button của bước khác.
                 </FieldHint>
@@ -487,13 +481,11 @@ const StepForm = ({ node }) => {
                           onClick={() => {
                             const next = (node.data.forms ?? []).filter((_, j) => j !== i)
                             const values = form.getFieldsValue()
-                            form.setFieldValue('submitButton', { ...DEFAULT_SUBMIT_BUTTON })
                             updateNodeData(node.id, {
                               ...values,
                               label: values.name,
                               actions,
                               forms: next,
-                              submitButton: { ...DEFAULT_SUBMIT_BUTTON },
                             })
                           }}
                         />
@@ -503,53 +495,6 @@ const StepForm = ({ node }) => {
                   })
                 )}
 
-                {(node.data.forms ?? []).length > 0 && (
-                  <div
-                    style={{
-                      marginTop: 12,
-                      padding: 12,
-                      border: '1px solid #f0f0f0',
-                      borderRadius: 8,
-                      background: '#fafafa',
-                    }}
-                  >
-                    <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 12 }}>
-                      Cấu hình nút submit form
-                    </div>
-                    <Form.Item
-                      name={['submitButton', 'visible']}
-                      valuePropName="checked"
-                      initialValue={true}
-                      style={{ marginBottom: 12 }}
-                    >
-                      <Checkbox>Hiển thị nút submit</Checkbox>
-                    </Form.Item>
-                    <Form.Item
-                      name={['submitButton', 'label']}
-                      label="Tên nút"
-                      rules={[{ required: true, message: 'Nhập tên nút submit' }]}
-                    >
-                      <Input placeholder="Ví dụ: Lưu kết quả kiểm tra" />
-                    </Form.Item>
-                    <Form.Item name={['submitButton', 'style']} label="Kiểu hiển thị">
-                      <Select
-                        options={[
-                          { value: 'PRIMARY', label: 'Primary' },
-                          { value: 'DEFAULT', label: 'Mặc định' },
-                          { value: 'DANGER', label: 'Nguy hiểm' },
-                        ]}
-                      />
-                    </Form.Item>
-                    <Form.Item
-                      name={['submitButton', 'closeAfterSubmit']}
-                      valuePropName="checked"
-                      initialValue={false}
-                      style={{ marginBottom: 0 }}
-                    >
-                      <Checkbox>Đóng form và quay lại bước hiện tại sau khi submit</Checkbox>
-                    </Form.Item>
-                  </div>
-                )}
               </Section>
             </div>
           </SlidePane>

@@ -49,7 +49,6 @@ import { ListUserSystemConfig } from './ListUserSysTemConfig';
 import { BusinessUnitsConfig } from './BusinessUnitsConfig';
 
 /* CSKH */
-import { Lead3DayConfig } from './Lead3DayConfig'
 import { Cohoi7DayConfig } from './Cohoi7DayConfig';
 
 /* Kế  toán */
@@ -76,7 +75,6 @@ const routeConfigs = [
     ProductionControlConfig,
     CommonConfig,
     LeadConfig,
-    Lead3DayConfig,
     CohoiConfig,
     InstockConfig,
     WareHouseConfig,

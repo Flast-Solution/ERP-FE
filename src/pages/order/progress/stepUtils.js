@@ -32,25 +32,6 @@ export const getWorkflowStepButtons = (step = {}) => {
     .sort((left, right) => left.order - right.order)
 }
 
-export const getStepSubmitButtonConfig = (step = {}) => {
-  let config = step?.submitButton ?? step?.submit_button
-  if (typeof config === 'string' && config.trim()) {
-    try {
-      config = JSON.parse(config)
-    } catch (_) {
-      config = {}
-    }
-  }
-  if (!config || typeof config !== 'object' || Array.isArray(config)) config = {}
-
-  return {
-    visible: config.visible ?? true,
-    label: config.label ?? config.text ?? 'Cập nhật',
-    style: config.style ?? config.buttonStyle ?? config.button_style ?? 'PRIMARY',
-    closeAfterSubmit: config.closeAfterSubmit ?? config.close_after_submit ?? false,
-  }
-}
-
 export const isSameStepRef = (left, right) => {
   const normalizedLeft = normalizeStepRef(left)
   const normalizedRight = normalizeStepRef(right)

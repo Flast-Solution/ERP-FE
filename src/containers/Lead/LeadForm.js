@@ -4,6 +4,7 @@ import { Button, Form, Input, Radio, Select, message } from 'antd'
 import {
   FormContextCustom,
   FormHidden,
+  FormSelectAPI,
   FormSelectInfiniteProduct,
 } from '@flast-erp/core/components'
 import { RequestUtils } from '@flast-erp/core/utils'
@@ -125,7 +126,7 @@ const LeadSelect = ({ name, label, code, required, options = [], fieldClassName 
   </Form.Item>
 )
 
-const LeadForm = ({ listServices = [], listSale = [], submitting = false }) => {
+const LeadForm = ({ listSale = [], submitting = false }) => {
   const { form, record } = useContext(FormContextCustom)
   const [provinces, setProvinces] = useState([])
   const [leadStatuses, setLeadStatuses] = useState([])
@@ -226,10 +227,6 @@ const LeadForm = ({ listServices = [], listSale = [], submitting = false }) => {
     () => provinces.map(item => ({ value: item.name, label: item.name })),
     [provinces],
   )
-  const serviceOptions = useMemo(
-    () => listServices.map(item => ({ value: item.id, label: item.name })),
-    [listServices],
-  )
   const leadSourceOptions = useMemo(
     () => CHANNEL_SOURCE.map(item => ({ value: item.id, label: item.name })),
     [],
@@ -326,7 +323,21 @@ const LeadForm = ({ listServices = [], listSale = [], submitting = false }) => {
               titleProp="name"
             />
           </div>
-          <LeadSelect name="serviceId" label="Dịch vụ" code="service" placeholder="Chọn dịch vụ" options={serviceOptions} />
+          <div className="pl-field lead-service-field">
+            <FormSelectAPI
+              showSearch
+              allowClear
+              className="pl-select"
+              apiPath="erp/service/list"
+              apiAddNewItem="erp/service/create"
+              onData={getResponseItems}
+              label="Dịch vụ"
+              name="serviceId"
+              valueProp="id"
+              titleProp="name"
+              placeholder="Chọn dịch vụ"
+            />
+          </div>
           <LeadSelect required name="source" label="Nguồn Lead" code="source" placeholder="Chọn nguồn Lead" options={leadSourceOptions} />
           <LeadInput name="quantityRange" label="Số lượng dự kiến" code="quantity_range" placeholder="200 - 500 kg" />
           <LeadInput name="budgetRange" label="Giá trị dự kiến" code="budget_range" placeholder="50.000.000 - 100.000.000 đ" />

@@ -203,11 +203,5 @@ export const DEFAULT_STEP = {
   config: {},
   hidden: false,
   buttons: [],
-  submitButton: {
-    visible: true,
-    label: 'Cập nhật',
-    style: 'PRIMARY',
-    closeAfterSubmit: false,
-  },
   actions: [],
 }

@@ -39,9 +39,9 @@ const normalizeStepConfig = (config) => {
   }
 }
 
-const removeSubmitLogFromConfig = (config) => Object.fromEntries(
+const sanitizeStepConfig = (config) => Object.fromEntries(
   Object.entries(normalizeStepConfig(config)).filter(([key]) => (
-    key !== 'saveSubmitLog' 
+    key !== 'saveSubmitLog' && key !== 'assigneeId'
   )),
 )
 
@@ -65,25 +65,6 @@ const normalizeStepButtons = (value) => {
     requireSubmission: button?.requireSubmission ?? button?.require_submission ?? false,
     order: button?.order ?? index,
   }))
-}
-
-const normalizeSubmitButton = (value) => {
-  let config = value
-  if (typeof config === 'string' && config.trim()) {
-    try {
-      config = JSON.parse(config)
-    } catch (_) {
-      config = {}
-    }
-  }
-  if (!config || typeof config !== 'object' || Array.isArray(config)) config = {}
-
-  return {
-    visible: config.visible ?? true,
-    label: config.label ?? config.text ?? 'Cập nhật',
-    style: config.style ?? config.buttonStyle ?? config.button_style ?? 'PRIMARY',
-    closeAfterSubmit: config.closeAfterSubmit ?? config.close_after_submit ?? false,
-  }
 }
 
 const getStepActions = (step = {}) => firstArray(
@@ -208,10 +189,7 @@ export const jsonToFlow = (raw, stepTypes = []) => {
         enabled: step.enabled ?? true,
         hidden: step.hidden ?? step.isHidden ?? step.is_hidden ?? false,
         buttons: normalizeStepButtons(step.buttons ?? step.stepButtons ?? step.step_buttons),
-        submitButton: normalizeSubmitButton(
-          step.submitButton ?? step.submit_button ?? rawConfig.submitButton ?? rawConfig.submit_button,
-        ),
-        config: removeSubmitLogFromConfig(rawConfig),
+        config: sanitizeStepConfig(rawConfig),
         saveSubmitLog: step.saveSubmitLog ?? false,
         forms: normalizeStepForms(step),
         actions: getStepActions(step).map(deserializeAction),
@@ -638,8 +616,7 @@ const serializeStep = (node, index, stepTypes = [], edges = []) => {
       ...button,
       order: button.order ?? buttonIndex,
     })),
-    submitButton: normalizeSubmitButton(node.data?.submitButton),
-    config: removeSubmitLogFromConfig(node.data?.config),
+    config: sanitizeStepConfig(node.data?.config),
     saveSubmitLog: node.data?.saveSubmitLog ?? false,
     form: serializeFormId(node.data?.forms ?? []),
     actions: (node.data?.actions ?? []).map(serializeAction),

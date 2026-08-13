@@ -144,6 +144,14 @@ export const LeadFormShell = styled.div`
     margin-bottom: 0;
   }
 
+  .lead-service-field .ant-form-item {
+    margin-bottom: 0;
+  }
+
+  .lead-service-field .ant-select {
+    width: 100%;
+  }
+
   .lead-business-caption {
     margin: var(--s-4) 0 6px;
   }
