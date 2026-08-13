@@ -55,7 +55,7 @@ export const getReportRanges = days => {
   const currentStart = currentEnd.subtract(days - 1, 'day').startOf('day')
   const previousEnd = currentStart.subtract(1, 'millisecond')
   const previousStart = previousEnd.subtract(days - 1, 'day').startOf('day')
-  const toIso = value => value.toISOString()
+  const toIso = value => value.toISOString().replace(/\.\d{3}Z$/, 'Z')
 
   return {
     today: { start: toIso(dayjs().startOf('day')), end: toIso(dayjs().endOf('day')) },
@@ -64,10 +64,22 @@ export const getReportRanges = days => {
   }
 }
 
-export const createReportFilters = (bizId, range) => [
-  createLeadFilter('bizId', 'EQUALS', bizId),
-  createLeadFilter('inTime', 'BETWEEN', range.start, range.end),
-]
+export const createReportFilters = (bizId, range, dashboardFilters = {}) => {
+  const filters = [
+    createLeadFilter('bizId', 'EQUALS', bizId),
+    createLeadFilter('inTime', 'BETWEEN', range.start, range.end),
+  ]
+
+  const filterFields = ['source', 'saleId', 'status', 'interestLevel']
+  filterFields.forEach(field => {
+    const value = dashboardFilters[field]
+    if (value !== undefined && value !== null && value !== '') {
+      filters.push(createLeadFilter(field, 'EQUALS', value))
+    }
+  })
+
+  return filters
+}
 
 export const percent = (value, total) => (
   total > 0 ? (Number(value || 0) / Number(total)) * 100 : 0
@@ -99,4 +111,3 @@ export const getInitials = name => String(name || '?')
   .slice(-2)
   .map(part => part.charAt(0).toUpperCase())
   .join('')
-

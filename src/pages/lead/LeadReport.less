@@ -18,6 +18,60 @@
   background: transparent !important;
 }
 
+.lead-report-filters {
+  margin-bottom: var(--s-5, 20px);
+  padding: 16px;
+  border: 1px solid #e9ebf1;
+  border-radius: 12px;
+  background: #fafbfc;
+}
+
+.lead-report-filters__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: #343849;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.lead-report-filters__head .anticon {
+  color: #6961f5;
+}
+
+.lead-report-filters__controls {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(140px, 1fr)) auto;
+  gap: 10px;
+}
+
+.lead-report-filters__controls .ant-select,
+.lead-report-filters__controls .ant-btn {
+  width: 100%;
+}
+
+.lead-report-filters__controls .ant-select-selector,
+.lead-report-filters__controls .ant-btn {
+  min-height: 38px;
+  border-color: #dfe2e9 !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 1200px) {
+  .lead-report-filters__controls {
+    grid-template-columns: repeat(3, minmax(160px, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .lead-report-filters__controls {
+    grid-template-columns: 1fr;
+  }
+}
+
 .lead-report-shell .lead-report-loading {
   min-height: 420px;
   display: grid;
