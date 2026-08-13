@@ -2,6 +2,7 @@ import { RequestUtils } from '@flast-erp/core/utils'
 import { DEFAULT_STEP, DEFAULT_TRANSITION } from '@/store/workflowConstants'
 import {
   getNodeTopologyType,
+  isWorkflowStepHidden,
   normalizeWorkflowStepType,
   resolveNodeProcessTypeKey,
 } from './workflowValidators'
@@ -107,6 +108,19 @@ const serializeAllowedRoles = (roles) => {
  * }
  */
 export const flowToJson = ({ nodes, edges, process, stepTypes = [] }) => {
+  const hiddenTargetCodes = new Set(
+    nodes.flatMap(node => (node?.data?.buttons ?? []))
+      .filter(button => button?.type === 'OPEN_HIDDEN_STEP')
+      .map(button => String(button?.targetStepCode ?? '').trim())
+      .filter(Boolean),
+  )
+  const normalizedNodes = nodes.map(node => {
+    const referencedAsHidden = hiddenTargetCodes.has(String(node?.data?.code ?? ''))
+      || hiddenTargetCodes.has(String(node?.id ?? ''))
+    return referencedAsHidden && !isWorkflowStepHidden(node)
+      ? { ...node, data: { ...node.data, hidden: true } }
+      : node
+  })
   const stepCodeByNodeId = nodes.reduce((map, node) => {
     map.set(node.id, node.data?.code ?? node.id)
     return map
@@ -114,7 +128,7 @@ export const flowToJson = ({ nodes, edges, process, stepTypes = [] }) => {
 
   return {
     process: serializeProcess(process),
-    steps: nodes.map((node, index) => serializeStep(node, index, stepTypes, edges)),
+    steps: normalizedNodes.map((node, index) => serializeStep(node, index, stepTypes, edges)),
     transitions: edges.map((edge, index) =>
       serializeTransition(edge, index, stepCodeByNodeId)
     ),
@@ -168,7 +182,7 @@ export const jsonToFlow = (raw, stepTypes = []) => {
     id: raw.process?.id ?? raw.id ?? raw.processId ?? raw.process_id ?? null,
   })
 
-  const nodes = (raw.steps ?? []).map((step) => {
+  const rawNodes = (raw.steps ?? []).map((step) => {
     const stepCode = step.code ?? step.stepCode ?? step.step_code ?? ''
     const name = step.name ?? step.displayName ?? step.display_name ?? step.stepName ?? step.step_name ?? stepCode
     const typeValue = getStepProcessTypeRef(step)
@@ -187,7 +201,7 @@ export const jsonToFlow = (raw, stepTypes = []) => {
         description: step.description ?? '',
         sortOrder: step.sortOrder ?? step.sort_order ?? null,
         enabled: step.enabled ?? true,
-        hidden: step.hidden ?? step.isHidden ?? step.is_hidden ?? false,
+        hidden: isWorkflowStepHidden(step.hidden ?? step.isHidden ?? step.is_hidden ?? false),
         buttons: normalizeStepButtons(step.buttons ?? step.stepButtons ?? step.step_buttons),
         config: sanitizeStepConfig(rawConfig),
         saveSubmitLog: step.saveSubmitLog ?? false,
@@ -204,6 +218,20 @@ export const jsonToFlow = (raw, stepTypes = []) => {
         type: resolveNodeProcessTypeKey(nodeData, stepTypes),
       },
     }
+  })
+
+  const hiddenTargetCodes = new Set(
+    rawNodes.flatMap(node => (node?.data?.buttons ?? []))
+      .filter(button => button?.type === 'OPEN_HIDDEN_STEP')
+      .map(button => String(button?.targetStepCode ?? '').trim())
+      .filter(Boolean),
+  )
+  const nodes = rawNodes.map(node => {
+    const referencedAsHidden = hiddenTargetCodes.has(String(node?.data?.code ?? ''))
+      || hiddenTargetCodes.has(String(node?.id ?? ''))
+    return referencedAsHidden
+      ? { ...node, data: { ...node.data, hidden: true } }
+      : node
   })
 
   const edges = (raw.transitions ?? []).map((t) => {
@@ -611,7 +639,7 @@ const serializeStep = (node, index, stepTypes = [], edges = []) => {
     position: node.position,
     sortOrder: node.data?.sortOrder ?? index,
     enabled: node.data?.enabled ?? true,
-    hidden: node.data?.hidden ?? false,
+    hidden: isWorkflowStepHidden(node),
     buttons: normalizeStepButtons(node.data?.buttons).map((button, buttonIndex) => ({
       ...button,
       order: button.order ?? buttonIndex,

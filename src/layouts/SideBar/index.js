@@ -31,8 +31,6 @@ import {
   DollarCircleFilled,
   OrderedListOutlined,
   DeploymentUnitOutlined,
-  AppstoreOutlined,
-  AuditOutlined,
   // OpenAIOutlined,
   TeamOutlined,
   SettingOutlined,
@@ -42,7 +40,6 @@ import {
   ForkOutlined,
   WalletOutlined,
   TagOutlined,
-  DeleteOutlined,
   PaperClipOutlined,
   GiftOutlined,
   BuildOutlined,
@@ -130,15 +127,8 @@ function SideBar() {
     getItem(<Link to="/sale/report-common">{t('sideBar.dashboard')}</Link>, 'home', <FundViewOutlined />),
     getItem(<Link to="/task">Dự án</Link>, 'project_list', <PieChartOutlined />),
     getItem(<Link to="/lead">Lead</Link>, 'tong_lead', <FolderOpenOutlined />),
-    getItem('Chăm sóc K.H', 'chua_cham_soc', <FolderOpenOutlined style={iconSize} />, [
-      getItem(<Link to="/customer-service/co-hoi">Cơ hội</Link>, "cs_co_hoi", <AppstoreOutlined />),
-      getItem(<Link to="/customer-service/don-hang">Đơn hàng</Link>, "cs_don_hang", <AuditOutlined />)
-    ]),
     getItem(<Link to="/sale/co-hoi"> Cơ hội </Link>, 'co_hoi', <TagOutlined />),
-    getItem('Đơn hàng', 'order_solve', <PaperClipOutlined style={iconSize} />, [
-      getItem(<Link to="/sale/order">Tổng hợp</Link>, 'list_order', <UnorderedListOutlined />),
-      getItem(<Link to="/sale/order-cancel">Đơn hủy</Link>, 'order_cancel', <DeleteOutlined />)
-    ]),
+    getItem(<Link to="/sale/order">Đơn hàng</Link>, 'order_solve', <PaperClipOutlined style={iconSize} />),
     getItem('Qui trình', 'business_flow', <DollarCircleFilled />, [
       getItem(<Link to="/workflow-designer">Tạo nghiệp vụ</Link>, 'business_create', <UnorderedListOutlined />),
       getItem(<Link to="/workflow-forms">Danh sách form</Link>, 'workflow_form_list', <UnorderedListOutlined />),

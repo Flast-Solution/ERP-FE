@@ -3,7 +3,7 @@ import { Handle, Position } from 'reactflow'
 import { DeleteOutlined } from '@ant-design/icons'
 import { message, Tooltip } from 'antd'
 import { useDeleteNode, useEdges, useStepTypes } from '@/hooks/useWorkflowStore'
-import { resolveStepTypeConfig } from '@/utils/workflowValidators'
+import { isWorkflowStepHidden, resolveStepTypeConfig } from '@/utils/workflowValidators'
 import {
   NodeWrapper,
   NodeHeader,
@@ -23,7 +23,7 @@ import {
 const buildFooterBadges = (data) => {
   const badges = []
 
-  if (data.hidden) {
+  if (isWorkflowStepHidden(data.hidden)) {
     badges.push({ icon: '◌', label: 'Bước ẩn', key: 'hidden' })
   }
 

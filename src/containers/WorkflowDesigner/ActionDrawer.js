@@ -118,6 +118,7 @@ const ERP_CORE_TABLE_OPTIONS = [
   { value: 'order_detail', label: 'Đơn hàng con' },
   { value: 'product', label: 'Sản phẩm' },
   { value: 'user', label: 'Nhân viên' },
+  { value: 'lead', label: 'Lead'}
 ]
 
 const normalizeActionType = (type) =>

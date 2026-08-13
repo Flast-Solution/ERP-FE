@@ -84,6 +84,12 @@ export const normalizeWorkflowStepType = (type, stepTypes = [], node = {}) => {
 
 const CANONICAL_STEP_TYPES = ['start', 'end', 'approval', 'revision', 'condition', 'process']
 
+export const isWorkflowStepHidden = (valueOrNode) => {
+  const value = valueOrNode?.data ? valueOrNode.data.hidden : valueOrNode
+  if (value === true || value === 1) return true
+  return ['true', '1'].includes(String(value ?? '').trim().toLowerCase())
+}
+
 const getStepTypeMatchCandidates = (stepType) => [
   stepType?.key,
   stepType?.id,
@@ -155,9 +161,15 @@ export const validateBeforeExport = (nodes, edges, stepTypes = []) => {
     return errors // không check thêm nếu rỗng
   }
 
-  const isHiddenNode = node => node?.data?.hidden === true
-    || node?.data?.hidden === 1
-    || String(node?.data?.hidden).toLowerCase() === 'true'
+  const hiddenTargetCodes = new Set(
+    nodes.flatMap(node => (node?.data?.buttons ?? []))
+      .filter(button => button?.type === 'OPEN_HIDDEN_STEP')
+      .map(button => String(button?.targetStepCode ?? '').trim())
+      .filter(Boolean),
+  )
+  const isHiddenNode = node => isWorkflowStepHidden(node)
+    || hiddenTargetCodes.has(String(node?.data?.code ?? ''))
+    || hiddenTargetCodes.has(String(node?.id ?? ''))
   const visibleNodes = nodes.filter(node => !isHiddenNode(node))
   const visibleNodeIds = new Set(visibleNodes.map(node => node.id))
   const visibleEdges = edges.filter(edge => (
@@ -264,7 +276,7 @@ export const validateBeforeExport = (nodes, edges, stepTypes = []) => {
 // Validation đầy đủ hơn, dùng khi save lên API
 // Trả về { valid: boolean, errors: string[], warnings: string[] }
 export const validateFlow = (nodes, edges, stepTypes = []) => {
-  const errors = validateBeforeExport(nodes, edges, stepTypes)
+  const errors = [...new Set(validateBeforeExport(nodes, edges, stepTypes))]
   const warnings = []
 
   // Warning: guard có config rỗng
@@ -296,7 +308,7 @@ export const validateFlow = (nodes, edges, stepTypes = []) => {
   return {
     valid: errors.length === 0,
     errors,
-    warnings,
+    warnings: [...new Set(warnings)],
   }
 }
 

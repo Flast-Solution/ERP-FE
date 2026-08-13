@@ -8,7 +8,12 @@ import {
 } from '@flast-erp/core/components'
 import { useNodes, useStepTypes, useUpdateNodeData } from '@/hooks/useWorkflowStore'
 import { ACTION_TYPES } from '@/store/workflowConstants'
-import { isStepTypeMatch, resolveStepTypeConfig, slugifyCode } from '@/utils/workflowValidators'
+import {
+  isStepTypeMatch,
+  isWorkflowStepHidden,
+  resolveStepTypeConfig,
+  slugifyCode,
+} from '@/utils/workflowValidators'
 import { getFormDisplayName, normalizeAttachedForm } from '@/utils/workflowSerializer'
 import {
   Section,
@@ -105,7 +110,7 @@ const StepForm = ({ node }) => {
       type: node.data.type,
       config,
       saveSubmitLog: node.data.saveSubmitLog ?? false,
-      hidden: node.data.hidden ?? false,
+      hidden: isWorkflowStepHidden(node),
       buttons: node.data.buttons ?? [],
     })
     /* eslint-disable-next-line */
@@ -215,7 +220,7 @@ const StepForm = ({ node }) => {
     .filter((item) => item.id !== node.id)
     .map((item) => ({
       value: item.data?.code ?? item.id,
-      label: `${item.data?.name ?? item.data?.label ?? item.id}${item.data?.hidden ? ' (bước ẩn)' : ''}`,
+      label: `${item.data?.name ?? item.data?.label ?? item.id}${isWorkflowStepHidden(item) ? ' (bước ẩn)' : ''}`,
     }))
 
   return (
