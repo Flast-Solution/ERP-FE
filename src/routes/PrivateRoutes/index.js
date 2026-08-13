@@ -48,9 +48,6 @@ import { ListAcountGroupConfig } from './ListUserGroupConfig';
 import { ListUserSystemConfig } from './ListUserSysTemConfig';
 import { BusinessUnitsConfig } from './BusinessUnitsConfig';
 
-/* CSKH */
-import { Cohoi7DayConfig } from './Cohoi7DayConfig';
-
 /* Kế  toán */
 import { KeToanConfig } from './KeToanConfig';
 
@@ -82,7 +79,6 @@ const routeConfigs = [
     ListAcountConfig,
     ListAcountGroupConfig,
     BusinessUnitsConfig,
-    Cohoi7DayConfig,
     KeToanConfig,
     ListUserSystemConfig,
     NewfeedConfig,

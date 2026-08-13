@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import { Button } from 'antd';
 import { Helmet } from 'react-helmet';
 import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
@@ -31,16 +31,8 @@ import { dateFormatOnSubmit } from '@flast-erp/core/utils';
 import { ORDER_COLUMN_ACTION } from '@/containers/Order/utils';
 import Filter from './Filter';
 import OrderService from '@/services/OrderService';
-import { useEffectAsync } from '@flast-erp/core/hooks';
 
-const CoHoi7DayPage = ( { type }) => {
-
-  const [ title, setTitle ] = useState("");
-  useEffectAsync(() => setTitle(type === 'cohoi' 
-    ? 'Danh sách Cơ hội 7 ngày chưa ra đơn hàng' 
-    : 'Đơn hàng chưa chăm sóc sau bán'
-  ), [type]);
-
+export const CoHoi7DayContent = ({ type }) => {
   const onEdit = (item) => {
     let title = 'Cập nhật mã Cơ hội / Đơn hàng #' + item.code
     let hash = '#draw/cohoi7Day.edit';
@@ -76,24 +68,34 @@ const CoHoi7DayPage = ( { type }) => {
   }, []);
 
   return (
+    <RestList
+      xScroll={1200}
+      onData={onData}
+      initialFilter={{ limit: 10, page: 1, type }}
+      filter={<Filter />}
+      beforeSubmitFilter={beforeSubmitFilter}
+      useGetAllQuery={useGetList}
+      hasCreate={false}
+      apiPath={'cs/co-hoi-order-fetch'}
+      columns={CUSTOM_ACTION}
+    />
+  )
+}
+
+const CoHoi7DayPage = ({ type }) => {
+  const title = type === 'cohoi'
+    ? 'Danh sách Cơ hội 7 ngày chưa ra đơn hàng'
+    : 'Đơn hàng chưa chăm sóc sau bán';
+
+  return (
     <div>
       <Helmet>
         <title>{title}</title>
       </Helmet>
       <BreadcrumbCustom
-        data={[{ title: 'Trang chủ' }, { title: title }]}
+        data={[{ title: 'Trang chủ' }, { title }]}
       />
-      <RestList
-        xScroll={1200}
-        onData={onData}
-        initialFilter={{ limit: 10, page: 1, type }}
-        filter={<Filter />}
-        beforeSubmitFilter={beforeSubmitFilter}
-        useGetAllQuery={useGetList}
-        hasCreate={false}
-        apiPath={'cs/co-hoi-order-fetch'}
-        columns={CUSTOM_ACTION}
-      />
+      <CoHoi7DayContent type={type} />
     </div>
   )
 }
