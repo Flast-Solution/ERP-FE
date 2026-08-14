@@ -34,7 +34,9 @@ const FormFileUpload = ({
   useEffect(() => {
     setFileList(current => {
       if (current.some(file => file.status === 'uploading')) return current
-      return (Array.isArray(formValue) ? formValue : (formValue ? [formValue] : [])).map(toUploadFile)
+      return (Array.isArray(formValue) ? formValue : (formValue ? [formValue] : []))
+        .map(toUploadFile)
+        .filter(Boolean)
     })
   }, [formValue])
 
