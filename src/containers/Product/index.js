@@ -78,7 +78,10 @@ const Product = ({ closeModal, data }) => {
         item.sku = details;
         skus.push(item);
       }
-      const productAssets = splitProductAssets(data);
+      const isCreate = !data?.id;
+      const productAssets = isCreate
+        ? { images: [], files: [] }
+        : splitProductAssets(data);
       setRecord({
         ...data,
         image: productAssets.images,

@@ -2,13 +2,14 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Button, Select, Spin } from 'antd'
 import {
   BarChartOutlined,
+  FilterOutlined,
   InfoCircleOutlined,
   ReloadOutlined,
   RiseOutlined,
 } from '@ant-design/icons'
 import { RequestUtils } from '@flast-erp/core/utils'
 import useGetMe from '@/hooks/useGetMe'
-import { CHANNEL_SOURCE_MAP_KEYS } from '@/configs/localData'
+import { CHANNEL_SOURCE, CHANNEL_SOURCE_MAP_KEYS } from '@/configs/localData'
 import {
   fetchLeadBreakdowns,
   fetchLeadReport,
@@ -25,6 +26,7 @@ import {
   getGroups,
   getInitials,
   getReportRanges,
+  normalizeStage,
   percent,
   percentChange,
   rawStageValues,
@@ -42,6 +44,19 @@ const LOST_REASON_LABELS = {
   WRONG_PRODUCT: 'Không đúng sản phẩm',
   PROJECT_DELAYED: 'Hoãn dự án',
   OTHER: 'Khác',
+}
+
+const INTEREST_OPTIONS = [
+  { value: 'HIGH', label: 'Cao' },
+  { value: 'MEDIUM', label: 'Trung bình' },
+  { value: 'LOW', label: 'Thấp' },
+]
+
+const EMPTY_DASHBOARD_FILTERS = {
+  source: undefined,
+  saleId: undefined,
+  status: undefined,
+  interestLevel: undefined,
 }
 
 const BarRow = ({ label, value, maximum, tone, displayValue }) => (
@@ -82,6 +97,8 @@ const SectionHead = ({ icon, iconNode, title, caption }) => (
 const LeadReport = () => {
   const { user } = useGetMe()
   const [rangeDays, setRangeDays] = useState(30)
+  const [dashboardFilters, setDashboardFilters] = useState(EMPTY_DASHBOARD_FILTERS)
+  const [statusOptions, setStatusOptions] = useState([])
   const [report, setReport] = useState(null)
   const [breakdowns, setBreakdowns] = useState({})
   const [users, setUsers] = useState([])
@@ -110,14 +127,20 @@ const LeadReport = () => {
       try {
         const ranges = getReportRanges(rangeDays)
         const filters = {
-          today: createReportFilters(bizId, ranges.today),
-          current: createReportFilters(bizId, ranges.current),
-          previous: createReportFilters(bizId, ranges.previous),
+          today: createReportFilters(bizId, ranges.today, dashboardFilters),
+          current: createReportFilters(bizId, ranges.current, dashboardFilters),
+          previous: createReportFilters(bizId, ranges.previous, dashboardFilters),
         }
         const result = await fetchLeadReport(filters)
         if (!active) return
         setReport(result.data)
         setWarnings(result.errors)
+        if (!dashboardFilters.status) {
+          setStatusOptions(getGroups(result.data?.currentStatus).map(item => ({
+            value: item.groupValue,
+            label: normalizeStage(item.groupValue),
+          })))
+        }
 
         const sourceGroups = getGroups(result.data?.sources).sort((a, b) => b.count - a.count)
         const saleGroups = getGroups(result.data?.sales).sort((a, b) => b.count - a.count)
@@ -139,7 +162,15 @@ const LeadReport = () => {
 
     load()
     return () => { active = false }
-  }, [bizId, rangeDays, reloadKey])
+  }, [bizId, dashboardFilters, rangeDays, reloadKey])
+
+  const updateDashboardFilter = (field, value) => {
+    setDashboardFilters(current => ({ ...current, [field]: value }))
+  }
+
+  const hasDashboardFilters = Object.values(dashboardFilters).some(
+    value => value !== undefined && value !== null && value !== '',
+  )
 
   const model = useMemo(() => {
     if (!report) return null
@@ -259,14 +290,63 @@ const LeadReport = () => {
               <h1 className="t-h1" style={{ margin: '4px 0 0' }}>Lead Pipeline</h1>
               <div className="t-small pl-report-head__sub">Trả lời: đang có bao nhiêu lead tốt, kênh/nhân viên nào hiệu quả, pipeline nghẽn ở đâu, vì sao mất đơn, và tốc độ chốt đơn.</div>
             </div>
-            <div className="pl-report-range">
-              <img src={`${ICON_ROOT}/calendar.svg`} alt="" />
+          </div>
+
+          <div className="lead-report-filters">
+            <div className="lead-report-filters__head">
+              <FilterOutlined />
+              <span>Bộ lọc báo cáo</span>
+            </div>
+            <div className="lead-report-filters__controls">
               <Select
+                aria-label="Khoảng thời gian"
                 value={rangeDays}
                 onChange={setRangeDays}
-                variant="borderless"
                 options={[7, 30, 90].map(value => ({ value, label: `${value} ngày qua` }))}
               />
+              <Select
+                aria-label="Kênh Lead"
+                allowClear
+                placeholder="Tất cả kênh"
+                value={dashboardFilters.source}
+                onChange={value => updateDashboardFilter('source', value)}
+                options={CHANNEL_SOURCE.map(item => ({ value: item.id, label: item.name }))}
+              />
+              <Select
+                aria-label="Nhân viên phụ trách"
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                placeholder="Tất cả nhân viên"
+                value={dashboardFilters.saleId}
+                onChange={value => updateDashboardFilter('saleId', value)}
+                options={users.map(item => ({
+                  value: item.id ?? item.value,
+                  label: item.name || item.fullName || item.title || item.username,
+                })).filter(item => item.value != null && item.label)}
+              />
+              <Select
+                aria-label="Trạng thái Lead"
+                allowClear
+                placeholder="Tất cả trạng thái"
+                value={dashboardFilters.status}
+                onChange={value => updateDashboardFilter('status', value)}
+                options={statusOptions}
+              />
+              <Select
+                aria-label="Mức độ quan tâm"
+                allowClear
+                placeholder="Tất cả mức độ"
+                value={dashboardFilters.interestLevel}
+                onChange={value => updateDashboardFilter('interestLevel', value)}
+                options={INTEREST_OPTIONS}
+              />
+              <Button
+                disabled={!hasDashboardFilters}
+                onClick={() => setDashboardFilters(EMPTY_DASHBOARD_FILTERS)}
+              >
+                Xóa lọc
+              </Button>
             </div>
           </div>
 

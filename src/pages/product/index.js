@@ -105,7 +105,10 @@ const Index = () => {
   const onCreateProduct = () => InAppEvent.emit(HASH_MODAL, {
     hash: '#draw/product.edit',
     title: 'Tạo mới sản phẩm',
-    data: {}
+    data: {
+      image: [],
+      file: [],
+    }
   });
 
   const onAddBom = (item) => InAppEvent.emit(HASH_MODAL, {

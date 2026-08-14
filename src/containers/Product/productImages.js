@@ -6,7 +6,7 @@ import {
 
 const parseStringValue = (value) => {
   const normalized = String(value ?? '').trim()
-  if (!normalized) return []
+  if (!normalized || /^\[object\s+(?:Object|Undefined|Null)\]$/i.test(normalized)) return []
 
   try {
     const parsed = JSON.parse(normalized)
