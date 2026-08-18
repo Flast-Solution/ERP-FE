@@ -53,8 +53,9 @@ const useWorkflowProgressDrawer = () => {
             instance,
           ])
       ).values())
-      const requestedProcessId = options.processId
-      const requestedInstanceId = selectedDetail.workflowInstanceId
+      const includeAllInstances = options.includeAllInstances === true
+      const requestedProcessId = includeAllInstances ? null : options.processId
+      const requestedInstanceId = includeAllInstances ? null : selectedDetail.workflowInstanceId
       const scopedInstances = normalizedInstances.filter(instance => {
         if (requestedInstanceId && String(instance.id) !== String(requestedInstanceId)) return false
         if (requestedProcessId && String(instance.processId) !== String(requestedProcessId)) return false
