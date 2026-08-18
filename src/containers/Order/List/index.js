@@ -48,6 +48,8 @@ const ListOrder = ({
   disableWorkflowAttach = false,
   apiPath = 'erp/order/fetch',
   orderMode = false,
+  detailDrawerHash = '#order.tabs',
+  detailDrawerTitle,
 }) => {
   const navigate = useNavigate()
   const [copiedIndex, setCopiedIndex] = useState(null)
@@ -113,10 +115,10 @@ const ListOrder = ({
   }, [isOpportunityList, openWorkflowModal])
 
   const onClickViewDetail = useCallback((customerOrder) => InAppEvent.emit(HASH_MODAL, {
-    hash: '#order.tabs',
-    title: 'Thông tin đơn hàng ' + customerOrder.code,
+    hash: detailDrawerHash,
+    title: detailDrawerTitle ?? ('Thông tin đơn hàng ' + customerOrder.code),
     data: { customerOrder },
-  }), [])
+  }), [detailDrawerHash, detailDrawerTitle])
 
   const beforeSubmitFilter = useCallback((values) => {
     dateFormatOnSubmit(values, ['from', 'to'])

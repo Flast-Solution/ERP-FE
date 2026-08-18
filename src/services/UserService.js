@@ -133,6 +133,16 @@ const UserService = {
     }
     return embedded;
   },
+  async loadBusinessUsers() {
+    const { data: embedded, errorCode } = await RequestUtils.Get("/auth/user-bussiness/list-user");
+    if (errorCode !== SUCCESS_CODE || !Array.isArray(embedded)) {
+      return [];
+    }
+    for (let item of embedded) {
+      this.cacheItems[item.id] = item;
+    }
+    return embedded;
+  },
   timeSheetSumary(action, data) {
     this.timeSheet[action] = data;
   },

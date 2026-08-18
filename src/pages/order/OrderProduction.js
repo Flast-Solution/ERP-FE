@@ -58,6 +58,8 @@ const OrderProduction = () => {
                 orderMode
                 hideQuoteButton={true}
                 disableWorkflowAttach={true}
+                detailDrawerHash="#order.production.overview"
+                detailDrawerTitle=""
                 extraActions={extraActions}
             />
         </>

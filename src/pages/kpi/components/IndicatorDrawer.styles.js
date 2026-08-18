@@ -101,8 +101,14 @@ export const DrawerForm = styled(Form)`
 
   .ant-form-item-required::before {
     order: 2;
-    margin-left: 5px !important;
   }
+  .ant-form-item .ant-form-item-label >label::after {
+    content: ":";
+    position: relative;
+    margin-block: 0;
+    margin-inline-start: 2px;
+    margin-inline-end: 0 !important;
+}
 
   .ant-input,
   .ant-input-number,

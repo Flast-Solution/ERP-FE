@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import UserService from '@/services/UserService';
 
-const getUserLabel = (user) => (
-  user.fullName
-  || user.name
-  || user.username
-  || user.email
-  || `Người dùng #${user.id}`
-);
+const getUserLabel = (user) => {
+  const fullName = user.fullName || user.name || '';
+  const ssoId = user.ssoId || user.username || '';
+
+  if (fullName && ssoId) return `${fullName} - ${ssoId}`;
+  return fullName || ssoId || user.email || `Người dùng #${user.id}`;
+};
 
 const useUserOptions = (enabled) => {
   const [userOptions, setUserOptions] = useState([]);
@@ -21,15 +21,20 @@ const useUserOptions = (enabled) => {
     setUserLoading(true);
     setUserLoadError(false);
 
-    UserService.loadAll()
+    UserService.loadBusinessUsers()
       .then((users) => {
         if (!active) return;
 
         const options = (Array.isArray(users) ? users : [])
-          .filter((user) => user?.id !== undefined && user?.id !== null)
+          .filter((user) => (
+            user?.id !== undefined
+            && user?.id !== null
+            && user?.status !== 0
+          ))
           .map((user) => ({
             value: user.id,
             label: getUserLabel(user),
+            user,
           }));
 
         setUserOptions(options);

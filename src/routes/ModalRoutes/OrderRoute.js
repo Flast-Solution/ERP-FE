@@ -38,6 +38,16 @@ const OrderRoute = [
     modalOptions: { title: '', width: 750 }
   },
   {
+    path: 'order.production.overview',
+    Component: React.lazy(() => import('@/containers/Order/ProductionOverview')),
+    modalOptions: { title: '', width: 750 }
+  },
+  {
+    path: 'order.production.detail',
+    Component: React.lazy(() => import('@/containers/Order/ProductionOrderDetail')),
+    modalOptions: { title: '', width: 750 }
+  },
+  {
     path: 'order.createQC',
     Component: React.lazy(() => import('@/containers/Order/Shipment')),
     modalOptions: { title: '', width: 750 }
