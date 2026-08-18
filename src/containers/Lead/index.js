@@ -28,6 +28,8 @@ import { HASH_MODAL_CLOSE } from '@/configs';
 import moment from 'moment';
 import LeadForm from './LeadForm';
 import { resolveUploadFilename } from '@/containers/PreviewModal/uploadUtils';
+import { LEAD_WORKFLOW_ENTITY_TYPE } from '@/containers/Order/List/constants';
+import { attachWorkflow } from '@/containers/Order/List/services/workflowApi';
 
 const DISPLAY_DATE_FORMAT = 'DD/MM/YYYY HH:mm:ss';
 const API_DATE_FORMAT = 'YYYY-MM-DD HH:mm:ss';
@@ -43,6 +45,25 @@ const formatApiDate = (value) => {
   const parsed = moment(value, [DISPLAY_DATE_FORMAT, API_DATE_FORMAT, moment.ISO_8601], true);
   return parsed.isValid() ? parsed.format(API_DATE_FORMAT) : value;
 };
+
+const normalizeWorkflowProcessIds = (item = {}) => Array.from(new Set([
+  ...(Array.isArray(item.workflowProcessIds) ? item.workflowProcessIds : []),
+  ...(Array.isArray(item.workflowInstances)
+    ? item.workflowInstances.map(instance => instance?.processId)
+    : []),
+  item.workflowProcessId,
+].filter(id => id !== undefined && id !== null && id !== '')));
+
+const isSuccessfulResponse = response => (
+  Number(response?.errorCode) === 200 || response?.success === true
+);
+
+const resolveSavedLeadId = (response, fallbackId) => (
+  response?.data?.id
+  ?? response?.data?.data?.id
+  ?? fallbackId
+  ?? null
+);
 
 const normalizeLeadRecord = (item = {}) => {
   const currentBusiness = item.business && typeof item.business === 'object'
@@ -64,6 +85,7 @@ const normalizeLeadRecord = (item = {}) => {
       : Array.isArray(item.products)
         ? item.products.map(product => product?.id ?? product).filter(Boolean)
         : (item.productId ? [item.productId] : []),
+    workflowProcessIds: normalizeWorkflowProcessIds(item),
     inTime: formatDisplayDate(item.inTime ?? item.createdDate ?? item.createdAt),
     lastContactedAt: item.lastContactedAt ? formatDisplayDate(item.lastContactedAt) : undefined,
     nextAppointmentAt: item.nextAppointmentAt ? formatDisplayDate(item.nextAppointmentAt) : undefined,
@@ -115,10 +137,51 @@ const NewLead = ({ closeModal, data }) => {
         inTime: formatApiDate(body.inTime),
       };
 
+      const selectedWorkflowIds = normalizeWorkflowProcessIds(submitBody);
+      const primaryWorkflowId = selectedWorkflowIds[0] ?? null;
+      submitBody.workflowProcessIds = selectedWorkflowIds;
+      // Giữ contract cũ để BE tiếp tục tự khởi tạo workflow đầu tiên.
+      submitBody.workflowProcessId = primaryWorkflowId;
+      delete submitBody.workflowInstances;
+      delete submitBody.workflowInstance;
+      delete submitBody.workflowProcess;
+
       const response = await RequestUtils.Post("/data/create", submitBody);
-      if (Number(response?.errorCode) === 200 || response?.success === true) {
+      if (isSuccessfulResponse(response)) {
+        const leadId = resolveSavedLeadId(response, submitBody.id ?? record?.id);
+        const attachedWorkflowIds = new Set(normalizeWorkflowProcessIds(item).map(String));
+        // workflowProcessId đầu tiên vẫn do /data/create xử lý như logic cũ.
+        if (primaryWorkflowId !== null) attachedWorkflowIds.add(String(primaryWorkflowId));
+        const workflowsToStart = selectedWorkflowIds.filter(
+          processId => !attachedWorkflowIds.has(String(processId)),
+        );
+
+        let failedWorkflowCount = 0;
+        if (workflowsToStart.length > 0 && leadId) {
+          const workflowResults = await Promise.all(workflowsToStart.map(async processId => {
+            try {
+              return await attachWorkflow({
+                processId,
+                entityType: LEAD_WORKFLOW_ENTITY_TYPE,
+                entityId: leadId,
+              });
+            } catch (error) {
+              return null;
+            }
+          }));
+          failedWorkflowCount = workflowResults.filter(result => !isSuccessfulResponse(result)).length;
+        } else if (workflowsToStart.length > 0) {
+          failedWorkflowCount = workflowsToStart.length;
+        }
+
         f5List('data/lists');
-        InAppEvent.normalSuccess("Cập nhật thành công");
+        if (failedWorkflowCount > 0) {
+          InAppEvent.normalError(
+            `Lead đã được lưu nhưng có ${failedWorkflowCount} workflow chưa gắn được.`,
+          );
+        } else {
+          InAppEvent.normalSuccess("Cập nhật thành công");
+        }
         InAppEvent.emit(HASH_MODAL_CLOSE);
         return;
       }

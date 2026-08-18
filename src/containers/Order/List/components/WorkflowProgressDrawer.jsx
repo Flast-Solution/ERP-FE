@@ -67,13 +67,14 @@ const WorkflowProgressDrawer = ({
       <Spin spinning={loading}>
         {!loading && items.length === 0 ? (
           <Empty description={`${entityLabel} này chưa có workflow`} />
-        ) : formOnly || leadMode ? (
+        ) : formOnly || (leadMode && items.length === 1) ? (
           items[0]?.children ?? null
         ) : (
           <Tabs
             items={items}
             destroyOnHidden
             className="workflow-detail-drawer__tabs"
+            tabBarGutter={20}
           />
         )}
       </Spin>

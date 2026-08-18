@@ -17,6 +17,11 @@ import { useWorkflowDrawer } from '@/contexts/WorkflowDrawerContext';
 
 const LEAD_API_PATH = 'data/lists';
 
+const hasLeadWorkflow = record => (
+  (Array.isArray(record?.workflowInstances) && record.workflowInstances.length > 0)
+  || Boolean(record?.workflowProcessId)
+);
+
 const LeadList = () => {
   const { openWorkflowDrawer } = useWorkflowDrawer();
 
@@ -48,8 +53,10 @@ const LeadList = () => {
   }
 
   const openLeadProgress = useCallback((record) => {
-    const processId = record?.workflowProcessId;
-    if (!processId) {
+    const workflowInstances = Array.isArray(record?.workflowInstances)
+      ? record.workflowInstances
+      : [];
+    if (!hasLeadWorkflow(record)) {
       InAppEvent.normalError('Lead chưa được cấu hình workflow.');
       return;
     }
@@ -57,8 +64,8 @@ const LeadList = () => {
       entityName: LEAD_WORKFLOW_ENTITY_TYPE,
       entityLabel: 'Lead',
       entityType: LEAD_WORKFLOW_ENTITY_TYPE,
-      processId,
-      workflowInstances: record?.workflowInstances ?? [],
+      workflowInstances,
+      includeAllInstances: true,
       leadMode: true,
     });
   }, [openWorkflowDrawer]);
@@ -140,28 +147,31 @@ const LeadList = () => {
       width: 170,
       fixed: 'right',
       ellipsis: true,
-      render: (record) => (
-        <div style={{ display: 'flex', gap: 20 }}>
-          <Tooltip style={{ cursor: 'pointer' }} title="Chuyển sale">
-            <UserAddOutlined style={{ color: '#1677ff', fontSize: 16 }} onClick={() => {
-              setDetailRecord(record)
-            }} />
-          </Tooltip>
-          <Tooltip style={{ cursor: 'pointer' }} title="Xem chi tiết Lead">
-            <EyeOutlined style={{ color: '#1677ff', fontSize: 16 }} onClick={() => onEdit(record)} />
-          </Tooltip>
-          <Tooltip style={{ cursor: 'pointer' }} title="Xem tiến trình Lead">
-            <InfoCircleOutlined
-              style={{
-                color: record?.workflowProcessId ? '#52c41a' : '#bfbfbf',
-                fontSize: 16,
-                cursor: record?.workflowProcessId ? 'pointer' : 'not-allowed',
-              }}
-              onClick={record?.workflowProcessId ? () => openLeadProgress(record) : undefined}
-            />
-          </Tooltip>
-        </div>
-      )
+      render: (record) => {
+        const hasWorkflow = hasLeadWorkflow(record);
+        return (
+          <div style={{ display: 'flex', gap: 20 }}>
+            <Tooltip style={{ cursor: 'pointer' }} title="Chuyển sale">
+              <UserAddOutlined style={{ color: '#1677ff', fontSize: 16 }} onClick={() => {
+                setDetailRecord(record)
+              }} />
+            </Tooltip>
+            <Tooltip style={{ cursor: 'pointer' }} title="Xem chi tiết Lead">
+              <EyeOutlined style={{ color: '#1677ff', fontSize: 16 }} onClick={() => onEdit(record)} />
+            </Tooltip>
+            <Tooltip style={{ cursor: 'pointer' }} title="Xem tiến trình Lead">
+              <InfoCircleOutlined
+                style={{
+                  color: hasWorkflow ? '#52c41a' : '#bfbfbf',
+                  fontSize: 16,
+                  cursor: hasWorkflow ? 'pointer' : 'not-allowed',
+                }}
+                onClick={hasWorkflow ? () => openLeadProgress(record) : undefined}
+              />
+            </Tooltip>
+          </div>
+        );
+      }
     }
   ];
 

@@ -1,5 +1,5 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { Button, Form, Input, Radio, Select, message } from 'antd'
+import { Button, Form, Input, Radio, Select, Tag, message } from 'antd'
 
 import {
   FormContextCustom,
@@ -114,13 +114,25 @@ const LeadInput = ({ name, label, code, required, fieldClassName = '', ...props 
   </Form.Item>
 )
 
-const LeadSelect = ({ name, label, code, required, options = [], fieldClassName = '', ...props }) => (
+const LeadSelect = ({
+  name,
+  label,
+  code,
+  required,
+  options = [],
+  fieldClassName = '',
+  normalize,
+  extra,
+  ...props
+}) => (
   <Form.Item
     name={name}
     label={<LeadLabel code={code} required={required}>{label}</LeadLabel>}
     required={false}
     className={`pl-field ${fieldClassName}`.trim()}
     rules={required && !props.disabled ? [{ required: true, message: `Vui lòng chọn ${String(label).toLowerCase()}` }] : []}
+    normalize={normalize}
+    extra={extra}
   >
     <Select className="pl-select" options={options} optionFilterProp="label" showSearch allowClear {...props} />
   </Form.Item>
@@ -138,6 +150,17 @@ const LeadForm = ({ listSale = [], submitting = false }) => {
   const workflowHasMoreRef = useRef(true)
   const workflowItemsRef = useRef([])
   const customerType = Form.useWatch('customerType', form) ?? record?.customerType ?? 'INDIVIDUAL'
+
+  const attachedWorkflowIds = useMemo(() => Array.from(new Set([
+    ...(Array.isArray(record?.workflowInstances)
+      ? record.workflowInstances.map(instance => instance?.processId)
+      : []),
+    record?.workflowProcessId,
+  ].filter(id => id !== undefined && id !== null && id !== ''))), [record])
+  const attachedWorkflowIdSet = useMemo(
+    () => new Set(attachedWorkflowIds.map(String)),
+    [attachedWorkflowIds],
+  )
 
   useEffect(() => {
     RequestUtils.GetAsList('/province/find', { id: 0 }).then(setProvinces).catch(() => setProvinces([]))
@@ -235,11 +258,19 @@ const LeadForm = ({ listSale = [], submitting = false }) => {
     value: item.id,
     label: item.fullName ?? item.name ?? item.username ?? `Nhân viên #${item.id}`,
   })), [listSale])
-  const workflowOptions = useMemo(() => workflows.map(item => ({
+  const workflowOptions = useMemo(() => mergeById([
+    ...(Array.isArray(record?.workflowInstances)
+      ? record.workflowInstances.map(instance => instance?.process ?? {
+        id: instance?.processId,
+        name: instance?.processName,
+      })
+      : []),
+    record?.workflowProcess,
+  ].filter(Boolean), workflows).map(item => ({
     value: item.id,
     label: item.name ?? item.processKey ?? item.code ?? `Workflow #${item.id}`,
     disabled: item.enabled === false,
-  })), [workflows])
+  })), [record, workflows])
 
   const handleWorkflowPopupScroll = useCallback((event) => {
     const target = event.currentTarget
@@ -372,15 +403,35 @@ const LeadForm = ({ listSale = [], submitting = false }) => {
           <div>
             <LeadSelect required name="saleId" label="Nhân viên phụ trách" code="owner_id" placeholder="Chọn nhân viên" options={saleOptions} />
           </div>
-          <div>
+          <div className="lead-workflow-column">
             <LeadSelect
-              name="workflowProcessId"
+              name="workflowProcessIds"
               label="Work flow"
-              code="workflow_process_id"
-              placeholder="Chọn workflow"
+              code="workflow_process_ids"
+              placeholder="Chọn một hoặc nhiều workflow"
               options={workflowOptions}
               loading={loadingWorkflows}
               onPopupScroll={handleWorkflowPopupScroll}
+              mode="multiple"
+              maxTagCount="responsive"
+              fieldClassName="lead-workflow-field"
+              normalize={(values = []) => Array.from(new Set([
+                ...attachedWorkflowIds,
+                ...values,
+              ]))}
+              tagRender={({ label, value, closable, onClose }) => {
+                const attached = attachedWorkflowIdSet.has(String(value))
+                return (
+                  <Tag
+                    className={`lead-workflow-tag${attached ? ' is-attached' : ''}`}
+                    closable={!attached && closable}
+                    onClose={attached ? undefined : onClose}
+                  >
+                    {label}
+                  </Tag>
+                )
+              }}
+              extra="Workflow đã chạy được giữ lại; bạn có thể chọn thêm nhiều workflow khác."
             />
           </div>
           <div className="lead-readonly">

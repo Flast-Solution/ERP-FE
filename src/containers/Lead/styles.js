@@ -152,6 +152,44 @@ export const LeadFormShell = styled.div`
     width: 100%;
   }
 
+  .lead-workflow-field .ant-select {
+    width: 100%;
+  }
+
+  .lead-workflow-column {
+    grid-column: span 2;
+  }
+
+  .lead-workflow-field .ant-select-selector {
+    align-items: center;
+    padding-block: 3px !important;
+  }
+
+  .lead-workflow-field .ant-form-item-extra {
+    margin-top: 6px;
+    color: var(--fg-subtle);
+    font-size: var(--fs-12);
+    line-height: 1.4;
+  }
+
+  .lead-workflow-tag {
+    display: inline-flex;
+    max-width: 210px;
+    align-items: center;
+    margin: 2px 4px 2px 0;
+    overflow: hidden;
+    border-color: #d9d9d9;
+    border-radius: 999px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .lead-workflow-tag.is-attached {
+    color: #237804;
+    background: #f6ffed;
+    border-color: #b7eb8f;
+  }
+
   .lead-business-caption {
     margin: var(--s-4) 0 6px;
   }
@@ -195,5 +233,9 @@ export const LeadFormShell = styled.div`
 
   @media (max-width: 720px) {
     padding: 0;
+
+    .lead-workflow-column {
+      grid-column: 1 / -1;
+    }
   }
 `
