@@ -112,6 +112,18 @@ const STATUS_FALLBACK = {
 
 const toNumber = value => Number(value ?? 0) || 0;
 
+const getConfirmedBomId = detail => (
+  detail?.bomProductId
+  ?? detail?.bomProduct?.bomProductId
+  ?? detail?.bomProduct?.id
+  ?? null
+);
+
+const hasConfirmedBom = detail => {
+  const bomProductId = getConfirmedBomId(detail);
+  return bomProductId !== null && bomProductId !== undefined && String(bomProductId).trim() !== '';
+};
+
 const getResponseItems = (response) => {
   const payload = response?.data ?? response;
   const candidates = [
@@ -168,22 +180,28 @@ const calculateMaterialReadiness = ({
 }) => {
   const requiredByMaterialId = new Map();
   let missingBom = false;
+  let confirmedDetailCount = 0;
 
   (productionOrder?.details ?? []).forEach((detail) => {
-    if (detail?.bomProductId == null) {
-      missingBom = true;
-      return;
-    }
-
+    const confirmedBomId = getConfirmedBomId(detail);
     const productBoms = bomVersionsByProductId.get(String(detail.productId)) ?? [];
-    const selectedBom = productBoms.find(bom => (
-      String(bom?.bomProductId) === String(detail.bomProductId)
-    )) ?? (productBoms.length === 1 ? productBoms[0] : null);
+    const persistedBom = hasConfirmedBom(detail)
+      ? productBoms.find(bom => (
+        String(bom?.bomProductId ?? bom?.id) === String(confirmedBomId)
+      ))
+      : null;
+    const hasLegacyConfirmation = detailedOrder?.confirmedBy != null
+      || (Array.isArray(detailedOrder?.outbound) && detailedOrder.outbound.length > 0);
+    const selectedBom = persistedBom
+      ?? (hasLegacyConfirmation
+        ? productBoms.find(bom => Number(bom?.status) === 1) ?? productBoms[0]
+        : null);
 
     if (!selectedBom || !Array.isArray(selectedBom.productMaterials)) {
       missingBom = true;
       return;
     }
+    confirmedDetailCount += 1;
 
     selectedBom.productMaterials.forEach((material) => {
       const materialId = material?.materialId ?? material?.material?.id;
@@ -201,6 +219,7 @@ const calculateMaterialReadiness = ({
       percent: null,
       totalRequired: 0,
       totalAllocated: 0,
+      confirmedDetailCount,
       note: 'Thiếu cấu hình BOM để tính',
     };
   }
@@ -212,6 +231,7 @@ const calculateMaterialReadiness = ({
       percent: null,
       totalRequired: 0,
       totalAllocated: 0,
+      confirmedDetailCount,
       note: 'BOM chưa có nhu cầu vật tư',
     };
   }
@@ -221,6 +241,7 @@ const calculateMaterialReadiness = ({
       percent: null,
       totalRequired,
       totalAllocated: 0,
+      confirmedDetailCount,
       note: 'Chưa có dữ liệu phân bổ vật tư',
     };
   }
@@ -245,6 +266,7 @@ const calculateMaterialReadiness = ({
     percent,
     totalRequired,
     totalAllocated,
+    confirmedDetailCount,
     note: `${totalAllocated.toLocaleString('vi-VN')}/${totalRequired.toLocaleString('vi-VN')} vật tư đã phân bổ`,
   };
 };
@@ -311,8 +333,20 @@ const ProductionOverview = ({ data = {}, closeModal }) => {
         const detailedOrdersById = new Map(
           detailedOrders.map(item => [String(item.id), item]),
         );
+        const mergedManufactureProducts = manufactureProducts.map((productionOrder) => {
+          const detailedOrder = detailedOrdersById.get(String(productionOrder.id));
+          if (!detailedOrder) return productionOrder;
+          return {
+            ...productionOrder,
+            ...detailedOrder,
+            details: Array.isArray(detailedOrder.details)
+              ? detailedOrder.details
+              : productionOrder.details,
+          };
+        });
+        if (active) setProductionOrders(mergedManufactureProducts);
         const productIds = Array.from(new Set(
-          manufactureProducts
+          mergedManufactureProducts
             .flatMap(item => item?.details ?? [])
             .map(detail => detail?.productId)
             .filter(productId => productId != null)
@@ -334,7 +368,7 @@ const ProductionOverview = ({ data = {}, closeModal }) => {
           }
         }));
         const bomVersionsByProductId = new Map(bomResults);
-        const readiness = Object.fromEntries(manufactureProducts.map(productionOrder => [
+        const readiness = Object.fromEntries(mergedManufactureProducts.map(productionOrder => [
           String(productionOrder.id),
           calculateMaterialReadiness({
             productionOrder,
@@ -351,6 +385,7 @@ const ProductionOverview = ({ data = {}, closeModal }) => {
               percent: null,
               totalRequired: 0,
               totalAllocated: 0,
+              confirmedDetailCount: (item?.details ?? []).filter(hasConfirmedBom).length,
               note: 'Không tải được dữ liệu vật tư',
             }]),
           ));
@@ -366,10 +401,16 @@ const ProductionOverview = ({ data = {}, closeModal }) => {
 
   const metrics = useMemo(() => getOrderMetrics(productionOrders), [productionOrders]);
   const detailCount = productionOrders.reduce((sum, item) => sum + (item?.details?.length ?? 0), 0);
-  const bomConfirmedCount = productionOrders.reduce((sum, item) => (
-    sum + (item?.details ?? []).filter(detail => detail?.bomProductId != null).length
+  const persistedBomConfirmedCount = productionOrders.reduce((sum, item) => (
+    sum + (item?.details ?? []).filter(hasConfirmedBom).length
   ), 0);
   const materialReadinessValues = Object.values(materialReadinessByOrderId);
+  const evaluatedBomCount = materialReadinessValues.reduce((sum, item) => (
+    sum + toNumber(item?.confirmedDetailCount)
+  ), 0);
+  const bomConfirmedCount = materialReadinessValues.length === productionOrders.length
+    ? Math.max(persistedBomConfirmedCount, evaluatedBomCount)
+    : persistedBomConfirmedCount;
   const allocationKnownOrders = materialReadinessValues.filter(item => item?.percent != null);
   const allocatedCount = allocationKnownOrders.filter(item => item.percent >= 100).length;
   const completedCount = productionOrders.filter(item => Number(item?.status) === 2).length;
@@ -462,7 +503,7 @@ const ProductionOverview = ({ data = {}, closeModal }) => {
           </aside>
 
           <main className="overview-main">
-            {missingBomCount > 0 && (
+            {!materialReadinessLoading && missingBomCount > 0 && (
               <Alert
                 className="overview-alert"
                 type="warning"
@@ -483,8 +524,13 @@ const ProductionOverview = ({ data = {}, closeModal }) => {
               ) : productionOrders.map((productionOrder) => {
                 const orderMetrics = getOrderMetrics([productionOrder]);
                 const status = getStatus(productionOrder.status);
-                const hasBom = (productionOrder.details ?? []).every(detail => detail?.bomProductId != null);
                 const materialReadiness = materialReadinessByOrderId[String(productionOrder.id)];
+                const detailTotal = productionOrder.details?.length ?? 0;
+                const hasBom = detailTotal > 0
+                  && Math.max(
+                    (productionOrder.details ?? []).filter(hasConfirmedBom).length,
+                    toNumber(materialReadiness?.confirmedDetailCount),
+                  ) === detailTotal;
                 const materialReadinessPercent = materialReadiness?.percent;
                 const blocked = !hasBom || materialReadinessPercent === 0;
                 return (

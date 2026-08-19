@@ -1,24 +1,22 @@
 import React from 'react';
 import { EditOutlined, LeftOutlined, PlusOutlined, RightOutlined } from '@ant-design/icons';
+import { Empty, Spin } from 'antd';
 import { Helmet } from 'react-helmet';
-import { MOCK_KPI_DETAILS, STATUS_META, TITLE } from '../mockData';
-import { BackButton, DetailAddButton, DetailAvatar, DetailBreadcrumb, DetailContent, DetailName, DetailPage, EditButton, EmployeeSummary, IndicatorActions, IndicatorBar, IndicatorCard, IndicatorCode, IndicatorDescription, IndicatorHeading, IndicatorList, IndicatorMetrics, IndicatorPercent, IndicatorProgress, IndicatorTitleLine, IndicatorTop, IndicatorTrack, IndicatorWeight, MetaSeparator, Metric, MetricLabel, MetricValue, OverallProgress, SummaryMain, SummaryMeta } from './EmployeeKpiDetail.styles';
-import { StatusBadge, StatusDot } from './KpiDashboard.styles';
+import { KPI_PAGE_TITLE } from '../constants';
+import { BackButton, DetailAddButton, DetailAvatar, DetailBreadcrumb, DetailContent, DetailName, DetailPage, EditButton, EmployeeSummary, IndicatorActions, IndicatorCard, IndicatorCode, IndicatorDescription, IndicatorHeading, IndicatorList, IndicatorMetrics, IndicatorTitleLine, IndicatorTop, IndicatorWeight, MetaSeparator, Metric, MetricLabel, MetricValue, OverallProgress, SummaryMain, SummaryMeta } from './EmployeeKpiDetail.styles';
 
-const EmployeeKpiDetail = ({ employee, period, onBack, onAdd, onEdit }) => {
-  const employeeStatus = STATUS_META[employee.status];
-
+const EmployeeKpiDetail = ({ employee, indicators = [], loading, period, onBack, onAdd, onEdit }) => {
   return (
     <DetailPage>
       <Helmet>
-        <title>{employee.name} | {TITLE}</title>
+        <title>{employee.fullName} | {KPI_PAGE_TITLE}</title>
       </Helmet>
 
       <DetailBreadcrumb>
         <span>Hệ thống</span><RightOutlined />
         <span>Nhân sự</span><RightOutlined />
         <span>Bảng KPI</span><RightOutlined />
-        <strong>{employee.name}</strong>
+        <strong>{employee.fullName}</strong>
       </DetailBreadcrumb>
 
       <DetailContent>
@@ -29,22 +27,18 @@ const EmployeeKpiDetail = ({ employee, period, onBack, onAdd, onEdit }) => {
         <EmployeeSummary>
           <DetailAvatar>{employee.initials}</DetailAvatar>
           <SummaryMain>
-            <DetailName>{employee.name}</DetailName>
+            <DetailName>{employee.fullName}</DetailName>
             <SummaryMeta>
-              <span>{employee.role}</span>
+              <span>{employee.ssoId || '-'}</span>
               <MetaSeparator>·</MetaSeparator>
-              <span>{employee.department}</span>
+              <span>{employee.email || '-'}</span>
               <MetaSeparator>·</MetaSeparator>
               <span>{period.evaluation}</span>
             </SummaryMeta>
-            <StatusBadge $meta={employeeStatus}>
-              <StatusDot />
-              {employeeStatus.label}
-            </StatusBadge>
           </SummaryMain>
           <OverallProgress>
-            <strong>{employee.progress}%</strong>
-            <span>tiến độ chung</span>
+            <strong>{employee.indicatorCount}</strong>
+            <span>chỉ tiêu KPI</span>
           </OverallProgress>
         </EmployeeSummary>
 
@@ -56,10 +50,12 @@ const EmployeeKpiDetail = ({ employee, period, onBack, onAdd, onEdit }) => {
         </IndicatorHeading>
 
         <IndicatorList>
-          {MOCK_KPI_DETAILS.map((indicator) => {
-            const status = STATUS_META[indicator.status];
-            return (
-              <IndicatorCard key={indicator.id} $status={indicator.status}>
+          {loading && <Spin />}
+          {!loading && !indicators.length && (
+            <Empty description="Chưa có chỉ tiêu KPI" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          )}
+          {!loading && indicators.map((indicator) => (
+              <IndicatorCard key={indicator.id}>
                 <IndicatorTop>
                   <div>
                     <IndicatorTitleLine>
@@ -69,10 +65,7 @@ const EmployeeKpiDetail = ({ employee, period, onBack, onAdd, onEdit }) => {
                     <IndicatorWeight>Trọng số {indicator.weight}% trong đánh giá kỳ này</IndicatorWeight>
                   </div>
                   <IndicatorActions>
-                    <StatusBadge $meta={status}>
-                      <StatusDot />
-                      {status.label}
-                    </StatusBadge>
+                    <IndicatorCode>{indicator.type}</IndicatorCode>
                     <EditButton
                       type="text"
                       aria-label={`Sửa ${indicator.name}`}
@@ -82,24 +75,14 @@ const EmployeeKpiDetail = ({ employee, period, onBack, onAdd, onEdit }) => {
                   </IndicatorActions>
                 </IndicatorTop>
 
-                <IndicatorProgress>
-                  <IndicatorTrack>
-                    <IndicatorBar
-                      $status={indicator.status}
-                      $width={Math.min(indicator.progress, 100)}
-                    />
-                  </IndicatorTrack>
-                  <IndicatorPercent>{indicator.progress}%</IndicatorPercent>
-                </IndicatorProgress>
-
                 <IndicatorMetrics>
                   <Metric>
                     <MetricLabel>Mục tiêu</MetricLabel>
                     <MetricValue>{indicator.target}</MetricValue>
                   </Metric>
                   <Metric>
-                    <MetricLabel>Kết quả thực tế</MetricLabel>
-                    <MetricValue>{indicator.actual}</MetricValue>
+                    <MetricLabel>Hướng mục tiêu</MetricLabel>
+                    <MetricValue>{indicator.targetDirection}</MetricValue>
                   </Metric>
                   <Metric>
                     <MetricLabel>Đơn vị đo</MetricLabel>
@@ -109,8 +92,7 @@ const EmployeeKpiDetail = ({ employee, period, onBack, onAdd, onEdit }) => {
 
                 <IndicatorDescription>{indicator.description}</IndicatorDescription>
               </IndicatorCard>
-            );
-          })}
+          ))}
         </IndicatorList>
       </DetailContent>
     </DetailPage>

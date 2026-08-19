@@ -10,17 +10,32 @@
 /* Bản quyền (c) 2024-2025 Long Huu, Quang Duc, Hung Bui                  */
 /**************************************************************************/
 
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { message } from 'antd';
+import { RequestUtils } from '@flast-erp/core/utils';
 import EmployeeKpiDetail from './components/EmployeeKpiDetail';
 import IndicatorDrawer from './components/IndicatorDrawer';
 import KpiDashboard from './components/KpiDashboard';
-import { MOCK_EMPLOYEES, PERIODS } from './mockData';
+import { createKpiPeriods } from './constants';
+
+const getInitials = (name = '') => name
+  .trim()
+  .split(/\s+/)
+  .slice(-2)
+  .map((part) => part.charAt(0).toLocaleUpperCase('vi'))
+  .join('');
 
 const KpiPage = () => {
-  const [period, setPeriod] = useState('q2');
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const periods = useMemo(() => createKpiPeriods(currentYear), [currentYear]);
+  const [period, setPeriod] = useState(`q${Math.floor(now.getMonth() / 3) + 1}`);
   const [search, setSearch] = useState('');
   const [attentionOnly, setAttentionOnly] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [kpiLoading, setKpiLoading] = useState(false);
+  const kpiRequestIdRef = useRef(0);
   const [drawer, setDrawer] = useState({
     open: false,
     mode: 'create',
@@ -28,28 +43,102 @@ const KpiPage = () => {
     indicator: null,
   });
 
-  const selectedPeriod = PERIODS.find((item) => item.key === period) || PERIODS[1];
+  const kpiQueryParams = useMemo(() => {
+    if (period === 'year') {
+      return {
+        year: currentYear,
+        frequency: 'year',
+      };
+    }
+
+    const currentQuarter = Math.floor(new Date().getMonth() / 3) + 1;
+    const selectedQuarter = Number(period.replace('q', '')) || currentQuarter;
+
+    return {
+      year: currentYear,
+      quarter: selectedQuarter,
+      frequency: 'quarter',
+    };
+  }, [currentYear, period]);
+
+  const loadKpis = useCallback(async () => {
+    const requestId = kpiRequestIdRef.current + 1;
+    kpiRequestIdRef.current = requestId;
+    setKpiLoading(true);
+
+    try {
+      const response = await RequestUtils.Get('/user/kpi', kpiQueryParams);
+      if (requestId !== kpiRequestIdRef.current) return;
+
+      const isSuccess = response?.success === true || Number(response?.errorCode) === 200;
+
+      if (!isSuccess) {
+        setUsers([]);
+        message.error(response?.message || 'Không tải được danh sách KPI.');
+        return;
+      }
+
+      setUsers(Array.isArray(response?.data) ? response.data : []);
+    } catch (error) {
+      if (requestId !== kpiRequestIdRef.current) return;
+
+      console.error('[KPI] Không tải được danh sách KPI:', error);
+      setUsers([]);
+      message.error('Không tải được danh sách KPI.');
+    } finally {
+      if (requestId === kpiRequestIdRef.current) setKpiLoading(false);
+    }
+  }, [kpiQueryParams]);
+
+  useEffect(() => {
+    loadKpis();
+  }, [loadKpis]);
+
+  const selectedPeriod = periods.find((item) => item.key === period) || periods[0];
+
+  const employeeRows = useMemo(() => users.map((user) => {
+      const employeeKpis = Array.isArray(user.kpi) ? user.kpi : [];
+
+      return {
+        ...user,
+        initials: getInitials(user.fullName),
+        indicatorCount: employeeKpis.length,
+        kpiNames: employeeKpis.map((kpi) => kpi.name).filter(Boolean).join(', '),
+        kpiTypes: [...new Set(employeeKpis.map((kpi) => kpi.type).filter(Boolean))].join(', '),
+        totalWeight: employeeKpis.reduce((total, kpi) => total + Number(kpi.weight || 0), 0),
+      };
+    }), [users]);
 
   const employees = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase('vi');
 
-    return MOCK_EMPLOYEES.filter((employee) => {
-      const matchesSearch = !normalizedSearch || [employee.name, employee.role, employee.department]
+    return employeeRows.filter((employee) => {
+      const matchesSearch = !normalizedSearch || [employee.fullName, employee.ssoId, employee.email]
+        .filter(Boolean)
         .some((value) => value.toLocaleLowerCase('vi').includes(normalizedSearch));
-      const matchesStatus = !attentionOnly || employee.status === 'warning';
+      const matchesStatus = !attentionOnly || employee.indicatorCount === 0;
       return matchesSearch && matchesStatus;
     });
-  }, [attentionOnly, search]);
+  }, [attentionOnly, employeeRows, search]);
 
-  const averageProgress = Math.round(
-    MOCK_EMPLOYEES.reduce((total, employee) => total + employee.progress, 0) / MOCK_EMPLOYEES.length,
-  );
+  const selectedEmployeeView = selectedEmployee
+    ? employeeRows.find((employee) => employee.id === selectedEmployee.id) || selectedEmployee
+    : null;
+
+  const selectedEmployeeKpis = useMemo(() => {
+    if (!selectedEmployeeView) return [];
+
+    const selectedUser = users.find(
+      (user) => String(user.id) === String(selectedEmployeeView.id),
+    );
+    return Array.isArray(selectedUser?.kpi) ? selectedUser.kpi : [];
+  }, [selectedEmployeeView, users]);
 
   const openIndicatorDrawer = (employee, indicator = null) => {
     setDrawer({
       open: true,
       mode: indicator ? 'edit' : 'create',
-      employee: employee || MOCK_EMPLOYEES[0],
+      employee: employee || null,
       indicator,
     });
   };
@@ -60,20 +149,23 @@ const KpiPage = () => {
 
   return (
     <>
-      {selectedEmployee ? (
+      {selectedEmployeeView ? (
         <EmployeeKpiDetail
-          employee={selectedEmployee}
+          employee={selectedEmployeeView}
+          indicators={selectedEmployeeKpis}
+          loading={kpiLoading}
           period={selectedPeriod}
           onBack={() => setSelectedEmployee(null)}
-          onAdd={() => openIndicatorDrawer(selectedEmployee)}
-          onEdit={(indicator) => openIndicatorDrawer(selectedEmployee, indicator)}
+          onAdd={() => openIndicatorDrawer(selectedEmployeeView)}
+          onEdit={(indicator) => openIndicatorDrawer(selectedEmployeeView, indicator)}
         />
       ) : (
         <KpiDashboard
           attentionOnly={attentionOnly}
-          averageProgress={averageProgress}
           employees={employees}
-          onAdd={() => openIndicatorDrawer(MOCK_EMPLOYEES[0])}
+          loading={kpiLoading}
+          periods={periods}
+          onAdd={() => openIndicatorDrawer(null)}
           onFilterChange={() => setAttentionOnly((current) => !current)}
           onPeriodChange={setPeriod}
           onSearchChange={setSearch}
@@ -83,7 +175,7 @@ const KpiPage = () => {
           selectedPeriod={selectedPeriod}
         />
       )}
-      <IndicatorDrawer drawer={drawer} onClose={closeIndicatorDrawer} />
+      <IndicatorDrawer drawer={drawer} onClose={closeIndicatorDrawer} onSaved={loadKpis} />
     </>
   );
 };
