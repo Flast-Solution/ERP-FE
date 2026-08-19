@@ -47,30 +47,6 @@ export const isAccessTokenExpired = (
   return expiration !== null && Date.now() >= expiration
 }
 
-export const logAccessTokenExpiration = (
-  source = 'manual',
-  token = window.localStorage.getItem('jwt_access_token')
-) => {
-  const now = Date.now()
-  const expiration = token ? getAccessTokenExpiration(token) : null
-  const status = !token
-    ? 'missing-token'
-    : expiration === null
-      ? 'missing-exp'
-      : now >= expiration
-        ? 'expired'
-        : 'valid'
-
-  console.log('[SessionExpiry] JWT expiration', {
-    source,
-    status,
-    now: new Date(now).toISOString(),
-    expiresAt: expiration ? new Date(expiration).toISOString() : null,
-    remainingSeconds: expiration === null
-      ? null
-      : Math.floor((expiration - now) / 1000),
-  })
-}
 
 const clearExpiryTimer = () => {
   if (expiryTimer) window.clearTimeout(expiryTimer)
@@ -105,19 +81,16 @@ export const scheduleAccessTokenExpiry = (
 
   const expiration = getAccessTokenExpiration(token)
   if (expiration === null) {
-    logAccessTokenExpiration('schedule:missing-exp', token)
     clearExpiryTimer()
     return
   }
   if (Date.now() >= expiration) {
-    logAccessTokenExpiration('schedule:expired', token)
     clearExpiryTimer()
     handleUnauthorized()
     return
   }
   if (expiryTimer && scheduledToken === token) return
 
-  logAccessTokenExpiration('schedule:active', token)
   clearExpiryTimer()
   scheduledToken = token
 
@@ -138,7 +111,6 @@ export const startAccessTokenExpiryMonitor = () => {
   expiryMonitorStarted = true
 
   const checkCurrentToken = (source = 'monitor') => {
-    logAccessTokenExpiration(source)
     scheduleAccessTokenExpiry()
   }
   const checkVisibleToken = () => {

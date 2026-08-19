@@ -50,7 +50,7 @@ const fetchUserNameMap = async (userIds = []) => {
   return userNameMap
 }
 
-export const useProductionOrders = () => {
+export const useProductionOrders = (initialOrderCode = '') => {
   const [orders, setOrders] = useState([])
   const [ordersLoading, setOrdersLoading] = useState(false)
   const [pagination, setPagination] = useState({
@@ -58,7 +58,10 @@ export const useProductionOrders = () => {
     pageSize: PRODUCTION_PAGE_SIZE,
     total: 0,
   })
-  const [filters, setFilters] = useState(EMPTY_FILTERS)
+  const [filters, setFilters] = useState(() => ({
+    ...EMPTY_FILTERS,
+    orderCode: initialOrderCode,
+  }))
   const [statusOptions, setStatusOptions] = useState([])
   const [updatingStatusId, setUpdatingStatusId] = useState(null)
   const requestIdRef = useRef(0)
@@ -116,8 +119,13 @@ export const useProductionOrders = () => {
   }, [])
 
   useEffect(() => {
-    fetchProductionOrders()
-  }, [fetchProductionOrders])
+    const initialFilters = {
+      ...EMPTY_FILTERS,
+      orderCode: initialOrderCode,
+    }
+    setFilters(initialFilters)
+    fetchProductionOrders(initialFilters, 1)
+  }, [fetchProductionOrders, initialOrderCode])
 
   const updateFilter = useCallback((key, value) => {
     setFilters(current => ({ ...current, [key]: value }))

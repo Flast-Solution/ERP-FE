@@ -184,7 +184,7 @@ export const IndicatorList = styled.section`
 export const IndicatorCard = styled.article`
   padding: 24px 28px 22px;
   border: 1px solid #e2e8f0;
-  border-left: 4px solid ${({ $status }) => progressColor[$status]};
+  border-left: 4px solid #4f46e5;
   border-radius: 8px;
   background: #fff;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.025);
@@ -284,6 +284,7 @@ export const IndicatorMetrics = styled.div`
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 28px;
+  margin-top: 18px;
   padding-top: 16px;
   border-top: 1px solid #edf1f5;
 

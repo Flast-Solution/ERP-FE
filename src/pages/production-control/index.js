@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet'
 import { Pagination } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import { BreadcrumbCustom, CustomButton } from '@flast-erp/core/components'
+import { useLocation } from 'react-router-dom'
 import { ProductionOrderListShell } from './styles'
 import ProductionOrderFilters from './production-order-list/components/ProductionOrderFilters'
 import ProductionOrderTable from './production-order-list/components/ProductionOrderTable'
@@ -12,6 +13,8 @@ import { useWaitingOrders } from './production-order-list/hooks/useWaitingOrders
 import { useProductionOrderFlow } from './production-order-list/hooks/useProductionOrderFlow'
 
 const ProductionOrderList = () => {
+  const location = useLocation()
+  const initialOrderCode = new URLSearchParams(location.search).get('orderCode')?.trim() ?? ''
   const {
     orders,
     ordersLoading,
@@ -25,7 +28,7 @@ const ProductionOrderList = () => {
     clearFilters,
     changePage,
     reloadCurrentPage,
-  } = useProductionOrders()
+  } = useProductionOrders(initialOrderCode)
 
   const {
     waitingOrders,

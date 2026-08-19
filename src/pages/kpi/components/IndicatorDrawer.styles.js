@@ -111,8 +111,10 @@ export const DrawerForm = styled(Form)`
 }
 
   .ant-input,
+  .ant-input-affix-wrapper,
   .ant-input-number,
-  .ant-select-selector {
+  .ant-select-selector,
+  .ant-picker {
     border-color: #dce2ea !important;
     border-radius: 8px !important;
     box-shadow: none !important;
@@ -120,12 +122,22 @@ export const DrawerForm = styled(Form)`
   }
 
   .ant-input:not(textarea),
+  .ant-input-affix-wrapper,
   .ant-input-number,
-  .ant-select-selector {
+  .ant-select-selector,
+  .ant-picker {
     min-height: 46px;
   }
 
+  .ant-input-affix-wrapper > .ant-input {
+    min-height: auto;
+  }
+
   .ant-input-number {
+    width: 100%;
+  }
+
+  .ant-picker {
     width: 100%;
   }
 
@@ -257,4 +269,3 @@ export const DeleteButton = styled(Button)`
     font-weight: 600;
   }
 `;
-

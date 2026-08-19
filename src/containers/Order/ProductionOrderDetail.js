@@ -86,6 +86,18 @@ const SYSTEM_STATUSES = {
 
 const toNumber = value => Number(value ?? 0) || 0;
 
+const getConfirmedBomId = detail => (
+  detail?.bomProductId
+  ?? detail?.bomProduct?.bomProductId
+  ?? detail?.bomProduct?.id
+  ?? null
+);
+
+const hasConfirmedBom = detail => {
+  const bomProductId = getConfirmedBomId(detail);
+  return bomProductId !== null && bomProductId !== undefined && String(bomProductId).trim() !== '';
+};
+
 const getResponseItems = (response) => {
   const payload = response?.data ?? response;
   return [payload?.embedded, payload?.items, payload?.content, payload?.data, payload]
@@ -119,7 +131,7 @@ const getProductName = (productId, customerOrder) => (
 );
 
 const selectBom = (versions, bomProductId) => (
-  versions.find(item => String(item?.bomProductId) === String(bomProductId)) ?? null
+  versions.find(item => String(item?.bomProductId ?? item?.id) === String(bomProductId)) ?? null
 );
 
 const ProductionOrderDetail = ({ data = {}, closeModal }) => {
@@ -197,13 +209,20 @@ const ProductionOrderDetail = ({ data = {}, closeModal }) => {
 
   const bomItems = useMemo(() => (record.details ?? []).map((detail) => {
     const versions = bomVersionsByProductId.get(String(detail.productId)) ?? [];
-    const bom = selectBom(versions, detail.bomProductId);
+    const persistedBom = selectBom(versions, getConfirmedBomId(detail));
+    const hasLegacyConfirmation = record.confirmedBy != null
+      || (Array.isArray(record.outbound) && record.outbound.length > 0);
+    const bom = persistedBom
+      ?? (hasLegacyConfirmation
+        ? versions.find(item => Number(item?.status) === 1) ?? versions[0]
+        : null);
     return {
       ...detail,
       productName: getProductName(detail.productId, customerOrder),
       bom,
+      confirmed: hasConfirmedBom(detail) || Boolean(bom && hasLegacyConfirmation),
     };
-  }), [bomVersionsByProductId, customerOrder, record.details]);
+  }), [bomVersionsByProductId, customerOrder, record.confirmedBy, record.details, record.outbound]);
 
   const materialRows = useMemo(() => {
     const rows = new Map();
@@ -243,7 +262,7 @@ const ProductionOrderDetail = ({ data = {}, closeModal }) => {
   const status = statuses.find(item => String(item.id) === String(record.status))
     ?? SYSTEM_STATUSES[record.status]
     ?? { name: `Trạng thái #${record.status}`, color: 'default' };
-  const confirmedBomCount = bomItems.filter(item => item.bomProductId != null).length;
+  const confirmedBomCount = bomItems.filter(item => item.confirmed).length;
   const allocations = Array.isArray(record.outbound) ? record.outbound : [];
 
   const goBack = () => {
@@ -256,7 +275,8 @@ const ProductionOrderDetail = ({ data = {}, closeModal }) => {
 
   const openProductionManagement = () => {
     closeModal?.();
-    navigate(`/material/bom?code=${encodeURIComponent(record.code ?? '')}`);
+    const orderCode = record.orderCode ?? customerOrder.code ?? '';
+    navigate(`/material/bom?orderCode=${encodeURIComponent(orderCode)}`);
   };
 
   if (loading) {
@@ -314,8 +334,8 @@ const ProductionOrderDetail = ({ data = {}, closeModal }) => {
                 <div className="bom-item" key={item.id ?? `${item.productId}-${item.sortOrder}`}>
                   <div><div className="bom-label">Sản phẩm</div><div className="bom-value">{item.productName}</div></div>
                   <div><div className="bom-label">Phiên bản BOM</div><div className="bom-value">{item.bom?.version ?? 'Chưa xác nhận'}</div></div>
-                  <Tag color={item.bomProductId != null ? 'success' : 'warning'}>
-                    {item.bomProductId != null ? 'Đã xác nhận' : 'Chưa có BOM'}
+                  <Tag color={item.confirmed ? 'success' : 'warning'}>
+                    {item.confirmed ? 'Đã xác nhận' : 'Chưa có BOM'}
                   </Tag>
                 </div>
               ))}

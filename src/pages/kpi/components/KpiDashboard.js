@@ -10,13 +10,7 @@ import {
   WarningOutlined,
 } from '@ant-design/icons';
 import { Helmet } from 'react-helmet';
-import {
-  KPI_NAMES,
-  MOCK_EMPLOYEES,
-  PERIODS,
-  STATUS_META,
-  TITLE,
-} from '../mockData';
+import { KPI_PAGE_TITLE } from '../constants';
 import {
   AddButton,
   Avatar,
@@ -36,18 +30,12 @@ import {
   PageTitle,
   PeriodButton,
   PeriodTabs,
-  ProgressBar,
-  ProgressCell,
-  ProgressTrack,
-  ProgressValue,
   SearchInput,
   StatCard,
   StatIcon,
   StatLabel,
   StatsGrid,
   StatValue,
-  StatusBadge,
-  StatusDot,
   TableHeader,
   TableRow,
   TableScroller,
@@ -57,20 +45,21 @@ import {
 
 const KpiDashboard = ({
   attentionOnly,
-  averageProgress,
   employees,
+  loading,
   onAdd,
   onFilterChange,
   onPeriodChange,
   onSearchChange,
   onSelectEmployee,
   period,
+  periods,
   search,
   selectedPeriod,
 }) => (
   <Page>
     <Helmet>
-      <title>{TITLE}</title>
+      <title>{KPI_PAGE_TITLE}</title>
     </Helmet>
 
     <Dashboard>
@@ -78,7 +67,7 @@ const KpiDashboard = ({
         <div>
           <PageTitle>KPI nhân viên</PageTitle>
           <PageSubtitle>
-            {MOCK_EMPLOYEES.length} thành viên — kỳ đánh giá {selectedPeriod.evaluation}
+            {employees.length} thành viên — kỳ đánh giá {selectedPeriod.evaluation}
           </PageSubtitle>
         </div>
         <AddButton type="primary" icon={<PlusOutlined />} onClick={onAdd}>
@@ -89,29 +78,29 @@ const KpiDashboard = ({
       <StatsGrid>
         <StatCard>
           <StatLabel>Tổng thành viên</StatLabel>
-          <StatValue>{MOCK_EMPLOYEES.length}</StatValue>
+          <StatValue>{employees.length}</StatValue>
           <StatIcon><TeamOutlined /></StatIcon>
         </StatCard>
         <StatCard>
-          <StatLabel>Tiến độ trung bình</StatLabel>
-          <StatValue>{averageProgress}%</StatValue>
+          <StatLabel>Tổng chỉ tiêu KPI</StatLabel>
+          <StatValue>{employees.reduce((total, item) => total + item.indicatorCount, 0)}</StatValue>
           <StatIcon><BarChartOutlined /></StatIcon>
         </StatCard>
         <StatCard>
-          <StatLabel>Đạt mục tiêu</StatLabel>
-          <StatValue>{MOCK_EMPLOYEES.filter((item) => item.status === 'success').length}</StatValue>
+          <StatLabel>Đã gắn KPI</StatLabel>
+          <StatValue>{employees.filter((item) => item.indicatorCount > 0).length}</StatValue>
           <StatIcon><CheckCircleOutlined /></StatIcon>
         </StatCard>
         <StatCard>
-          <StatLabel>Cần theo dõi</StatLabel>
-          <StatValue>{MOCK_EMPLOYEES.filter((item) => item.status === 'warning').length}</StatValue>
+          <StatLabel>Chưa có KPI</StatLabel>
+          <StatValue>{employees.filter((item) => item.indicatorCount === 0).length}</StatValue>
           <StatIcon><WarningOutlined /></StatIcon>
         </StatCard>
       </StatsGrid>
 
       <Toolbar>
         <PeriodTabs>
-          {PERIODS.map((item) => (
+          {periods.map((item) => (
             <PeriodButton
               key={item.key}
               type="button"
@@ -134,7 +123,7 @@ const KpiDashboard = ({
           $active={attentionOnly}
           onClick={onFilterChange}
         >
-          Bộ lọc
+          Chưa có KPI
         </FilterButton>
       </Toolbar>
 
@@ -143,17 +132,15 @@ const KpiDashboard = ({
           <TableHeader>
             <span>Thành viên</span>
             <span>Tên KPI</span>
-            <span>Phòng ban</span>
+            <span>Loại KPI</span>
             <span>Kỳ đánh giá</span>
             <span>Số chỉ tiêu</span>
-            <span>Tiến độ trung bình</span>
-            <span>Trạng thái</span>
+            <span>Tổng trọng số</span>
+            <span>Email</span>
             <span />
           </TableHeader>
 
-          {employees.map((employee) => {
-            const status = STATUS_META[employee.status];
-            return (
+          {employees.map((employee) => (
               <TableRow
                 key={employee.id}
                 role="button"
@@ -166,31 +153,28 @@ const KpiDashboard = ({
                 <MemberCell>
                   <Avatar>{employee.initials}</Avatar>
                   <MemberInfo>
-                    <MemberName>{employee.name}</MemberName>
-                    <MutedText>{employee.role}</MutedText>
+                    <MemberName>{employee.fullName}</MemberName>
+                    <MutedText>{employee.ssoId || employee.phone || '-'}</MutedText>
                   </MemberInfo>
                 </MemberCell>
-                <EllipsisText title={KPI_NAMES}>{KPI_NAMES}</EllipsisText>
-                <EllipsisText title={employee.department}>{employee.department}</EllipsisText>
+                <EllipsisText title={employee.kpiNames || ''}>
+                  {employee.kpiNames || 'Chưa có KPI'}
+                </EllipsisText>
+                <EllipsisText title={employee.kpiTypes || ''}>
+                  {employee.kpiTypes || '-'}
+                </EllipsisText>
                 <CellText>{selectedPeriod.evaluation}</CellText>
                 <CellText>{employee.indicatorCount}</CellText>
-                <ProgressCell>
-                  <ProgressTrack>
-                    <ProgressBar $status={employee.status} $width={Math.min(employee.progress, 100)} />
-                  </ProgressTrack>
-                  <ProgressValue>{employee.progress}%</ProgressValue>
-                </ProgressCell>
-                <StatusBadge $meta={status}>
-                  <StatusDot />
-                  {status.label}
-                </StatusBadge>
+                <CellText>{employee.totalWeight}%</CellText>
+                <EllipsisText title={employee.email || ''}>{employee.email || '-'}</EllipsisText>
                 <Chevron><RightOutlined /></Chevron>
               </TableRow>
-            );
-          })}
+          ))}
 
           {!employees.length && (
-            <EmptyState>Không tìm thấy thành viên phù hợp.</EmptyState>
+            <EmptyState>
+              {loading ? 'Đang tải dữ liệu KPI...' : 'Không tìm thấy thành viên phù hợp.'}
+            </EmptyState>
           )}
         </TableScroller>
       </TableShell>

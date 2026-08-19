@@ -68,11 +68,13 @@ export const buildManufacturePayload = ({ productionOrder = {}, materialConfirma
   const details = orderDetails.map((product, index) => {
     const detailKey = String(product.id ?? index)
     const detailValues = productDetails[detailKey] ?? {}
+    const bomSelection = materialConfirmation.bomSelections?.[detailKey] ?? {}
     const target = Number(detailValues.target ?? product.target ?? 0)
     const unitPrice = Number(product.unitPrice ?? product.price ?? 0)
 
     return {
       productId: product.productId,
+      bomProductId: bomSelection.bomProductId ?? product.bomProductId ?? null,
       target,
       unitPrice,
       totalPrice: Number(detailValues.totalPrice ?? (target * unitPrice)),

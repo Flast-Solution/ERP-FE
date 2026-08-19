@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import UserService from '@/services/UserService';
 
 const getUserLabel = (user) => {
-  const fullName = user.fullName || user.name || '';
-  const ssoId = user.ssoId || user.username || '';
+  const fullName = user.fullName || '';
+  const ssoId = user.ssoId || '';
 
   if (fullName && ssoId) return `${fullName} - ${ssoId}`;
   return fullName || ssoId || user.email || `Người dùng #${user.id}`;
