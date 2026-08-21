@@ -1,5 +1,6 @@
 import React from 'react'
-import { Breadcrumb, Col, Empty, Row, Spin } from 'antd'
+import { Col, Empty, Row, Spin } from 'antd'
+import { BreadcrumbCustom } from '@flast-erp/core/components'
 import { Helmet } from 'react-helmet'
 
 import { workflowFixedPanelStyle } from '../constants'
@@ -73,11 +74,10 @@ const OrderProgressLayout = ({
         <title>Tiến trình workflow đơn hàng</title>
       </Helmet>
       <style>{workflowProgressPageStyles}</style>
-      <Breadcrumb
-        style={{ marginBottom: 10 }}
-        items={[
-          { title: 'Trang chủ' },
-          { title: 'Đơn hàng' },
+      <BreadcrumbCustom
+        data={[
+          { title: 'Trang chủ', path: '/' },
+          { title: 'Đơn hàng đang sản xuất', path: '/sale/order-production' },
           { title: 'Tiến trình workflow' },
         ]}
       />

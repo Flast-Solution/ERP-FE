@@ -239,7 +239,11 @@ const ProductForm = () => {
               )}
             >
               {({ getFieldValue }) => (
-                <ProductFormPrice listProperties={getFieldValue('listProperties')} />
+                <ProductFormPrice
+                  listProperties={Array.isArray(getFieldValue('listProperties'))
+                    ? getFieldValue('listProperties')
+                    : []}
+                />
               )}
             </Form.Item>
           </>

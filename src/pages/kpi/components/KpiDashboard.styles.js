@@ -194,20 +194,20 @@ export const TableScroller = styled.div`
 
 export const tableGrid = `
   grid-template-columns:
-    minmax(220px, 1.35fr)
-    minmax(270px, 1.6fr)
-    minmax(210px, 1.2fr)
-    minmax(120px, 0.65fr)
-    minmax(90px, 0.5fr)
-    minmax(180px, 1fr)
-    minmax(150px, 0.85fr)
+    minmax(180px, 1.25fr)
+    minmax(180px, 1.35fr)
+    minmax(120px, 0.8fr)
+    minmax(105px, 0.7fr)
+    minmax(76px, 0.45fr)
+    minmax(170px, 1fr)
+    minmax(145px, 0.85fr)
     22px;
 `;
 
 export const TableHeader = styled.div`
   ${tableGrid}
   display: grid;
-  min-width: 1250px;
+  min-width: 1060px;
   min-height: 48px;
   align-items: center;
   gap: 20px;
@@ -222,7 +222,7 @@ export const TableHeader = styled.div`
 export const TableRow = styled.div`
   ${tableGrid}
   display: grid;
-  min-width: 1250px;
+  min-width: 1060px;
   min-height: 72px;
   align-items: center;
   gap: 20px;
@@ -368,4 +368,3 @@ export const EmptyState = styled.div`
   color: #94a3b8;
   text-align: center;
 `;
-

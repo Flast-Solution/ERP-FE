@@ -275,7 +275,7 @@ const LeadReport = () => {
     <div className="lead-report-shell">
       <link rel="stylesheet" href="http://view.user.flast.vn/colors_and_type.css" />
       <link rel="stylesheet" href="http://view.user.flast.vn/pipe_lead.css" />
-      <div className="pl-report-page" data-screen-label="Pipe Lead · 9 Báo cáo">
+      <div className="" style={{ backgroundColor: '#f6f8fa' }} data-screen-label="Pipe Lead · 9 Báo cáo">
         <div className="pl-report">
           {warnings.length ? (
             <div className="lead-report-notice">
@@ -283,14 +283,6 @@ const LeadReport = () => {
               <span>Một số chỉ số nâng cao chưa có dữ liệu trong kỳ này.</span>
             </div>
           ) : null}
-
-          <div className="pl-report-head">
-            <div>
-              <div className="t-eyebrow">Báo cáo</div>
-              <h1 className="t-h1" style={{ margin: '4px 0 0' }}>Lead Pipeline</h1>
-              <div className="t-small pl-report-head__sub">Trả lời: đang có bao nhiêu lead tốt, kênh/nhân viên nào hiệu quả, pipeline nghẽn ở đâu, vì sao mất đơn, và tốc độ chốt đơn.</div>
-            </div>
-          </div>
 
           <div className="lead-report-filters">
             <div className="lead-report-filters__head">
@@ -350,7 +342,8 @@ const LeadReport = () => {
             </div>
           </div>
 
-          <div className="pl-detail-card">
+          <div className="lead-report-grid">
+            <div className="pl-detail-card lead-report-card--today">
             <SectionHead icon="zap" title="Hôm nay" />
             <div className="pl-chart">
               {model.today.map(item => <BarRow key={item.label} {...item} maximum={todayMax} />)}
@@ -361,7 +354,7 @@ const LeadReport = () => {
             </div>
           </div>
 
-          <div className="pl-detail-card">
+          <div className="pl-detail-card lead-report-card--comparison">
             <SectionHead iconNode={<RiseOutlined className="lead-report-section-icon" />} title="So với kỳ trước" />
             <div className="pl-stat-cards">
               <div className="pl-stat-card"><div className="lbl">New leads</div><div className="v">{formatNumber(model.currentTotal)}</div><Delta current={model.currentTotal} previous={model.previousTotal} /></div>
@@ -371,7 +364,7 @@ const LeadReport = () => {
             </div>
           </div>
 
-          <div className="pl-detail-card">
+          <div className="pl-detail-card lead-report-card--funnel">
             <SectionHead icon="filter" title="Pipeline nghẽn ở đâu — Funnel theo stage" caption={`${rangeDays} ngày qua`} />
             <div className="pl-funnel">
               {model.funnel.map((item, index) => {
@@ -393,7 +386,7 @@ const LeadReport = () => {
             </div>
           </div>
 
-          <div className="pl-detail-card">
+          <div className="pl-detail-card lead-report-card--channel">
             <SectionHead icon="git-branch" title="Channel performance" caption="Kênh nào đáng đầu tư thêm" />
             <div className="pl-chart-legend">
               <span><span className="dot" style={{ background: 'var(--brand-300)' }} /> Leads</span>
@@ -427,7 +420,7 @@ const LeadReport = () => {
             {bestChannel ? <div className="field-help" style={{ marginTop: 'var(--s-3)' }}>{bestChannel.name} đang có doanh thu cao nhất trong kỳ đã chọn.</div> : null}
           </div>
 
-          <div className="pl-detail-card">
+          <div className="pl-detail-card lead-report-card--wide lead-report-card--employees">
             <SectionHead icon="users" title="Hiệu suất nhân viên" caption={`${rangeDays} ngày qua`} />
             <table className="pl-table">
               <thead><tr><th>Nhân viên</th><th className="num">Lead được giao</th><th className="num">Đã chốt</th><th className="num">Doanh thu</th><th className="num">Tỷ lệ chốt</th></tr></thead>
@@ -449,7 +442,7 @@ const LeadReport = () => {
             </div>
           </div>
 
-          <div className="pl-detail-card">
+          <div className="pl-detail-card lead-report-card--speed">
             <SectionHead icon="clock" title="Tốc độ chốt đơn" caption="Thời gian trung bình giữa các stage" />
             <div className="pl-stat-cards">
               {['NEW → QUALIFIED', 'QUALIFIED → CONTACTED', 'NEGOTIATING → WON', 'NEW → WON (toàn trình)'].map(label => (
@@ -458,7 +451,7 @@ const LeadReport = () => {
             </div>
           </div>
 
-          <div className="pl-detail-card">
+          <div className="pl-detail-card lead-report-card--wide lead-report-card--lost">
             <SectionHead icon="circle-x" title="Vì sao mất đơn" caption={`${formatNumber(model.lost)} lead LOST trong ${rangeDays} ngày qua`} />
             <div className="pl-chart">
               {model.lostReasons.map(item => (
@@ -472,6 +465,7 @@ const LeadReport = () => {
                 />
               ))}
             </div>
+          </div>
           </div>
         </div>
       </div>

@@ -21,49 +21,40 @@
 
 import React from 'react';
 import { Helmet } from "react-helmet";
-import { Menu } from 'antd';
 import { BreadcrumbCustom } from '@flast-erp/core/components';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import ListOrder from '@/containers/Order/List';
 import { CoHoi7DayContent } from '@/pages/cohoi7Day';
 import { OrderCancelContent } from './Cancel';
 
-const ORDER_NAV_ITEMS = [
-  { key: 'list', label: 'Danh sách đơn hàng' },
-  { key: 'after-sale', label: 'Đơn hàng chưa chăm sóc sau bán' },
-  { key: 'cancelled', label: 'Danh sách đơn hủy' },
-];
-
-const ORDER_TAB_TITLES = {
-  list: 'Danh sách đơn hàng',
-  'after-sale': 'Đơn hàng chưa chăm sóc sau bán',
-  cancelled: 'Danh sách đơn hủy',
+const ORDER_VIEWS = {
+  list: {
+    title: 'Danh sách đơn hàng',
+  },
+  afterSale: {
+    title: 'Đơn hàng chưa chăm sóc sau bán',
+  },
+  cancelled: {
+    title: 'Danh sách đơn hủy',
+  },
 };
 
 const OrderPage = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const requestedTab = searchParams.get('tab');
-  const activeKey = ORDER_TAB_TITLES[requestedTab] ? requestedTab : 'list';
-  const title = ORDER_TAB_TITLES[activeKey];
-  const filterParams = Object.fromEntries(searchParams.entries());
-  delete filterParams.tab;
+  const { pathname, search } = useLocation();
+  const view = pathname === '/sale/order/after-sale'
+    ? 'afterSale'
+    : pathname === '/sale/order/cancelled'
+      ? 'cancelled'
+      : 'list';
+  const currentView = ORDER_VIEWS[view];
+  const filterParams = Object.fromEntries(new URLSearchParams(search).entries());
   const filter = { type: 'order', ...filterParams };
 
-  const changeTab = (key) => {
-    const nextParams = new URLSearchParams(searchParams);
-    if (key === 'list') {
-      nextParams.delete('tab');
-    } else {
-      nextParams.set('tab', key);
-    }
-    setSearchParams(nextParams);
-  };
-
   const renderContent = () => {
-    if (activeKey === 'after-sale') {
+    if (view === 'afterSale') {
       return <CoHoi7DayContent type="order" />;
     }
-    if (activeKey === 'cancelled') {
+    if (view === 'cancelled') {
       return <OrderCancelContent />;
     }
     return <ListOrder filter={filter} />;
@@ -72,17 +63,10 @@ const OrderPage = () => {
   return (
     <div>
       <Helmet>
-        <title>{title}</title>
+        <title>{currentView.title}</title>
       </Helmet>
       <BreadcrumbCustom
-        data={[{ title: 'Trang chủ' }, { title: 'Đơn hàng' }, { title }]}
-      />
-      <Menu
-        mode="horizontal"
-        selectedKeys={[activeKey]}
-        items={ORDER_NAV_ITEMS}
-        onClick={({ key }) => changeTab(key)}
-        style={{ marginBottom: 16, background: 'transparent' }}
+        data={[{ title: 'Trang chủ' }, { title: 'Đơn hàng' }, { title: currentView.title }]}
       />
       {renderContent()}
     </div>

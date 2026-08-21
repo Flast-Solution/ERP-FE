@@ -25,6 +25,18 @@ const getInitials = (name = '') => name
   .map((part) => part.charAt(0).toLocaleUpperCase('vi'))
   .join('');
 
+const getAverageProgress = (kpis = []) => {
+  if (!kpis.length) return 0;
+
+  const totalProgress = kpis.reduce((total, kpi) => {
+    const target = Number(kpi.target) || 0;
+    const achieve = Number(kpi.achieve) || 0;
+    return total + (target > 0 ? (achieve / target) * 100 : 0);
+  }, 0);
+
+  return Math.round(totalProgress / kpis.length);
+};
+
 const KpiPage = () => {
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -105,7 +117,7 @@ const KpiPage = () => {
         indicatorCount: employeeKpis.length,
         kpiNames: employeeKpis.map((kpi) => kpi.name).filter(Boolean).join(', '),
         kpiTypes: [...new Set(employeeKpis.map((kpi) => kpi.type).filter(Boolean))].join(', '),
-        totalWeight: employeeKpis.reduce((total, kpi) => total + Number(kpi.weight || 0), 0),
+        averageProgress: getAverageProgress(employeeKpis),
       };
     }), [users]);
 

@@ -69,10 +69,12 @@ const Product = ({ closeModal, data }) => {
         dRe.attrs = itemAttrs;
         dRe.attrValues = itemAttrValues;
       }
-      for (const iSkus of ( data?.skus || [] )) {
+      const sourceSkus = Array.isArray(data?.skus) ? data.skus : [];
+      for (const iSkus of sourceSkus) {
         let item = { id: iSkus?.id, name: iSkus?.name, note: iSkus?.note, skuPrices: iSkus?.skuPrices || [] }
         let details = [];
-        for (const detail of iSkus?.sku) {
+        const skuDetails = Array.isArray(iSkus?.sku) ? iSkus.sku : [];
+        for (const detail of skuDetails) {
           details.push([detail.attributedId, detail.attributedValueId]);
         }
         item.sku = details;
@@ -86,6 +88,7 @@ const Product = ({ closeModal, data }) => {
         ...data,
         image: productAssets.images,
         file: productAssets.files,
+        listProperties: Array.isArray(data?.listProperties) ? data.listProperties : [],
         skus,
         dRe
       });
@@ -97,18 +100,25 @@ const Product = ({ closeModal, data }) => {
     log({ action: 'onSubmit', datas });
     let values = cloneDeep(datas);
     let skusAdd = [];
-    for (let arrsku of values.skus) {
+    const submittedSkus = Array.isArray(values.skus) ? values.skus : [];
+    const originalSkus = Array.isArray(data?.skus) ? data.skus : [];
+    for (let arrsku of submittedSkus) {
       /* oldSku = [ {id: 10384, attributedId: 10023, attributedValueId: 10085}, ... ] */
-      const oldSku = data?.skus?.find(f => f?.id === arrsku?.id)?.sku ?? [];
-      let newSku = GenerateSkuDetailsOnSubmit(oldSku, arrsku.sku);
+      const originalSkuDetails = originalSkus.find(f => f?.id === arrsku?.id)?.sku;
+      const oldSku = Array.isArray(originalSkuDetails) ? originalSkuDetails : [];
+      const submittedSkuDetails = Array.isArray(arrsku.sku) ? arrsku.sku : [];
+      let newSku = GenerateSkuDetailsOnSubmit(oldSku, submittedSkuDetails);
       arrsku.sku = newSku;
       skusAdd.push(arrsku);
     }
 
-    const newListProperties = values?.listProperties.map(item => ({
+    const submittedProperties = Array.isArray(values.listProperties)
+      ? values.listProperties
+      : [];
+    const newListProperties = submittedProperties.map(item => ({
       attributedId: item?.attributedId,
       propertyValueId: item?.attributedValueId,
-    })) || [];
+    }));
 
     const {
       images: legacyImages,

@@ -1,5 +1,5 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { Button, Form, Input, Radio, Select, Tag, message } from 'antd'
+import { Button, DatePicker, Form, Input, Radio, Select, Tag, message } from 'antd'
 
 import {
   FormContextCustom,
@@ -13,10 +13,8 @@ import FormFileUpload from '@/containers/PreviewModal/FormFileUpload'
 
 import { LeadFormShell } from './styles'
 
-const CONFIG_FETCH_API = '/erp/config/fetch'
 const WORKFLOW_FILTER_API = '/workflow/process/filter'
 const WORKFLOW_PAGE_SIZE = 10
-const LEAD_STATUS_KEYS = ['LEAD_STATUS', 'LEAD_STATUSES', 'STATUS_LEAD']
 
 const getResponseItems = (response) => {
   const payload = response?.data ?? response
@@ -32,41 +30,6 @@ const getResponseItems = (response) => {
     payload,
   ].find(Array.isArray) ?? []
 }
-
-const parseOptions = (value) => {
-  if (Array.isArray(value)) return value
-  if (typeof value !== 'string' || !value.trim()) return []
-  try {
-    const parsed = JSON.parse(value)
-    return Array.isArray(parsed) ? parsed : []
-  } catch (_) {
-    return []
-  }
-}
-
-const normalizeOption = (item, index) => {
-  if (item === undefined || item === null || item === '') return null
-  if (typeof item !== 'object') return { value: item, label: String(item) }
-  const value = item.value ?? item.code ?? item.id ?? item.key ?? index
-  const label = item.name ?? item.label ?? item.title ?? item.text ?? item.value ?? item.code
-  return value === undefined || value === null || label === undefined || label === null
-    ? null
-    : { value, label: String(label) }
-}
-
-const matchesConfigKey = (key, aliases) => {
-  const normalized = String(key ?? '').trim().toUpperCase()
-  return aliases.some(alias => normalized === alias || normalized.startsWith(`${alias}_`))
-}
-
-const resolveConfigOptions = (items, aliases) => items
-  .filter(item => matchesConfigKey(item?.key, aliases))
-  .flatMap((item) => {
-    const nested = parseOptions(item?.value)
-    return nested.length ? nested : [item]
-  })
-  .map(normalizeOption)
-  .filter(Boolean)
 
 const getResponsePage = (response) => {
   const payload = response?.data ?? response
@@ -138,11 +101,33 @@ const LeadSelect = ({
   </Form.Item>
 )
 
+const LeadDatePicker = ({
+  name,
+  label,
+  code,
+  required,
+  fieldClassName = '',
+  ...props
+}) => (
+  <Form.Item
+    name={name}
+    label={<LeadLabel code={code} required={required}>{label}</LeadLabel>}
+    required={false}
+    className={`pl-field ${fieldClassName}`.trim()}
+    rules={required ? [{ required: true, message: `Vui lòng chọn ${String(label).toLowerCase()}` }] : []}
+  >
+    <DatePicker
+      className="pl-input pl-date-picker"
+      format="DD/MM/YYYY"
+      allowClear
+      {...props}
+    />
+  </Form.Item>
+)
+
 const LeadForm = ({ listSale = [], submitting = false }) => {
   const { form, record } = useContext(FormContextCustom)
   const [provinces, setProvinces] = useState([])
-  const [leadStatuses, setLeadStatuses] = useState([])
-  const [loadingConfigs, setLoadingConfigs] = useState(false)
   const [workflows, setWorkflows] = useState([])
   const [loadingWorkflows, setLoadingWorkflows] = useState(false)
   const workflowOffsetRef = useRef(0)
@@ -215,36 +200,23 @@ const LeadForm = ({ listSale = [], submitting = false }) => {
     loadWorkflows({ reset: true })
   }, [loadWorkflows])
 
-  useEffect(() => {
-    let mounted = true
-    setLoadingConfigs(true)
-    RequestUtils.Get(CONFIG_FETCH_API, { limit: 500, offset: 0 })
-      .then((response) => {
-        if (!mounted) return
-        const items = getResponseItems(response)
-        setLeadStatuses(resolveConfigOptions(items, LEAD_STATUS_KEYS))
-      })
-      .catch(() => {
-        if (!mounted) return
-        setLeadStatuses([])
-      })
-      .finally(() => {
-        if (mounted) setLoadingConfigs(false)
-      })
-    return () => {
-      mounted = false
+  const normalizeLeadStatuses = useCallback((response) => {
+    const statuses = getResponseItems(response)
+    const currentStatus = form?.getFieldValue('status')
+    if (
+      form
+      && statuses.length
+      && (currentStatus === undefined || currentStatus === null || currentStatus === '')
+    ) {
+      const initialStatus = statuses.find(status => (
+        ['NEW', 'CREATE_DATA'].includes(
+          String(status?.code ?? status?.value ?? '').toUpperCase(),
+        )
+      )) ?? statuses[0]
+      form.setFieldValue('status', initialStatus?.id ?? initialStatus?.value ?? initialStatus?.code)
     }
-  }, [])
-
-  useEffect(() => {
-    if (!form || !leadStatuses.length) return
-    const current = form.getFieldValue('status')
-    if (current !== undefined && current !== null && current !== '') return
-    const initial = leadStatuses.find(option => (
-      ['NEW', 'CREATE_DATA'].includes(String(option.value).toUpperCase())
-    )) ?? leadStatuses[0]
-    form.setFieldValue('status', initial?.value)
-  }, [form, leadStatuses])
+    return statuses
+  }, [form])
 
   const provinceOptions = useMemo(
     () => provinces.map(item => ({ value: item.name, label: item.name })),
@@ -431,11 +403,23 @@ const LeadForm = ({ listSale = [], submitting = false }) => {
                   </Tag>
                 )
               }}
-              extra="Workflow đã chạy được giữ lại; bạn có thể chọn thêm nhiều workflow khác."
             />
           </div>
-          <div className="lead-readonly">
-            <LeadSelect disabled name="status" label="Trạng thái Lead" code="stage" placeholder="Hệ thống tự xác định" options={leadStatuses} loading={loadingConfigs} />
+          <div className="pl-field lead-service-field">
+            <FormSelectAPI
+              showSearch
+              allowClear
+              className="pl-select"
+              apiPath="entity-status/list-by-type?type=LEAD"
+              apiAddNewItem="entity-status/save-application-status"
+              createDefaultValues={{ entityType: 'LEAD' }}
+              onData={normalizeLeadStatuses}
+              label="Trạng thái Lead"
+              name="status"
+              valueProp="id"
+              titleProp="name"
+              placeholder="Chọn trạng thái Lead"
+            />
           </div>
           <LeadSelect name="interestLevel" label="Mức độ quan tâm" code="interest_level" placeholder="Chọn mức độ" options={[
             { value: 'HIGH', label: 'Cao' },
@@ -444,7 +428,12 @@ const LeadForm = ({ listSale = [], submitting = false }) => {
           ]} />
           <LeadInput disabled name="inTime" label="Ngày tạo" code="created_at" placeholder="Tự sinh khi tạo Lead" fieldClassName="lead-readonly" />
           <LeadInput disabled name="lastContactedAt" label="Ngày liên hệ gần nhất" code="last_contacted_at" placeholder="Chưa có" fieldClassName="lead-readonly" />
-          <LeadInput disabled name="nextAppointmentAt" label="Lịch hẹn tiếp theo" code="next_appointment_at" placeholder="Chưa có" fieldClassName="lead-readonly" />
+          <LeadDatePicker
+            name="nextAppointmentAt"
+            label="Lịch hẹn tiếp theo"
+            code="next_appointment_at"
+            placeholder="Chọn ngày hẹn"
+          />
         </div>
 
         <div className="pl-effect">

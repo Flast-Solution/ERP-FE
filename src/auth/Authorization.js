@@ -41,15 +41,26 @@ const Authorization = (props) => {
     const { pathname } = location;
 
     useEffect(() => {
-        /* const matched = routes.find(r => r.path === pathname); */
-        const matched = routes.find(r => r.path && matchPath({ path: r.path, end: true }, pathname));
+        const exactRoute = routes.find(
+            r => r.path && matchPath({ path: r.path, end: true }, pathname)
+        );
+        const parentRoute = exactRoute ? null : routes.reduce((bestMatch, route) => {
+            if (!route.path || !matchPath({ path: route.path, end: false }, pathname)) {
+                return bestMatch;
+            }
+
+            return !bestMatch || route.path.length > bestMatch.path.length
+                ? route
+                : bestMatch;
+        }, null);
+        const matched = exactRoute ?? parentRoute;
         const isAuthenticatedPublicPath = PUBLIC_AUTHENTICATED_PREFIXES.some(path => pathname.startsWith(path));
         const granted = matched
             ? FuseUtils.hasPermission(matched.auth, (user?.id || '') !== '')
             : Boolean(user?.id && isAuthenticatedPublicPath);
         setAccessGranted(granted);
         /* eslint-disable-next-line */
-    }, [pathname, user]);
+    }, [pathname, routes, user]);
 
     const redirectRoute = useCallback(() => {
         const { pathname, state } = location;

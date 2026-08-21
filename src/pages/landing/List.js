@@ -269,15 +269,7 @@ const LandingList = () => {
     <PageShell>
       <Helmet><title>Quản lý trang</title></Helmet>
       <BreadcrumbCustom data={[{ title: 'Trang chủ' }, { title: 'Quản lý trang' }]} />
-      <Header>
-        <div>
-          <h1>Quản lý trang</h1>
-          <p>Tạo và chỉnh sửa Landing Page bằng các block nội dung.</p>
-        </div>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
-          Thêm trang mới
-        </Button>
-      </Header>
+   
       <Toolbar>
         <Input
           allowClear

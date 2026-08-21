@@ -30,18 +30,64 @@ import {
   PageTitle,
   PeriodButton,
   PeriodTabs,
+  ProgressBar,
+  ProgressCell,
+  ProgressTrack,
+  ProgressValue,
   SearchInput,
   StatCard,
   StatIcon,
   StatLabel,
   StatsGrid,
   StatValue,
+  StatusBadge,
+  StatusDot,
   TableHeader,
   TableRow,
   TableScroller,
   TableShell,
   Toolbar,
 } from './KpiDashboard.styles';
+
+const getProgressMeta = (progress) => {
+  if (progress >= 100) {
+    return {
+      key: 'success',
+      label: 'Đạt mục tiêu',
+      border: '#a7f3c5',
+      background: '#e9fbef',
+      color: '#15803d',
+    };
+  }
+
+  if (progress >= 70) {
+    return {
+      key: 'active',
+      label: 'Đang thực hiện',
+      border: '#bfdbfe',
+      background: '#eff6ff',
+      color: '#2563eb',
+    };
+  }
+
+  if (progress > 0) {
+    return {
+      key: 'warning',
+      label: 'Cần theo dõi',
+      border: '#fde68a',
+      background: '#fffbeb',
+      color: '#a16207',
+    };
+  }
+
+  return {
+    key: 'pending',
+    label: 'Chưa bắt đầu',
+    border: '#d5dde8',
+    background: '#f1f5f9',
+    color: '#64748b',
+  };
+};
 
 const KpiDashboard = ({
   attentionOnly,
@@ -135,12 +181,16 @@ const KpiDashboard = ({
             <span>Loại KPI</span>
             <span>Kỳ đánh giá</span>
             <span>Số chỉ tiêu</span>
-            <span>Tổng trọng số</span>
-            <span>Email</span>
+            <span>Tiến độ trung bình</span>
+            <span>Trạng thái</span>
             <span />
           </TableHeader>
 
-          {employees.map((employee) => (
+          {employees.map((employee) => {
+            const progress = employee.averageProgress;
+            const progressMeta = getProgressMeta(progress);
+
+            return (
               <TableRow
                 key={employee.id}
                 role="button"
@@ -165,11 +215,23 @@ const KpiDashboard = ({
                 </EllipsisText>
                 <CellText>{selectedPeriod.evaluation}</CellText>
                 <CellText>{employee.indicatorCount}</CellText>
-                <CellText>{employee.totalWeight}%</CellText>
-                <EllipsisText title={employee.email || ''}>{employee.email || '-'}</EllipsisText>
+                <ProgressCell>
+                  <ProgressTrack>
+                    <ProgressBar
+                      $status={progressMeta.key}
+                      $width={Math.min(Math.max(progress, 0), 100)}
+                    />
+                  </ProgressTrack>
+                  <ProgressValue>{progress}%</ProgressValue>
+                </ProgressCell>
+                <StatusBadge $meta={progressMeta}>
+                  <StatusDot />
+                  {progressMeta.label}
+                </StatusBadge>
                 <Chevron><RightOutlined /></Chevron>
               </TableRow>
-          ))}
+            );
+          })}
 
           {!employees.length && (
             <EmptyState>
