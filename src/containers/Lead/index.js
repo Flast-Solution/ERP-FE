@@ -20,6 +20,7 @@
 /**************************************************************************/
 
 import React, { useState } from 'react';
+import { Form } from 'antd';
 import { RestEditModal } from '@flast-erp/core/components';
 
 import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
@@ -127,18 +128,22 @@ const normalizeLeadRecord = (item = {}) => {
 const NewLead = ({ closeModal, data }) => {
 
   const { record: item, listSale } = data;
+  const [form] = Form.useForm();
   const [record, setRecord] = useState(() => normalizeLeadRecord(item));
   const [submitting, setSubmitting] = useState(false);
 
   const onSubmit = async (values) => {
     setSubmitting(true);
     try {
+      const currentFormValues = form.getFieldsValue(true);
       const body = {
         ...record,
         ...values,
+        ...currentFormValues,
         business: {
           ...(record?.business ?? {}),
           ...(values?.business ?? {}),
+          ...(currentFormValues?.business ?? {}),
         },
       };
       delete body.fileUploads;
@@ -231,7 +236,8 @@ const NewLead = ({ closeModal, data }) => {
 
   return (
     <RestEditModal
-      isMergeRecordOnSubmit={true}
+      form={form}
+      isMergeRecordOnSubmit={false}
       updateRecord={(values) => {
         setRecord(curvals => ({
           ...curvals,
