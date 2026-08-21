@@ -15,6 +15,7 @@ const createOrderColumns = ({
   actionWidth,
   hideQuoteButton,
   disableWorkflowAttach,
+  showWorkflowProgressAction,
   extraActions,
   onClickViewDetail,
   openQuotationViewer,
@@ -168,6 +169,7 @@ const createOrderColumns = ({
         isOpportunityList={isOpportunityList}
         hideQuoteButton={hideQuoteButton}
         disableWorkflowAttach={disableWorkflowAttach}
+        showWorkflowProgressAction={showWorkflowProgressAction}
         extraActions={extraActions}
         onClickViewDetail={onClickViewDetail}
         openQuotationViewer={openQuotationViewer}

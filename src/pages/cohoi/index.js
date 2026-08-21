@@ -21,54 +21,39 @@
 
 import React from 'react';
 import { Helmet } from "react-helmet";
-import { Menu } from 'antd';
 import { BreadcrumbCustom } from '@flast-erp/core/components';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import ListOrder from '@/containers/Order/List';
 import { CoHoi7DayContent } from '@/pages/cohoi7Day';
 
 const COHOI_FILTER = { type: 'cohoi' };
 
-const COHOI_NAV_ITEMS = [
-  { key: 'list', label: 'Danh sách cơ hội bán hàng' },
-  { key: 'seven-day', label: 'Danh sách Cơ hội 7 ngày chưa ra đơn hàng' },
-];
-
-const COHOI_TAB_TITLES = {
-  list: 'Danh sách cơ hội bán hàng',
-  'seven-day': 'Danh sách Cơ hội 7 ngày chưa ra đơn hàng',
+const COHOI_VIEWS = {
+  list: {
+    title: 'Danh sách cơ hội bán hàng',
+    content: () => <ListOrder filter={COHOI_FILTER} />,
+  },
+  sevenDay: {
+    title: 'Danh sách Cơ hội 7 ngày chưa ra đơn hàng',
+    content: () => <CoHoi7DayContent type="cohoi" />,
+  },
 };
 
 const CoHoiPage = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const requestedTab = searchParams.get('tab');
-  const activeKey = COHOI_TAB_TITLES[requestedTab] ? requestedTab : 'list';
-  const title = COHOI_TAB_TITLES[activeKey];
+  const { pathname } = useLocation();
+  const view = pathname === '/sale/co-hoi/seven-day' ? 'sevenDay' : 'list';
+  const currentView = COHOI_VIEWS[view];
+  const Content = currentView.content;
 
   return (
     <div>
       <Helmet>
-        <title>{title}</title>
+        <title>{currentView.title}</title>
       </Helmet>
       <BreadcrumbCustom
-        data={[{ title: 'Trang chủ' }, { title: 'Cơ hội' }, { title }]}
+        data={[{ title: 'Trang chủ' }, { title: 'Cơ hội' }, { title: currentView.title }]}
       />
-      <Menu
-        mode="horizontal"
-        selectedKeys={[activeKey]}
-        items={COHOI_NAV_ITEMS}
-        onClick={({ key }) => {
-          if (key === 'seven-day') {
-            setSearchParams({ tab: key });
-            return;
-          }
-          setSearchParams({});
-        }}
-        style={{ marginBottom: 16, background: 'transparent' }}
-      />
-      {activeKey === 'seven-day'
-        ? <CoHoi7DayContent type="cohoi" />
-        : <ListOrder filter={COHOI_FILTER} />}
+      <Content />
     </div>
   );
 };

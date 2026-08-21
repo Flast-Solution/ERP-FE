@@ -19,61 +19,50 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Helmet } from 'react-helmet';
-import { Menu } from 'antd';
 import { BreadcrumbCustom } from '@flast-erp/core/components';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import LeadList from './LeadList';
 import LeadReport from './LeadReport';
 import { Lead3DayContent } from '@/pages/lead3Day';
 
-const LEAD_NAV_ITEMS = [
-  { key: 'list', label: 'Danh sách Lead' },
-  { key: 'three-day', label: 'Khách hàng 3 ngày chưa ra cơ hội bán hàng' },
-  { key: 'report', label: 'Báo cáo' },
-]
+const LEAD_VIEWS = {
+  list: {
+    title: 'Danh sách Lead',
+    content: LeadList,
+  },
+  threeDay: {
+    title: 'Khách hàng 3 ngày chưa ra cơ hội bán hàng',
+    content: Lead3DayContent,
+  },
+  report: {
+    title: 'Báo cáo',
+    content: LeadReport,
+  },
+}
 
-const LEAD_TAB_TITLES = {
-  list: 'Danh sách Lead',
-  'three-day': 'Khách hàng 3 ngày chưa ra cơ hội bán hàng',
-  report: 'Báo cáo',
+const getLeadViewFromPath = (pathname) => {
+  if (pathname === '/lead/three-day') return 'threeDay'
+  if (pathname === '/lead/report') return 'report'
+  return 'list'
 }
 
 const LeadPage = () => {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const requestedTab = searchParams.get('tab')
-  const activeKey = LEAD_TAB_TITLES[requestedTab] ? requestedTab : 'list'
-  const title = useMemo(() => LEAD_TAB_TITLES[activeKey], [activeKey])
-
-  const renderContent = () => {
-    if (activeKey === 'report') return <LeadReport />
-    if (activeKey === 'three-day') return <Lead3DayContent />
-    return <LeadList />
-  }
+  const { pathname } = useLocation()
+  const view = getLeadViewFromPath(pathname)
+  const currentView = LEAD_VIEWS[view] ?? LEAD_VIEWS.list
+  const Content = currentView.content
 
   return (
     <div>
       <Helmet>
-        <title>{title}</title>
+        <title>{currentView.title}</title>
       </Helmet>
       <BreadcrumbCustom
-        data={[{ title: 'Trang chủ' }, { title: 'Lead' }, { title }]}
+        data={[{ title: 'Trang chủ' }, { title: 'Lead' }, { title: currentView.title }]}
       />
-      <Menu
-        mode="horizontal"
-        selectedKeys={[activeKey]}
-        items={LEAD_NAV_ITEMS}
-        onClick={({ key }) => {
-          if (key !== 'list') {
-            setSearchParams({ tab: key })
-            return
-          }
-          setSearchParams({})
-        }}
-        style={{ marginBottom: 16, background: 'transparent' }}
-      />
-      {renderContent()}
+      <Content />
     </div>
   )
 }

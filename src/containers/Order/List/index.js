@@ -46,6 +46,7 @@ const ListOrder = ({
   extraActions,
   enableLotTree = false,
   disableWorkflowAttach = false,
+  showWorkflowProgressAction = false,
   apiPath = 'erp/order/fetch',
   orderMode = false,
   detailDrawerHash = '#order.tabs',
@@ -137,6 +138,7 @@ const ListOrder = ({
     actionWidth,
     hideQuoteButton,
     disableWorkflowAttach,
+    showWorkflowProgressAction,
     extraActions,
     onClickViewDetail,
     openQuotationViewer,
@@ -195,6 +197,7 @@ const ListOrder = ({
         order={workflowProgressOrder}
         orderDetail={workflowProgressOrderDetail}
         workflowInstances={workflowProgressInstances}
+        singleBlock={isOpportunityList}
         onClose={closeWorkflowProgressDrawer}
       />
 

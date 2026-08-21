@@ -303,6 +303,36 @@
   }
 }
 
+.workflow-detail-drawer--single-block {
+  .ant-drawer-body {
+    background: #fff;
+  }
+
+  .workflow-detail-drawer__tab-content {
+    gap: 0;
+    margin: 16px;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
+  }
+
+  .workflow-detail-drawer__tab-content > .workflow-detail-drawer__block,
+  .workflow-detail-drawer__tab-content > .workflow-detail-drawer__form-block {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .workflow-detail-drawer__form-block .workflow-progress-section {
+    padding: 0;
+    border: 0;
+  }
+}
+
 @media (max-width: 768px) {
   .workflow-detail-drawer {
     &__tab-content {

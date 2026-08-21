@@ -126,9 +126,32 @@ function SideBar() {
   const items = [
     getItem(<Link to="/sale/report-common">{t('sideBar.dashboard')}</Link>, 'home', <FundViewOutlined />),
     getItem(<Link to="/task">Dự án</Link>, 'project_list', <PieChartOutlined />),
-    getItem(<Link to="/lead">Lead</Link>, 'tong_lead', <FolderOpenOutlined />),
-    getItem(<Link to="/sale/co-hoi"> Cơ hội </Link>, 'co_hoi', <TagOutlined />),
-    getItem(<Link to="/sale/order">Đơn hàng</Link>, 'order_solve', <PaperClipOutlined style={iconSize} />),
+    getItem('Lead', 'tong_lead', <FolderOpenOutlined />, [
+      getItem(<Link to="/lead">Danh sách Lead</Link>, 'lead_list', <UnorderedListOutlined />),
+      getItem(
+        <Link to="/lead/three-day">Khách hàng 3 ngày chưa ra cơ hội bán hàng</Link>,
+        'lead_three_day',
+        <FieldTimeOutlined />,
+      ),
+      getItem(<Link to="/lead/report">Báo cáo</Link>, 'lead_report', <FundViewOutlined />),
+    ]),
+    getItem('Cơ hội', 'co_hoi', <TagOutlined />, [
+      getItem(<Link to="/sale/co-hoi">Danh sách cơ hội bán hàng</Link>, 'co_hoi_list', <UnorderedListOutlined />),
+      getItem(
+        <Link to="/sale/co-hoi/seven-day">Danh sách Cơ hội 7 ngày chưa ra đơn hàng</Link>,
+        'co_hoi_seven_day',
+        <FieldTimeOutlined />,
+      ),
+    ]),
+    getItem('Đơn hàng', 'order_solve', <PaperClipOutlined style={iconSize} />, [
+      getItem(<Link to="/sale/order">Danh sách đơn hàng</Link>, 'order_list', <UnorderedListOutlined />),
+      getItem(
+        <Link to="/sale/order/after-sale">Đơn hàng chưa chăm sóc sau bán</Link>,
+        'order_after_sale',
+        <FieldTimeOutlined />,
+      ),
+      getItem(<Link to="/sale/order/cancelled">Danh sách đơn hủy</Link>, 'order_cancelled', <OrderedListOutlined />),
+    ]),
     getItem('Qui trình', 'business_flow', <DollarCircleFilled />, [
       getItem(<Link to="/workflow-designer">Tạo nghiệp vụ</Link>, 'business_create', <UnorderedListOutlined />),
       getItem(<Link to="/workflow-forms">Danh sách form</Link>, 'workflow_form_list', <UnorderedListOutlined />),

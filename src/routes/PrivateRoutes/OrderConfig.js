@@ -32,7 +32,7 @@ export const OrderConfig = {
     routes: [
         { path: '/sale/order/progress/:orderId', element: <OrderProgressPage /> },
         { path: '/sale/order/progress', element: <OrderProgressPage /> },
-        { path: '/sale/order', element: <OrderPage /> },
+        { path: '/sale/order/*', element: <OrderPage /> },
         { path: '/sale/order-production', element: <OrderProductionPage /> },
         { path: '/sale/production/lots/create', element: <ManufacturingLot /> }
     ]

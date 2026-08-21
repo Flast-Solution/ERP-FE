@@ -58,6 +58,7 @@ const OrderProduction = () => {
                 orderMode
                 hideQuoteButton={true}
                 disableWorkflowAttach={true}
+                showWorkflowProgressAction
                 detailDrawerHash="#order.production.overview"
                 detailDrawerTitle=""
                 extraActions={extraActions}

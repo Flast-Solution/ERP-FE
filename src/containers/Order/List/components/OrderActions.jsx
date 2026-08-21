@@ -8,6 +8,7 @@ const OrderActions = ({
   isOpportunityList,
   hideQuoteButton,
   disableWorkflowAttach,
+  showWorkflowProgressAction,
   extraActions,
   onClickViewDetail,
   openQuotationViewer,
@@ -53,12 +54,42 @@ const OrderActions = ({
         icon: <ApartmentOutlined />,
         label: hasParentWorkflowInstance ? 'Gắn thêm workflow' : 'Gắn workflow',
       },
-      hasParentWorkflowInstance && {
+      (hasParentWorkflowInstance || showWorkflowProgressAction) && {
         key: 'progress',
         icon: <EyeOutlined />,
         label: 'Xem tiến trình',
+        disabled: !hasParentWorkflowInstance,
       },
     ].filter(Boolean)
+
+  const handleWorkflowAction = (key, event) => {
+    event?.stopPropagation?.()
+    if (key === 'attach') {
+      openWorkflowModal(record)
+      return
+    }
+    if (key.startsWith('progress:')) {
+      const detailId = key.slice('progress:'.length)
+      const detail = workflowDetails.find(item => String(item?.id) === detailId)
+      if (detail) {
+        openWorkflowProgressDrawer(record, detail)
+      }
+      return
+    }
+    if (key === 'progress') {
+      navigate(`/sale/order/progress/${record.id}`, {
+        state: {
+          order: clonePlainData(record),
+        },
+      })
+    }
+  }
+
+  const singleWorkflowAction = workflowMenuItems.length === 1
+    ? workflowMenuItems[0]
+    : null
+  const isDirectProgressAction = singleWorkflowAction?.key === 'progress'
+    || singleWorkflowAction?.key?.startsWith('progress:')
 
   return (
     <Space gap={8}>
@@ -81,39 +112,32 @@ const OrderActions = ({
           Báo giá
         </Button>
       )}
-      {workflowMenuItems.length > 0 ? (
+      {isDirectProgressAction ? (
+        <Tooltip title={singleWorkflowAction.disabled ? 'Chưa có workflow' : 'Xem tiến trình'}>
+          <span>
+            <Button
+              size="small"
+              icon={<EyeOutlined />}
+              disabled={singleWorkflowAction.disabled}
+              onClick={(event) => handleWorkflowAction(singleWorkflowAction.key, event)}
+            />
+          </span>
+        </Tooltip>
+      ) : workflowMenuItems.length > 0 ? (
         <Dropdown
           trigger={['click']}
           menu={{
             items: workflowMenuItems,
-            onClick: ({ key, domEvent }) => {
-              domEvent?.stopPropagation()
-              if (key === 'attach') {
-                openWorkflowModal(record)
-                return
-              }
-              if (key.startsWith('progress:')) {
-                const detailId = key.slice('progress:'.length)
-                const detail = workflowDetails.find(item => String(item?.id) === detailId)
-                if (detail) {
-                  openWorkflowProgressDrawer(record, detail)
-                }
-                return
-              }
-              if (key === 'progress') {
-                navigate(`/sale/order/progress/${record.id}`, {
-                  state: {
-                    order: clonePlainData(record),
-                  },
-                })
-              }
-            },
+            onClick: ({ key, domEvent }) => handleWorkflowAction(key, domEvent),
           }}
         >
-          <Tooltip title={hasWorkflowInstance ? 'Xem tiến trình' : 'Workflow'}>
+          <Tooltip title={hasWorkflowInstance ? 'Xem tiến trình' : 'Chưa có workflow'}>
             <Button
               size="small"
-              icon={hasWorkflowInstance ? <EyeOutlined /> : <ApartmentOutlined />}
+              icon={(hasWorkflowInstance || showWorkflowProgressAction)
+                ? <EyeOutlined />
+                : <ApartmentOutlined />}
+              disabled={showWorkflowProgressAction && !hasWorkflowInstance}
               onClick={(event) => event.stopPropagation()}
             />
           </Tooltip>

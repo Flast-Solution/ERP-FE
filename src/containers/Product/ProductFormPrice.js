@@ -39,13 +39,15 @@ import ProductAttrService from '@/services/ProductAttrService';
  * ]
 */
 
-const ProductFormPrice = ({ listProperties }) => {
+const ProductFormPrice = ({ listProperties = [] }) => {
 
   const [ dataInOptions, setDataInOptions ] = useState([]);
   
   useEffect(() => {
     let attrs = [], attrValues = [];
-    for (let item of listProperties) {
+    const properties = Array.isArray(listProperties) ? listProperties : [];
+
+    for (let item of properties) {
       if (isEmpty(item) || !item.attributedId || !item.attributedValueId) {
         continue;
       }

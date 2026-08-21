@@ -26,6 +26,7 @@ import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import { f5List } from '@flast-erp/core/utils';
 import { HASH_MODAL_CLOSE } from '@/configs';
 import moment from 'moment';
+import dayjs from 'dayjs';
 import LeadForm from './LeadForm';
 import { resolveUploadFilename } from '@/containers/PreviewModal/uploadUtils';
 import { LEAD_WORKFLOW_ENTITY_TYPE } from '@/containers/Order/List/constants';
@@ -42,8 +43,27 @@ const formatDisplayDate = (value) => {
 
 const formatApiDate = (value) => {
   if (!value) return null;
+  if (dayjs.isDayjs(value)) return value.format(API_DATE_FORMAT);
+  if (moment.isMoment(value)) return value.format(API_DATE_FORMAT);
   const parsed = moment(value, [DISPLAY_DATE_FORMAT, API_DATE_FORMAT, moment.ISO_8601], true);
   return parsed.isValid() ? parsed.format(API_DATE_FORMAT) : value;
+};
+
+const normalizeEmptyPayloadValues = (value) => {
+  if (value === undefined || value === null) return null;
+  if (typeof value === 'string') return value.trim() ? value : null;
+  if (Array.isArray(value)) {
+    return value.length ? value.map(normalizeEmptyPayloadValues) : null;
+  }
+  if (Object.prototype.toString.call(value) === '[object Object]') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nestedValue]) => [
+        key,
+        normalizeEmptyPayloadValues(nestedValue),
+      ]),
+    );
+  }
+  return value;
 };
 
 const normalizeWorkflowProcessIds = (item = {}) => Array.from(new Set([
@@ -88,7 +108,7 @@ const normalizeLeadRecord = (item = {}) => {
     workflowProcessIds: normalizeWorkflowProcessIds(item),
     inTime: formatDisplayDate(item.inTime ?? item.createdDate ?? item.createdAt),
     lastContactedAt: item.lastContactedAt ? formatDisplayDate(item.lastContactedAt) : undefined,
-    nextAppointmentAt: item.nextAppointmentAt ? formatDisplayDate(item.nextAppointmentAt) : undefined,
+    nextAppointmentAt: item.nextAppointmentAt ? dayjs(item.nextAppointmentAt) : undefined,
   };
 };
 
@@ -118,7 +138,7 @@ const NewLead = ({ closeModal, data }) => {
       delete body.website;
 
       if (body.customerType !== 'BUSINESS') {
-        delete body.business;
+        body.business = null;
       } else {
         body.business = {
           companyName: body.business?.companyName ?? null,
@@ -135,6 +155,7 @@ const NewLead = ({ closeModal, data }) => {
           .map(resolveUploadFilename)
           .filter(Boolean),
         inTime: formatApiDate(body.inTime),
+        nextAppointmentAt: formatApiDate(body.nextAppointmentAt),
       };
 
       const selectedWorkflowIds = normalizeWorkflowProcessIds(submitBody);
@@ -146,9 +167,10 @@ const NewLead = ({ closeModal, data }) => {
       delete submitBody.workflowInstance;
       delete submitBody.workflowProcess;
 
-      const response = await RequestUtils.Post("/data/create", submitBody);
+      const payload = normalizeEmptyPayloadValues(submitBody);
+      const response = await RequestUtils.Post("/data/create", payload);
       if (isSuccessfulResponse(response)) {
-        const leadId = resolveSavedLeadId(response, submitBody.id ?? record?.id);
+        const leadId = resolveSavedLeadId(response, payload.id ?? record?.id);
         const attachedWorkflowIds = new Set(normalizeWorkflowProcessIds(item).map(String));
         // workflowProcessId đầu tiên vẫn do /data/create xử lý như logic cũ.
         if (primaryWorkflowId !== null) attachedWorkflowIds.add(String(primaryWorkflowId));

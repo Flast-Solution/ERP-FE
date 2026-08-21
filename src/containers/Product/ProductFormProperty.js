@@ -47,12 +47,21 @@ const ProductFormProperty = ({ field }) => {
       <Col md={12} xs={24}>
         <Form.Item
           noStyle
-          shouldUpdate={(prevValues, curValues) =>
-            prevValues.listProperties[name]?.attributedId !== curValues.listProperties[name]?.attributedId
-          }
+          shouldUpdate={(prevValues, curValues) => {
+            const previousProperties = Array.isArray(prevValues.listProperties)
+              ? prevValues.listProperties
+              : [];
+            const currentProperties = Array.isArray(curValues.listProperties)
+              ? curValues.listProperties
+              : [];
+
+            return previousProperties[name]?.attributedId
+              !== currentProperties[name]?.attributedId;
+          }}
         >
           {({ getFieldValue }) => {
-            let listProperties = getFieldValue('listProperties');
+            const fieldValue = getFieldValue('listProperties');
+            const listProperties = Array.isArray(fieldValue) ? fieldValue : [];
             const attributedId = listProperties[name]?.attributedId ?? '';
             const filter = { attributedId, forceUpdate: attributedId !== '' };
             return (

@@ -118,6 +118,16 @@ export const LeadFormShell = styled.div`
     box-shadow: none;
   }
 
+  .pl-date-picker.ant-picker {
+    width: 100%;
+    min-height: 36px;
+    color: var(--fg-default);
+    background: var(--bg-canvas);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    box-shadow: none;
+  }
+
   .pl-select.ant-select {
     min-height: 36px;
     padding: 0;

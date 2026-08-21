@@ -19,6 +19,7 @@ const WorkflowProgressDrawer = ({
   entityType = 'order',
   formOnly = false,
   leadMode = false,
+  singleBlock = false,
 }) => {
   const items = workflowInstances.map((instance, index) => {
     const processId = getWorkflowInstanceProcessId(instance)
@@ -43,7 +44,7 @@ const WorkflowProgressDrawer = ({
 
   return (
     <Drawer
-      className={`workflow-detail-drawer${leadMode ? ' workflow-detail-drawer--lead' : ''}`}
+      className={`workflow-detail-drawer${leadMode ? ' workflow-detail-drawer--lead' : ''}${singleBlock ? ' workflow-detail-drawer--single-block' : ''}`}
       open={open}
       onClose={onClose}
       width="min(750px, calc(100vw - 16px))"
