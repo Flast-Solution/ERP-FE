@@ -34,16 +34,18 @@ import { attachWorkflow } from '@/containers/Order/List/services/workflowApi';
 
 const DISPLAY_DATE_FORMAT = 'DD/MM/YYYY HH:mm:ss';
 const API_DATE_FORMAT = 'YYYY-MM-DD HH:mm:ss';
-const SLASH_API_DATE_FORMAT = 'YYYY/MM/DD HH:mm:ss';
+const LEGACY_SLASH_DATE_FORMAT = 'YYYY/MM/DD HH:mm:ss';
 
-const formatDisplayDate = (value) => {
-  if (!value) return moment().format(DISPLAY_DATE_FORMAT);
+const toDatePickerValue = (value) => {
+  if (!value) return undefined;
+  if (dayjs.isDayjs(value)) return value;
+  if (moment.isMoment(value)) return dayjs(value.toDate());
   const parsed = moment(
     value,
-    [DISPLAY_DATE_FORMAT, API_DATE_FORMAT, SLASH_API_DATE_FORMAT, moment.ISO_8601],
+    [DISPLAY_DATE_FORMAT, API_DATE_FORMAT, LEGACY_SLASH_DATE_FORMAT, moment.ISO_8601],
     true,
   );
-  return parsed.isValid() ? parsed.format(DISPLAY_DATE_FORMAT) : value;
+  return parsed.isValid() ? dayjs(parsed.toDate()) : undefined;
 };
 
 const formatApiDate = (value, outputFormat = API_DATE_FORMAT) => {
@@ -52,7 +54,7 @@ const formatApiDate = (value, outputFormat = API_DATE_FORMAT) => {
   if (moment.isMoment(value)) return value.format(outputFormat);
   const parsed = moment(
     value,
-    [DISPLAY_DATE_FORMAT, API_DATE_FORMAT, SLASH_API_DATE_FORMAT, moment.ISO_8601],
+    [DISPLAY_DATE_FORMAT, API_DATE_FORMAT, LEGACY_SLASH_DATE_FORMAT, moment.ISO_8601],
     true,
   );
   return parsed.isValid() ? parsed.format(outputFormat) : value;
@@ -115,9 +117,10 @@ const normalizeLeadRecord = (item = {}) => {
         ? item.products.map(product => product?.id ?? product).filter(Boolean)
         : (item.productId ? [item.productId] : []),
     workflowProcessIds: normalizeWorkflowProcessIds(item),
-    inTime: formatDisplayDate(item.inTime ?? item.createdDate ?? item.createdAt),
-    lastContactedAt: item.lastContactedAt ? formatDisplayDate(item.lastContactedAt) : undefined,
-    nextAppointmentAt: item.nextAppointmentAt ? dayjs(item.nextAppointmentAt) : undefined,
+    birthday: toDatePickerValue(item.birthday),
+    inTime: toDatePickerValue(item.inTime ?? item.createdDate ?? item.createdAt) ?? dayjs(),
+    lastContactedAt: toDatePickerValue(item.lastContactedAt),
+    nextAppointmentAt: toDatePickerValue(item.nextAppointmentAt),
   };
 };
 
@@ -163,9 +166,10 @@ const NewLead = ({ closeModal, data }) => {
         fileUrls: (Array.isArray(body.fileUrls) ? body.fileUrls : [])
           .map(resolveUploadFilename)
           .filter(Boolean),
+        birthday: formatApiDate(body.birthday),
         inTime: formatApiDate(body.inTime),
-        lastContactedAt: formatApiDate(body.lastContactedAt, SLASH_API_DATE_FORMAT),
-        nextAppointmentAt: formatApiDate(body.nextAppointmentAt, SLASH_API_DATE_FORMAT),
+        lastContactedAt: formatApiDate(body.lastContactedAt),
+        nextAppointmentAt: formatApiDate(body.nextAppointmentAt),
       };
 
       const selectedWorkflowIds = normalizeWorkflowProcessIds(submitBody);

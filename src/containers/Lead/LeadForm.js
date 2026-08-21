@@ -118,7 +118,8 @@ const LeadDatePicker = ({
   >
     <DatePicker
       className="pl-input pl-date-picker"
-      format="DD/MM/YYYY"
+      format="YYYY-MM-DD HH:mm:ss"
+      showTime={{ format: 'HH:mm:ss' }}
       allowClear
       {...props}
     />
@@ -295,7 +296,7 @@ const LeadForm = ({ listSale = [], submitting = false }) => {
           <LeadInput required name="customerName" label="Họ và tên" code="contact_name" placeholder="Trần Thị Mai" />
           <LeadInput required name="customerMobile" label="Điện thoại" code="phone" placeholder="0901 234 567" />
           <LeadInput name="customerEmail" label="Email" code="email" placeholder="tranthimai@gmail.com" />
-          <LeadInput name="birthday" label="Ngày sinh (tùy chọn)" code="birthday" placeholder="12/06/1990" />
+          <LeadDatePicker name="birthday" label="Ngày sinh (tùy chọn)" code="birthday" placeholder="Chọn ngày sinh" />
           <LeadSelect name="provinceName" label="Tỉnh / Thành phố" code="province" placeholder="Chọn Tỉnh / Thành phố" options={provinceOptions} />
           <LeadInput name="customerFacebook" label="Facebook" code="facebook" placeholder="Nhập Facebook" />
           <LeadInput name="address" label="Địa chỉ" code="address" placeholder="123 Nguyễn Văn Cừ, P. An Hòa, Q. Ninh Kiều, TP. Cần Thơ" fieldClassName="full" />
@@ -426,8 +427,8 @@ const LeadForm = ({ listSale = [], submitting = false }) => {
             { value: 'MEDIUM', label: 'Trung bình' },
             { value: 'LOW', label: 'Thấp' },
           ]} />
-          <LeadInput disabled name="inTime" label="Ngày tạo" code="created_at" placeholder="Tự sinh khi tạo Lead" fieldClassName="lead-readonly" />
-          <LeadInput disabled name="lastContactedAt" label="Ngày liên hệ gần nhất" code="last_contacted_at" placeholder="Chưa có" fieldClassName="lead-readonly" />
+          <LeadDatePicker disabled name="inTime" label="Ngày tạo" code="created_at" placeholder="Tự sinh khi tạo Lead" fieldClassName="lead-readonly" />
+          <LeadDatePicker disabled name="lastContactedAt" label="Ngày liên hệ gần nhất" code="last_contacted_at" placeholder="Chưa có" fieldClassName="lead-readonly" />
           <LeadDatePicker
             name="nextAppointmentAt"
             label="Lịch hẹn tiếp theo"
