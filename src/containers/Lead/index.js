@@ -34,13 +34,13 @@ import { attachWorkflow } from '@/containers/Order/List/services/workflowApi';
 
 const DISPLAY_DATE_FORMAT = 'DD/MM/YYYY HH:mm:ss';
 const API_DATE_FORMAT = 'YYYY-MM-DD HH:mm:ss';
-const LAST_CONTACTED_DATE_FORMAT = 'YYYY/MM/DD HH:mm:ss';
+const SLASH_API_DATE_FORMAT = 'YYYY/MM/DD HH:mm:ss';
 
 const formatDisplayDate = (value) => {
   if (!value) return moment().format(DISPLAY_DATE_FORMAT);
   const parsed = moment(
     value,
-    [DISPLAY_DATE_FORMAT, API_DATE_FORMAT, LAST_CONTACTED_DATE_FORMAT, moment.ISO_8601],
+    [DISPLAY_DATE_FORMAT, API_DATE_FORMAT, SLASH_API_DATE_FORMAT, moment.ISO_8601],
     true,
   );
   return parsed.isValid() ? parsed.format(DISPLAY_DATE_FORMAT) : value;
@@ -52,7 +52,7 @@ const formatApiDate = (value, outputFormat = API_DATE_FORMAT) => {
   if (moment.isMoment(value)) return value.format(outputFormat);
   const parsed = moment(
     value,
-    [DISPLAY_DATE_FORMAT, API_DATE_FORMAT, LAST_CONTACTED_DATE_FORMAT, moment.ISO_8601],
+    [DISPLAY_DATE_FORMAT, API_DATE_FORMAT, SLASH_API_DATE_FORMAT, moment.ISO_8601],
     true,
   );
   return parsed.isValid() ? parsed.format(outputFormat) : value;
@@ -164,8 +164,8 @@ const NewLead = ({ closeModal, data }) => {
           .map(resolveUploadFilename)
           .filter(Boolean),
         inTime: formatApiDate(body.inTime),
-        lastContactedAt: formatApiDate(body.lastContactedAt, LAST_CONTACTED_DATE_FORMAT),
-        nextAppointmentAt: formatApiDate(body.nextAppointmentAt),
+        lastContactedAt: formatApiDate(body.lastContactedAt, SLASH_API_DATE_FORMAT),
+        nextAppointmentAt: formatApiDate(body.nextAppointmentAt, SLASH_API_DATE_FORMAT),
       };
 
       const selectedWorkflowIds = normalizeWorkflowProcessIds(submitBody);
