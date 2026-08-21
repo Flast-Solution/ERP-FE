@@ -19,14 +19,51 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { useContext } from 'react';
+import { useCallback, useContext, useMemo } from 'react';
 import { DataContext } from '@flast-erp/core/components';
+import authRoles from '@/auth/authRoles';
 
 function useGetMe() {
     const { user, setMyData } = useContext(DataContext)
+
+    const userRoles = useMemo(() => {
+        if (Array.isArray(user?.roles) && user.roles.length) {
+            return user.roles;
+        }
+        return Array.isArray(user?.userProfiles)
+            ? user.userProfiles.map(profile => profile?.type).filter(Boolean)
+            : [];
+    }, [user]);
+
+    const hasRole = useCallback(
+        roles => roles.some(role => userRoles.includes(role)),
+        [userRoles],
+    );
+
+    const isLeader = useCallback(
+        () => hasRole([...authRoles.admin, ...authRoles.partner, ...authRoles.leader]),
+        [hasRole],
+    );
+
+    const isManager = useCallback(
+        () => hasRole([
+            ...authRoles.admin,
+            ...authRoles.partner,
+            ...authRoles.provider,
+            ...authRoles.leader,
+        ]),
+        [hasRole],
+    );
+
+    const isUser = useCallback(() => !isLeader() && !isManager(), [isLeader, isManager]);
+
     return {
         user,
         setMe: (me) => setMyData(pre => ({ ...pre, user: me })),
+        isLeader,
+        isManager,
+        isUser,
+        hasRole,
     };
 }
 

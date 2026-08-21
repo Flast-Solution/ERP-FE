@@ -34,19 +34,28 @@ import { attachWorkflow } from '@/containers/Order/List/services/workflowApi';
 
 const DISPLAY_DATE_FORMAT = 'DD/MM/YYYY HH:mm:ss';
 const API_DATE_FORMAT = 'YYYY-MM-DD HH:mm:ss';
+const LAST_CONTACTED_DATE_FORMAT = 'YYYY/MM/DD HH:mm:ss';
 
 const formatDisplayDate = (value) => {
   if (!value) return moment().format(DISPLAY_DATE_FORMAT);
-  const parsed = moment(value, [DISPLAY_DATE_FORMAT, API_DATE_FORMAT, moment.ISO_8601], true);
+  const parsed = moment(
+    value,
+    [DISPLAY_DATE_FORMAT, API_DATE_FORMAT, LAST_CONTACTED_DATE_FORMAT, moment.ISO_8601],
+    true,
+  );
   return parsed.isValid() ? parsed.format(DISPLAY_DATE_FORMAT) : value;
 };
 
-const formatApiDate = (value) => {
+const formatApiDate = (value, outputFormat = API_DATE_FORMAT) => {
   if (!value) return null;
-  if (dayjs.isDayjs(value)) return value.format(API_DATE_FORMAT);
-  if (moment.isMoment(value)) return value.format(API_DATE_FORMAT);
-  const parsed = moment(value, [DISPLAY_DATE_FORMAT, API_DATE_FORMAT, moment.ISO_8601], true);
-  return parsed.isValid() ? parsed.format(API_DATE_FORMAT) : value;
+  if (dayjs.isDayjs(value)) return value.format(outputFormat);
+  if (moment.isMoment(value)) return value.format(outputFormat);
+  const parsed = moment(
+    value,
+    [DISPLAY_DATE_FORMAT, API_DATE_FORMAT, LAST_CONTACTED_DATE_FORMAT, moment.ISO_8601],
+    true,
+  );
+  return parsed.isValid() ? parsed.format(outputFormat) : value;
 };
 
 const normalizeEmptyPayloadValues = (value) => {
@@ -155,6 +164,7 @@ const NewLead = ({ closeModal, data }) => {
           .map(resolveUploadFilename)
           .filter(Boolean),
         inTime: formatApiDate(body.inTime),
+        lastContactedAt: formatApiDate(body.lastContactedAt, LAST_CONTACTED_DATE_FORMAT),
         nextAppointmentAt: formatApiDate(body.nextAppointmentAt),
       };
 
