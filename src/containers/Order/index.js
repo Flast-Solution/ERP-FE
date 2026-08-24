@@ -69,6 +69,22 @@ const ORDER_TEMPLATE = {
   mSkuDetails: []
 }
 
+function getLeadProducts(lead = {}) {
+  const productIds = Array.isArray(lead?.productIds)
+    ? lead.productIds
+    : (lead?.productId != null ? [lead.productId] : []);
+  const productNames = Array.isArray(lead?.productNames)
+    ? lead.productNames
+    : (lead?.productName ? [lead.productName] : []);
+
+  return productIds
+    .filter(productId => productId != null)
+    .map((productId, index) => ({
+      id: productId,
+      name: productNames[index] || `Sản phẩm #${productId}`,
+    }));
+}
+
 function randomString(length = 8) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let result = '';
@@ -129,6 +145,7 @@ const BanHangPage = ({
 
   const [data, setData] = useState([]);
   const [customer, setCustomer] = useState();
+  const [leadProducts, setLeadProducts] = useState([]);
 
   const [localOrder, setLocalOrder] = useState({ orderId, reload: false });
   const [customerOrder, setCustomerOrder] = useState();
@@ -153,11 +170,13 @@ const BanHangPage = ({
     const { data: response, errorCode } = await RequestUtils.Get("/data/get-customer", { dataId });
     if (errorCode === SUCCESS_CODE) {
       setCustomer(response.customer);
+      setLeadProducts(getLeadProducts(response.lead));
       onAddProduct(response.lead);
     }
   }, [dataId]);
 
   const onAddProduct = useCallback((lead = null) => {
+    const suggestedProducts = lead ? getLeadProducts(lead) : leadProducts;
     const onAfterChoiseProduct = (values) => {
       let order = _.cloneDeep(ORDER_TEMPLATE);
       const { mSkuDetails, mProduct, quantity, productId, skuId } = values;
@@ -201,10 +220,11 @@ const BanHangPage = ({
       title: "Thêm sản phẩm",
       data: {
         onSave: onAfterChoiseProduct,
-        ...(lead ? { productId: lead.productId } : {})
+        productId: suggestedProducts[0]?.id,
+        leadProducts: suggestedProducts,
       }
     });
-  }, []);
+  }, [leadProducts]);
 
   const onAddStock = useCallback(() => {
     const onAfterSubmit = (values) => {

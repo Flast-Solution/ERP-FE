@@ -32,6 +32,15 @@ import { ORDER_COLUMN_ACTION } from '@/containers/Order/utils';
 import Filter from './Filter';
 import OrderService from '@/services/OrderService';
 
+const OPPORTUNITY_HIDDEN_COLUMN_KEYS = new Set([
+  'opportunityAt',
+  'customerAddress',
+  'priceOff',
+  'shippingCost',
+  'paid',
+  'remainingAmount',
+]);
+
 export const CoHoi7DayContent = ({ type }) => {
   const onEdit = (item) => {
     let title = 'Cập nhật mã Cơ hội / Đơn hàng #' + item.code
@@ -40,8 +49,12 @@ export const CoHoi7DayContent = ({ type }) => {
     InAppEvent.emit(HASH_MODAL, { hash, title, data });
   }
 
+  const baseColumns = type === 'cohoi'
+    ? ORDER_COLUMN_ACTION.filter(column => !OPPORTUNITY_HIDDEN_COLUMN_KEYS.has(column.key))
+    : ORDER_COLUMN_ACTION;
+
   const CUSTOM_ACTION = [
-    ...ORDER_COLUMN_ACTION,
+    ...baseColumns,
     {
       title: 'Action',
       fixed: 'right',

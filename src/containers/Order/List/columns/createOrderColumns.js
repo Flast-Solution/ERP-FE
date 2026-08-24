@@ -6,10 +6,26 @@ import { renderArrayColor } from '../../utils'
 import { copyToClipboard } from '../utils/clipboard'
 import { getWorkflowCurrentStepLabel } from '../utils/workflowMappers'
 import OrderActions from '../components/OrderActions'
+import { STATUS_LEAD } from '@/configs/constant'
+
+const OPPORTUNITY_HIDDEN_COLUMN_KEYS = new Set([
+  'opportunityAt',
+  'customerAddress',
+  'priceOff',
+  'shippingCost',
+  'paid',
+  'remainingAmount',
+])
+
+const DEFAULT_OPPORTUNITY_STATUS = {
+  [STATUS_LEAD.CREATE_DATA]: { name: 'Tạo mới' },
+  [STATUS_LEAD.THANH_CO_HOI]: { name: 'Thành cơ hội', color: 'green' },
+}
 
 const createOrderColumns = ({
   isOrderList,
   isOpportunityList,
+  opportunityStatusOptions,
   copiedIndex,
   setCopiedIndex,
   actionWidth,
@@ -22,7 +38,7 @@ const createOrderColumns = ({
   openWorkflowModal,
   openWorkflowProgressDrawer,
   navigate,
-}) => [
+}) => ([
   {
     title: 'Kinh doanh',
     dataIndex: 'userCreateUsername',
@@ -65,6 +81,28 @@ const createOrderColumns = ({
     width: 150,
     ellipsis: true,
     render: (array, record) => {
+      if (isOpportunityList) {
+        const detailStatuses = Array.isArray(record?.details)
+          ? record.details.map(detail => detail?.status)
+          : []
+
+        return detailStatuses.length > 0
+          ? detailStatuses.map((status, index) => {
+            const statusItem = DEFAULT_OPPORTUNITY_STATUS[Number(status)]
+              ?? opportunityStatusOptions.find(item => String(item.id) === String(status))
+
+            return (
+              <div key={record.details[index]?.id ?? index}>
+                {index + 1} -{' '}
+                {statusItem
+                  ? <Tag color={statusItem.color || undefined}>{statusItem.name}</Tag>
+                  : '-'}
+              </div>
+            )
+          })
+          : '-'
+      }
+
       if (!isOrderList) {
         return renderArrayColor(array, record.detailstatus)
       }
@@ -90,7 +128,7 @@ const createOrderColumns = ({
     render: (time) => formatTime(time),
   },
   {
-    title: 'Họ tên',
+    title: isOpportunityList ? 'Khách hàng' : 'Họ tên',
     dataIndex: 'customerReceiverName',
     key: 'customerReceiverName',
     width: 130,
@@ -179,6 +217,8 @@ const createOrderColumns = ({
       />
     ),
   },
-]
+].filter(column => !(
+  isOpportunityList && OPPORTUNITY_HIDDEN_COLUMN_KEYS.has(column.key)
+)))
 
 export default createOrderColumns

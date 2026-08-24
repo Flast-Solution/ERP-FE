@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { RestList, FormSelect, NoFooter } from '@flast-erp/core/components';
 import { EyeOutlined, InfoCircleOutlined, UserAddOutlined } from '@ant-design/icons';
 import LeadFilter from './LeadFilter';
@@ -14,6 +14,7 @@ import { CHANNEL_SOURCE_MAP_KEYS } from '@/configs/localData';
 import { LEAD_WORKFLOW_ENTITY_TYPE } from '@/containers/Order/List/constants';
 import { enrichEntitiesWithWorkflowData } from '@/containers/Order/List/services/workflowApi';
 import { useWorkflowDrawer } from '@/contexts/WorkflowDrawerContext';
+import { getLeadStatusOption, mergeLeadStatusOptions } from './leadStatusOptions';
 
 const LEAD_API_PATH = 'data/lists';
 
@@ -28,12 +29,19 @@ const LeadList = () => {
   const [form] = Form.useForm();
   const [listSale, setListSale] = useState([]);
   const [detailRecord, setDetailRecord] = useState({});
-  const [listServices, setlistServices] = useState([])
+  const [listServices, setlistServices] = useState([]);
+  const [listStatus, setListStatus] = useState([]);
 
   useEffect(() => {
     RequestUtils.GetAsList('/service/list').then(setlistServices);
     RequestUtils.GetAsList('/user/list-name-id').then(setListSale);
+    RequestUtils.GetAsList('/entity-status/list-by-type', { type: 'LEAD' }).then(setListStatus);
   }, [])
+
+  const statusOptions = useMemo(
+    () => mergeLeadStatusOptions(listStatus),
+    [listStatus],
+  );
 
   useEffect(() => {
     form.setFieldsValue({ saleId: detailRecord?.saleId })
@@ -77,11 +85,6 @@ const LeadList = () => {
 
   const CUSTOM_ACTION = [
     {
-      title: "Create",
-      dataIndex: 'staff',
-      width: 150
-    },
-    {
       title: "Khách hàng",
       dataIndex: 'customerName',
       width: 200,
@@ -111,9 +114,25 @@ const LeadList = () => {
     },
     {
       title: "Sản phẩm",
-      dataIndex: 'productName',
+      dataIndex: 'productNames',
       width: 200,
-      ellipsis: true
+      ellipsis: true,
+      render: (productNames) => (
+        Array.isArray(productNames) && productNames.length > 0
+          ? productNames.join(', ')
+          : '-'
+      )
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: 'status',
+      width: 140,
+      render: (status) => {
+        const statusItem = getLeadStatusOption(status, listStatus);
+        return statusItem
+          ? <Tag color={statusItem.color || undefined}>{statusItem.name}</Tag>
+          : '-';
+      }
     },
     {
       title: "Ngày",
@@ -214,7 +233,7 @@ const LeadList = () => {
         xScroll={1200}
         onData={onData}
         initialFilter={{ limit: 10, page: 1 }}
-        filter={<LeadFilter />}
+        filter={<LeadFilter statusOptions={statusOptions} />}
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
         apiPath={LEAD_API_PATH}

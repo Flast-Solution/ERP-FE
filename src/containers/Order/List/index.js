@@ -1,8 +1,8 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { RestList } from '@flast-erp/core/components'
 import { useGetList } from '@flast-erp/core/hooks'
-import { dateFormatOnSubmit, f5List, InAppEvent } from '@flast-erp/core/utils'
+import { dateFormatOnSubmit, f5List, InAppEvent, RequestUtils } from '@flast-erp/core/utils'
 import GeneratedDocumentViewer from '@/components/GeneratedDocumentViewer'
 import { HASH_MODAL } from '@/configs'
 import Filter from '../Filter'
@@ -40,6 +40,18 @@ const QUOTATION_COMMENT_MOCKS = [
   },
 ]
 
+const useOpportunityOrderList = ({ queryParams, ...options }) => {
+  const opportunityQueryParams = useMemo(() => ({
+    ...queryParams,
+    type: 'cohoi',
+  }), [queryParams])
+
+  return useGetList({
+    ...options,
+    queryParams: opportunityQueryParams,
+  })
+}
+
 const ListOrder = ({
   filter = {},
   hideQuoteButton,
@@ -56,6 +68,30 @@ const ListOrder = ({
   const [copiedIndex, setCopiedIndex] = useState(null)
   const isOrderList = orderMode || filter.type === 'order'
   const isOpportunityList = filter.type === 'cohoi'
+  const [opportunityStatusOptions, setOpportunityStatusOptions] = useState([])
+
+  useEffect(() => {
+    let mounted = true
+
+    if (!isOpportunityList) {
+      setOpportunityStatusOptions([])
+      return () => {
+        mounted = false
+      }
+    }
+
+    RequestUtils.GetAsList('/entity-status/list-by-type', { type: 'LEAD' })
+      .then((statuses) => {
+        if (mounted) setOpportunityStatusOptions(Array.isArray(statuses) ? statuses : [])
+      })
+      .catch(() => {
+        if (mounted) setOpportunityStatusOptions([])
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [isOpportunityList])
 
   const {
     expandedRowKeys,
@@ -123,8 +159,8 @@ const ListOrder = ({
 
   const beforeSubmitFilter = useCallback((values) => {
     dateFormatOnSubmit(values, ['from', 'to'])
-    return values
-  }, [])
+    return { ...values, ...filter }
+  }, [filter])
 
   const actionWidth = (
     filter.type === 'cohoi' ? 260 : 220
@@ -133,6 +169,7 @@ const ListOrder = ({
   const columns = createOrderColumns({
     isOrderList,
     isOpportunityList,
+    opportunityStatusOptions,
     copiedIndex,
     setCopiedIndex,
     actionWidth,
@@ -163,14 +200,14 @@ const ListOrder = ({
       <RestList
         rowKey="id"
         bordered
-        xScroll={1800}
+        xScroll={isOpportunityList ? 1200 : 1800}
         expandable={orderLotExpandable}
         onData={onData}
         initialFilter={{ limit: 10, page: 1, ...filter }}
         filter={<Filter />}
         hasCreate={false}
         beforeSubmitFilter={beforeSubmitFilter}
-        useGetAllQuery={useGetList}
+        useGetAllQuery={isOpportunityList ? useOpportunityOrderList : useGetList}
         apiPath={apiPath}
         columns={columns}
       />
