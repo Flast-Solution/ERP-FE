@@ -67,7 +67,10 @@ const OrderService = {
 
     const listStatus = await this.fetchStatus();
     const getColorMeta = (item) => {
-      return listStatus.find(i => i.id === item.status) ?? {};
+      if (Number(item?.status) === 0) {
+        return { name: 'Tạo mới' };
+      }
+      return listStatus.find(i => String(i.id) === String(item?.status)) ?? {};
     }
 
     for (let item of response.embedded) {

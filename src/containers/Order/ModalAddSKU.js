@@ -164,6 +164,7 @@ const AddSKU = ({ onSave, productId, leadProducts = [], closeModal }) => {
       const draft = productDraftsRef.current[String(itemId)];
       onSave({
         ...draft.values,
+        status: draft.values?.status ?? 0,
         mProduct: draft.product,
         mSkuDetails: createMSkuDetails(draft.sku?.skuDetails ?? []),
       });

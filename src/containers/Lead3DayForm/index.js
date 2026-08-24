@@ -19,14 +19,45 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { RestEditModal } from '@flast-erp/core/components';
 import Form3Day from './Form3Day';
 import { RequestUtils, f5List, InAppEvent } from '@flast-erp/core/utils';
 
+export const normalizeIssues = (issues) => {
+  if (Array.isArray(issues)) {
+    return issues;
+  }
+  if (typeof issues === 'string' && issues.trim()) {
+    return issues.split(',').map(item => item.trim()).filter(Boolean);
+  }
+  return [];
+};
+
+export const mapDataCareToForm = (data = {}) => {
+  const dataCare = data?.dataCare ?? {};
+  const information = dataCare?.information ?? {};
+
+  return {
+    rating: information.rating ?? undefined,
+    satisfactionPercent: information.satisfactionPercent ?? undefined,
+    issues: normalizeIssues(information.issues),
+    newFeatures: information.newFeatures ?? '',
+    supportRequest: information.supportRequest ?? '',
+    priority: dataCare.priority ?? undefined,
+    cause: dataCare.cause ?? undefined,
+    action: dataCare.action ?? undefined,
+    active: dataCare.active ?? undefined,
+  };
+};
+
 const Lead3DayForm = ({ data }) => {
 
-  const [ record, setRecord ] = useState({});
+  const [ record, setRecord ] = useState(() => mapDataCareToForm(data));
+
+  useEffect(() => {
+    setRecord(mapDataCareToForm(data));
+  }, [data]);
   const onSubmit = async (dataCreate) => {
     const { 
       priority, 
@@ -35,6 +66,7 @@ const Lead3DayForm = ({ data }) => {
       newFeatures = "", 
       supportRequest = "", 
       active, 
+      issues,
       ...information 
     } = dataCreate;
     const { errorCode, message } = await RequestUtils.Post("/cs/3day-update", {
@@ -43,7 +75,12 @@ const Lead3DayForm = ({ data }) => {
       action,
       active,
       objectId: data.id,
-      information: { ...information, newFeatures, supportRequest },
+      information: {
+        ...information,
+        issues: normalizeIssues(issues),
+        newFeatures,
+        supportRequest,
+      },
     });
     if (errorCode === 200) {
       f5List('cs/3day-fetch');

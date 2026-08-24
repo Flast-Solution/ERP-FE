@@ -19,22 +19,40 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import Form7Day from '@/containers/Lead3DayForm/Form3Day';
+import { mapDataCareToForm, normalizeIssues } from '@/containers/Lead3DayForm';
 import { RestEditModal } from '@flast-erp/core/components';
 import { RequestUtils, InAppEvent, f5List } from '@flast-erp/core/utils';
 
 const CoHoi7DayForm = ({ data }) => {
 
+  const formRecord = useMemo(() => mapDataCareToForm(data), [data]);
+
   const onSubmit = async (values) => {
-    const { priority, cause, action, newFeatures = "", supportRequest = "", ...lead3Day } = values;
+    const {
+      priority,
+      cause,
+      action,
+      newFeatures = "",
+      supportRequest = "",
+      active,
+      issues,
+      ...information
+    } = values;
     const { message } = await RequestUtils.Post("/cs/order-update", {
       priority,
       cause,
       action,
+      active,
       objectId: data.id,
       objectType: data.type,
-      lead3Day: { ...lead3Day, newFeatures, supportRequest },
+      information: {
+        ...information,
+        issues: normalizeIssues(issues),
+        newFeatures,
+        supportRequest,
+      },
     });
     f5List('cs/co-hoi-order-fetch');
     InAppEvent.normalSuccess(message);
@@ -45,7 +63,7 @@ const CoHoi7DayForm = ({ data }) => {
       isMergeRecordOnSubmit={false}
       updateRecord={(values) => values}
       onSubmit={onSubmit}
-      record={data}
+      record={formRecord}
     >
       <Form7Day />
     </RestEditModal>
