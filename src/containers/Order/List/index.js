@@ -80,7 +80,7 @@ const ListOrder = ({
       }
     }
 
-    RequestUtils.GetAsList('/entity-status/list-by-type', { type: 'LEAD' })
+    RequestUtils.GetAsList('/erp/order-status/fetch')
       .then((statuses) => {
         if (mounted) setOpportunityStatusOptions(Array.isArray(statuses) ? statuses : [])
       })
@@ -167,7 +167,6 @@ const ListOrder = ({
   ) + ((extraActions?.length ?? 0) * 44)
 
   const columns = createOrderColumns({
-    isOrderList,
     isOpportunityList,
     opportunityStatusOptions,
     copiedIndex,

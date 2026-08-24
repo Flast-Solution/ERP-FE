@@ -4,7 +4,6 @@ import { CopyOutlined } from '@ant-design/icons'
 import { formatMoney, formatTime } from '@flast-erp/core/utils'
 import { renderArrayColor } from '../../utils'
 import { copyToClipboard } from '../utils/clipboard'
-import { getWorkflowCurrentStepLabel } from '../utils/workflowMappers'
 import OrderActions from '../components/OrderActions'
 import { STATUS_LEAD } from '@/configs/constant'
 
@@ -23,7 +22,6 @@ const DEFAULT_OPPORTUNITY_STATUS = {
 }
 
 const createOrderColumns = ({
-  isOrderList,
   isOpportunityList,
   opportunityStatusOptions,
   copiedIndex,
@@ -103,20 +101,7 @@ const createOrderColumns = ({
           : '-'
       }
 
-      if (!isOrderList) {
-        return renderArrayColor(array, record.detailstatus)
-      }
-
-      if (!record?.workflowInstance) {
-        return <Tag>Chưa gắn workflow</Tag>
-      }
-
-      const currentStepLabel = getWorkflowCurrentStepLabel(record)
-      if (currentStepLabel) {
-        return <Tag color="blue">{currentStepLabel}</Tag>
-      }
-
-      return <Tag color="orange">Chưa xác định bước</Tag>
+      return renderArrayColor(array, record.detailstatus)
     },
   },
   {
