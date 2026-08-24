@@ -30,8 +30,6 @@ import moment from 'moment';
 import dayjs from 'dayjs';
 import LeadForm from './LeadForm';
 import { resolveUploadFilename } from '@/containers/PreviewModal/uploadUtils';
-import { LEAD_WORKFLOW_ENTITY_TYPE } from '@/containers/Order/List/constants';
-import { attachWorkflow } from '@/containers/Order/List/services/workflowApi';
 
 const DISPLAY_DATE_FORMAT = 'DD/MM/YYYY HH:mm:ss';
 const API_DATE_FORMAT = 'YYYY-MM-DD HH:mm:ss';
@@ -88,13 +86,6 @@ const normalizeWorkflowProcessIds = (item = {}) => Array.from(new Set([
 
 const isSuccessfulResponse = response => (
   Number(response?.errorCode) === 200 || response?.success === true
-);
-
-const resolveSavedLeadId = (response, fallbackId) => (
-  response?.data?.id
-  ?? response?.data?.data?.id
-  ?? fallbackId
-  ?? null
 );
 
 const normalizeLeadRecord = (item = {}) => {
@@ -189,40 +180,8 @@ const NewLead = ({ closeModal, data }) => {
       const payload = normalizeEmptyPayloadValues(submitBody);
       const response = await RequestUtils.Post("/data/create", payload);
       if (isSuccessfulResponse(response)) {
-        const leadId = resolveSavedLeadId(response, payload.id ?? record?.id);
-        const attachedWorkflowIds = new Set(normalizeWorkflowProcessIds(item).map(String));
-        // workflowProcessId đầu tiên vẫn do /data/create xử lý như logic cũ.
-        if (primaryWorkflowId !== null) attachedWorkflowIds.add(String(primaryWorkflowId));
-        const workflowsToStart = selectedWorkflowIds.filter(
-          processId => !attachedWorkflowIds.has(String(processId)),
-        );
-
-        let failedWorkflowCount = 0;
-        if (workflowsToStart.length > 0 && leadId) {
-          const workflowResults = await Promise.all(workflowsToStart.map(async processId => {
-            try {
-              return await attachWorkflow({
-                processId,
-                entityType: LEAD_WORKFLOW_ENTITY_TYPE,
-                entityId: leadId,
-              });
-            } catch (error) {
-              return null;
-            }
-          }));
-          failedWorkflowCount = workflowResults.filter(result => !isSuccessfulResponse(result)).length;
-        } else if (workflowsToStart.length > 0) {
-          failedWorkflowCount = workflowsToStart.length;
-        }
-
         f5List('data/lists');
-        if (failedWorkflowCount > 0) {
-          InAppEvent.normalError(
-            `Lead đã được lưu nhưng có ${failedWorkflowCount} workflow chưa gắn được.`,
-          );
-        } else {
-          InAppEvent.normalSuccess("Cập nhật thành công");
-        }
+        InAppEvent.normalSuccess("Cập nhật thành công");
         InAppEvent.emit(HASH_MODAL_CLOSE);
         return;
       }

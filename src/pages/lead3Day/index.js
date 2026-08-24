@@ -19,20 +19,40 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
 import LeadFilter from './LeadFilter';
 import { useGetList } from "@flast-erp/core/hooks";
 import { Button, Tag } from 'antd';
-import { arrayEmpty, dateFormatOnSubmit } from '@flast-erp/core/utils';
-import { getColorStatusLead, getStatusLead } from '@/configs/constant';
+import { dateFormatOnSubmit } from '@flast-erp/core/utils';
 import { HASH_MODAL } from '@/configs';
 import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import { cloneDeep } from 'lodash';
 import { CHANNEL_SOURCE_MAP_KEYS } from '@/configs/localData';
+import { getLeadStatusOption, mergeLeadStatusOptions } from '@/pages/lead/leadStatusOptions';
 
 export const Lead3DayContent = () => {
+  const [services, setServices] = useState([]);
+  const [leadStatuses, setLeadStatuses] = useState([]);
+
+  useEffect(() => {
+    RequestUtils.GetAsList('/service/list')
+      .then(items => setServices(Array.isArray(items) ? items : []))
+      .catch(() => setServices([]));
+    RequestUtils.GetAsList('/entity-status/list-by-type', { type: 'LEAD' })
+      .then(setLeadStatuses)
+      .catch(() => setLeadStatuses([]));
+  }, []);
+
+  const statusOptions = useMemo(
+    () => mergeLeadStatusOptions(leadStatuses),
+    [leadStatuses],
+  );
+  const serviceNameById = useMemo(
+    () => new Map(services.map(service => [String(service.id), service.name])),
+    [services],
+  );
 
   const onEdit = (item) => {
     let title = 'Cập nhật tương tác khách hàng# ' + item.id;
@@ -42,12 +62,6 @@ export const Lead3DayContent = () => {
   }
 
   const CUSTOM_ACTION = [
-    {
-      title: "N.Viên",
-      dataIndex: 'staff',
-      width: 150,
-      ellipsis: true
-    },
     {
       title: "K.Hàng",
       dataIndex: 'customerName',
@@ -62,9 +76,10 @@ export const Lead3DayContent = () => {
     },
     {
       title: "Dịch vụ",
-      dataIndex: 'serviceName',
+      dataIndex: 'serviceId',
       width: 100,
-      ellipsis: true
+      ellipsis: true,
+      render: (serviceId) => serviceNameById.get(String(serviceId)) || '-'
     },
     {
       title: "Nguồn",
@@ -74,18 +89,26 @@ export const Lead3DayContent = () => {
     },
     {
       title: "S.Phẩm",
-      dataIndex: 'productName',
+      dataIndex: 'productNames',
       width: 100,
-      ellipsis: true
+      ellipsis: true,
+      render: (productNames) => (
+        Array.isArray(productNames) && productNames.length > 0
+          ? productNames.join(', ')
+          : '-'
+      )
     },
     {
       title: "Trạng thái",
       dataIndex: 'status',
       width: 100,
       ellipsis: true,
-      render: (status) => (
-        <Tag color={getColorStatusLead(status)}>{getStatusLead(status)}</Tag>
-      )
+      render: (status) => {
+        const statusItem = getLeadStatusOption(status, leadStatuses);
+        return statusItem
+          ? <Tag color={statusItem.color || undefined}>{statusItem.name}</Tag>
+          : '-';
+      }
     },
     {
       title: "K.Doanh",
@@ -112,17 +135,6 @@ export const Lead3DayContent = () => {
     }
   ];
 
-  const onData = useCallback(async (values) => {
-    if (arrayEmpty(values.embedded)) {
-      return values;
-    }
-    const services = await RequestUtils.GetAsList('/service/list');
-    for (let item of values.embedded) {
-      item.serviceName = services.find(i => i.id === item.serviceId)?.name ?? "";
-    }
-    return values;
-  }, []);
-
   const beforeSubmitFilter = useCallback((values) => {
     dateFormatOnSubmit(values, ['from', 'to']);
     return values;
@@ -131,9 +143,8 @@ export const Lead3DayContent = () => {
   return (
     <RestList
       xScroll={1200}
-      onData={onData}
       initialFilter={{ limit: 10, page: 1 }}
-      filter={<LeadFilter />}
+      filter={<LeadFilter statusOptions={statusOptions} />}
       beforeSubmitFilter={beforeSubmitFilter}
       useGetAllQuery={useGetList}
       hasCreate={false}

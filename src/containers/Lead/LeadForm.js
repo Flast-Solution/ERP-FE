@@ -135,6 +135,7 @@ const LeadForm = ({ listSale = [], submitting = false }) => {
   const workflowLoadingRef = useRef(false)
   const workflowHasMoreRef = useRef(true)
   const workflowItemsRef = useRef([])
+  const isEditing = Boolean(record?.id)
   const customerType = Form.useWatch('customerType', form) ?? record?.customerType ?? 'INDIVIDUAL'
 
   const attachedWorkflowIds = useMemo(() => Array.from(new Set([
@@ -406,22 +407,24 @@ const LeadForm = ({ listSale = [], submitting = false }) => {
               }}
             />
           </div>
-          <div className="pl-field lead-service-field">
-            <FormSelectAPI
-              showSearch
-              allowClear
-              className="pl-select"
-              apiPath="entity-status/list-by-type?type=LEAD"
-              apiAddNewItem="entity-status/save-application-status"
-              createDefaultValues={{ entityType: 'LEAD' }}
-              onData={normalizeLeadStatuses}
-              label="Trạng thái Lead"
-              name="status"
-              valueProp="id"
-              titleProp="name"
-              placeholder="Chọn trạng thái Lead"
-            />
-          </div>
+          {isEditing ? (
+            <div className="pl-field lead-service-field">
+              <FormSelectAPI
+                showSearch
+                allowClear
+                className="pl-select"
+                apiPath="entity-status/list-by-type?type=LEAD"
+                apiAddNewItem="entity-status/save-application-status"
+                createDefaultValues={{ entityType: 'LEAD' }}
+                onData={normalizeLeadStatuses}
+                label="Trạng thái Lead"
+                name="status"
+                valueProp="id"
+                titleProp="name"
+                placeholder="Chọn trạng thái Lead"
+              />
+            </div>
+          ) : null}
           <LeadSelect name="interestLevel" label="Mức độ quan tâm" code="interest_level" placeholder="Chọn mức độ" options={[
             { value: 'HIGH', label: 'Cao' },
             { value: 'MEDIUM', label: 'Trung bình' },
