@@ -65,6 +65,7 @@ const ORDER_TEMPLATE = {
   stock: 0,
   discountRate: 0,
   discountAmount: 0,
+  status: 0,
   editable: false,
   mSkuDetails: []
 }
@@ -190,6 +191,7 @@ const BanHangPage = ({
       order.mSkuDetails = mSkuDetails;
       order.skuDetailCode = String(skuId);
       order.quantity = quantity;
+      order.status = values?.status ?? 0;
       order.warehouseOptions = getWarehouseByProduct(skuId, mProduct);
 
       const skus = mProduct?.skus ?? [];
