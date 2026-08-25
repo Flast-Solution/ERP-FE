@@ -98,7 +98,10 @@ const OrderService = {
       return response;
     }
     for (let detail of details) {
-      let mProduct = (products.embedded ?? []).find(item => item.id === detail.productId);
+      let mProduct = (products.embedded ?? []).find(
+        item => String(item?.id) === String(detail?.productId)
+      );
+      detail.productCode = detail.productCode ?? mProduct?.code ?? null;
       detail.warehouseOptions = getWarehouseByProduct(detail.skuId, mProduct);
       if (arrayEmpty(detail.warehouseOptions)) {
         continue;

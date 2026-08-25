@@ -36,10 +36,10 @@ import InStockTable from '@/containers/WareHouse/InStockTable'
 import OrderService from '@/services/OrderService';
 import { useEffectAsync } from '@flast-erp/core/hooks';
 import { ShowSkuDetail } from '@/containers/Product/SkuView';
-import { 
-  arrayNotEmpty, 
-  RequestUtils, 
-  createMSkuDetails 
+import {
+  arrayNotEmpty,
+  RequestUtils,
+  createMSkuDetails
 } from '@flast-erp/core/utils';
 
 const AddSKU = ({ onSave, productId, leadProducts = [], closeModal }) => {
@@ -71,6 +71,7 @@ const AddSKU = ({ onSave, productId, leadProducts = [], closeModal }) => {
       values: {
         ...form.getFieldsValue(),
         productId: currentProductId,
+        productCode: productRef.current?.code ?? null,
       },
       sku: skuRef.current,
       product: productRef.current,
@@ -109,8 +110,11 @@ const AddSKU = ({ onSave, productId, leadProducts = [], closeModal }) => {
       setSkuDetail(restoredSku);
     } else {
       form.resetFields(['skuId', 'quantity', 'orderName', 'note']);
-      form.setFieldValue('productId', value);
-      form.setFieldValue('quantity', 1);
+      form.setFieldsValue({
+        productId: value,
+        productCode: nextProduct?.code ?? null,
+        quantity: 1,
+      });
       skuRef.current = [];
       setSkuDetail([]);
     }
@@ -122,7 +126,21 @@ const AddSKU = ({ onSave, productId, leadProducts = [], closeModal }) => {
     }
     const { data, errorCode } = await RequestUtils.Get('/product/find-by-id', { id: nextProductId });
     if (errorCode === 200) {
-      onChangeSelectedProductItem(nextProductId, data, preserveCurrent);
+      let resolvedProduct = data;
+      if (!resolvedProduct?.code) {
+        const productListResponse = await RequestUtils.Get('/erp/product/fetch', { ids: nextProductId });
+        const productSummary = productListResponse?.data?.embedded?.find(
+          item => String(item?.id) === String(nextProductId),
+        );
+        if (productSummary) {
+          resolvedProduct = {
+            ...productSummary,
+            ...resolvedProduct,
+            code: resolvedProduct?.code || productSummary.code || null,
+          };
+        }
+      }
+      onChangeSelectedProductItem(nextProductId, resolvedProduct, preserveCurrent);
     }
   }, [onChangeSelectedProductItem]);
 
@@ -137,7 +155,10 @@ const AddSKU = ({ onSave, productId, leadProducts = [], closeModal }) => {
   const onFinish = useCallback((values) => {
     const currentProductId = values.productId;
     const currentDraft = {
-      values,
+      values: {
+        ...values,
+        productCode: productRef.current?.code ?? null,
+      },
       sku: skuRef.current,
       product: productRef.current || mProduct,
     };

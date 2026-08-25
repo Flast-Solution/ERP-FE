@@ -42,9 +42,76 @@ const interpolateBindings = (content, data) => String(content ?? '').replace(
   (_, path) => formatBindingValue(getValueByPath(data, path.trim(), '')),
 )
 
+const escapeHtml = value => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+
+const renderListItems = value => {
+  const items = String(value ?? '')
+    .split(/\r?\n/)
+    .map(item => item.trim())
+    .filter(Boolean)
+  const normalizedItems = items.length ? items : ['']
+  return normalizedItems.map(item => `<li>${item ? escapeHtml(item) : '<br>'}</li>`).join('')
+}
+
+const renderRichTextHtml = ({ content, data, preview, editable }) => {
+  const manualLists = []
+  const manualInputs = []
+  const contentWithListMarkers = String(content ?? '').replace(
+    /{{\s*input-list:([^{}]+?)\s*}}/g,
+    (_, path) => {
+      const marker = `__DOCUMENT_MANUAL_LIST_${manualLists.length}__`
+      manualLists.push({ marker, path: path.trim() })
+      return marker
+    },
+  )
+  const contentWithMarkers = contentWithListMarkers.replace(
+    /{{\s*input:([^{}]+?)\s*}}/g,
+    (_, path) => {
+      const marker = `__DOCUMENT_MANUAL_INPUT_${manualInputs.length}__`
+      manualInputs.push({ marker, path: path.trim() })
+      return marker
+    },
+  )
+  const resolvedContent = preview ? interpolateBindings(contentWithMarkers, data) : contentWithMarkers
+  let html = sanitizeRichText(resolvedContent)
+
+  manualLists.forEach(({ marker, path }) => {
+    const value = getValueByPath(data, path, '')
+    let replacement = `[Danh sách nhập tay: ${escapeHtml(path)}]`
+    if (preview && editable) {
+      replacement = `<ul data-document-manual-list-path="${escapeHtml(path)}" contenteditable="true" style="list-style-type:disc;list-style-position:outside;margin:2px 0 0;padding-left:24px;outline:none;min-height:24px">${renderListItems(value)}</ul>`
+    } else if (preview) {
+      replacement = `<ul style="list-style-type:disc;list-style-position:outside;margin:2px 0 0;padding-left:24px">${renderListItems(value)}</ul>`
+    }
+    html = html.replace(new RegExp(`\\s*${marker}\\s*`), replacement)
+  })
+
+  manualInputs.forEach(({ marker, path }) => {
+    const value = getValueByPath(data, path, '')
+    let replacement = `[Nhập tay: ${escapeHtml(path)}]`
+    if (preview && editable) {
+      replacement = `<input data-document-manual-path="${escapeHtml(path)}" value="${escapeHtml(value)}" placeholder="Nhập nội dung" style="display:block;width:100%;min-width:80px;height:28px;padding:2px 0;border:0;border-bottom:1px solid currentColor;border-radius:0;outline:none;color:inherit;background:transparent;font:inherit;text-align:inherit;box-sizing:border-box" />`
+    } else if (preview) {
+      replacement = value
+        ? escapeHtml(formatBindingValue(value))
+        : '<span style="display:block;min-height:24px;border-bottom:1px solid currentColor">&nbsp;</span>'
+    }
+    html = html.replace(new RegExp(`\\s*${marker}\\s*`), replacement)
+  })
+
+  return html
+}
+
 const sanitizeRichText = (html) => {
   if (typeof window === 'undefined' || typeof window.DOMParser !== 'function') return html
-  const allowedTags = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'S', 'BR', 'P', 'DIV', 'SPAN', 'SMALL', 'SUB', 'SUP'])
+  const allowedTags = new Set([
+    'B', 'STRONG', 'I', 'EM', 'U', 'S', 'BR', 'P', 'DIV', 'SPAN',
+    'SMALL', 'SUB', 'SUP', 'UL', 'OL', 'LI',
+  ])
   const parser = new window.DOMParser()
   const documentNode = parser.parseFromString(`<div>${html}</div>`, 'text/html')
   const root = documentNode.body.firstElementChild
@@ -57,13 +124,81 @@ const sanitizeRichText = (html) => {
       if (attribute.name !== 'style') element.removeAttribute(attribute.name)
     })
     if (element.hasAttribute('style')) {
-      const allowedStyles = new Set(['color', 'background-color', 'font-size', 'font-weight', 'line-height', 'text-align', 'text-decoration'])
+      const allowedStyles = new Set([
+        'color',
+        'background-color',
+        'font-size',
+        'font-weight',
+        'line-height',
+        'text-align',
+        'text-decoration',
+        'text-decoration-line',
+        'text-decoration-style',
+        'text-decoration-color',
+        'text-underline-offset',
+        'list-style-type',
+        'list-style-position',
+        'margin',
+        'margin-top',
+        'margin-right',
+        'margin-bottom',
+        'margin-left',
+        'padding',
+        'padding-top',
+        'padding-right',
+        'padding-bottom',
+        'padding-left',
+      ])
       Array.from(element.style).forEach(property => {
         if (!allowedStyles.has(property)) element.style.removeProperty(property)
       })
     }
     if (['P', 'DIV'].includes(element.tagName)) element.style.margin = '0'
+    if (['UL', 'OL'].includes(element.tagName)) {
+      if (!element.style.margin) element.style.margin = '2px 0 0'
+      if (!element.style.paddingLeft) element.style.paddingLeft = '24px'
+      if (!element.style.listStylePosition) element.style.listStylePosition = 'outside'
+    }
+    if (element.tagName === 'LI' && !element.style.margin) element.style.margin = '0'
   })
+
+  root?.querySelectorAll('li').forEach((listItem) => {
+    if (['UL', 'OL'].includes(listItem.parentElement?.tagName)) return
+
+    const list = documentNode.createElement('ul')
+    list.style.listStyleType = 'disc'
+    list.style.listStylePosition = 'outside'
+    list.style.margin = '2px 0 0'
+    list.style.paddingLeft = '24px'
+    listItem.replaceWith(list)
+    list.appendChild(listItem)
+
+    let nextElement = list.nextElementSibling
+    while (nextElement?.tagName === 'LI') {
+      const followingElement = nextElement.nextElementSibling
+      list.appendChild(nextElement)
+      nextElement = followingElement
+    }
+  })
+
+  const blockTags = new Set(['DIV', 'P', 'UL', 'OL', 'LI'])
+  const textNodes = []
+  const walker = documentNode.createTreeWalker(root, window.NodeFilter.SHOW_TEXT)
+  while (walker.nextNode()) textNodes.push(walker.currentNode)
+  textNodes.forEach((textNode) => {
+    if (!/^\s+$/.test(textNode.nodeValue ?? '')) return
+    const previousTag = textNode.previousSibling?.nodeType === 1
+      ? textNode.previousSibling.tagName
+      : null
+    const nextTag = textNode.nextSibling?.nodeType === 1
+      ? textNode.nextSibling.tagName
+      : null
+    const parentTag = textNode.parentElement?.tagName
+    if (blockTags.has(previousTag) || blockTags.has(nextTag) || ['UL', 'OL'].includes(parentTag)) {
+      textNode.remove()
+    }
+  })
+
   return root?.innerHTML ?? ''
 }
 
@@ -82,7 +217,27 @@ const evaluateFormula = (formula, rows) => {
   return normalized
 }
 
-const DynamicTable = ({ node, data, preview }) => {
+const normalizeSkuAttributeLabel = value => String(value ?? '')
+  .trim()
+  .replace(/\s+/g, ' ')
+  .toLocaleUpperCase('vi-VN')
+
+const resolveTableColumnValue = (row, column, fallback) => {
+  const binding = String(column?.binding || '')
+  const attributeLabel = normalizeSkuAttributeLabel(column?.skuAttributeLabel)
+  if (!binding.startsWith('skuDetails.') || !attributeLabel) {
+    return getValueByPath(row, binding, fallback)
+  }
+
+  const skuDetail = (Array.isArray(row?.skuDetails) ? row.skuDetails : []).find(
+    item => normalizeSkuAttributeLabel(item?.text) === attributeLabel,
+  )
+  if (!skuDetail) return fallback
+
+  return getValueByPath(skuDetail, binding.slice('skuDetails.'.length), fallback)
+}
+
+const DynamicTable = ({ node, data, preview, editable = false, onTableCellChange }) => {
   const rows = getValueByPath(data, node.source, [])
   const previewRows = Array.isArray(rows) && rows.length ? rows : (preview ? [] : [{}])
   const borderColor = node.tableStyle?.borderColor ?? '#d1d5db'
@@ -142,13 +297,35 @@ const DynamicTable = ({ node, data, preview }) => {
       <tbody>
         {previewRows.length ? previewRows.map((row, rowIndex) => (
           <tr key={row?.id ?? row?.key ?? rowIndex} data-pdf-avoid-break="true">
-            {(node.columns ?? []).map(column => (
-              <td key={column.id} style={{ border: cellBorder, padding: cellPadding, textAlign: column.align, color: column.color, backgroundColor: column.backgroundColor }}>
-                {column.cellTemplate
-                  ? <span dangerouslySetInnerHTML={{ __html: sanitizeRichText(preview ? interpolateBindings(column.cellTemplate, row) : column.cellTemplate) }} />
-                  : formatBindingValue(getValueByPath(row, column.binding, preview ? '' : `{{ ${column.binding} }}`), column.format)}
-              </td>
-            ))}
+            {(node.columns ?? []).map(column => {
+              const isManual = column.inputMode === 'manual'
+              const fallback = preview
+                ? ''
+                : (isManual ? `[Nhập tay: ${column.binding || 'chưa đặt key'}]` : `{{ ${column.binding} }}`)
+              const value = resolveTableColumnValue(row, column, fallback)
+
+              return (
+                <td key={column.id} style={{ border: cellBorder, padding: cellPadding, textAlign: column.align, color: column.color, backgroundColor: column.backgroundColor, whiteSpace: 'pre-line' }}>
+                  {isManual && preview && editable ? (
+                    <Input
+                      variant="borderless"
+                      value={value}
+                      placeholder={column.placeholder || 'Nhập nội dung'}
+                      onChange={event => onTableCellChange?.({
+                        node,
+                        row,
+                        rowIndex,
+                        column,
+                        value: event.target.value,
+                      })}
+                      style={{ padding: 0, textAlign: column.align || 'left' }}
+                    />
+                  ) : column.cellTemplate
+                    ? <span dangerouslySetInnerHTML={{ __html: sanitizeRichText(preview ? interpolateBindings(column.cellTemplate, row) : column.cellTemplate) }} />
+                    : formatBindingValue(value, column.format)}
+                </td>
+              )
+            })}
           </tr>
         )) : (
           <tr data-pdf-avoid-break="true"><td colSpan={Math.max(node.columns?.length ?? 0, 1)} style={{ textAlign: 'center', color: '#9ca3af' }}>Không có dữ liệu</td></tr>
@@ -199,7 +376,15 @@ const CodeGraphic = ({ type, value, size = 96, height = 64 }) => {
   )
 }
 
-const DocumentNodeContent = ({ node, data = {}, preview = false, renderChildren }) => {
+const DocumentNodeContent = ({
+  node,
+  data = {},
+  preview = false,
+  editable = false,
+  onTableCellChange,
+  onManualFieldChange,
+  renderChildren,
+}) => {
   if (node?.visible === false && preview) return null
   const style = resolveStyle(node.style)
   const stretchedStyle = { ...style, height: '100%' }
@@ -209,8 +394,31 @@ const DocumentNodeContent = ({ node, data = {}, preview = false, renderChildren 
     case COMPONENT_TYPES.TEXT:
       return <div style={stretchedStyle}>{node.content}</div>
     case COMPONENT_TYPES.RICH_TEXT: {
-      const html = sanitizeRichText(preview ? interpolateBindings(node.content, data) : node.content)
-      return <div style={stretchedStyle} dangerouslySetInnerHTML={{ __html: html }} />
+      const html = renderRichTextHtml({
+        content: node.content,
+        data,
+        preview,
+        editable,
+      })
+      return (
+        <div
+          style={stretchedStyle}
+          dangerouslySetInnerHTML={{ __html: html }}
+          onBlur={event => {
+            const inputPath = event.target?.dataset?.documentManualPath
+            if (inputPath) onManualFieldChange?.(inputPath, event.target.value)
+
+            const listPath = event.target?.dataset?.documentManualListPath
+            if (listPath) {
+              const value = Array.from(event.target.querySelectorAll('li'))
+                .map(item => item.textContent.trim())
+                .filter(Boolean)
+                .join('\n')
+              onManualFieldChange?.(listPath, value)
+            }
+          }}
+        />
+      )
     }
     case COMPONENT_TYPES.CONTAINER:
       return (
@@ -233,7 +441,14 @@ const DocumentNodeContent = ({ node, data = {}, preview = false, renderChildren 
               ? renderChildren(node.children ?? [])
               : (node.children ?? []).map(child => (
                 <div key={child.id} style={resolveGridItemStyle(child)} data-pdf-avoid-break="true">
-                  <DocumentNodeContent node={child} data={data} preview={preview} />
+                  <DocumentNodeContent
+                    node={child}
+                    data={data}
+                    preview={preview}
+                    editable={editable}
+                    onTableCellChange={onTableCellChange}
+                    onManualFieldChange={onManualFieldChange}
+                  />
                 </div>
               ))}
           </div>
@@ -245,7 +460,17 @@ const DocumentNodeContent = ({ node, data = {}, preview = false, renderChildren 
     case COMPONENT_TYPES.MANUAL_FIELD:
       return <div style={stretchedStyle}><div style={{ marginBottom: 5, fontWeight: 600 }}>{node.label}</div><Input disabled={preview} placeholder={node.placeholder} /></div>
     case COMPONENT_TYPES.TABLE:
-      return <div style={style}><DynamicTable node={node} data={data} preview={preview} /></div>
+      return (
+        <div style={style}>
+          <DynamicTable
+            node={node}
+            data={data}
+            preview={preview}
+            editable={editable}
+            onTableCellChange={onTableCellChange}
+          />
+        </div>
+      )
     case COMPONENT_TYPES.IMAGE:
     case COMPONENT_TYPES.LOGO:
       return (

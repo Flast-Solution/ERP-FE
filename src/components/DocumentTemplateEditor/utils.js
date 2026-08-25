@@ -14,6 +14,8 @@ const createDefaultColumns = (schema = []) => {
     id: createNodeId(),
     title: field.label,
     binding: field.relativePath ?? String(field.path || '').replace(`${firstCollection}.`, ''),
+    inputMode: 'binding',
+    placeholder: '',
     format: field.dataType === 'number' ? 'number' : 'text',
     align: field.dataType === 'number' ? 'right' : 'left',
   }))
@@ -116,12 +118,35 @@ export const createEmptyTemplate = ({ name = 'Mẫu chứng từ', documentType 
 
 export const getValueByPath = (source, path, fallback = '') => {
   if (!path) return fallback
-  const value = String(path).split('.').reduce((current, key) => current?.[key], source)
+
+  const resolvePath = (current, keys) => {
+    if (!keys.length) return current
+    if (current === undefined || current === null) return undefined
+    if (Array.isArray(current)) {
+      return current.flatMap(item => {
+        const itemValue = resolvePath(item, keys)
+        if (itemValue === undefined || itemValue === null) return []
+        return Array.isArray(itemValue) ? itemValue : [itemValue]
+      })
+    }
+
+    const [key, ...remainingKeys] = keys
+    return resolvePath(current?.[key], remainingKeys)
+  }
+
+  const value = resolvePath(source, String(path).split('.').filter(Boolean))
   return value === undefined || value === null || value === '' ? fallback : value
 }
 
 export const formatBindingValue = (value, format = 'text') => {
   if (value === undefined || value === null || value === '') return ''
+  if (Array.isArray(value)) {
+    return value
+      .flat(Infinity)
+      .filter(item => item !== undefined && item !== null && item !== '')
+      .map(item => formatBindingValue(item, format))
+      .join('\n')
+  }
   if (format === 'number') {
     const numericValue = Number(value)
     return Number.isFinite(numericValue) ? numericValue.toLocaleString('vi-VN') : value

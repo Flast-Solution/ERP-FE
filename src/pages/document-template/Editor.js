@@ -32,16 +32,16 @@ const DocumentTemplateEditorPage = () => {
       setLoadError('')
       try {
         const requestedTemplateId = templateId || sourceTemplateId
-        const entityResponse = await DocumentTemplateService.fetchAllEntities()
-        if (!Array.isArray(entityResponse)) {
-          throw new Error('Không tải được danh sách nguồn dữ liệu')
+        const entityFields = await DocumentTemplateService.fetchAllEntities()
+        if (!Array.isArray(entityFields)) {
+          throw new Error('API /erp/template/all-entities không trả về mảng dữ liệu')
         }
 
         // Tạo mới: mở designer trống, không cần chọn hạng mục
         if (!requestedTemplateId) {
           if (!mounted) return
           const schemaData = buildDocumentSchemaFromEntityFields(
-            entityResponse,
+            entityFields,
             { code: null, name: 'Mẫu chứng từ' },
           )
           setRecord(null)
@@ -63,7 +63,7 @@ const DocumentTemplateEditorPage = () => {
 
         const schemaData = {
           ...buildDocumentSchemaFromEntityFields(
-            entityResponse,
+            entityFields,
             { code: templateSource.code, name: templateSource.name },
           ),
           schemaVersion: templateSource.version,
