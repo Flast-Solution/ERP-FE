@@ -22,6 +22,107 @@ const BINDABLE_TYPES = new Set([
   COMPONENT_TYPES.BARCODE,
 ])
 
+const RichTextBindingEditor = ({ value = '', fields = [], onChange }) => {
+  const textAreaRef = React.useRef(null)
+  const [selectedPath, setSelectedPath] = React.useState()
+  const [manualPath, setManualPath] = React.useState('customerOrder.customerNote')
+  const selectionRef = React.useRef({ start: value.length, end: value.length })
+
+  const getTextArea = () => textAreaRef.current?.resizableTextArea?.textArea
+
+  const rememberSelection = () => {
+    const textArea = getTextArea()
+    if (!textArea) return
+    selectionRef.current = {
+      start: textArea.selectionStart,
+      end: textArea.selectionEnd,
+    }
+  }
+
+  const insertAtSelection = (token) => {
+    const start = Math.min(selectionRef.current.start ?? value.length, value.length)
+    const end = Math.min(selectionRef.current.end ?? start, value.length)
+    const nextValue = `${value.slice(0, start)}${token}${value.slice(end)}`
+    const nextCursor = start + token.length
+
+    onChange(nextValue)
+    setTimeout(() => {
+      const textArea = getTextArea()
+      textArea?.focus()
+      textArea?.setSelectionRange(nextCursor, nextCursor)
+      selectionRef.current = { start: nextCursor, end: nextCursor }
+    }, 0)
+  }
+
+  const insertBinding = () => {
+    if (selectedPath) insertAtSelection(`{{ ${selectedPath} }}`)
+  }
+
+  const insertManualLine = () => {
+    const normalizedPath = manualPath.trim()
+    if (normalizedPath) insertAtSelection(`<div>{{ input:${normalizedPath} }}</div>`)
+  }
+
+  const insertManualList = () => {
+    const normalizedPath = manualPath.trim()
+    if (normalizedPath) insertAtSelection(`{{ input-list:${normalizedPath} }}`)
+  }
+
+  const options = fields.map(field => ({
+    value: field.path,
+    label: `${field.label || field.path}${field.group ? ` — ${field.group}` : ''}`,
+  }))
+
+  return (
+    <>
+      <Input.TextArea
+        ref={textAreaRef}
+        rows={8}
+        value={value}
+        onChange={event => onChange(event.target.value)}
+        onClick={rememberSelection}
+        onKeyUp={rememberSelection}
+        onSelect={rememberSelection}
+      />
+      <Space.Compact block style={{ marginTop: 8 }}>
+        <Select
+          showSearch
+          allowClear
+          optionFilterProp="label"
+          placeholder="Chọn trường dữ liệu"
+          value={selectedPath}
+          options={options}
+          onChange={setSelectedPath}
+          style={{ flex: 1, minWidth: 0 }}
+        />
+        <Button type="primary" disabled={!selectedPath} onClick={insertBinding}>
+          Thay / chèn
+        </Button>
+      </Space.Compact>
+      <div style={{ marginTop: 6, color: '#6b7280', fontSize: 12, lineHeight: 1.5 }}>
+        Bôi đen nội dung cần thay, chọn trường dữ liệu rồi bấm “Thay / chèn”. Nếu không bôi đen, trường sẽ được chèn tại vị trí con trỏ.
+      </div>
+      <Space.Compact block style={{ marginTop: 10 }}>
+        <Input
+          value={manualPath}
+          placeholder="Key nhập tay, ví dụ: customerOrder.customerNote"
+          onChange={event => setManualPath(event.target.value)}
+        />
+        <Button disabled={!manualPath.trim()} onClick={insertManualLine}>
+          Chèn dòng nhập tay
+        </Button>
+        <Button disabled={!manualPath.trim()} onClick={insertManualList}>
+          Chèn danh sách nhập tay
+        </Button>
+      </Space.Compact>
+      <div style={{ marginTop: 6, color: '#6b7280', fontSize: 12, lineHeight: 1.5 }}>
+        Dòng nhập tay có dạng {'{{ input:customerOrder.customerNote }}'}. Danh sách nhập tay có dạng {'{{ input-list:customerOrder.customerNote }}'};
+        khi mở Báo giá, nhấn Enter để thêm một mục mới.
+      </div>
+    </>
+  )
+}
+
 const DocumentImageUploader = ({ node, onChange }) => {
   const uploadImage = async ({ file, onSuccess, onError }) => {
     if (!String(file.type ?? '').startsWith('image/')) {
@@ -203,6 +304,8 @@ const FieldInspector = ({ node, template, dataSchema = [], onChange, onTemplateC
           id: createNodeId(),
           title: field?.label ?? 'Cột mới',
           binding: field?.relativePath ?? '',
+          inputMode: 'binding',
+          placeholder: '',
           format: field?.dataType === 'number' ? 'number' : 'text',
           align: field?.dataType === 'number' ? 'right' : 'left',
         },
@@ -407,7 +510,11 @@ const FieldInspector = ({ node, template, dataSchema = [], onChange, onTemplateC
               label="Nội dung HTML"
               extra="Hỗ trợ strong, b, em, u, span và binding dạng {{ path.to.field }}."
             >
-              <Input.TextArea rows={8} value={node.content} onChange={event => onChange({ content: event.target.value })} />
+              <RichTextBindingEditor
+                value={node.content}
+                fields={scalarFields}
+                onChange={content => onChange({ content })}
+              />
             </Form.Item>
           )}
           {node.type === COMPONENT_TYPES.CONTAINER && (
@@ -585,7 +692,56 @@ const FieldInspector = ({ node, template, dataSchema = [], onChange, onTemplateC
                     <Col span={20}><Input value={column.title} onChange={event => updateColumn(column.id, { title: event.target.value })} /></Col>
                     <Col span={4}><Button danger type="text" icon={<DeleteOutlined />} onClick={() => onChange({ columns: node.columns.filter(item => item.id !== column.id) })} /></Col>
                   </Row>
-                  <Select style={{ width: '100%', marginTop: 6 }} value={column.binding || undefined} options={tableFields.map(field => ({ value: field.relativePath, label: field.label }))} onChange={binding => updateColumn(column.id, { binding })} />
+                  <Select
+                    style={{ width: '100%', marginTop: 6 }}
+                    value={column.inputMode || 'binding'}
+                    options={[
+                      { value: 'binding', label: 'Lấy từ dữ liệu tự động' },
+                      { value: 'manual', label: 'Cho nhập text bằng tay' },
+                    ]}
+                    onChange={inputMode => updateColumn(column.id, { inputMode })}
+                  />
+                  {column.inputMode === 'manual' ? (
+                    <>
+                      <Input
+                        style={{ marginTop: 6 }}
+                        value={column.binding}
+                        placeholder="Key nhận dữ liệu, ví dụ: note"
+                        onChange={event => updateColumn(column.id, { binding: event.target.value.trim() })}
+                      />
+                      <Input
+                        style={{ marginTop: 6 }}
+                        value={column.placeholder}
+                        placeholder="Placeholder khi nhập báo giá"
+                        onChange={event => updateColumn(column.id, { placeholder: event.target.value })}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <Select
+                        showSearch
+                        optionFilterProp="label"
+                        style={{ width: '100%', marginTop: 6 }}
+                        value={column.binding || undefined}
+                        options={tableFields.map(field => ({ value: field.relativePath, label: field.label }))}
+                        onChange={binding => updateColumn(column.id, {
+                          binding,
+                          skuAttributeLabel: String(binding).startsWith('skuDetails.')
+                            ? column.skuAttributeLabel
+                            : undefined,
+                        })}
+                      />
+                      {String(column.binding || '').startsWith('skuDetails.') && (
+                        <Input
+                          style={{ marginTop: 6 }}
+                          value={column.skuAttributeLabel}
+                          addonBefore="Thuộc tính SKU"
+                          placeholder="Ví dụ: DẠNG KẾT CẤU"
+                          onChange={event => updateColumn(column.id, { skuAttributeLabel: event.target.value })}
+                        />
+                      )}
+                    </>
+                  )}
                   <Row gutter={6} style={{ marginTop: 6 }}>
                     <Col span={8}><InputNumber min={1} max={100} addonAfter="%" placeholder="Rộng" value={column.width} onChange={width => updateColumn(column.id, { width })} style={{ width: '100%' }} /></Col>
                     <Col span={8}><Select value={column.align || 'left'} options={ALIGN_OPTIONS} onChange={align => updateColumn(column.id, { align })} /></Col>

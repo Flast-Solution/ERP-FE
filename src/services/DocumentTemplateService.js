@@ -14,16 +14,25 @@ const normalizeDataType = value => {
 }
 
 export const buildDocumentSchemaFromEntityFields = (fields = [], category = {}) => {
-  const scalarFields = []
+  const scalarFieldsByPath = new Map()
   const collectionsByPath = new Map()
 
   fields.forEach(field => {
-    const path = String(field?.path || '')
+    const rawPath = String(field?.path || '').trim()
+    if (!rawPath) return
+
+    const path = rawPath === 'details' || rawPath.startsWith('details.')
+      ? `customerOrder.${rawPath}`
+      : rawPath.includes('.')
+        ? rawPath
+        : `customerOrder.${rawPath}`
     const detailsMarker = '.details.'
     const markerIndex = path.indexOf(detailsMarker)
 
     if (markerIndex < 0) {
-      scalarFields.push(field)
+      if (!scalarFieldsByPath.has(path)) {
+        scalarFieldsByPath.set(path, { ...field, path })
+      }
       return
     }
 
@@ -36,16 +45,19 @@ export const buildDocumentSchemaFromEntityFields = (fields = [], category = {}) 
         fields: [],
       })
     }
-    collectionsByPath.get(collectionPath).fields.push({
-      label: field.label,
-      path: relativePath,
-      dataType: field.dataType,
-    })
+    const collection = collectionsByPath.get(collectionPath)
+    if (!collection.fields.some(item => item.path === relativePath)) {
+      collection.fields.push({
+        label: field.label,
+        path: relativePath,
+        dataType: field.dataType,
+      })
+    }
   })
 
   return {
     category,
-    fields: scalarFields,
+    fields: Array.from(scalarFieldsByPath.values()),
     collections: Array.from(collectionsByPath.values()),
   }
 }

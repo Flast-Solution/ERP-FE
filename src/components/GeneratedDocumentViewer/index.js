@@ -15,6 +15,7 @@ import {
   MinusOutlined,
   PlusOutlined,
   PrinterOutlined,
+  SaveOutlined,
   SendOutlined,
 } from '@ant-design/icons'
 import html2canvas from 'html2canvas'
@@ -22,6 +23,7 @@ import { jsPDF } from 'jspdf'
 import { useReactToPrint } from 'react-to-print'
 import DocumentNodeContent from '@/components/DocumentTemplateEditor/DocumentNodeContent'
 import { A4ContentGrid, A4Page } from '@/components/DocumentTemplateEditor/styles'
+import { getValueByPath } from '@/components/DocumentTemplateEditor/utils'
 import {
   DiscussionComposer,
   DiscussionHeader,
@@ -41,6 +43,30 @@ import {
 } from './styles'
 
 const EMPTY_COMMENTS = []
+
+const hasManualDocumentFields = (nodes = []) => nodes.some(node => (
+  (node?.type === 'dynamicTable' && node.columns?.some(column => column.inputMode === 'manual'))
+  || (node?.type === 'richText' && /{{\s*input(?:-list)?:[^{}]+?\s*}}/.test(node.content || ''))
+  || hasManualDocumentFields(node?.children ?? [])
+))
+
+const setValueByPath = (source, path, value) => {
+  const keys = String(path || '').split('.').filter(Boolean)
+  if (!keys.length) return source
+
+  const root = Array.isArray(source) ? [...source] : { ...(source ?? {}) }
+  let cursor = root
+  keys.forEach((key, index) => {
+    if (index === keys.length - 1) {
+      cursor[key] = value
+      return
+    }
+    const currentValue = cursor[key]
+    cursor[key] = Array.isArray(currentValue) ? [...currentValue] : { ...(currentValue ?? {}) }
+    cursor = cursor[key]
+  })
+  return root
+}
 
 const findCrossingRange = (ranges, minimumTop, target) => ranges.reduce((selected, range) => {
   const crossesBoundary = range.top > minimumTop && range.top < target && range.bottom > target
@@ -114,6 +140,8 @@ const GeneratedDocumentViewer = ({
   comments = EMPTY_COMMENTS,
   onSubmitComment,
   commentSubmitting = false,
+  onSubmitDocument,
+  documentSubmitting = false,
   onClose,
 }) => {
   const documentRef = useRef(null)
@@ -122,6 +150,7 @@ const GeneratedDocumentViewer = ({
   const [activePane, setActivePane] = useState('document')
   const [commentValue, setCommentValue] = useState('')
   const [discussionComments, setDiscussionComments] = useState(comments)
+  const [documentData, setDocumentData] = useState(data)
   const orientation = template?.page?.orientation === 'landscape' ? 'landscape' : 'portrait'
   const pageWidth = orientation === 'landscape' ? 297 : 210
   const pageHeight = orientation === 'landscape' ? 210 : 297
@@ -154,13 +183,13 @@ const GeneratedDocumentViewer = ({
     `,
   })
   const pdfFileName = useMemo(
-    () => getPdfFileName(template, title, data),
-    [data, template, title],
+    () => getPdfFileName(template, title, documentData),
+    [documentData, template, title],
   )
-  const customerOrder = data?.customerOrder
+  const customerOrder = documentData?.customerOrder
   const customerName = customerOrder?.enterpriseName
     ?? customerOrder?.customerReceiverName
-    ?? data?.customer?.name
+    ?? documentData?.customer?.name
 
   useEffect(() => {
     if (!open) return
@@ -169,6 +198,29 @@ const GeneratedDocumentViewer = ({
     setCommentValue('')
     setDiscussionComments(comments)
   }, [comments, open])
+
+  useEffect(() => {
+    if (open) setDocumentData(data)
+  }, [data, open])
+
+  const editableDocument = Boolean(onSubmitDocument && hasManualDocumentFields(template?.nodes))
+
+  const updateTableCell = ({ node, rowIndex, column, value }) => {
+    if (!node?.source || !column?.binding) return
+    setDocumentData(currentData => {
+      const rows = getValueByPath(currentData, node.source, [])
+      if (!Array.isArray(rows) || !rows[rowIndex]) return currentData
+      const nextRows = rows.map((row, index) => (
+        index === rowIndex ? setValueByPath(row, column.binding, value) : row
+      ))
+      return setValueByPath(currentData, node.source, nextRows)
+    })
+  }
+
+  const updateManualField = (path, value) => {
+    if (!path) return
+    setDocumentData(currentData => setValueByPath(currentData, path, value))
+  }
 
   const changeZoom = (amount) => {
     setZoom(current => Math.min(1.4, Math.max(0.6, Number((current + amount).toFixed(1)))))
@@ -322,6 +374,16 @@ const GeneratedDocumentViewer = ({
               <span className="page-count">Trang 1</span>
             </FileInfo>
             <ToolbarActions>
+              {editableDocument ? (
+                <Button
+                  type="primary"
+                  icon={<SaveOutlined />}
+                  loading={documentSubmitting}
+                  onClick={() => onSubmitDocument(documentData)}
+                >
+                  Lưu báo giá
+                </Button>
+              ) : null}
               <div className="zoom-control">
                 <Button
                   type="text"
@@ -392,7 +454,14 @@ const GeneratedDocumentViewer = ({
                             minHeight: node.layout?.minHeight || undefined,
                           }}
                         >
-                          <DocumentNodeContent node={node} data={data} preview />
+                          <DocumentNodeContent
+                            node={node}
+                            data={documentData}
+                            preview
+                            editable={editableDocument}
+                            onTableCellChange={updateTableCell}
+                            onManualFieldChange={updateManualField}
+                          />
                         </div>
                       ))}
                     </A4ContentGrid>

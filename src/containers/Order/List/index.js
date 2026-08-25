@@ -137,7 +137,9 @@ const ListOrder = ({
     quoteTemplate,
     quoteData,
     quoteOrder,
+    quoteSaving,
     openQuotationViewer,
+    saveQuotation,
     closeQuotationViewer,
   } = useQuotationViewer()
 
@@ -244,6 +246,8 @@ const ListOrder = ({
         data={quoteData}
         comments={QUOTATION_COMMENT_MOCKS}
         title={`Báo giá${quoteOrder?.code ? ` - ${quoteOrder.code}` : ''}`}
+        documentSubmitting={quoteSaving}
+        onSubmitDocument={saveQuotation}
         onClose={closeQuotationViewer}
       />
     </>

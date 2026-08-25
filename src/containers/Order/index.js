@@ -54,6 +54,7 @@ const ORDER_TEMPLATE = {
   detailId: null,
   orderName: "",
   productId: null,
+  productCode: "",
   productName: "",
   skuDetailCode: "",
   unit: "(Chưa có)",
@@ -65,6 +66,7 @@ const ORDER_TEMPLATE = {
   stock: 0,
   discountRate: 0,
   discountAmount: 0,
+  profit: 0,
   status: 0,
   editable: false,
   mSkuDetails: []
@@ -119,6 +121,136 @@ function resolveUnitPrice({ skuPrices = [], quantity, product = {} }) {
   );
 }
 
+const tokenizeFormula = (formula = '') => {
+  const tokens = [];
+  let index = 0;
+
+  while (index < formula.length) {
+    const char = formula[index];
+    if (/\s/.test(char)) {
+      index += 1;
+      continue;
+    }
+    if (/[0-9.]/.test(char)) {
+      const match = formula.slice(index).match(/^(?:\d+(?:\.\d*)?|\.\d+)/);
+      if (!match) throw new Error('Số trong công thức không hợp lệ');
+      tokens.push({ type: 'number', value: Number(match[0]) });
+      index += match[0].length;
+      continue;
+    }
+    if (/[A-Za-z_]/.test(char)) {
+      const match = formula.slice(index).match(/^[A-Za-z_][A-Za-z0-9_]*/);
+      tokens.push({ type: 'identifier', value: match[0] });
+      index += match[0].length;
+      continue;
+    }
+    if ('+-*/()%'.includes(char)) {
+      tokens.push({ type: char, value: char });
+      index += 1;
+      continue;
+    }
+    throw new Error(`Ký tự không được hỗ trợ trong công thức: ${char}`);
+  }
+
+  return tokens;
+};
+
+const evaluateCalculationFormula = (formula, variables) => {
+  if (!formula?.trim()) return null;
+
+  try {
+    const tokens = tokenizeFormula(formula);
+    let cursor = 0;
+    const peek = () => tokens[cursor];
+    const consume = type => {
+      const token = tokens[cursor];
+      if (!token || token.type !== type) {
+        throw new Error(`Thiếu token ${type}`);
+      }
+      cursor += 1;
+      return token;
+    };
+
+    const parsePrimary = () => {
+      const token = peek();
+      let value;
+      if (token?.type === 'number') {
+        value = consume('number').value;
+      } else if (token?.type === 'identifier') {
+        const variableName = consume('identifier').value;
+        if (!Object.prototype.hasOwnProperty.call(variables, variableName)) {
+          throw new Error(`Biến ${variableName} không tồn tại`);
+        }
+        value = Number(variables[variableName] ?? 0);
+      } else if (token?.type === '(') {
+        consume('(');
+        value = parseExpression();
+        consume(')');
+      } else {
+        throw new Error('Công thức không hợp lệ');
+      }
+
+      while (peek()?.type === '%') {
+        consume('%');
+        value /= 100;
+      }
+      return value;
+    };
+
+    const parseUnary = () => {
+      if (peek()?.type === '+') {
+        consume('+');
+        return parseUnary();
+      }
+      if (peek()?.type === '-') {
+        consume('-');
+        return -parseUnary();
+      }
+      return parsePrimary();
+    };
+
+    const parseTerm = () => {
+      let value = parseUnary();
+      while (peek()?.type === '*' || peek()?.type === '/') {
+        const operator = tokens[cursor].type;
+        cursor += 1;
+        const right = parseUnary();
+        value = operator === '*' ? value * right : value / right;
+      }
+      return value;
+    };
+
+    function parseExpression() {
+      let value = parseTerm();
+      while (peek()?.type === '+' || peek()?.type === '-') {
+        const operator = tokens[cursor].type;
+        cursor += 1;
+        const right = parseTerm();
+        value = operator === '+' ? value + right : value - right;
+      }
+      return value;
+    }
+
+    const result = parseExpression();
+    if (cursor !== tokens.length || !Number.isFinite(result)) return null;
+    return Math.round((result + Number.EPSILON) * 100) / 100;
+  } catch (_) {
+    return null;
+  }
+};
+
+const calculateLineTotal = ({ item, shippingCost, formula }) => {
+  if (!formula) {
+    return Number(item?.price ?? 0) * Number(item?.quantity ?? 0);
+  }
+  return evaluateCalculationFormula(formula, {
+    price: Number(item?.price ?? 0),
+    quantity: Number(item?.quantity ?? 0),
+    shippingCost: Number(shippingCost ?? 0),
+    profit: Number(item?.profit ?? 0),
+  });
+};
+
 const EditButton = ({
   editable,
   onEdit,
@@ -150,6 +282,21 @@ const BanHangPage = ({
 
   const [localOrder, setLocalOrder] = useState({ orderId, reload: false });
   const [customerOrder, setCustomerOrder] = useState();
+  const [shippingCost, setShippingCost] = useState(0);
+  const [calculationFormula, setCalculationFormula] = useState('');
+
+  useEffectAsync(async () => {
+    const { data: configs, errorCode } = await RequestUtils.Get('/erp/config/fetch', {
+      limit: 10,
+      page: 1,
+      key: 'CACULATOR_TOTAL'
+    });
+    if (errorCode !== SUCCESS_CODE || !Array.isArray(configs)) {
+      return;
+    }
+    const config = configs.find(item => item?.key === 'CACULATOR_TOTAL');
+    setCalculationFormula(typeof config?.value === 'string' ? config.value.trim() : '');
+  }, []);
 
   useEffectAsync(async (isMounted) => {
     const { customer, order, data } = await OrderService.getOrderOnEdit(localOrder.orderId);
@@ -158,6 +305,7 @@ const BanHangPage = ({
     }
     if (order) {
       setCustomerOrder(order);
+      setShippingCost(Number(order.shippingCost ?? 0));
     }
     if (arrayNotEmpty(data)) {
       setData(data);
@@ -180,17 +328,19 @@ const BanHangPage = ({
     const suggestedProducts = lead ? getLeadProducts(lead) : leadProducts;
     const onAfterChoiseProduct = (values) => {
       let order = _.cloneDeep(ORDER_TEMPLATE);
-      const { mSkuDetails, mProduct, quantity, productId, skuId } = values;
+      const { mSkuDetails, mProduct, quantity, productId, productCode, skuId } = values;
       /* Tạo Item trong list sản phẩm */
       order.key = randomString();
       order.note = values?.note ?? "";
       order.orderName = values?.orderName ?? "";
       order.productId = productId;
+      order.productCode = productCode ?? mProduct.code ?? null;
       order.productName = mProduct.name;
       order.unit = mProduct.unit ?? "N/A";
       order.mSkuDetails = mSkuDetails;
       order.skuDetailCode = String(skuId);
       order.quantity = quantity;
+      order.profit = Number(values?.profit ?? 0);
       order.status = values?.status ?? 0;
       order.warehouseOptions = getWarehouseByProduct(skuId, mProduct);
 
@@ -213,7 +363,11 @@ const BanHangPage = ({
         quantity: order.quantity,
         product: mProduct
       });
-      order.totalPrice = order.price * order.quantity;
+      order.totalPrice = calculateLineTotal({
+        item: order,
+        shippingCost,
+        formula: calculationFormula
+      }) ?? (order.price * order.quantity);
       setData(datas => ([...datas, order]));
     };
 
@@ -226,7 +380,7 @@ const BanHangPage = ({
         leadProducts: suggestedProducts,
       }
     });
-  }, [leadProducts]);
+  }, [calculationFormula, leadProducts, shippingCost]);
 
   const onAddStock = useCallback(() => {
     const onAfterSubmit = (values) => {
@@ -289,10 +443,60 @@ const BanHangPage = ({
       editable: true
     },
     {
+      title: 'Lợi nhuận (%)',
+      dataIndex: 'profit',
+      key: 'profit',
+      width: 120,
+      render: (_, record) => (
+        <InputNumber
+          min={0}
+          max={99.99}
+          value={Number(record?.profit ?? 0)}
+          onChange={value => handleChange(record.key, 'profit', value)}
+          formatter={value => `${value ?? 0}%`}
+          parser={value => value?.replace('%', '')}
+          style={{ width: '100%' }}
+        />
+      )
+    },
+    {
       title: 'Thành tiền',
       dataIndex: 'totalPrice',
       key: 'totalPrice',
-      width: 150
+      width: 150,
+      editable: true
+    },
+    {
+      title: 'Phí ship',
+      dataIndex: 'shippingCost',
+      key: 'shippingCost',
+      width: 140,
+      onCell: (_, index) => ({
+        rowSpan: index === 0 ? Math.max(data.length, 1) : 0
+      }),
+      render: (_, __, index) => index === 0 ? (
+        <InputNumber
+          min={0}
+          value={shippingCost}
+          onChange={value => {
+            const nextShippingCost = Number(value ?? 0);
+            setShippingCost(nextShippingCost);
+            if (calculationFormula) {
+              setData(current => current.map(item => ({
+                ...item,
+                totalPrice: calculateLineTotal({
+                  item,
+                  shippingCost: nextShippingCost,
+                  formula: calculationFormula
+                }) ?? item.totalPrice
+              })));
+            }
+          }}
+          formatter={formatterInputNumber}
+          parser={parserInputNumber}
+          style={{ width: '100%' }}
+        />
+      ) : null
     },
     {
       title: 'Kho',
@@ -351,7 +555,7 @@ const BanHangPage = ({
       return;
     }
 
-    if (['quantity', 'price', 'discountRate', 'discountAmount'].includes(field)) {
+    if (['quantity', 'price', 'discountRate', 'discountAmount', 'profit', 'totalPrice'].includes(field)) {
       target[field] = parseFloat(value || 0);
     } else if (field === 'warehouse') {
       target[field] = target.warehouseOptions.find(option => option.id === value)?.stockName || '';
@@ -369,8 +573,12 @@ const BanHangPage = ({
         }
       });
     }
-    if (field === 'quantity' || field === 'price') {
-      target.totalPrice = target.quantity * target.price;
+    if (['quantity', 'price', 'profit'].includes(field)) {
+      target.totalPrice = calculateLineTotal({
+        item: target,
+        shippingCost,
+        formula: calculationFormula
+      }) ?? (target.quantity * target.price);
     }
     if (field === 'discountRate') {
       target.discountAmount = (target.price * target.quantity * target.discountRate) / 100;
@@ -428,6 +636,7 @@ const BanHangPage = ({
       return (
         <InputNumber
           min={0}
+          max={column.dataIndex === 'profit' ? 99.99 : undefined}
           value={text}
           onChange={value => handleChange(record.key, column.dataIndex, value)}
           style={{ width: '100%' }}
@@ -443,6 +652,9 @@ const BanHangPage = ({
         return <ShowSkuDetail skuDetails={record.mSkuDetails} width={260} />
       }
       const isFormatted = ['price', 'discountAmount', 'totalPrice'].includes(column.dataIndex);
+      if (column.dataIndex === 'profit') {
+        return `${Number(text ?? 0)}%`;
+      }
       return isFormatted ? formatMoney(text) : text;
     }
   };
@@ -454,7 +666,11 @@ const BanHangPage = ({
   const onSubmitOrder = useCallback(async () => {
 
     const submit = async (mCustomer) => {
-      let params = { customer: mCustomer, details: data };
+      let params = {
+        customer: mCustomer,
+        details: data,
+        shippingCost: Number(shippingCost || 0)
+      };
       if (customerOrder?.id) {
         params.id = customerOrder.id;
       }
@@ -489,7 +705,7 @@ const BanHangPage = ({
         details: data
       }
     });
-  }, [data, dataId, customer, customerOrder]);
+  }, [data, dataId, customer, customerOrder, shippingCost]);
 
   const onOpenFormPayment = useCallback(() => {
     InAppEvent.emit(HASH_MODAL, {
@@ -515,14 +731,17 @@ const BanHangPage = ({
     <>
       <Table
         bordered
-        scroll={{ x: 1500 }}
+        scroll={{ x: 1760 }}
         dataSource={data}
         columns={columns.map(col => ({
           ...col,
-          onCell: () => ({ editable: col.editable?.toString() }),
-          render: col.dataIndex !== 'operation'
-            ? (text, record, index) => renderCell(text, record, index, col)
-            : col.render
+          onCell: (record, index) => ({
+            ...(col.onCell?.(record, index) ?? {}),
+            editable: col.editable?.toString()
+          }),
+          render: ['profit', 'shippingCost', 'operation'].includes(col.dataIndex)
+            ? col.render
+            : (text, record, index) => renderCell(text, record, index, col)
         }))}
         pagination={false}
         summary={() => (
@@ -531,9 +750,11 @@ const BanHangPage = ({
             <Table.Summary.Cell index={3}>{totalQuantity}</Table.Summary.Cell>
             <Table.Summary.Cell index={4}></Table.Summary.Cell>
             <Table.Summary.Cell index={5}></Table.Summary.Cell>
-            <Table.Summary.Cell index={7}>{formatMoney(totalDiscount)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={6}>{formatMoney(totalDiscount)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={7}></Table.Summary.Cell>
             <Table.Summary.Cell index={8}>{formatMoney(totalSubOrder)}</Table.Summary.Cell>
-            <Table.Summary.Cell index={9}></Table.Summary.Cell>
+            <Table.Summary.Cell index={9}>{formatMoney(shippingCost)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={10} colSpan={4}></Table.Summary.Cell>
           </Table.Summary.Row>
         )}
       />
