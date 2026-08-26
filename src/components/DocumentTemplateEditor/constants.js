@@ -16,8 +16,10 @@ export const DOCUMENT_SCHEMA_VERSION = 3
 export const DOCUMENT_CANVAS_ID = 'document-template-canvas'
 
 export const DOCUMENT_TYPE_OPTIONS = [
-  { value: 'invoice', label: 'Chứng từ báo giá' },
-  { value: 'GOODS_ISSUE', label: 'Chứng từ xuất hàng' },
+  { value: 'quotation', label: 'Chứng từ báo giá' },
+  { value: 'goods_issue', label: 'Chứng từ xuất hàng' },
+  { value: 'invoice', label: 'Chứng từ hoá đơn' },
+
 ]
 
 export const COMPONENT_TYPES = {
@@ -104,5 +106,7 @@ export const FORMAT_OPTIONS = [
   { value: 'text', label: 'Văn bản' },
   { value: 'number', label: 'Số' },
   { value: 'currency', label: 'Tiền tệ' },
+  { value: 'number_en', label: 'Số (4,867)' },
+  { value: 'decimal_en', label: 'USD (8,906.61)' },
   { value: 'date', label: 'Ngày tháng' },
 ]

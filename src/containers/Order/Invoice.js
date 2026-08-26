@@ -19,168 +19,120 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useRef, useState } from 'react';
-import { Row, Col, Table, Typography } from 'antd';
-import OrderTextTableOnly from './OrderTextTableOnly';
-import { useReactToPrint } from "react-to-print";
-
-import { CustomButton, HeaderCompany } from '@flast-erp/core/components';
-import { formatPhoneNumber, formatMoney } from '@flast-erp/core/utils';
-import { useEffectAsync } from '@flast-erp/core/hooks';
-import UserService from '@/services/UserService';
-import { StyledHeaderInvoice } from "@/css/global";
-
-const { Title, Text } = Typography;
-
-const InvoicePage = ({
-	customer,
-	customerOrder
-}) => {
-	const { userCreateId } = customerOrder;
-	const [user, setUser] = useState();
-
-	useEffectAsync(async () => {
-		const [error, data] = await UserService.findId(userCreateId);
-		if (!error) {
-			setUser(data);
-		}
-	}, [userCreateId]);
-
-	return (
-		<StyledHeaderInvoice style={{ background: '#fff', marginBottom: 40 }}>
-			<HeaderCompany />
-			<Title level={3} style={{ textAlign: 'center', marginTop: '20px' }}>
-				HÓA ĐƠN BÁN HÀNG
-			</Title>
-
-			<Row gutter={4} style={{ marginTop: '20px' }}>
-				<Col span={12}>
-					<p className='title'>THÔNG TIN KHÁCH HÀNG</p>
-					<Table
-						className='row_padding_small'
-						showHeader={false}
-						dataSource={[
-							{ key: '1', label: 'Công ty:', value: customer.companyName || 'N/A' },
-							{ key: '2', label: 'Địa chỉ:', value: customer.address || '' },
-							{ key: '3', label: 'Số điện thoại:', value: formatPhoneNumber(customer.mobile) },
-							{ key: '4', label: 'Người liên hệ:', value: customer.name }
-						]}
-						columns={[
-							{ dataIndex: 'label', key: 'label' },
-							{ dataIndex: 'value', key: 'value' }
-						]}
-						pagination={false}
-						bordered
-					/>
-				</Col>
-				<Col span={12}>
-					<p className='title'>
-						THÔNG TIN ĐẠI DIỆN
-					</p>
-					<Table
-						className='row_padding_small'
-						showHeader={false}
-						dataSource={[
-							{ key: '1', label: 'Bộ phận:', value: 'Phòng kinh doanh' },
-							{ key: '2', label: 'Đại diện:', value: user?.ssoId },
-							{ key: '3', label: 'Số điện thoại:', value: formatPhoneNumber(user?.phone) },
-							{ key: '4', label: 'Email:', value: user?.email }
-						]}
-						columns={[
-							{ dataIndex: 'label', key: 'label' },
-							{ dataIndex: 'value', key: 'value' }
-						]}
-						pagination={false}
-						bordered
-					/>
-				</Col>
-			</Row>
-		</StyledHeaderInvoice>
-	)
-};
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Alert, Button, Empty, Select, Space, Spin } from 'antd'
+import { MinusOutlined, PlusOutlined, PrinterOutlined, ReloadOutlined } from '@ant-design/icons'
+import { useReactToPrint } from 'react-to-print'
+import DocumentTemplateService from '@/services/DocumentTemplateService'
+import { SUCCESS_CODE } from '@/configs'
+import DocumentTemplateContent from '@/components/DocumentTemplateEditor/DocumentTemplateContent'
+import { createInvoiceData, getInvoiceTemplates, parseInvoiceTemplate } from './invoiceTemplateUtils'
 
 const Invoice = ({ data }) => {
+  const contentRef = useRef(null)
+  const [templates, setTemplates] = useState([])
+  const [selectedId, setSelectedId] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [reload, setReload] = useState(0)
+  const [zoom, setZoom] = useState(85)
+  const refresh = useCallback(() => setReload(value => value + 1), [])
 
-	const contentRef = useRef();
-	const reactToPrintFn = useReactToPrint({ contentRef });
+  useEffect(() => {
+    setZoom(85)
+  }, [data.customerOrder?.id, selectedId])
 
-	const { customer, details, customerOrder } = data;
-	const monneyVAT = customerOrder.subtotal * (customerOrder.vat || 0) / 100;
+  const changeZoom = amount => setZoom(current => Math.min(150, Math.max(50, current + amount)))
 
-	return <>
-		<div ref={contentRef} style={{ padding: 25, marginTop: 20 }}>
-			<InvoicePage
-				customer={customer}
-				customerOrder={customerOrder}
-			/>
-			<p><strong>Đơn hàng #{customerOrder?.code || ''}</strong></p>
-			<OrderTextTableOnly details={details} />
-			<table
-				id="pay__order__info"
-				cellSpacing={0}
-				cellPadding={0}
-				border={0}
-				width="100%"
-				style={{ textAlign: "right", marginTop: 30 }}
-			>
-				<tbody>
-					<tr id="tpri">
-						<td align="right" width="70%" style={{ padding: "4px 12px" }}>
-							Tổng chi phí:
-						</td>
-						<td className="total" width="30%" style={{ padding: "4px 12px" }}>
-							{formatMoney(customerOrder.subtotal)}
-						</td>
-					</tr>
-					<tr>
-						<td align="right" width="70%" style={{ padding: "4px 12px" }}>
-							Chiết khấu:
-						</td>
-						<td className="ck" width="30%" style={{ padding: "4px 12px" }}>
-							{formatMoney(customerOrder.priceOff)}
-						</td>
-					</tr>
-					<tr>
-						<td align="right" width="70%" style={{ padding: "4px 12px" }}>
-							Phí vận chuyển:
-						</td>
-						<td width="30%" style={{ padding: "4px 12px" }}>
-							{formatMoney(customerOrder.shippingCost)}
-						</td>
-					</tr>
-					<tr>
-						<td align="right" width="70%" style={{ padding: "4px 12px" }}>
-							Phí VAT:
-						</td>
-						<td className="vt" width="30%" style={{ padding: "4px 12px" }}>
-							{formatMoney(monneyVAT)}
-						</td>
-					</tr>
-					<tr id="vorh">
-						<td align="right" width="70%" style={{ padding: "12px 12px 0" }}>
-							<b>Tổng thanh toán:</b>
-						</td>
-						<td className="total" width="30%" style={{ padding: "12px 12px 0" }}>
-							<div style={{ fontSize: 16, fontWeight: 700 }}>{formatMoney(customerOrder.total)}</div>
-						</td>
-					</tr>
-				</tbody>
-			</table>
-			<Row justify="space-between" style={{ marginTop: '40px', padding: '10px 0' }}>
-				<Col style={{ textAlign: 'center' }} span={8}>
-					<Text strong>Khách hàng</Text>
-				</Col>
-				<Col span={8} offset={8}>
-					<Text strong>Người lập hóa đơn</Text>
-					<div style={{ height: 80 }} />
-					<Text style={{ display: 'block', marginTop: '5px' }}>Ngày .... tháng .... năm 202..</Text>
-				</Col>
-			</Row>
-		</div>
-		<div style={{ display: 'flex', justifyContent: 'end', marginTop: 20 }}>
-			<CustomButton onClick={reactToPrintFn} title="In PDF" />
-		</div>
-	</>
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    setLoadError('')
+    setTemplates([])
+    const load = async () => {
+      try {
+        const response = await DocumentTemplateService.fetchTemplates()
+        if (Number(response?.errorCode) !== SUCCESS_CODE || !Array.isArray(response?.data)) {
+          throw new Error(response?.message || 'Không tải được mẫu hoá đơn')
+        }
+        if (!active) return
+        const invoices = getInvoiceTemplates(response.data)
+        setTemplates(invoices)
+        setSelectedId(invoices.length ? String(invoices[0].templateId) : '')
+      } catch (error) {
+        if (active) setLoadError(error?.message || 'Không tải được mẫu hoá đơn')
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    load()
+    return () => { active = false }
+  }, [reload])
+
+  const { template, templateError } = useMemo(() => {
+    const record = templates.find(item => String(item.templateId) === selectedId)
+    if (!record) return {}
+    try {
+      return { template: parseInvoiceTemplate(record) }
+    } catch {
+      return { templateError: 'Mẫu hoá đơn không hợp lệ. Vui lòng kiểm tra lại trong Tạo chứng từ.' }
+    }
+  }, [templates, selectedId])
+  const documentData = useMemo(() => createInvoiceData(data), [data])
+  const orientation = template?.page?.orientation === 'landscape' ? 'landscape' : 'portrait'
+  const printInvoice = useReactToPrint({
+    contentRef,
+    documentTitle: `${template?.name || 'Hoa-don'}-${data.customerOrder?.code || ''}`,
+    pageStyle: `
+      @page { size: A4 ${orientation}; margin: 0; }
+      @media print {
+        html, body { margin: 0 !important; padding: 0 !important; background: #fff !important;
+          -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        .document-pdf-page { margin: 0 !important; border: 0 !important; box-shadow: none !important; }
+        .document-pdf-page + .document-pdf-page { break-before: page; }
+        [data-pdf-avoid-break], tr, img { break-inside: avoid; }
+        thead { display: table-header-group; }
+      }
+    `,
+  })
+
+  return (
+    <div>
+      <Space wrap style={{ width: '100%', justifyContent: 'space-between', marginBottom: 16 }}>
+        {templates.length > 1 ? (
+          <Select
+            aria-label="Mẫu hoá đơn"
+            value={selectedId}
+            options={templates.map(item => ({ value: String(item.templateId), label: item.name }))}
+            onChange={setSelectedId}
+            style={{ minWidth: 240 }}
+          />
+        ) : <strong>{template?.name || 'Mẫu hoá đơn'}</strong>}
+        <Space wrap>
+          <div role="group" aria-label="Thu phóng PDF" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#eef1f5', borderRadius: 8, padding: '2px 4px' }}>
+            <Button type="text" aria-label="Thu nhỏ PDF" icon={<MinusOutlined />} disabled={loading || !template || zoom <= 50} onClick={() => changeZoom(-5)} />
+            <span aria-label="Mức zoom PDF" aria-live="polite" style={{ minWidth: 44, textAlign: 'center' }}>{zoom}%</span>
+            <Button type="text" aria-label="Phóng to PDF" icon={<PlusOutlined />} disabled={loading || !template || zoom >= 150} onClick={() => changeZoom(5)} />
+          </div>
+          <Button icon={<ReloadOutlined />} onClick={refresh} loading={loading}>Tải lại mẫu</Button>
+          <Button type="primary" icon={<PrinterOutlined />} onClick={printInvoice} disabled={loading || !template}>In PDF</Button>
+        </Space>
+      </Space>
+      {loading ? <div style={{ padding: 40, textAlign: 'center' }}><Spin /></div>
+        : loadError || templateError ? <Alert type="error" showIcon message={loadError || templateError} />
+          : !template ? <Empty description="Chưa có mẫu hoá đơn đang sử dụng. Vui lòng tạo hoặc kích hoạt mẫu loại invoice trong Tạo chứng từ." />
+            : (
+              <div style={{ overflow: 'auto', background: '#eef1f5', padding: 16 }}>
+                {/* Keep screen zoom outside the subtree cloned by react-to-print. */}
+                <div data-invoice-zoom style={{ zoom: zoom / 100, width: 'max-content', margin: '0 auto' }}>
+                  <div ref={contentRef}>
+                    <DocumentTemplateContent template={template} data={documentData} />
+                  </div>
+                </div>
+              </div>
+            )}
+    </div>
+  )
 }
 
-export default Invoice;
+export default Invoice

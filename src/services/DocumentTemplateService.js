@@ -2,6 +2,46 @@ import { RequestUtils } from '@flast-erp/core/utils'
 
 const TEMPLATE_PATH = '/erp/template'
 
+const DOCUMENT_TYPES = ['quotation', 'invoice', 'goods_issue']
+
+// Saved responses may wrap the document in a single-element array.
+// Reject ambiguous arrays instead of silently opening an empty designer.
+export const parseDocumentTemplateData = (value, errorMessage = 'Template không hợp lệ') => {
+  try {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value
+    const template = Array.isArray(parsed) && parsed.length === 1 ? parsed[0] : parsed
+    if (!template || typeof template !== 'object' || Array.isArray(template) || !Array.isArray(template.nodes)) {
+      throw new Error(errorMessage)
+    }
+    return template
+  } catch {
+    throw new Error(errorMessage)
+  }
+}
+
+export const normalizeDocumentType = value => {
+  const type = String(value || '').trim().toLowerCase()
+  return DOCUMENT_TYPES.includes(type) ? type : 'quotation'
+}
+
+const normalizedTemplateName = value => String(value || '').toLowerCase().normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').trim().replace(/\s+/g, ' ')
+
+// Limit legacy compatibility to the known old names/types. A normal lowercase
+// invoice record is now an invoice, not a quotation.
+export const resolveDocumentTemplateType = record => {
+  const type = String(record?.documentType || '').trim()
+  const name = normalizedTemplateName(record?.name)
+  if (type === 'invoice' && name === 'mau bao gia') return 'quotation'
+  if (type === 'QUOTATION' && name === 'mau hoa don') return 'invoice'
+  return type.toLowerCase()
+}
+
+export const getActiveDocumentTemplates = (records, documentType, preferredName) => (Array.isArray(records) ? records : [])
+  .filter(record => resolveDocumentTemplateType(record) === String(documentType || '').toLowerCase() && [1, '1', 'ACTIVE'].includes(record.status))
+  .sort((a, b) => Number(normalizedTemplateName(b.name) === normalizedTemplateName(preferredName))
+    - Number(normalizedTemplateName(a.name) === normalizedTemplateName(preferredName)))
+
 const normalizeDataType = value => {
   const normalizedValue = String(value || '').toLowerCase()
   if (['long', 'integer', 'decimal', 'double', 'float', 'bigdecimal', 'number'].includes(normalizedValue)) {

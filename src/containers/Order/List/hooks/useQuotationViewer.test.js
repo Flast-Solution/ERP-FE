@@ -21,6 +21,7 @@ jest.mock('@/services/DocumentTemplateService', () => (
 ), { virtual: true })
 
 const template = { nodes: [{ type: 'richText', content: '{{ input:customerOrder.customerNote }}' }] }
+const templateRecord = { templateId: 1, name: 'Mẫu báo giá', documentType: 'quotation', status: 1, data: JSON.stringify(template) }
 const order = { id: 34019, customerNote: null, details: [{ id: 1, skuId: 11, quantity: 5 }] }
 
 describe('quotation approval flow', () => {
@@ -38,11 +39,11 @@ describe('quotation approval flow', () => {
     await act(async () => { root.render(<Harness approvalEnabled={approvalEnabled} currentUserId={currentUserId} />) })
   }
 
-  const setApprovalResponse = approval => RequestUtils.Get.mockImplementation((path, params) => Promise.resolve({
+  const setApprovalResponse = (approval, templates = [templateRecord]) => RequestUtils.Get.mockImplementation((path, params) => Promise.resolve({
     errorCode: 200,
     data: path === '/erp/template/invoice'
       ? { templateData: JSON.stringify(template), customerOrder: { ...order, id: params.id } }
-      : approval,
+      : path === '/erp/template/fetch' ? templates : approval,
   }))
 
   beforeEach(() => {
@@ -88,12 +89,7 @@ describe('quotation approval flow', () => {
     await act(async () => { viewer.closeQuotationViewer() })
     expect(viewer.quoteApproverId).toBeUndefined()
     expect(viewer.quoteApprovalStatus).toBe(0)
-    RequestUtils.Get.mockImplementation((path, params) => Promise.resolve({
-      errorCode: 200,
-      data: path === '/erp/template/invoice'
-        ? { templateData: JSON.stringify(template), customerOrder: { ...order, id: params.id } }
-        : null,
-    }))
+    setApprovalResponse(null)
     await act(async () => { await viewer.openQuotationViewer({ id: 34020 }) })
     expect(RequestUtils.Get).toHaveBeenCalledWith('/erp/order/invoice-check', { orderId: 34020, type: 'quote' })
     await act(async () => { expect(await viewer.saveQuotation(viewer.quoteData)).toBe(true) })
@@ -116,9 +112,50 @@ describe('quotation approval flow', () => {
   it('does not enable the approval flow outside opportunities', async () => {
     await mount(false)
     await act(async () => { await viewer.openQuotationViewer(order) })
-    expect(RequestUtils.Get).toHaveBeenCalledTimes(1)
+    expect(RequestUtils.Get).toHaveBeenCalledTimes(2)
+    expect(RequestUtils.Get).not.toHaveBeenCalledWith('/erp/order/invoice-check', expect.anything())
     expect(viewer.quoteApproverId).toBeUndefined()
     expect(viewer.isQuoteApprover).toBe(false)
+  })
+
+  it.each([true, false])('selects only QUOTATION templates for the quote action (approvalEnabled=%s)', async approvalEnabled => {
+    const selectedTemplate = { nodes: [{ type: 'text', content: 'Selected QUOTATION template' }] }
+    setApprovalResponse(null, [
+      { ...templateRecord, templateId: 2, name: 'Mẫu hoá đơn', documentType: 'invoice', data: { nodes: [{ type: 'text', content: 'Wrong invoice template' }] } },
+      { ...templateRecord, templateId: 3, name: 'Mẫu khác' },
+      { ...templateRecord, data: selectedTemplate },
+    ])
+    await mount(approvalEnabled)
+    await act(async () => { await viewer.openQuotationViewer(order) })
+    expect(RequestUtils.Get).toHaveBeenCalledWith('/erp/template/fetch', undefined)
+    expect(viewer.quoteTemplate).toEqual(selectedTemplate)
+    expect(viewer.quoteOrder.id).toBe(order.id)
+  })
+
+  it('does not fall back to INVOICE or the implicit endpoint template when no active QUOTATION exists', async () => {
+    setApprovalResponse(null, [
+      { ...templateRecord, name: 'Mẫu hoá đơn', documentType: 'invoice' },
+      { ...templateRecord, status: 0 },
+    ])
+    await mount()
+    await act(async () => { await viewer.openQuotationViewer(order) })
+    expect(viewer.quoteTemplate).toBeNull()
+    expect(viewer.quoteLoading).toBe(false)
+    expect(message.error).toHaveBeenCalledWith('Chưa có mẫu báo giá loại quotation đang sử dụng')
+    await act(async () => { expect(await viewer.saveQuotation({})).toBe(false) })
+    expect(RequestUtils.Post).not.toHaveBeenCalled()
+  })
+
+  it('selects the legacy lowercase invoice quotation, never the old QUOTATION named Mẫu hoá đơn', async () => {
+    const quoteTemplate = { name: 'Mẫu Báo giá', nodes: [{ type: 'text', content: 'BÁO GIÁ' }] }
+    setApprovalResponse(null, [
+      { ...templateRecord, name: 'Mẫu hoá đơn', documentType: 'QUOTATION', data: { nodes: [{ type: 'text', content: 'HOÁ ĐƠN' }] } },
+      { ...templateRecord, templateId: 2, name: 'Mẫu Báo giá', documentType: 'invoice', data: JSON.stringify(quoteTemplate) },
+    ])
+    await mount()
+    await act(async () => { await viewer.openQuotationViewer(order) })
+    expect(viewer.quoteTemplate).toEqual(quoteTemplate)
+    expect(message.error).not.toHaveBeenCalled()
   })
 
   it.each([0, 1, 2])('derives edit/review permissions from status %i and the server-assigned approver', async status => {
