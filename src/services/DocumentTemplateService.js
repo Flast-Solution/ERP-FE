@@ -1,4 +1,5 @@
 import { RequestUtils } from '@flast-erp/core/utils'
+import { normalizeHtmlDefinition } from '../components/DocumentTemplateEditor/html/model'
 
 const TEMPLATE_PATH = '/erp/template'
 
@@ -13,7 +14,7 @@ export const parseDocumentTemplateData = (value, errorMessage = 'Template không
     if (!template || typeof template !== 'object' || Array.isArray(template) || !Array.isArray(template.nodes)) {
       throw new Error(errorMessage)
     }
-    return template
+    return template.layout?.mode === 'html' ? { ...template, htmlTemplate: normalizeHtmlDefinition(template.htmlTemplate) } : template
   } catch {
     throw new Error(errorMessage)
   }

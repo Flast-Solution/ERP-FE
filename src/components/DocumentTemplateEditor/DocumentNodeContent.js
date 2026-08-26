@@ -251,6 +251,18 @@ const DynamicTable = ({ node, data, preview, editable = false, onTableCellChange
   const cellPadding = node.tableStyle?.cellPadding ?? 8
   const headerRows = Array.isArray(node.headerRows) ? node.headerRows : []
   const summaryRows = Array.isArray(node.summaryRows) ? node.summaryRows : []
+  // Fixed-width columns must wrap long labels rather than paint over adjacent cells.
+  // Share these rules between ordinary headers and merged/multi-row headers.
+  const headerStyle = {
+    border: cellBorder,
+    padding: cellPadding,
+    whiteSpace: 'pre-line',
+    overflowWrap: 'anywhere',
+    wordBreak: 'normal',
+    verticalAlign: 'middle',
+    fontSize: node.tableStyle?.headerFontSize ?? node.style?.fontSize,
+    lineHeight: node.tableStyle?.headerLineHeight ?? 1.25,
+  }
 
   return (
     <TablePlaceholder style={{ borderColor, fontSize: node.style?.fontSize, tableLayout: 'fixed' }}>
@@ -268,12 +280,10 @@ const DynamicTable = ({ node, data, preview, editable = false, onTableCellChange
                 colSpan={cell.colSpan || 1}
                 rowSpan={cell.rowSpan || 1}
                 style={{
-                  border: cellBorder,
-                  padding: cellPadding,
+                  ...headerStyle,
                   textAlign: cell.align || 'center',
                   color: cell.color,
                   fontWeight: cell.fontWeight,
-                  whiteSpace: 'pre-line',
                   backgroundColor: cell.backgroundColor || node.tableStyle?.headerBackgroundColor,
                 }}
               >
@@ -289,8 +299,7 @@ const DynamicTable = ({ node, data, preview, editable = false, onTableCellChange
                 colSpan={column.headerColSpan || 1}
                 rowSpan={column.headerRowSpan || 1}
                 style={{
-                  border: cellBorder,
-                  padding: cellPadding,
+                  ...headerStyle,
                   textAlign: column.headerAlign || column.align || 'center',
                   backgroundColor: column.headerBackgroundColor || node.tableStyle?.headerBackgroundColor,
                 }}

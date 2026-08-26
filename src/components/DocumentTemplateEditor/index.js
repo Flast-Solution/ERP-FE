@@ -7,6 +7,7 @@ import {
   SaveOutlined,
   UndoOutlined,
   UploadOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons'
 import {
   closestCenter,
@@ -24,6 +25,9 @@ import useDocumentTemplateEditor from './useDocumentTemplateEditor'
 import { DOCUMENT_CANVAS_ID } from './constants'
 import { importPdfAsTemplate } from './pdfImport'
 import { EditorBody, EditorShell, EditorToolbar } from './styles'
+import HtmlTemplateDesigner from './html/HtmlTemplateDesigner'
+import { normalizeHtmlDefinition } from './html/model'
+import { downloadTemplateBytes, exportHtmlTemplateZip, importHtmlTemplateZip } from './html/package'
 
 /**
  * Reusable document template editor.
@@ -41,8 +45,34 @@ const DocumentTemplateEditor = ({
   const [previewOpen, setPreviewOpen] = useState(false)
   const [activeComponentType, setActiveComponentType] = useState(null)
   const [importingPdf, setImportingPdf] = useState(false)
+  const [importingHtml, setImportingHtml] = useState(false)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const editor = useDocumentTemplateEditor({ initialTemplate, dataSchema, documentType })
+  const isHtml = editor.template.layout?.mode === 'html'
+  const handleHtmlImport = async file => {
+    setImportingHtml(true)
+    try {
+      const imported = await importHtmlTemplateZip(file)
+      Modal.confirm({
+        title: `Import mẫu ${imported.name}?`,
+        content: `Có ${Object.keys(imported.htmlTemplate.fields).length} trường cấu hình. Bố cục hiện tại sẽ được thay thế; có thể Hoàn tác.`,
+        okText: 'Import mẫu', cancelText: 'Hủy',
+        onOk: () => editor.replaceTemplate(imported),
+      })
+    } catch (error) { message.error(error.message || 'Không thể đọc gói HTML + JSON') }
+    finally { setImportingHtml(false) }
+    return false
+  }
+  const exportHtml = () => {
+    try { downloadTemplateBytes(exportHtmlTemplateZip(editor.serializedTemplate), 'document-template.zip') }
+    catch (error) { message.error(error.message) }
+  }
+  const saveTemplate = () => {
+    try {
+      const template = editor.serializedTemplate
+      onSave?.(isHtml ? { ...template, htmlTemplate: normalizeHtmlDefinition(template.htmlTemplate) } : template)
+    } catch (error) { message.error(error.message) }
+  }
 
   const handlePdfImport = async (file) => {
     const confirmed = await new Promise(resolve => {
@@ -104,7 +134,7 @@ const DocumentTemplateEditor = ({
     >
       <EditorShell>
         <EditorToolbar>
-          <Space>
+          <Space wrap>
             <Tooltip title="Quay lại"><Button icon={<ArrowLeftOutlined />} onClick={onCancel} /></Tooltip>
             <Input
               value={editor.template.name}
@@ -115,16 +145,21 @@ const DocumentTemplateEditor = ({
             <Tooltip title="Hoàn tác"><Button icon={<UndoOutlined />} disabled={!editor.canUndo} onClick={editor.undo} /></Tooltip>
             <Tooltip title="Làm lại"><Button icon={<RedoOutlined />} disabled={!editor.canRedo} onClick={editor.redo} /></Tooltip>
           </Space>
-          <Space>
+          <Space wrap>
+            <Button href={`${process.env.PUBLIC_URL || ''}/document-templates/htk-commercial-invoice.zip`} download icon={<DownloadOutlined />}>Tải mẫu HTML HTK</Button>
+            <Upload accept=".zip,application/zip" showUploadList={false} beforeUpload={handleHtmlImport}>
+              <Button icon={<UploadOutlined />} loading={importingHtml}>Import HTML + JSON</Button>
+            </Upload>
+            {isHtml && <Button icon={<DownloadOutlined />} onClick={exportHtml}>Xuất gói HTML</Button>}
             <Upload accept="application/pdf,.pdf" showUploadList={false} beforeUpload={handlePdfImport}>
               <Button icon={<UploadOutlined />} loading={importingPdf}>Import PDF</Button>
             </Upload>
             <Button icon={<EyeOutlined />} onClick={() => setPreviewOpen(true)}>Xem trước</Button>
-            <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={() => onSave?.(editor.serializedTemplate)}>Lưu chứng từ</Button>
+            <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={saveTemplate}>Lưu chứng từ</Button>
           </Space>
         </EditorToolbar>
 
-        <EditorBody>
+        {isHtml ? <HtmlTemplateDesigner template={editor.template} onChange={editor.updateTemplate} dataSchema={dataSchema} sampleData={sampleData} /> : <EditorBody>
           <ComponentPalette onAdd={editor.addNode} />
           <DocumentCanvas
             template={editor.template}
@@ -144,7 +179,7 @@ const DocumentTemplateEditor = ({
             onAddChild={type => editor.addNode(type, undefined, editor.selectedNodeId, false)}
             onSelectNode={editor.setSelectedNodeId}
           />
-        </EditorBody>
+        </EditorBody>}
       </EditorShell>
 
       <DragOverlay dropAnimation={null}>
@@ -158,7 +193,7 @@ const DocumentTemplateEditor = ({
       <PreviewDrawer
         open={previewOpen}
         template={editor.serializedTemplate}
-        data={sampleData}
+        data={isHtml && !Object.keys(sampleData).length ? editor.template.htmlTemplate.sampleData : sampleData}
         onClose={() => setPreviewOpen(false)}
       />
     </DndContext>

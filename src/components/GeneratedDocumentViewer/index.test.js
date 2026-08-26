@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import GeneratedDocumentViewer from './index'
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
+import { createHtmlDocumentTemplate } from '../DocumentTemplateEditor/html/model'
 
 jest.mock('antd', () => {
   const React = require('react')
@@ -96,6 +97,26 @@ describe('quotation viewer controls', () => {
     expect(findButton('Lưu báo giá')).toBeDefined()
     expect(findButton('Duyệt')).toBeUndefined()
     expect(container.querySelector('input').value).toBe('Quote value')
+  })
+
+  it('edits HTML manual fields, submits their values and honors read-only access', async () => {
+    const htmlTemplate = createHtmlDocumentTemplate('<div><span data-field="my-note"></span></div>', {
+      version: 1, fields: { 'my-note': { mode: 'manual', label: 'Ghi chú HTML' } },
+    })
+    const onSubmitDocument = jest.fn()
+    await mount({ template: htmlTemplate, onSubmitDocument })
+    const input = container.querySelector('input')
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'Ghi chú mới')
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await act(async () => findButton('Lưu báo giá').click())
+    expect(onSubmitDocument).toHaveBeenCalledWith(expect.objectContaining({
+      customerOrder: expect.objectContaining({ htmlFields: { 'my-note': 'Ghi chú mới' } }),
+    }))
+    await mount({ template: htmlTemplate, onSubmitDocument, readOnly: true })
+    expect(container.querySelector('input')).toBeNull()
+    expect(findButton('Lưu báo giá')).toBeUndefined()
   })
 
   it.each([false, true])('shows review actions instead of Save and honors readOnly=%s', async readOnly => {
