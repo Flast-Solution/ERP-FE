@@ -56,7 +56,7 @@ const ORDER_TEMPLATE = {
   productId: null,
   productCode: "",
   productName: "",
-  skuDetailCode: "",
+  skuId: "",
   unit: "(Chưa có)",
   warrantyPeriod: "(Chưa có)",
   quantity: 1,
@@ -338,7 +338,7 @@ const BanHangPage = ({
       order.productName = mProduct.name;
       order.unit = mProduct.unit ?? "N/A";
       order.mSkuDetails = mSkuDetails;
-      order.skuDetailCode = String(skuId);
+      order.skuId = String(skuId);
       order.quantity = quantity;
       order.profit = Number(values?.profit ?? 0);
       order.status = values?.status ?? 0;
@@ -396,8 +396,8 @@ const BanHangPage = ({
   const columns = [
     {
       title: 'Mã',
-      dataIndex: 'skuDetailCode',
-      key: 'skuDetailCode',
+      dataIndex: 'skuId',
+      key: 'skuId',
       width: 80
     },
     {
@@ -668,7 +668,10 @@ const BanHangPage = ({
     const submit = async (mCustomer) => {
       let params = {
         customer: mCustomer,
-        details: data,
+        details: data.map(({ mSkuDetails, ...detail }) => ({
+          ...detail,
+          skuDetails: detail.skuDetails ?? mSkuDetails ?? []
+        })),
         shippingCost: Number(shippingCost || 0)
       };
       if (customerOrder?.id) {
