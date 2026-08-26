@@ -174,8 +174,8 @@ const ListOrder = ({
   const onClickViewDetail = useCallback((customerOrder) => InAppEvent.emit(HASH_MODAL, {
     hash: detailDrawerHash,
     title: detailDrawerTitle ?? ('Thông tin đơn hàng ' + customerOrder.code),
-    data: { customerOrder },
-  }), [detailDrawerHash, detailDrawerTitle])
+    data: { customerOrder, hideInvoiceTab: isOpportunityList },
+  }), [detailDrawerHash, detailDrawerTitle, isOpportunityList])
 
   const beforeSubmitFilter = useCallback((values) => {
     dateFormatOnSubmit(values, ['from', 'to'])

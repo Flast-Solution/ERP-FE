@@ -17,6 +17,8 @@ import {
   FORMAT_OPTIONS,
 } from './constants'
 import { createNodeId } from './utils'
+import ImportedTextInspector from './ImportedTextInspector'
+import { getImportedTextMode } from './importedTextBindings'
 import { InspectorBody, InspectorSection, InspectorTitle, PanelHeader, SidePanel } from './styles'
 
 const BINDABLE_TYPES = new Set([
@@ -282,6 +284,8 @@ const FieldInspector = ({ node, template, dataSchema = [], onChange, onTemplateC
   }
 
   const updateStyle = (key, value) => onChange({ style: { ...(node.style ?? {}), [key]: value } })
+  const isImportedText = Boolean(node.importedFromPdf && [COMPONENT_TYPES.TEXT, COMPONENT_TYPES.RICH_TEXT, COMPONENT_TYPES.DATA_FIELD].includes(node.type))
+  const showStaticContent = !isImportedText || getImportedTextMode(node) === 'static'
   const scalarFields = dataSchema.filter(field => !field.scope)
   const tableFields = dataSchema.filter(field => field.scope === node.source)
   const collectionOptions = Array.from(dataSchema.reduce((result, field) => {
@@ -417,6 +421,7 @@ const FieldInspector = ({ node, template, dataSchema = [], onChange, onTemplateC
     <SidePanel $side="right">
       <PanelHeader>Thuộc tính</PanelHeader>
       <InspectorBody>
+        {isImportedText ? <ImportedTextInspector node={node} dataSchema={dataSchema} onChange={onChange} /> : null}
         <InspectorSection>
           <InspectorTitle>Bố cục item</InspectorTitle>
           {template?.layout?.mode === 'absolute' ? (
@@ -506,10 +511,10 @@ const FieldInspector = ({ node, template, dataSchema = [], onChange, onTemplateC
 
         <InspectorSection>
           <InspectorTitle>Nội dung</InspectorTitle>
-          {node.type === COMPONENT_TYPES.TEXT && (
-            <Form.Item label="Văn bản"><Input.TextArea value={node.content} onChange={event => onChange({ content: event.target.value })} /></Form.Item>
+          {showStaticContent && node.type === COMPONENT_TYPES.TEXT && (
+            <Form.Item label="Văn bản"><Input.TextArea value={node.content} onChange={event => onChange(isImportedText ? { content: event.target.value, pdfStaticContent: event.target.value } : { content: event.target.value })} /></Form.Item>
           )}
-          {node.type === COMPONENT_TYPES.RICH_TEXT && (
+          {showStaticContent && node.type === COMPONENT_TYPES.RICH_TEXT && (
             <Form.Item
               label="Nội dung HTML"
               extra="Hỗ trợ strong, b, em, u, span và binding dạng {{ path.to.field }}."
@@ -517,7 +522,7 @@ const FieldInspector = ({ node, template, dataSchema = [], onChange, onTemplateC
               <RichTextBindingEditor
                 value={node.content}
                 fields={scalarFields}
-                onChange={content => onChange({ content })}
+                onChange={content => onChange(isImportedText ? { content, pdfStaticContent: content } : { content })}
               />
             </Form.Item>
           )}
@@ -629,7 +634,7 @@ const FieldInspector = ({ node, template, dataSchema = [], onChange, onTemplateC
               )}
             </>
           )}
-          {BINDABLE_TYPES.has(node.type) && (
+          {!isImportedText && BINDABLE_TYPES.has(node.type) && (
             <>
               <Form.Item label="Nhãn"><Input value={node.label} onChange={event => onChange({ label: event.target.value })} /></Form.Item>
               <Form.Item label="Nguồn dữ liệu">

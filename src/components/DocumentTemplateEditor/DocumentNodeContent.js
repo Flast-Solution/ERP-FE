@@ -2,7 +2,8 @@ import React from 'react'
 import { Input } from 'antd'
 import { resolveRuntimeAssetUrl } from '@/containers/PreviewModal/uploadUtils'
 import { COMPONENT_TYPES } from './constants'
-import { formatBindingValue, getValueByPath, resolveNodeValue } from './utils'
+import { getImportedSkuSettings } from './importedTextBindings'
+import { formatBindingValue, getValueByPath, resolveBindingValue, resolveNodeValue } from './utils'
 import { TablePlaceholder } from './styles'
 
 const resolveStyle = (style = {}) => ({
@@ -38,9 +39,32 @@ const resolveGridItemStyle = node => ({
   minHeight: node.layout?.minHeight || undefined,
 })
 
-const interpolateBindings = (content, data) => String(content ?? '').replace(
+const interpolateBindings = (content, data, node) => String(content ?? '').replace(
   /{{\s*([^{}]+?)\s*}}/g,
-  (_, path) => formatBindingValue(getValueByPath(data, path.trim(), '')),
+  (_, path) => {
+    const tokenPath = path.trim()
+    if (tokenPath.startsWith('sku:')) {
+      return escapeHtml(formatBindingValue(resolveBindingValue(data, 'skuDetails.values.text', tokenPath.slice(4), '')))
+    }
+    if (node?.tableCell && tokenPath.startsWith('skuDetails.')) {
+      const skuPath = tokenPath.replace(/^skuDetails\.value(?=\.|$)/, 'skuDetails.values')
+      return escapeHtml(formatBindingValue(resolveBindingValue(data, skuPath, node.skuAttributeLabel, '')))
+    }
+    const sum = tokenPath.match(/^SUM\(([^)]+)\)$/i)
+    if (sum) {
+      const values = getValueByPath(data, sum[1].trim(), [])
+      return formatBindingValue([values].flat(Infinity).reduce((total, value) => total + (Number(value) || 0), 0), 'number_en')
+    }
+    if (node?.pdfContentMode === 'sku' && tokenPath.startsWith('skuDetails.')) {
+      const { source, rowIndex } = getImportedSkuSettings(node)
+      // The API uses values[]. Accept the user's singular value alias as well.
+      const skuPath = tokenPath.replace(/^skuDetails\.value(?=\.|$)/, 'skuDetails.values')
+      const value = resolveBindingValue(data, `${source}.${rowIndex}.${skuPath}`, node.skuAttributeLabel, '')
+      // SKU values are text; only the authored template may supply HTML markup.
+      return escapeHtml(formatBindingValue(value))
+    }
+    return escapeHtml(formatBindingValue(getValueByPath(data, tokenPath, '')))
+  },
 )
 
 const escapeHtml = value => String(value ?? '')
@@ -58,7 +82,7 @@ const renderListItems = value => {
   return normalizedItems.map(item => `<li>${item ? escapeHtml(item) : '<br>'}</li>`).join('')
 }
 
-const renderRichTextHtml = ({ content, data, preview, editable }) => {
+const renderRichTextHtml = ({ content, data, preview, editable, node }) => {
   const manualLists = []
   const manualInputs = []
   const contentWithListMarkers = String(content ?? '').replace(
@@ -77,7 +101,7 @@ const renderRichTextHtml = ({ content, data, preview, editable }) => {
       return marker
     },
   )
-  const resolvedContent = preview ? interpolateBindings(contentWithMarkers, data) : contentWithMarkers
+  const resolvedContent = preview ? interpolateBindings(contentWithMarkers, data, node) : contentWithMarkers
   let html = sanitizeRichText(resolvedContent)
 
   manualLists.forEach(({ marker, path }) => {
@@ -218,26 +242,6 @@ const evaluateFormula = (formula, rows) => {
   return normalized
 }
 
-const normalizeSkuAttributeLabel = value => String(value ?? '')
-  .trim()
-  .replace(/\s+/g, ' ')
-  .toLocaleUpperCase('vi-VN')
-
-const resolveTableColumnValue = (row, column, fallback) => {
-  const binding = String(column?.binding || '')
-  const attributeLabel = normalizeSkuAttributeLabel(column?.skuAttributeLabel)
-  if (!binding.startsWith('skuDetails.') || !attributeLabel) {
-    return getValueByPath(row, binding, fallback)
-  }
-
-  const skuDetail = (Array.isArray(row?.skuDetails) ? row.skuDetails : []).find(
-    item => normalizeSkuAttributeLabel(item?.text) === attributeLabel,
-  )
-  if (!skuDetail) return fallback
-
-  return getValueByPath(skuDetail, binding.slice('skuDetails.'.length), fallback)
-}
-
 const DynamicTable = ({ node, data, preview, editable = false, onTableCellChange }) => {
   const rows = getValueByPath(data, node.source, [])
   const previewRows = Array.isArray(rows) && rows.length ? rows : (preview ? [] : [{}])
@@ -249,7 +253,7 @@ const DynamicTable = ({ node, data, preview, editable = false, onTableCellChange
   const summaryRows = Array.isArray(node.summaryRows) ? node.summaryRows : []
 
   return (
-    <TablePlaceholder style={{ borderColor }}>
+    <TablePlaceholder style={{ borderColor, fontSize: node.style?.fontSize, tableLayout: 'fixed' }}>
       <colgroup>
         {(node.columns ?? []).map(column => (
           <col key={column.id} style={{ width: column.width ? `${column.width}%` : undefined }} />
@@ -268,6 +272,8 @@ const DynamicTable = ({ node, data, preview, editable = false, onTableCellChange
                   padding: cellPadding,
                   textAlign: cell.align || 'center',
                   color: cell.color,
+                  fontWeight: cell.fontWeight,
+                  whiteSpace: 'pre-line',
                   backgroundColor: cell.backgroundColor || node.tableStyle?.headerBackgroundColor,
                 }}
               >
@@ -303,10 +309,10 @@ const DynamicTable = ({ node, data, preview, editable = false, onTableCellChange
               const fallback = preview
                 ? ''
                 : (isManual ? `[Nhập tay: ${column.binding || 'chưa đặt key'}]` : `{{ ${column.binding} }}`)
-              const value = resolveTableColumnValue(row, column, fallback)
+              const value = resolveBindingValue(row, column.binding, column.skuAttributeLabel, fallback)
 
               return (
-                <td key={column.id} style={{ border: cellBorder, padding: cellPadding, textAlign: column.align, color: column.color, backgroundColor: column.backgroundColor, whiteSpace: 'pre-line' }}>
+                <td key={column.id} style={{ border: cellBorder, padding: cellPadding, height: node.tableStyle?.rowMinHeight, verticalAlign: column.verticalAlign || 'middle', textAlign: column.align, color: column.color, backgroundColor: column.backgroundColor, whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}>
                   {isManual && preview && editable ? (
                     <Input
                       variant="borderless"
@@ -322,7 +328,7 @@ const DynamicTable = ({ node, data, preview, editable = false, onTableCellChange
                       style={{ padding: 0, textAlign: column.align || 'left' }}
                     />
                   ) : column.cellTemplate
-                    ? <span dangerouslySetInnerHTML={{ __html: sanitizeRichText(preview ? interpolateBindings(column.cellTemplate, row) : column.cellTemplate) }} />
+                    ? <span dangerouslySetInnerHTML={{ __html: sanitizeRichText(preview ? interpolateBindings(column.cellTemplate, row, { ...column, tableCell: true }) : column.cellTemplate) }} />
                     : formatBindingValue(value, column.format)}
                 </td>
               )
@@ -335,6 +341,19 @@ const DynamicTable = ({ node, data, preview, editable = false, onTableCellChange
       {summaryRows.length ? (
         <tfoot>
           {summaryRows.map((summary, index) => {
+            if (Array.isArray(summary.cells) && summary.cells.length) {
+              return (
+                <tr key={summary.id ?? index} data-pdf-avoid-break="true">
+                  {summary.cells.map((cell, cellIndex) => (
+                    <td key={cell.id ?? cellIndex} colSpan={cell.colSpan || 1} style={{ border: cellBorder, padding: cellPadding, textAlign: cell.align || 'right', backgroundColor: cell.backgroundColor || summary.backgroundColor, fontWeight: summary.fontWeight || 700 }}>
+                      {cell.formula
+                        ? formatBindingValue(preview ? evaluateFormula(cell.formula, Array.isArray(rows) ? rows : []) : cell.formula, cell.format || 'number')
+                        : cell.label}
+                    </td>
+                  ))}
+                </tr>
+              )
+            }
             const labelColSpan = Math.min(
               Math.max(Number(summary.labelColSpan) || Math.max((node.columns?.length ?? 1) - 1, 1), 1),
               Math.max(node.columns?.length ?? 1, 1),
@@ -400,6 +419,7 @@ const DocumentNodeContent = ({
         data,
         preview,
         editable,
+        node,
       })
       return (
         <div
@@ -423,7 +443,7 @@ const DocumentNodeContent = ({
     }
     case COMPONENT_TYPES.CONTAINER:
       return (
-        <div style={{ ...style, height: '100%', minHeight: node.layout?.minHeight || 160 }}>
+        <div style={{ ...style, height: '100%', minHeight: node.layout?.minHeight ?? 160 }}>
           <div style={{
             display: 'grid',
             gridTemplateColumns: `repeat(${node.grid?.columns ?? 12}, minmax(0, 1fr))`,
@@ -436,7 +456,7 @@ const DocumentNodeContent = ({
             rowGap: node.grid?.rowGap ?? 0,
             alignItems: 'stretch',
             alignContent: 'start',
-            minHeight: Math.max((node.layout?.minHeight || 160) - ((node.style?.padding ?? 8) * 2), 96),
+            minHeight: Math.max((node.layout?.minHeight ?? 160) - ((node.style?.padding ?? 8) * 2), 0),
           }}>
             {renderChildren
               ? renderChildren(node.children ?? [])

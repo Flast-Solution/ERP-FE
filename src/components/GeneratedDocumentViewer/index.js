@@ -23,8 +23,7 @@ import {
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { useReactToPrint } from 'react-to-print'
-import DocumentNodeContent from '@/components/DocumentTemplateEditor/DocumentNodeContent'
-import { A4ContentGrid, A4Page } from '@/components/DocumentTemplateEditor/styles'
+import DocumentTemplateContent from '@/components/DocumentTemplateEditor/DocumentTemplateContent'
 import { getValueByPath } from '@/components/DocumentTemplateEditor/utils'
 import {
   DiscussionComposer,
@@ -187,6 +186,7 @@ const GeneratedDocumentViewer = ({
         .generated-document-page tr,
         .generated-document-page img { break-inside: avoid; }
         .generated-document-page thead { display: table-header-group; }
+        .generated-document-page + .generated-document-page { break-before: page; }
       }
     `,
   })
@@ -269,62 +269,39 @@ const GeneratedDocumentViewer = ({
         await document.fonts.ready
       }
 
-      const canvas = await html2canvas(documentRef.current, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: '#ffffff',
-        logging: false,
-      })
-      const pdf = new jsPDF({
-        orientation,
-        unit: 'mm',
-        format: 'a4',
-        compress: true,
-      })
-      const pagePixelHeight = Math.max(1, Math.floor(canvas.width * pageHeight / pageWidth))
+      const pages = Array.from(documentRef.current.querySelectorAll('.generated-document-page'))
+      const absolute = template?.layout?.mode === 'absolute'
+      let pdf
       let pageIndex = 0
-      const pageSlices = getPdfPageSlices(documentRef.current, canvas.height, pagePixelHeight)
+      for (const [index, pageElement] of pages.entries()) {
+        const canvas = await html2canvas(pageElement, {
+          scale: 2, useCORS: true, allowTaint: false, backgroundColor: '#ffffff', logging: false,
+        })
+        const width = absolute && template.pages?.[index]?.width ? template.pages[index].width * 25.4 / 96 : pageWidth
+        const height = absolute && template.pages?.[index]?.height ? template.pages[index].height * 25.4 / 96 : pageHeight
+        const pageOrientation = width > height ? 'landscape' : 'portrait'
+        const format = absolute ? [width, height] : 'a4'
+        if (!pdf) pdf = new jsPDF({ orientation: pageOrientation, unit: 'mm', format, compress: true })
+        const pageSlices = absolute
+          ? [{ offset: 0, height: canvas.height }]
+          : getPdfPageSlices(pageElement, canvas.height, Math.max(1, Math.floor(canvas.width * height / width)))
 
-      for (const pageSlice of pageSlices) {
-        const offsetY = pageSlice.offset
-        const sliceHeight = pageSlice.height
-        const pageCanvas = document.createElement('canvas')
-        const pageContext = pageCanvas.getContext('2d')
-
-        pageCanvas.width = canvas.width
-        pageCanvas.height = sliceHeight
-        pageContext.fillStyle = '#ffffff'
-        pageContext.fillRect(0, 0, pageCanvas.width, pageCanvas.height)
-        pageContext.drawImage(
-          canvas,
-          0,
-          offsetY,
-          canvas.width,
-          sliceHeight,
-          0,
-          0,
-          canvas.width,
-          sliceHeight,
-        )
-
-        if (pageIndex > 0) pdf.addPage('a4', orientation)
-
-        const imageHeight = sliceHeight * pageWidth / canvas.width
-        pdf.addImage(
-          pageCanvas.toDataURL('image/jpeg', 0.95),
-          'JPEG',
-          0,
-          0,
-          pageWidth,
-          imageHeight,
-          undefined,
-          'FAST',
-        )
-        pageIndex += 1
+        for (const pageSlice of pageSlices) {
+          const pageCanvas = document.createElement('canvas')
+          const pageContext = pageCanvas.getContext('2d')
+          pageCanvas.width = canvas.width
+          pageCanvas.height = pageSlice.height
+          pageContext.fillStyle = '#ffffff'
+          pageContext.fillRect(0, 0, pageCanvas.width, pageCanvas.height)
+          pageContext.drawImage(canvas, 0, pageSlice.offset, canvas.width, pageSlice.height, 0, 0, canvas.width, pageSlice.height)
+          if (pageIndex > 0) pdf.addPage(format, pageOrientation)
+          pdf.addImage(pageCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, width,
+            absolute ? height : pageSlice.height * width / canvas.width, undefined, 'FAST')
+          pageIndex += 1
+        }
       }
-
-      pdf.save(getPdfFileName(template, title, data))
+      if (!pdf) throw new Error('Chứng từ không có trang để xuất')
+      pdf.save(getPdfFileName(template, title, documentData))
       message.success('Đã tải chứng từ PDF')
     } catch (error) {
       console.error('Không thể tạo PDF từ chứng từ', error)
@@ -443,6 +420,7 @@ const GeneratedDocumentViewer = ({
               </Tooltip>
               <Tooltip title="Tải xuống PDF">
                 <Button
+                  aria-label="Tải xuống PDF"
                   type="text"
                   icon={<DownloadOutlined />}
                   disabled={!template}
@@ -462,42 +440,16 @@ const GeneratedDocumentViewer = ({
               ) : null}
               {template ? (
                 <PageZoom $zoom={zoom} $orientation={orientation}>
-                  <A4Page
-                    ref={documentRef}
-                    className="generated-document-page"
-                    $margin={template.page?.margin}
-                    $orientation={orientation}
-                  >
-                    <A4ContentGrid
-                      $columns={template.layout?.columns}
-                      $columnGap={template.layout?.columnGap}
-                      $rowGap={template.layout?.rowGap}
-                    >
-                      {(template.nodes ?? []).map(node => (
-                        <div
-                          key={node.id}
-                          data-pdf-avoid-break={node.layout?.avoidPageBreak === false ? undefined : 'true'}
-                          style={{
-                            gridColumn: node.layout?.startNewRow
-                              ? `1 / span ${node.layout?.columnSpan ?? 12}`
-                              : `span ${node.layout?.columnSpan ?? 12}`,
-                            gridRow: `span ${node.layout?.rowSpan ?? 1}`,
-                            minWidth: 0,
-                            minHeight: node.layout?.minHeight || undefined,
-                          }}
-                        >
-                          <DocumentNodeContent
-                            node={node}
-                            data={documentData}
-                            preview
-                            editable={editableDocument}
-                            onTableCellChange={updateTableCell}
-                            onManualFieldChange={updateManualField}
-                          />
-                        </div>
-                      ))}
-                    </A4ContentGrid>
-                  </A4Page>
+                  <div ref={documentRef}>
+                    <DocumentTemplateContent
+                      template={template}
+                      data={documentData}
+                      pageClassName="generated-document-page"
+                      editable={editableDocument}
+                      onTableCellChange={updateTableCell}
+                      onManualFieldChange={updateManualField}
+                    />
+                  </div>
                 </PageZoom>
               ) : null}
             </DocumentCanvas>

@@ -1,9 +1,9 @@
 import React, { useRef } from 'react'
-import { Button, Drawer, Empty, Segmented, Space } from 'antd'
+import { Button, Drawer, Segmented, Space } from 'antd'
 import { FilePdfOutlined } from '@ant-design/icons'
 import { useReactToPrint } from 'react-to-print'
-import DocumentNodeContent from './DocumentNodeContent'
-import { A4ContentGrid, A4Page, CanvasViewport, CodePreview } from './styles'
+import DocumentTemplateContent from './DocumentTemplateContent'
+import { CanvasViewport, CodePreview } from './styles'
 
 const PreviewDrawer = ({ open, template, data, onClose }) => {
   const [mode, setMode] = React.useState('preview')
@@ -77,68 +77,7 @@ const PreviewDrawer = ({ open, template, data, onClose }) => {
       ) : (
         <CanvasViewport>
           <div ref={documentRef}>
-          {template.layout?.mode === 'absolute' ? (
-            (template.pages?.length ? template.pages : [{ pageNumber: 1, width: 794, height: 1123 }]).map(page => (
-              <A4Page
-                key={page.pageNumber}
-                className="document-pdf-page"
-                $customWidth={page.width}
-                $customHeight={page.height}
-                $margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
-              >
-                {(template.nodes ?? [])
-                  .filter(node => (node.layout?.absolute?.page ?? 1) === page.pageNumber)
-                  .map(node => {
-                    const position = node.layout?.absolute ?? {}
-                    return (
-                      <div
-                        key={node.id}
-                        data-pdf-avoid-break="true"
-                        style={{
-                          position: 'absolute',
-                          left: position.x ?? 0,
-                          top: position.y ?? 0,
-                          width: position.width ?? 100,
-                          height: position.height ?? 24,
-                          transform: `rotate(${position.rotation ?? 0}deg)`,
-                          transformOrigin: '0 0',
-                        }}
-                      >
-                        <DocumentNodeContent node={node} data={data} preview />
-                      </div>
-                    )
-                  })}
-              </A4Page>
-            ))
-          ) : (
-          <A4Page className="document-pdf-page" $margin={template.page?.margin} $orientation={orientation}>
-            <A4ContentGrid
-              $columns={template.layout?.columns}
-              $columnGap={template.layout?.columnGap}
-              $rowGap={template.layout?.rowGap}
-            >
-              {(template.nodes ?? []).length
-                ? template.nodes.map(node => (
-                  <div
-                    key={node.id}
-                    data-pdf-avoid-break={node.layout?.avoidPageBreak === false ? undefined : 'true'}
-                    style={{
-                      gridColumn: node.layout?.startNewRow
-                        ? `1 / span ${node.layout?.columnSpan ?? 12}`
-                        : `span ${node.layout?.columnSpan ?? 12}`,
-                      gridRow: `span ${node.layout?.rowSpan ?? 1}`,
-                      minWidth: 0,
-                      minHeight: node.layout?.minHeight || undefined,
-                      height: '100%',
-                    }}
-                  >
-                    <DocumentNodeContent node={node} data={data} preview />
-                  </div>
-                ))
-                : <div style={{ gridColumn: '1 / -1' }}><Empty description="Template chưa có thành phần" /></div>}
-            </A4ContentGrid>
-          </A4Page>
-          )}
+            <DocumentTemplateContent template={template} data={data} />
           </div>
         </CanvasViewport>
       )}

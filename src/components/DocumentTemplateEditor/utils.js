@@ -99,7 +99,7 @@ export const createDocumentNode = (type, dataSchema = []) => {
   }
 }
 
-export const createEmptyTemplate = ({ name = 'Mẫu chứng từ', documentType = 'invoice' } = {}) => ({
+export const createEmptyTemplate = ({ name = 'Mẫu chứng từ', documentType = 'quotation' } = {}) => ({
   schemaVersion: DOCUMENT_SCHEMA_VERSION,
   name,
   documentType,
@@ -123,6 +123,7 @@ export const getValueByPath = (source, path, fallback = '') => {
     if (!keys.length) return current
     if (current === undefined || current === null) return undefined
     if (Array.isArray(current)) {
+      if (/^\d+$/.test(keys[0])) return resolvePath(current[Number(keys[0])], keys.slice(1))
       return current.flatMap(item => {
         const itemValue = resolvePath(item, keys)
         if (itemValue === undefined || itemValue === null) return []
@@ -151,6 +152,13 @@ export const formatBindingValue = (value, format = 'text') => {
     const numericValue = Number(value)
     return Number.isFinite(numericValue) ? numericValue.toLocaleString('vi-VN') : value
   }
+  if (format === 'number_en' || format === 'decimal_en') {
+    const numericValue = Number(value)
+    const decimals = format === 'decimal_en' ? 2 : undefined
+    return Number.isFinite(numericValue)
+      ? numericValue.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+      : value
+  }
   if (format === 'currency') {
     const numericValue = Number(value)
     return Number.isFinite(numericValue)
@@ -164,10 +172,33 @@ export const formatBindingValue = (value, format = 'text') => {
   return String(value)
 }
 
+const normalizeSkuAttributeLabel = value => String(value ?? '')
+  .trim()
+  .replace(/\s+/g, ' ')
+  .toLocaleUpperCase('vi-VN')
+
+// Supports both table-relative paths and absolute paths for PDF text blocks.
+export const resolveBindingValue = (source, binding, skuAttributeLabel, fallback = '') => {
+  const keys = String(binding || '').split('.')
+  const skuIndex = keys.indexOf('skuDetails')
+  const label = normalizeSkuAttributeLabel(skuAttributeLabel)
+  if (skuIndex < 0 || !label) return getValueByPath(source, binding, fallback)
+
+  const owners = skuIndex === 0 ? source : getValueByPath(source, keys.slice(0, skuIndex).join('.'), null)
+  const resolveOwner = owner => {
+    const attribute = (Array.isArray(owner?.skuDetails) ? owner.skuDetails : []).find(
+      item => normalizeSkuAttributeLabel(item?.text) === label,
+    )
+    return getValueByPath(attribute, keys.slice(skuIndex + 1).join('.'), fallback)
+  }
+  return Array.isArray(owners) ? owners.map(resolveOwner) : resolveOwner(owners)
+}
+
 export const resolveNodeValue = (node, data) => formatBindingValue(
-  getValueByPath(
+  resolveBindingValue(
     data,
     node?.binding,
+    node?.pdfContentMode === 'binding' ? '' : node?.skuAttributeLabel,
     node?.mockValue !== undefined && node?.mockValue !== '' ? node.mockValue : (node?.fallback ?? ''),
   ),
   node?.format,

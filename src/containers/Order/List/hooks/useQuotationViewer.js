@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import { message } from 'antd'
-import DocumentTemplateService from '@/services/DocumentTemplateService'
+import DocumentTemplateService, { getActiveDocumentTemplates, parseDocumentTemplateData } from '@/services/DocumentTemplateService'
 import { SUCCESS_CODE } from '@/configs'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { QUOTATION_APPROVAL_STATUS } from '../constants'
@@ -39,9 +39,10 @@ const useQuotationViewer = ({ approvalEnabled = false, currentUserId } = {}) => 
     setQuoteViewerOpen(true)
     setQuoteLoading(true)
     try {
-      const [response, checkResponse] = await Promise.all([
+      const [response, checkResponse, templatesResponse] = await Promise.all([
         DocumentTemplateService.fetchInvoice(order.id),
         approvalEnabled ? DocumentTemplateService.checkInvoice(order.id) : Promise.resolve(null),
+        DocumentTemplateService.fetchTemplates(),
       ])
       if (requestId !== loadRequestRef.current) return
       if (Number(response?.errorCode) !== SUCCESS_CODE) {
@@ -50,10 +51,14 @@ const useQuotationViewer = ({ approvalEnabled = false, currentUserId } = {}) => 
       if (approvalEnabled && Number(checkResponse?.errorCode) !== SUCCESS_CODE) {
         throw new Error(checkResponse?.message || 'Không kiểm tra được thông tin phê duyệt báo giá')
       }
-      const templateData = JSON.parse(response?.data?.templateData || '')
-      if (!templateData || !Array.isArray(templateData.nodes)) {
-        throw new Error('Template báo giá không hợp lệ')
+      if (Number(templatesResponse?.errorCode) !== SUCCESS_CODE || !Array.isArray(templatesResponse?.data)) {
+        throw new Error(templatesResponse?.message || 'Không tải được danh sách mẫu báo giá')
       }
+      // Use the invoice endpoint for order data, but choose the template by the
+      // quotation action's explicit type instead of its implicit templateData.
+      const [templateRecord] = getActiveDocumentTemplates(templatesResponse.data, 'quotation', 'Mẫu báo giá')
+      if (!templateRecord) throw new Error('Chưa có mẫu báo giá loại quotation đang sử dụng')
+      const templateData = parseDocumentTemplateData(templateRecord.data, 'Template báo giá không hợp lệ')
       const customerOrder = response.data.customerOrder
       if (approvalEnabled) {
         const approval = checkResponse?.data?.aproval ?? checkResponse?.data ?? customerOrder?.aproval ?? null
