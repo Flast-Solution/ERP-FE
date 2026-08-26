@@ -10,6 +10,8 @@ import {
   Tooltip,
 } from 'antd'
 import {
+  CheckOutlined,
+  CloseCircleOutlined,
   CloseOutlined,
   DownloadOutlined,
   MinusOutlined,
@@ -142,6 +144,12 @@ const GeneratedDocumentViewer = ({
   commentSubmitting = false,
   onSubmitDocument,
   documentSubmitting = false,
+  toolbarContent,
+  allowDocumentSubmit = false,
+  readOnly = false,
+  onApproveDocument,
+  onRejectDocument,
+  reviewDisabled = false,
   onClose,
 }) => {
   const documentRef = useRef(null)
@@ -203,10 +211,12 @@ const GeneratedDocumentViewer = ({
     if (open) setDocumentData(data)
   }, [data, open])
 
-  const editableDocument = Boolean(onSubmitDocument && hasManualDocumentFields(template?.nodes))
+  const editableDocument = Boolean(!readOnly && !loading && !documentSubmitting
+    && (onSubmitDocument || onApproveDocument || onRejectDocument)
+    && hasManualDocumentFields(template?.nodes))
 
   const updateTableCell = ({ node, rowIndex, column, value }) => {
-    if (!node?.source || !column?.binding) return
+    if (!editableDocument || !node?.source || !column?.binding) return
     setDocumentData(currentData => {
       const rows = getValueByPath(currentData, node.source, [])
       if (!Array.isArray(rows) || !rows[rowIndex]) return currentData
@@ -218,7 +228,7 @@ const GeneratedDocumentViewer = ({
   }
 
   const updateManualField = (path, value) => {
-    if (!path) return
+    if (!editableDocument || !path) return
     setDocumentData(currentData => setValueByPath(currentData, path, value))
   }
 
@@ -368,20 +378,42 @@ const GeneratedDocumentViewer = ({
         {activePane === 'document' ? (
           <DocumentPane>
           <DocumentToolbar>
-            <FileInfo>
+            {toolbarContent ?? <FileInfo>
               <span className="file-dot" />
               <span className="file-name">{pdfFileName}</span>
               <span className="page-count">Trang 1</span>
-            </FileInfo>
+            </FileInfo>}
             <ToolbarActions>
-              {editableDocument ? (
+              {!readOnly && onSubmitDocument && (editableDocument || allowDocumentSubmit) ? (
                 <Button
                   type="primary"
                   icon={<SaveOutlined />}
                   loading={documentSubmitting}
+                  disabled={loading || !template}
                   onClick={() => onSubmitDocument(documentData)}
                 >
                   Lưu báo giá
+                </Button>
+              ) : null}
+              {onApproveDocument ? (
+                <Button
+                  type="primary"
+                  icon={<CheckOutlined />}
+                  loading={documentSubmitting}
+                  disabled={reviewDisabled || loading || documentSubmitting || !template}
+                  onClick={() => onApproveDocument(documentData)}
+                >
+                  Duyệt
+                </Button>
+              ) : null}
+              {onRejectDocument ? (
+                <Button
+                  danger
+                  icon={<CloseCircleOutlined />}
+                  disabled={reviewDisabled || loading || documentSubmitting || !template}
+                  onClick={() => onRejectDocument(documentData)}
+                >
+                  Từ chối
                 </Button>
               ) : null}
               <div className="zoom-control">

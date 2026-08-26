@@ -1,6 +1,7 @@
 import cloneDeep from 'lodash/cloneDeep'
 import get from 'lodash/get'
 import set from 'lodash/set'
+import { QUOTATION_APPROVAL_STATUS } from '../constants'
 
 const hasOwn = (object, key) => Object.prototype.hasOwnProperty.call(object, key)
 const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -87,7 +88,7 @@ const writeManualValue = (owner, key, value) => {
   }
 }
 
-export const buildQuotationPayload = (data, template, originalOrder) => {
+export const buildQuotationPayload = (data, template, originalOrder, approverId, approvalStatus = QUOTATION_APPROVAL_STATUS.PENDING) => {
   // The viewer overlays manual values on bindings for rendering/formulas. Start
   // from the API snapshot so those overlays never overwrite business fields.
   const order = cloneDeep(originalOrder)
@@ -113,6 +114,9 @@ export const buildQuotationPayload = (data, template, originalOrder) => {
       address: order.customerAddress ?? null,
     },
     details,
+    ...(approverId != null ? {
+      aproval: { status: approvalStatus, type: 'quote', userApproval: Number(approverId) },
+    } : {}),
     shippingCost: order.shippingCost ?? null,
     customerNote: order.customerNote ?? null,
     quoteConfig: order.quoteConfig ?? null,
@@ -137,6 +141,7 @@ export const mergeSavedQuotationOrder = (originalOrder, payload, responseData) =
   const details = Array.isArray(saved.details) ? saved.details : payload.details
   return {
     ...originalOrder,
+    ...(payload.aproval ? { aproval: payload.aproval } : {}),
     ...saved,
     quoteConfig: mergeQuoteConfig(payload.quoteConfig, saved.quoteConfig),
     details: details.map(detail => {

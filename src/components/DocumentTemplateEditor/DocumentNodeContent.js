@@ -1,5 +1,6 @@
 import React from 'react'
 import { Input } from 'antd'
+import { resolveRuntimeAssetUrl } from '@/containers/PreviewModal/uploadUtils'
 import { COMPONENT_TYPES } from './constants'
 import { formatBindingValue, getValueByPath, resolveNodeValue } from './utils'
 import { TablePlaceholder } from './styles'
@@ -476,7 +477,7 @@ const DocumentNodeContent = ({
       return (
         <div style={style}>
           {node.src
-            ? <img src={node.src} alt={node.alt ?? ''} style={{ maxWidth: '100%', height: node.height, objectFit: 'contain' }} />
+            ? <img src={resolveRuntimeAssetUrl(node.src)} alt={node.alt ?? ''} style={{ maxWidth: '100%', height: node.height, objectFit: 'contain' }} />
             : <div style={{ height: node.height, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f6', color: '#9ca3af' }}>{node.type === COMPONENT_TYPES.LOGO ? 'Logo' : 'Hình ảnh'}</div>}
         </div>
       )

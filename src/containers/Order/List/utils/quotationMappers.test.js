@@ -47,6 +47,27 @@ const makeOrder = () => ({
 })
 
 describe('quotation quoteConfig mapping', () => {
+  it('sends the selected quote approver beside details using the exact BE field name', () => {
+    const order = makeOrder()
+    const data = createQuotationData(order, template)
+    const payload = buildQuotationPayload(data, template, order, 1649)
+    expect(payload.aproval).toEqual({ status: 1, type: 'quote', userApproval: 1649 })
+    expect(payload.details).toHaveLength(2)
+    expect(payload.quoteConfig).not.toHaveProperty('aproval')
+    expect(mergeSavedQuotationOrder(order, payload, { id: order.id }).aproval).toEqual(payload.aproval)
+  })
+
+  it.each([0, 2])('supports an explicit approval decision status %i', status => {
+    const order = makeOrder()
+    const payload = buildQuotationPayload(createQuotationData(order, template), template, order, 1649, status)
+    expect(payload.aproval).toEqual({ status, type: 'quote', userApproval: 1649 })
+  })
+
+  it('does not add approval to other quotation flows', () => {
+    const order = makeOrder()
+    expect(buildQuotationPayload(createQuotationData(order, template), template, order)).not.toHaveProperty('aproval')
+  })
+
   it('round-trips manual fields in nested templates without adding them to business data', () => {
     const order = makeOrder()
     const data = createQuotationData(order, template)
