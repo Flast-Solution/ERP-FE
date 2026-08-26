@@ -8,3 +8,5 @@ export const ORDER_WORKFLOW_ENTITY_TYPE = 'order'
 export const LOT_WORKFLOW_ENTITY_TYPE = 'WAREHOUSE_PARCEL'
 export const PRODUCT_WORKFLOW_ENTITY_TYPE = 'product'
 export const LEAD_WORKFLOW_ENTITY_TYPE = 'lead'
+
+export const QUOTATION_APPROVAL_STATUS = { DRAFT: 0, PENDING: 1, APPROVED: 2 }

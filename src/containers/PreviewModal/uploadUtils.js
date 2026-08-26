@@ -16,6 +16,26 @@ const isAbsoluteUploadUrl = (value = '') => (
   /^https?:\/\//i.test(String(value)) || String(value).startsWith('/api/')
 )
 
+const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1', '[::1]'])
+
+export const resolveRuntimeAssetUrl = (value) => {
+  const url = toUploadText(value)
+  if (!url || /^(?:data:|blob:|\/\/)/i.test(url)) return url
+  if (!/^https?:\/\//i.test(url)) return url
+
+  try {
+    const parsedUrl = new URL(url)
+    // Templates created in development used to persist the dev origin. Keep
+    // only the application-relative URL so the current deployed host is used.
+    if (LOCAL_HOSTNAMES.has(parsedUrl.hostname) && parsedUrl.pathname.startsWith('/api/')) {
+      return `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`
+    }
+  } catch {
+    return url
+  }
+  return url
+}
+
 const toUploadText = value => {
   if (typeof value !== 'string' && typeof value !== 'number') return ''
   const normalized = String(value).trim()
@@ -43,9 +63,9 @@ export const resolveUploadFilename = (item) => {
 export const resolveUploadUrl = (item) => {
   const filename = resolveUploadFilename(item)
   if (!filename) return ''
-  if (isAbsoluteUploadUrl(filename)) return filename
+  if (isAbsoluteUploadUrl(filename)) return resolveRuntimeAssetUrl(filename)
   const baseUrl = String(axios.defaults.baseURL || '/api').replace(/\/$/, '')
-  return `${baseUrl}/upload/folder/view?filename=${encodeURIComponent(filename)}`
+  return resolveRuntimeAssetUrl(`${baseUrl}/upload/folder/view?filename=${encodeURIComponent(filename)}`)
 }
 
 export const toUploadFile = (item, index) => {

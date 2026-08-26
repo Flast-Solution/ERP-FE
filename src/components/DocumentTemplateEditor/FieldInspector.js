@@ -2,7 +2,11 @@ import React from 'react'
 import axios from 'axios'
 import { Button, Checkbox, Col, ColorPicker, Empty, Form, Input, InputNumber, Row, Select, Space, Switch, Upload, message } from 'antd'
 import { DeleteOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons'
-import { extractUploadItems, resolveUploadUrl } from '@/containers/PreviewModal/uploadUtils'
+import {
+  extractUploadItems,
+  resolveRuntimeAssetUrl,
+  resolveUploadUrl,
+} from '@/containers/PreviewModal/uploadUtils'
 import {
   ALIGN_OPTIONS,
   COLUMN_SPAN_OPTIONS,
@@ -163,7 +167,7 @@ const DocumentImageUploader = ({ node, onChange }) => {
     <div style={{ marginBottom: 14 }}>
       {node.src ? (
         <div style={{ marginBottom: 10, padding: 10, border: '1px solid #e5e7eb', borderRadius: 6, background: '#f8fafc', textAlign: 'center' }}>
-          <img src={node.src} alt={node.alt || ''} style={{ display: 'block', maxWidth: '100%', maxHeight: 120, margin: '0 auto', objectFit: 'contain' }} />
+          <img src={resolveRuntimeAssetUrl(node.src)} alt={node.alt || ''} style={{ display: 'block', maxWidth: '100%', maxHeight: 120, margin: '0 auto', objectFit: 'contain' }} />
         </div>
       ) : null}
       <Space wrap>

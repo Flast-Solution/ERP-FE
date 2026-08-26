@@ -1,9 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Space, Tag } from 'antd'
+import useGetMe from '@/hooks/useGetMe'
 import { RestList } from '@flast-erp/core/components'
 import { useGetList } from '@flast-erp/core/hooks'
 import { dateFormatOnSubmit, f5List, InAppEvent, RequestUtils } from '@flast-erp/core/utils'
 import GeneratedDocumentViewer from '@/components/GeneratedDocumentViewer'
+import QuotationApproverSelect from './components/QuotationApproverSelect'
 import { HASH_MODAL } from '@/configs'
 import Filter from '../Filter'
 import createOrderColumns from './columns/createOrderColumns'
@@ -40,6 +43,12 @@ const QUOTATION_COMMENT_MOCKS = [
   },
 ]
 
+const QUOTATION_STATUS_META = {
+  0: { label: 'Chưa duyệt', color: 'default' },
+  1: { label: 'Chờ duyệt', color: 'processing' },
+  2: { label: 'Đã duyệt', color: 'success' },
+}
+
 const useOpportunityOrderList = ({ queryParams, ...options }) => {
   const opportunityQueryParams = useMemo(() => ({
     ...queryParams,
@@ -65,6 +74,7 @@ const ListOrder = ({
   detailDrawerTitle,
 }) => {
   const navigate = useNavigate()
+  const { user } = useGetMe()
   const [copiedIndex, setCopiedIndex] = useState(null)
   const isOrderList = orderMode || filter.type === 'order'
   const isOpportunityList = filter.type === 'cohoi'
@@ -138,10 +148,18 @@ const ListOrder = ({
     quoteData,
     quoteOrder,
     quoteSaving,
+    quoteApproverId,
+    quoteApprovalStatus,
+    quoteReadOnly,
+    quoteReviewDisabled,
+    isQuoteApprover,
+    setQuoteApproverId,
     openQuotationViewer,
     saveQuotation,
+    approveQuotation,
+    rejectQuotation,
     closeQuotationViewer,
-  } = useQuotationViewer()
+  } = useQuotationViewer({ approvalEnabled: isOpportunityList && !isOrderList, currentUserId: user?.id })
 
   const { onData } = useOrderWorkflowData(
     isOrderList || isOpportunityList
@@ -247,7 +265,27 @@ const ListOrder = ({
         comments={QUOTATION_COMMENT_MOCKS}
         title={`Báo giá${quoteOrder?.code ? ` - ${quoteOrder.code}` : ''}`}
         documentSubmitting={quoteSaving}
-        onSubmitDocument={saveQuotation}
+        readOnly={isOrderList || quoteReadOnly}
+        onSubmitDocument={isOrderList || isQuoteApprover || quoteReadOnly || quoteLoading || !quoteTemplate ? undefined : saveQuotation}
+        onApproveDocument={isQuoteApprover ? approveQuotation : undefined}
+        onRejectDocument={isQuoteApprover ? rejectQuotation : undefined}
+        reviewDisabled={quoteReviewDisabled}
+        allowDocumentSubmit={isOpportunityList && !isOrderList}
+        toolbarContent={isOpportunityList && !isOrderList ? (
+          <Space wrap>
+            <Tag color={QUOTATION_STATUS_META[quoteApprovalStatus]?.color}>
+              {quoteLoading ? 'Đang kiểm tra...' : QUOTATION_STATUS_META[quoteApprovalStatus]?.label ?? 'Không xác định trạng thái'}
+            </Tag>
+            {!isQuoteApprover && !quoteLoading && quoteTemplate ? (
+              <QuotationApproverSelect
+                key={quoteOrder?.id}
+                value={quoteApproverId}
+                onChange={setQuoteApproverId}
+                disabled={quoteLoading || quoteSaving || !quoteTemplate || quoteReadOnly}
+              />
+            ) : null}
+          </Space>
+        ) : undefined}
         onClose={closeQuotationViewer}
       />
     </>
