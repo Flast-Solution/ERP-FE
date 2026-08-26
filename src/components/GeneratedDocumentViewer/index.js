@@ -24,6 +24,7 @@ import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { useReactToPrint } from 'react-to-print'
 import DocumentTemplateContent from '@/components/DocumentTemplateEditor/DocumentTemplateContent'
+import { hasHtmlManualFields, isSafeBindingPath } from '../DocumentTemplateEditor/html/model'
 import { getValueByPath } from '@/components/DocumentTemplateEditor/utils'
 import {
   DiscussionComposer,
@@ -52,6 +53,7 @@ const hasManualDocumentFields = (nodes = []) => nodes.some(node => (
 ))
 
 const setValueByPath = (source, path, value) => {
+  if (!isSafeBindingPath(path)) return source
   const keys = String(path || '').split('.').filter(Boolean)
   if (!keys.length) return source
 
@@ -213,7 +215,7 @@ const GeneratedDocumentViewer = ({
 
   const editableDocument = Boolean(!readOnly && !loading && !documentSubmitting
     && (onSubmitDocument || onApproveDocument || onRejectDocument)
-    && hasManualDocumentFields(template?.nodes))
+    && (hasManualDocumentFields(template?.nodes) || hasHtmlManualFields(template)))
 
   const updateTableCell = ({ node, rowIndex, column, value }) => {
     if (!editableDocument || !node?.source || !column?.binding) return

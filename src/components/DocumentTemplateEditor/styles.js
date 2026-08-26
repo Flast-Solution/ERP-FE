@@ -15,6 +15,7 @@ export const EditorToolbar = styled.div`
   min-height: 58px;
   padding: 10px 16px;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;

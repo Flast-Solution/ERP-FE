@@ -694,11 +694,16 @@ const FieldInspector = ({ node, template, dataSchema = [], onChange, onTemplateC
                 <Col span={8}><Form.Item label="Màu viền"><ColorPicker value={node.tableStyle?.borderColor ?? '#111827'} onChange={(_, borderColor) => onChange({ tableStyle: { ...(node.tableStyle ?? {}), borderColor } })} /></Form.Item></Col>
               </Row>
               <Form.Item label="Màu nền header"><ColorPicker value={node.tableStyle?.headerBackgroundColor ?? '#f3f4f6'} onChange={(_, headerBackgroundColor) => onChange({ tableStyle: { ...(node.tableStyle ?? {}), headerBackgroundColor } })} /></Form.Item>
+              <Row gutter={8}>
+                <Col span={12}><Form.Item label="Cỡ chữ header"><InputNumber aria-label="Cỡ chữ header" min={8} max={72} value={node.tableStyle?.headerFontSize ?? node.style?.fontSize ?? 12} onChange={headerFontSize => onChange({ tableStyle: { ...(node.tableStyle ?? {}), headerFontSize } })} /></Form.Item></Col>
+                <Col span={12}><Form.Item label="Giãn dòng header"><InputNumber aria-label="Giãn dòng header" min={0.8} max={3} step={0.05} value={node.tableStyle?.headerLineHeight ?? 1.25} onChange={headerLineHeight => onChange({ tableStyle: { ...(node.tableStyle ?? {}), headerLineHeight } })} /></Form.Item></Col>
+              </Row>
+              <div style={{ marginBottom: 12, color: '#64748b', fontSize: 12 }}>Tiêu đề tự xuống dòng khi ô hẹp. Có thể Enter trong tên cột để chủ động ngắt dòng; tăng độ rộng (%) cho cột có tiêu đề dài.</div>
               <InspectorTitle>Cột dữ liệu</InspectorTitle>
               {(node.columns ?? []).map(column => (
                 <div key={column.id} style={{ padding: 8, marginBottom: 8, background: '#f8fafc', borderRadius: 6 }}>
                   <Row gutter={6}>
-                    <Col span={20}><Input value={column.title} onChange={event => updateColumn(column.id, { title: event.target.value })} /></Col>
+                    <Col span={20}><Input.TextArea aria-label={`Tiêu đề cột ${column.id}`} autoSize={{ minRows: 1, maxRows: 4 }} value={column.title} onChange={event => updateColumn(column.id, { title: event.target.value })} /></Col>
                     <Col span={4}><Button danger type="text" icon={<DeleteOutlined />} onClick={() => onChange({ columns: node.columns.filter(item => item.id !== column.id) })} /></Col>
                   </Row>
                   <Select
@@ -776,7 +781,7 @@ const FieldInspector = ({ node, template, dataSchema = [], onChange, onTemplateC
                   </Space>
                   {(headerRow.cells ?? []).map(cell => (
                     <Row key={cell.id} gutter={6} style={{ marginBottom: 6 }}>
-                      <Col span={12}><Input value={cell.title} placeholder="Tiêu đề ô" onChange={event => updateHeaderCell(headerRow.id, cell.id, { title: event.target.value })} /></Col>
+                      <Col span={12}><Input.TextArea aria-label={`Tiêu đề ô header ${cell.id}`} autoSize={{ minRows: 1, maxRows: 4 }} value={cell.title} placeholder="Tiêu đề ô" onChange={event => updateHeaderCell(headerRow.id, cell.id, { title: event.target.value })} /></Col>
                       <Col span={5}><InputNumber min={1} max={24} addonBefore="C" value={cell.colSpan || 1} onChange={colSpan => updateHeaderCell(headerRow.id, cell.id, { colSpan })} style={{ width: '100%' }} /></Col>
                       <Col span={5}><InputNumber min={1} max={20} addonBefore="R" value={cell.rowSpan || 1} onChange={rowSpan => updateHeaderCell(headerRow.id, cell.id, { rowSpan })} style={{ width: '100%' }} /></Col>
                       <Col span={2}><Button danger type="text" icon={<DeleteOutlined />} onClick={() => onChange({ headerRows: node.headerRows.map(row => row.id === headerRow.id ? { ...row, cells: row.cells.filter(item => item.id !== cell.id) } : row) })} /></Col>

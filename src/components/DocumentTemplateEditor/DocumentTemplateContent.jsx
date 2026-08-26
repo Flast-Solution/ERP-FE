@@ -2,9 +2,11 @@ import React from 'react'
 import { Empty } from 'antd'
 import DocumentNodeContent from './DocumentNodeContent'
 import { A4ContentGrid, A4Page } from './styles'
+import HtmlTemplateContent from './html/HtmlTemplateContent'
 
 // Shared layout for preview, invoices and quotations; read-only by default.
 const DocumentTemplateContent = ({ template, data, editable = false, onTableCellChange, onManualFieldChange, pageClassName = '' }) => {
+  if (template.layout?.mode === 'html') return <HtmlTemplateContent template={template} data={data} editable={editable} onManualFieldChange={onManualFieldChange} pageClassName={pageClassName} />
   const renderNode = node => <DocumentNodeContent node={node} data={data} preview editable={editable} onTableCellChange={onTableCellChange} onManualFieldChange={onManualFieldChange} />
   if (template.layout?.mode === 'absolute') {
     return (template.pages?.length ? template.pages : [{ pageNumber: 1, width: 794, height: 1123 }]).map(page => (

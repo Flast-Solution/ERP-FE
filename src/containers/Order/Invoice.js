@@ -78,7 +78,7 @@ const Invoice = ({ data }) => {
       return { templateError: 'Mẫu hoá đơn không hợp lệ. Vui lòng kiểm tra lại trong Tạo chứng từ.' }
     }
   }, [templates, selectedId])
-  const documentData = useMemo(() => createInvoiceData(data), [data])
+  const documentData = useMemo(() => createInvoiceData(data, template), [data, template])
   const orientation = template?.page?.orientation === 'landscape' ? 'landscape' : 'portrait'
   const printInvoice = useReactToPrint({
     contentRef,

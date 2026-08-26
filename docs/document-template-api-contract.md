@@ -178,3 +178,7 @@ Khi chỉnh sửa, `templateId` là ID hiện tại và `sourceTemplateId = null
 ```
 
 `viewUrl` trả `Content-Type: application/pdf` và `Content-Disposition: inline`. `downloadUrl` trả `Content-Disposition: attachment`. Nếu chưa có PDF, BE trả `data: []`.
+
+### Mẫu HTML + JSON
+
+FE hỗ trợ `data.layout.mode = "html"`, `data.nodes = []` và `data.htmlTemplate` chứa HTML/CSS đã kiểm tra, cấu hình fields/repeats và dữ liệu minh họa tùy chọn. BE lưu nguyên object này như các mẫu hiện có; không cần endpoint mới. Chi tiết định dạng gói import, mapping SKU/nhập tay và giới hạn CSS tại [html-document-templates.md](./html-document-templates.md).

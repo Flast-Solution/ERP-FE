@@ -2,6 +2,7 @@ import cloneDeep from 'lodash/cloneDeep'
 import get from 'lodash/get'
 import set from 'lodash/set'
 import { QUOTATION_APPROVAL_STATUS } from '../constants'
+import { getHtmlManualDefaults, getHtmlManualPaths } from '../../../../components/DocumentTemplateEditor/html/model'
 
 const hasOwn = (object, key) => Object.prototype.hasOwnProperty.call(object, key)
 const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -23,7 +24,7 @@ const isSafePath = path => path && !path.split('.').some(
 
 // Use the same bindings as the viewer, including fields inside nested containers.
 const getManualPaths = (template, data) => {
-  const paths = new Set()
+  const paths = new Set(getHtmlManualPaths(template, data))
   const visit = nodes => (nodes ?? []).forEach(node => {
     if (node.type === 'dynamicTable') {
       const rows = get(data, node.source)
@@ -63,15 +64,24 @@ export const createQuotationData = (customerOrder, template) => {
       address: customerOrder?.customerAddress,
       mobile: customerOrder?.customerMobilePhone,
       email: customerOrder?.customerEmail,
+      ...customerOrder?.customer,
     },
   })
+  return restoreDocumentManualValues(data, template)
+}
+
+export const restoreDocumentManualValues = (source, template) => {
+  const data = cloneDeep(source)
+  const defaults = getHtmlManualDefaults(template, data)
   getManualPaths(template, data).forEach(path => {
     const { detail, key } = getFieldOwner(data, path)
-    const config = parseQuoteConfig((detail ?? customerOrder)?.quoteConfig)
+    const config = parseQuoteConfig((detail ?? data.customerOrder)?.quoteConfig)
     // hasOwn preserves explicit clearing ("", null), 0 and false. Missing saved
     // values fall back to the original data for older orders.
     if (isObject(config.manualValues) && hasOwn(config.manualValues, key)) {
       set(data, path, cloneDeep(config.manualValues[key]))
+    } else if (get(data, path) === undefined && hasOwn(defaults, path)) {
+      set(data, path, cloneDeep(defaults[path]))
     }
   })
   return data
