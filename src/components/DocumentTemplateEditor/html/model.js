@@ -43,7 +43,9 @@ export const normalizeHtmlDefinition = (definition, assets = {}) => {
   const css = [clean.css, sanitizeTemplateCss(definition.css || '', assets)].filter(Boolean).join('\n')
   const doc = new DOMParser().parseFromString(clean.html, 'text/html')
   const repeats = definition.repeats || {}
+  const sheetTables = definition.sheetTables || {}
   if (!object(repeats)) throw new Error('repeats phải là object')
+  if (!object(sheetTables)) throw new Error('sheetTables phải là object')
   const repeatElements = Array.from(doc.querySelectorAll('[data-repeat]'))
   const repeatIds = new Set()
   repeatElements.forEach(element => {
@@ -54,6 +56,15 @@ export const normalizeHtmlDefinition = (definition, assets = {}) => {
     repeatIds.add(id)
   })
   if (Object.keys(repeats).some(id => !repeatIds.has(id))) throw new Error('Cấu hình vùng lặp không có trong HTML')
+  const sheetTableIds = new Set()
+  Array.from(doc.querySelectorAll('[data-sheet-table]')).forEach(element => {
+    const id = element.dataset.sheetTable
+    if (element.tagName !== 'TABLE' || !safeId(id) || sheetTableIds.has(id) || !object(sheetTables[id])) {
+      throw new Error(`Bảng Excel không hợp lệ hoặc thiếu cấu hình: ${id}`)
+    }
+    sheetTableIds.add(id)
+  })
+  if (Object.keys(sheetTables).some(id => !sheetTableIds.has(id))) throw new Error('Cấu hình bảng Excel không có trong HTML')
   const fields = {}
   const elements = Array.from(doc.querySelectorAll('[data-field]'))
   if (!elements.length || elements.length > 300) throw new Error('Mẫu cần có từ 1 đến 300 trường data-field')
@@ -91,7 +102,7 @@ export const normalizeHtmlDefinition = (definition, assets = {}) => {
     }
   })
   if (Object.keys(definition.fields).some(id => !Object.prototype.hasOwnProperty.call(fields, id))) throw new Error('Có cấu hình field không tồn tại trong HTML')
-  return { version: 1, html: clean.html, css, fields, repeats, sampleData: object(definition.sampleData) ? definition.sampleData : {} }
+  return { version: 1, html: clean.html, css, fields, repeats, sheetTables, sampleData: object(definition.sampleData) ? definition.sampleData : {} }
 }
 
 export const createHtmlDocumentTemplate = (html, manifest, assets = {}, sampleData = {}) => {
@@ -102,7 +113,7 @@ export const createHtmlDocumentTemplate = (html, manifest, assets = {}, sampleDa
     schemaVersion: 3, name: String(manifest.name || 'Mẫu HTML'), documentType: type,
     page: { size: 'A4', orientation: manifest.orientation === 'landscape' ? 'landscape' : 'portrait', margin: { top: 0, right: 0, bottom: 0, left: 0 } },
     layout: { mode: 'html' }, nodes: [],
-    htmlTemplate: normalizeHtmlDefinition({ html, fields: manifest.fields, repeats: manifest.repeats || {}, sampleData }, assets),
+    htmlTemplate: normalizeHtmlDefinition({ html, fields: manifest.fields, repeats: manifest.repeats || {}, sheetTables: manifest.sheetTables || {}, sampleData }, assets),
   }
 }
 

@@ -147,6 +147,7 @@ const DocumentTemplateEditor = ({
           </Space>
           <Space wrap>
             <Button href={`${process.env.PUBLIC_URL || ''}/document-templates/htk-commercial-invoice.zip`} download icon={<DownloadOutlined />}>Tải mẫu HTML HTK</Button>
+            <Button href={`${process.env.PUBLIC_URL || ''}/document-templates/htk-packing-list.zip`} download icon={<DownloadOutlined />}>Tải mẫu PKL</Button>
             <Upload accept=".zip,application/zip" showUploadList={false} beforeUpload={handleHtmlImport}>
               <Button icon={<UploadOutlined />} loading={importingHtml}>Import HTML + JSON</Button>
             </Upload>

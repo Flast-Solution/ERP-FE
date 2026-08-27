@@ -1,12 +1,15 @@
-import React, { useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Button, Drawer, Segmented, Space } from 'antd'
 import { FilePdfOutlined } from '@ant-design/icons'
 import { useReactToPrint } from 'react-to-print'
 import DocumentTemplateContent from './DocumentTemplateContent'
+import SheetImportButton from './SheetImportButton'
+import { setSheetTableData } from './sheetImport'
 import { CanvasViewport, CodePreview } from './styles'
 
 const PreviewDrawer = ({ open, template, data, onClose }) => {
   const [mode, setMode] = React.useState('preview')
+  const [previewData, setPreviewData] = useState(data)
   const documentRef = useRef(null)
   const orientation = template.page?.orientation === 'landscape' ? 'landscape' : 'portrait'
   const pageWidth = orientation === 'landscape' ? 297 : 210
@@ -50,6 +53,7 @@ const PreviewDrawer = ({ open, template, data, onClose }) => {
       }
     `,
   })
+  useEffect(() => { if (open) setPreviewData(data) }, [data, open])
 
   return (
     <Drawer
@@ -59,6 +63,7 @@ const PreviewDrawer = ({ open, template, data, onClose }) => {
       onClose={onClose}
       extra={(
         <Space>
+          <SheetImportButton template={template} onImport={(id, table) => setPreviewData(current => setSheetTableData(current, id, table))} />
           <Segmented value={mode} onChange={setMode} options={[{ value: 'preview', label: 'Chứng từ' }, { value: 'json', label: 'Template JSON' }]} />
           <Button
             type="primary"
@@ -77,7 +82,7 @@ const PreviewDrawer = ({ open, template, data, onClose }) => {
       ) : (
         <CanvasViewport>
           <div ref={documentRef}>
-            <DocumentTemplateContent template={template} data={data} />
+            <DocumentTemplateContent template={template} data={previewData} />
           </div>
         </CanvasViewport>
       )}

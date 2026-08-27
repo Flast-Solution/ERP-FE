@@ -70,7 +70,8 @@ describe('Commercial Invoice HTK HTML package', () => {
     data.customerOrder.details[1].htmlFields = { shippingMarks: 'BOX-2' }
     const payload = buildQuotationPayload(data, template, order)
     expect(payload.quoteConfig.manualValues).toMatchObject({ 'customerOrder.htmlFields.contract': 'CONTRACT-1', 'customerOrder.htmlFields.invoiceDate': '' })
-    expect(payload.details[1].quoteConfig.manualValues).toEqual({ 'htmlFields.shippingMarks': 'BOX-2' })
+    expect(payload.quoteConfig.details['2'].manualValues).toEqual({ 'htmlFields.shippingMarks': 'BOX-2' })
+    expect(payload.details[1]).not.toHaveProperty('quoteConfig')
     expect(payload.details[1]).not.toHaveProperty('htmlFields')
     const reopened = createQuotationData({ ...order, ...payload }, template)
     expect(reopened.customerOrder.htmlFields.invoiceDate).toBe('')

@@ -1,6 +1,36 @@
 import { getActiveDocumentTemplates, parseDocumentTemplateData, resolveDocumentTemplateType } from '../../services/DocumentTemplateService'
 import { buildQuotationPayload, restoreDocumentManualValues } from './List/utils/quotationMappers'
 
+const object = value => value && typeof value === 'object' && !Array.isArray(value)
+const parseConfig = value => {
+  if (typeof value === 'string') {
+    try {
+      return parseConfig(JSON.parse(value))
+    } catch {
+      return {}
+    }
+  }
+  return object(value) ? value : {}
+}
+const templateKey = templateId => String(templateId)
+
+const getScopedConfig = (value, templateId) => {
+  const config = parseConfig(value)
+  if (object(config.invoiceTemplates)) {
+    return parseConfig(config.invoiceTemplates[templateKey(templateId)])
+  }
+  return config
+}
+
+const scopeInvoiceOrder = (order, templateId) => ({
+  ...order,
+  quoteConfig: getScopedConfig(order.quoteConfig, templateId),
+  details: (order.details || []).map(detail => ({
+    ...detail,
+    quoteConfig: getScopedConfig(detail.quoteConfig, templateId),
+  })),
+})
+
 export const getInvoiceTemplates = records => getActiveDocumentTemplates(records, 'invoice', 'Mẫu hoá đơn')
 
 export const parseInvoiceTemplate = record => {
@@ -42,8 +72,34 @@ export const createInvoiceOrder = ({ customerOrder = {}, customer, details }) =>
   }
 }
 
-export const createInvoiceData = (source, template) => {
-  const customerOrder = createInvoiceOrder(source)
+export const createInvoiceOrderFromResponse = (responseData, fallbackSource = {}) => {
+  const payload = object(responseData) ? responseData : {}
+  const fallbackOrder = createInvoiceOrder(fallbackSource)
+  const responseOrder = object(payload.customerOrder)
+    ? payload.customerOrder
+    : object(payload.order) ? payload.order : {}
+  const responseConfig = object(payload.config) ? payload.config : {}
+  const responseDetails = Array.isArray(payload.details)
+    ? payload.details
+    : Array.isArray(payload.data) ? payload.data : undefined
+
+  return createInvoiceOrder({
+    customerOrder: {
+      ...fallbackOrder,
+      ...responseOrder,
+      details: Array.isArray(responseOrder.details) ? responseOrder.details : fallbackOrder.details,
+      quoteConfig: responseConfig.quoteConfig
+        ?? responseOrder.quoteConfig
+        ?? fallbackOrder.quoteConfig,
+    },
+    customer: object(payload.customer) ? payload.customer : fallbackOrder.customer,
+    details: responseDetails,
+  })
+}
+
+export const createInvoiceData = (source, template, templateId) => {
+  const order = createInvoiceOrder(source)
+  const customerOrder = templateId == null ? order : scopeInvoiceOrder(order, templateId)
   return restoreDocumentManualValues({
     customerOrder,
     customer: {
@@ -60,3 +116,23 @@ export const createInvoiceData = (source, template) => {
 export const buildInvoicePayload = (data, template, originalOrder, approverId, approvalStatus) => (
   buildQuotationPayload(data, template, originalOrder, approverId, approvalStatus, 'invoice')
 )
+
+export const buildInvoiceTemplatePayload = (document, originalOrder, approverId, approvalStatus) => {
+  if (!document?.template || document.templateId == null) throw new Error('Mẫu hoá đơn không hợp lệ để lưu')
+  const scopedOrder = scopeInvoiceOrder(originalOrder, document.templateId)
+  const payload = buildInvoicePayload(document.data, document.template, scopedOrder, approverId, approvalStatus)
+  const originalConfig = parseConfig(originalOrder.quoteConfig)
+  const otherConfig = { ...originalConfig }
+  delete otherConfig.invoiceTemplates
+  delete otherConfig.templatesId
+  return {
+    ...payload,
+    templateId: document.templateId,
+    quoteConfig: {
+      ...otherConfig,
+      invoiceTemplates: {
+        [templateKey(document.templateId)]: parseConfig(payload.quoteConfig),
+      },
+    },
+  }
+}

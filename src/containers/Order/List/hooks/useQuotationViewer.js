@@ -54,11 +54,11 @@ const useQuotationViewer = ({ approvalEnabled = false, currentUserId } = {}) => 
       if (Number(templatesResponse?.errorCode) !== SUCCESS_CODE || !Array.isArray(templatesResponse?.data)) {
         throw new Error(templatesResponse?.message || 'Không tải được danh sách mẫu báo giá')
       }
-      // Use the invoice endpoint for order data, but choose the template by the
-      // quotation action's explicit type instead of its implicit templateData.
+      // Use the invoice endpoint for order data only. Choose the render template
+      // from the active quotation record returned by /erp/template/fetch.
       const [templateRecord] = getActiveDocumentTemplates(templatesResponse.data, 'quotation', 'Mẫu báo giá')
       if (!templateRecord) throw new Error('Chưa có mẫu báo giá loại quotation đang sử dụng')
-      const templateData = parseDocumentTemplateData(templateRecord.data, 'Template báo giá không hợp lệ')
+      const quotationTemplate = parseDocumentTemplateData(templateRecord.data, 'Template báo giá không hợp lệ')
       const customerOrder = response.data.customerOrder
       if (approvalEnabled) {
         const approval = checkResponse?.data?.aproval ?? checkResponse?.data ?? customerOrder?.aproval ?? null
@@ -67,8 +67,8 @@ const useQuotationViewer = ({ approvalEnabled = false, currentUserId } = {}) => 
         if (approverId != null) setQuoteApproverId(Number(approverId))
       }
       setQuoteOrder(customerOrder)
-      setQuoteTemplate(templateData)
-      setQuoteData(createQuotationData(customerOrder, templateData))
+      setQuoteTemplate(quotationTemplate)
+      setQuoteData(createQuotationData(customerOrder, quotationTemplate))
     } catch (error) {
       if (requestId !== loadRequestRef.current) return
       message.error(error?.message || 'Không tải được báo giá')

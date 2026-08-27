@@ -80,7 +80,7 @@ export const sanitizeTemplateHtml = (html, assets = {}) => {
   const document = DOMPurify.sanitize(String(html || ''), {
     WHOLE_DOCUMENT: true, RETURN_DOM: true,
     ALLOWED_TAGS: [...ALLOWED_TAGS, 'html', 'head', 'body', 'style'],
-    ALLOWED_ATTR: ['class', 'style', 'src', 'alt', 'width', 'height', 'colspan', 'rowspan', 'span', 'data-field', 'data-repeat'],
+    ALLOWED_ATTR: ['class', 'style', 'src', 'alt', 'width', 'height', 'colspan', 'rowspan', 'span', 'data-field', 'data-repeat', 'data-sheet-table'],
     ALLOW_DATA_ATTR: false,
   })
   const css = Array.from(document.querySelectorAll('style')).map(style => style.textContent).join('\n')

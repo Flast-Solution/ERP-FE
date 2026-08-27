@@ -54,8 +54,8 @@ const getFieldOwner = (data, path) => {
   return { detail: null, key: path }
 }
 
-// manualValues is a path -> JSON value map. Order keys are absolute document
-// bindings; detail keys are relative to that row (moq, mcq, date, etc.).
+// manualValues is a path -> JSON value map. Detail configs are stored by detail
+// ID inside the order-level quoteConfig so details[] never needs quoteConfig.
 export const createQuotationData = (customerOrder, template) => {
   const data = cloneDeep({
     customerOrder,
@@ -72,10 +72,19 @@ export const createQuotationData = (customerOrder, template) => {
 
 export const restoreDocumentManualValues = (source, template) => {
   const data = cloneDeep(source)
+  const orderConfig = parseQuoteConfig(data.customerOrder?.quoteConfig)
+  if (isObject(orderConfig.sheetTables)) data.sheetTables = cloneDeep(orderConfig.sheetTables)
   const defaults = getHtmlManualDefaults(template, data)
   getManualPaths(template, data).forEach(path => {
     const { detail, key } = getFieldOwner(data, path)
-    const config = parseQuoteConfig((detail ?? data.customerOrder)?.quoteConfig)
+    const detailId = detail?.id == null ? null : String(detail.id)
+    const hasOrderDetailConfig = detailId !== null && isObject(orderConfig.details)
+      && hasOwn(orderConfig.details, detailId)
+    const config = detail === null
+      ? orderConfig
+      : hasOrderDetailConfig
+        ? parseQuoteConfig(orderConfig.details[detailId])
+        : parseQuoteConfig(detail?.quoteConfig)
     // hasOwn preserves explicit clearing ("", null), 0 and false. Missing saved
     // values fall back to the original data for older orders.
     if (isObject(config.manualValues) && hasOwn(config.manualValues, key)) {
@@ -87,16 +96,13 @@ export const restoreDocumentManualValues = (source, template) => {
   return data
 }
 
-const writeManualValue = (owner, key, value) => {
-  const config = parseQuoteConfig(owner.quoteConfig)
-  owner.quoteConfig = {
+const writeManualValue = (config, key, value) => ({
     ...config,
     manualValues: {
       ...(isObject(config.manualValues) ? config.manualValues : {}),
       [key]: cloneDeep(value),
     },
-  }
-}
+})
 
 export const buildQuotationPayload = (
   data,
@@ -110,15 +116,46 @@ export const buildQuotationPayload = (
   // from the API snapshot so those overlays never overwrite business fields.
   const order = cloneDeep(originalOrder)
   const details = Array.isArray(order.details) ? order.details : []
-  const detailsById = new Map(details.filter(detail => detail.id != null).map(detail => [String(detail.id), detail]))
+  let orderConfig = parseQuoteConfig(order.quoteConfig)
+
+  // Migrate legacy detail.quoteConfig values into the order-level config.
+  details.forEach(detail => {
+    if (detail.id == null) return
+    const id = String(detail.id)
+    const legacyConfig = parseQuoteConfig(detail.quoteConfig)
+    if (!Object.keys(legacyConfig).length || (isObject(orderConfig.details) && hasOwn(orderConfig.details, id))) return
+    orderConfig = {
+      ...orderConfig,
+      details: { ...(isObject(orderConfig.details) ? orderConfig.details : {}), [id]: legacyConfig },
+    }
+  })
+
+  if (isObject(data?.sheetTables)) {
+    orderConfig = { ...orderConfig, sheetTables: cloneDeep(data.sheetTables) }
+  }
 
   getManualPaths(template, data).forEach(path => {
     const value = get(data, path)
     if (value === undefined) return
     const { detail, key } = getFieldOwner(data, path)
-    const owner = detail === null ? order : detailsById.get(String(detail?.id))
-    if (owner) writeManualValue(owner, key, value)
+    if (detail === null) {
+      orderConfig = writeManualValue(orderConfig, key, value)
+      return
+    }
+    if (detail.id == null) return
+    const id = String(detail.id)
+    const detailConfig = parseQuoteConfig(orderConfig.details?.[id])
+    orderConfig = {
+      ...orderConfig,
+      details: {
+        ...(isObject(orderConfig.details) ? orderConfig.details : {}),
+        [id]: writeManualValue(detailConfig, key, value),
+      },
+    }
   })
+
+  order.quoteConfig = Object.keys(orderConfig).length ? orderConfig : null
+  const payloadDetails = details.map(({ quoteConfig, ...detail }) => detail)
 
   return {
     id: order.id,
@@ -130,7 +167,7 @@ export const buildQuotationPayload = (
       email: order.customerEmail ?? null,
       address: order.customerAddress ?? null,
     },
-    details,
+    details: payloadDetails,
     ...(approverId != null ? {
       aproval: { status: approvalStatus, type: approvalType, userApproval: Number(approverId) },
     } : {}),
@@ -147,6 +184,17 @@ const mergeQuoteConfig = (previous, incoming) => {
   if (isObject(previousConfig.manualValues) || isObject(incomingConfig.manualValues)) {
     merged.manualValues = { ...previousConfig.manualValues, ...incomingConfig.manualValues }
   }
+  ;['invoiceTemplates', 'details'].forEach(collection => {
+    if (!isObject(previousConfig[collection]) && !isObject(incomingConfig[collection])) return
+    const ids = new Set([
+      ...Object.keys(previousConfig[collection] || {}),
+      ...Object.keys(incomingConfig[collection] || {}),
+    ])
+    merged[collection] = Object.fromEntries([...ids].map(id => [
+      id,
+      mergeQuoteConfig(previousConfig[collection]?.[id], incomingConfig[collection]?.[id]),
+    ]))
+  })
   return Object.keys(merged).length ? merged : (incoming ?? previous ?? null)
 }
 
@@ -163,11 +211,12 @@ export const mergeSavedQuotationOrder = (originalOrder, payload, responseData) =
     quoteConfig: mergeQuoteConfig(payload.quoteConfig, saved.quoteConfig),
     details: details.map(detail => {
       const previous = detailsById.get(String(detail.id))
-      return {
+      const mergedDetail = {
         ...previous,
         ...detail,
-        quoteConfig: mergeQuoteConfig(previous?.quoteConfig, detail.quoteConfig),
       }
+      delete mergedDetail.quoteConfig
+      return mergedDetail
     }),
   }
 }

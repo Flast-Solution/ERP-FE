@@ -139,7 +139,10 @@ const DocumentTemplateService = {
 
   saveTemplate: payload => RequestUtils.Post(`${TEMPLATE_PATH}/save-data`, payload),
 
-  fetchInvoice: id => RequestUtils.Get(`${TEMPLATE_PATH}/invoice`, { id }),
+  fetchInvoice: (id, name) => RequestUtils.Get(`${TEMPLATE_PATH}/invoice`, {
+    id,
+    ...(name ? { name } : {}),
+  }),
 
   checkInvoice: (orderId, type = 'quote') => RequestUtils.Get('/erp/order/invoice-check', { orderId, type }),
 }

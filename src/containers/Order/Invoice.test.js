@@ -5,7 +5,13 @@ import { useReactToPrint } from 'react-to-print'
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import Invoice from './Invoice'
-import { createInvoiceOrder, getInvoiceTemplates, parseInvoiceTemplate } from './invoiceTemplateUtils'
+import {
+  createInvoiceData,
+  createInvoiceOrder,
+  createInvoiceOrderFromResponse,
+  getInvoiceTemplates,
+  parseInvoiceTemplate,
+} from './invoiceTemplateUtils'
 import { normalizeDocumentType } from '../../services/DocumentTemplateService'
 
 jest.mock('@flast-erp/core/utils', () => ({ RequestUtils: { Get: jest.fn(), Post: jest.fn() } }), { virtual: true })
@@ -115,6 +121,45 @@ describe('invoice templates', () => {
     })
     expect(order.details[0]).toMatchObject({ id: 34064, total: 900000 })
   })
+
+  it('maps the named invoice API response to customerOrder document bindings', () => {
+    const invoiceConfig = { invoiceTemplates: {
+      packing: { sheetTables: { packingList: { rows: [{ no: 1, lotNo: '01-1/3' }] } } },
+    } }
+    const order = createInvoiceOrderFromResponse({
+      order: { id: 34014, code: 'PKL-34014' },
+      customer: { name: 'Khách từ API' },
+      data: [{ detailId: 34079, key: 'PKL-34014-1', productName: 'Packing item', totalPrice: 500000 }],
+      config: { templateId: 'packing', quoteConfig: JSON.stringify(invoiceConfig) },
+    }, data)
+    expect(order).toMatchObject({
+      id: 34014,
+      code: 'PKL-34014',
+      customer: { name: 'Khách từ API' },
+      details: [{ id: 34079, code: 'PKL-34014-1', productName: 'Packing item', total: 500000 }],
+    })
+    const document = createInvoiceData({ customerOrder: order }, { nodes: [] }, 'packing')
+    expect(document.sheetTables.packingList.rows).toEqual([{ no: 1, lotNo: '01-1/3' }])
+  })
+
+  it('restores manual values from the selected invoice template namespace', () => {
+    const manualTemplate = { nodes: [
+      { id: 'note', type: 'richText', content: '{{ input:customerOrder.customerNote }}' },
+    ] }
+    const order = {
+      id: 1,
+      customerNote: 'Giá trị nghiệp vụ',
+      quoteConfig: { invoiceTemplates: {
+        first: { manualValues: { 'customerOrder.customerNote': 'Nội dung mẫu 1' } },
+        second: { manualValues: { 'customerOrder.customerNote': 'Nội dung mẫu 2' } },
+      } },
+      details: [],
+    }
+    expect(createInvoiceData({ customerOrder: order }, manualTemplate, 'first').customerOrder.customerNote)
+      .toBe('Nội dung mẫu 1')
+    expect(createInvoiceData({ customerOrder: order }, manualTemplate, 'second').customerOrder.customerNote)
+      .toBe('Nội dung mẫu 2')
+  })
 })
 
 describe('order information invoice tab', () => {
@@ -175,6 +220,7 @@ describe('order information invoice tab', () => {
   it('loads the invoice template and renders current customer/order/details with printing', async () => {
     await mount()
     expect(RequestUtils.Get).toHaveBeenCalledWith('/erp/template/fetch', undefined)
+    expect(RequestUtils.Get).toHaveBeenCalledWith('/erp/template/invoice', { id: 34014, name: 'Mẫu hoá đơn' })
     expect(container.textContent).toContain('HOÁ ĐƠN TỪ TEMPLATE')
     expect(container.textContent).toContain('Khách hàng hiện tại')
     expect(container.textContent).toContain('ORDER-34014')
@@ -185,10 +231,13 @@ describe('order information invoice tab', () => {
     expect(print).toHaveBeenCalledTimes(1)
     expect(useReactToPrint.mock.calls.at(-1)[0].contentRef.current.textContent).toContain('HOÁ ĐƠN TỪ TEMPLATE')
     const pdf = { addPage: jest.fn(), addImage: jest.fn(), save: jest.fn() }
-    html2canvas.mockResolvedValue({ toDataURL: jest.fn(() => 'data:image/jpeg;base64,test') })
+    html2canvas.mockResolvedValue({ width: 1588, height: 5000 })
     jsPDF.mockImplementation(() => pdf)
+    jest.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ fillRect: jest.fn(), drawImage: jest.fn() })
+    jest.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue('data:image/jpeg;base64,test')
     await act(async () => button('Tải xuống PDF').click())
-    expect(pdf.addImage).toHaveBeenCalledTimes(1)
+    expect(pdf.addImage).toHaveBeenCalledTimes(3)
+    expect(pdf.addPage).toHaveBeenCalledTimes(2)
     expect(pdf.save).toHaveBeenCalledWith('Mẫu hoá đơn-ORDER-34014.pdf')
     await mount({ customerOrder: { id: 34015, code: 'ORDER-34015', customerReceiverName: 'Khách tiếp theo' } })
     expect(container.textContent).toContain('Khách tiếp theo')
@@ -216,8 +265,13 @@ describe('order information invoice tab', () => {
 
     expect(RequestUtils.Post).toHaveBeenCalledWith('/order/save', expect.objectContaining({
       id: 34014,
+      templateId: 2,
       aproval: { status: 1, type: 'invoice', userApproval: 1649 },
-      quoteConfig: { manualValues: { 'customerOrder.customerNote': 'Ghi chú nhập trên PDF' } },
+      quoteConfig: expect.objectContaining({
+        invoiceTemplates: {
+          2: { manualValues: { 'customerOrder.customerNote': 'Ghi chú nhập trên PDF' } },
+        },
+      }),
     }))
     expect(container.textContent).toContain('Chờ duyệt')
     expect(container.querySelector('input')).toBeNull()
@@ -229,7 +283,7 @@ describe('order information invoice tab', () => {
       : { errorCode: 200, data: { status: 1, type: 'invoice', userApproval: 2 } }))
     RequestUtils.Post.mockResolvedValue({ errorCode: 200, data: {} })
     await mount()
-    expect(button('Lưu hoá đơn')).toBeUndefined()
+    expect(button('Lưu hoá đơn').disabled).toBe(true)
     expect(button('Duyệt').disabled).toBe(false)
     expect(button('Từ chối').disabled).toBe(false)
 
@@ -240,6 +294,53 @@ describe('order information invoice tab', () => {
     expect(container.textContent).toContain('Đã duyệt')
     expect(button('Duyệt').disabled).toBe(true)
     expect(button('Từ chối').disabled).toBe(true)
+  })
+
+  it('saves only the currently selected invoice template in one request', async () => {
+    const firstTemplate = { nodes: [
+      { id: 'first-note', type: 'richText', content: '{{ input:customerOrder.quoteFields.first }}' },
+    ] }
+    const secondTemplate = { nodes: [
+      { id: 'second-note', type: 'richText', content: '{{ input:customerOrder.details.0.htmlFields.second }}' },
+    ] }
+    RequestUtils.Get.mockImplementation(path => Promise.resolve(path === '/erp/template/fetch'
+      ? { errorCode: 200, data: [
+        { ...record, data: firstTemplate },
+        { ...record, templateId: 5, name: 'Mẫu hoá đơn phụ', data: secondTemplate },
+      ] }
+      : { errorCode: 200, data: null }))
+    RequestUtils.Post.mockResolvedValue({ errorCode: 200, data: {} })
+    await mount()
+
+    const editCurrentInput = async value => {
+      const input = container.querySelector('input')
+      await act(async () => {
+        input.value = value
+        input.dispatchEvent(new Event('focusout', { bubbles: true }))
+      })
+    }
+    await editCurrentInput('Nội dung mẫu chính')
+    const select = container.querySelector('select')
+    await act(async () => {
+      select.value = '5'
+      select.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    await editCurrentInput('Nội dung mẫu phụ')
+    await act(async () => button('Lưu hoá đơn').click())
+
+    expect(RequestUtils.Post).toHaveBeenCalledTimes(1)
+    expect(RequestUtils.Post.mock.calls[0]).toEqual(['/order/save', expect.objectContaining({
+      templateId: 5,
+      quoteConfig: expect.objectContaining({ invoiceTemplates: {
+        5: { details: { 34079: { manualValues: { 'htmlFields.second': 'Nội dung mẫu phụ' } } } },
+      } }),
+    })])
+    RequestUtils.Post.mock.calls.forEach(([, payload]) => {
+      expect(payload.details.every(detail => !Object.prototype.hasOwnProperty.call(detail, 'quoteConfig'))).toBe(true)
+      expect(Object.keys(payload.quoteConfig.invoiceTemplates)).toHaveLength(1)
+      expect(payload.quoteConfig).not.toHaveProperty('templatesId')
+      expect(JSON.stringify(payload)).not.toContain('Nội dung mẫu chính')
+    })
   })
 
   it('allows switching active invoice templates and preserves imported PDF page positions', async () => {

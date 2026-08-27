@@ -62,6 +62,14 @@ describe('HTML package validation and security', () => {
     expect(template.htmlTemplate.html).toContain(pixel)
     expect(importHtmlTemplateBytes(exportHtmlTemplateZip(template))).toEqual(template)
   })
+  it('keeps a configured marked-sheet table through package export and import', () => {
+    const template = createHtmlDocumentTemplate(
+      '<span data-field="name"></span><table data-sheet-table="packingList"></table>',
+      { ...manifest, sheetTables: { packingList: { marker: '@column:' } } },
+    )
+    expect(importHtmlTemplateBytes(exportHtmlTemplateZip(template)).htmlTemplate.sheetTables)
+      .toEqual({ packingList: { marker: '@column:' } })
+  })
   it('revalidates stored HTML instead of trusting a previously imported definition', () => {
     expect(() => normalizeHtmlDefinition({ ...make().htmlTemplate, css: '@import "https://example.com";' })).toThrow()
   })
@@ -162,6 +170,25 @@ describe('HTML field interaction', () => {
       { quantity: 10, price: 200000, total: 1900000 },
     ] } }} />))
     expect(Array.from(host.querySelectorAll('[data-field="amount"]')).map(cell => cell.textContent)).toEqual(['900,000.00', '1,900,000.00'])
+  })
+  it('renders imported sheet columns, rows and calculated totals', () => {
+    const sheetTemplate = createHtmlDocumentTemplate(
+      '<span data-field="name"></span><table data-sheet-table="packingList"></table>',
+      { ...manifest, sheetTables: { packingList: { marker: '@column:' } } },
+    )
+    const sheetTables = { packingList: {
+      columns: [
+        { key: 'rollNo', label: 'Roll No.', type: 'text', aggregate: null },
+        { key: 'quantity', label: 'NET Quantity', type: 'number', aggregate: 'sum' },
+      ],
+      rows: [{ rollNo: 'ROLL-1', quantity: 136 }, { rollNo: 'ROLL-2', quantity: 60 }],
+      totals: { quantity: 196 },
+    } }
+    // eslint-disable-next-line testing-library/no-unnecessary-act
+    act(() => root.render(<HtmlTemplateContent template={sheetTemplate} data={{ sheetTables }} />))
+    expect(host.textContent).toContain('Roll No.')
+    expect(host.textContent).toContain('ROLL-1')
+    expect(host.textContent).toContain('196')
   })
   it('emits the correct manual path and keeps input focus across updates', () => {
     const onChange = jest.fn()

@@ -3,6 +3,7 @@ import { Alert } from 'antd'
 import get from 'lodash/get'
 import { getHtmlManualPath, getHtmlManualPlaceholder, getHtmlRepeatRows, normalizeHtmlDefinition, resolveHtmlField } from './model'
 import { getScopedTemplateFonts, sanitizeTemplateCss } from './sanitize'
+import HtmlSheetTable from './HtmlSheetTable'
 
 const elementStyle = element => Object.fromEntries(Array.from(element.style || []).map(property => [
   property.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()), element.style.getPropertyValue(property),
@@ -39,6 +40,11 @@ const HtmlTemplateContent = ({ template, data = {}, editable = false, onManualFi
       props[name] = attribute.value
     }
     if (['tr', 'img'].includes(tag)) props['data-pdf-avoid-break'] = 'true'
+    const sheetTableId = node.getAttribute('data-sheet-table')
+    if (sheetTableId) {
+      const { key: sheetTableKey, ...tableProps } = props
+      return <HtmlSheetTable key={sheetTableKey} id={sheetTableId} data={data} tableProps={tableProps} />
+    }
     const id = node.getAttribute('data-field')
     let children
     if (id) {
