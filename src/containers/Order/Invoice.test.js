@@ -2,21 +2,35 @@ import React, { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { useReactToPrint } from 'react-to-print'
+import html2canvas from 'html2canvas'
+import { jsPDF } from 'jspdf'
 import Invoice from './Invoice'
 import { getInvoiceTemplates, parseInvoiceTemplate } from './invoiceTemplateUtils'
 import { normalizeDocumentType } from '../../services/DocumentTemplateService'
 
-jest.mock('@flast-erp/core/utils', () => ({ RequestUtils: { Get: jest.fn() } }), { virtual: true })
+jest.mock('@flast-erp/core/utils', () => ({ RequestUtils: { Get: jest.fn(), Post: jest.fn() } }), { virtual: true })
 jest.mock('@/configs', () => ({ SUCCESS_CODE: 200 }), { virtual: true })
 jest.mock('@/services/DocumentTemplateService', () => jest.requireActual('../../services/DocumentTemplateService'), { virtual: true })
 jest.mock('@/components/DocumentTemplateEditor/DocumentTemplateContent', () => jest.requireActual('../../components/DocumentTemplateEditor/DocumentTemplateContent'), { virtual: true })
 jest.mock('@/containers/PreviewModal/uploadUtils', () => ({ resolveRuntimeAssetUrl: value => value }), { virtual: true })
+jest.mock('../../hooks/useGetMe', () => () => ({ user: { id: 2 } }))
+jest.mock('./List/components/QuotationApproverSelect', () => ({ value, onChange, disabled }) => {
+  const React = require('react')
+  return React.createElement('button', {
+    'aria-label': 'Chọn người phê duyệt', disabled, onClick: () => onChange(value == null ? 1649 : undefined),
+  }, value == null ? 'Chọn người phê duyệt' : `Người phê duyệt #${value}`)
+})
+jest.mock('html2canvas', () => jest.fn())
+jest.mock('jspdf', () => ({ jsPDF: jest.fn() }))
 jest.mock('react-to-print', () => ({ useReactToPrint: jest.fn() }))
 jest.mock('antd', () => {
   const React = require('react')
   return {
     Button: ({ children, disabled, onClick, 'aria-label': ariaLabel }) => React.createElement('button', { disabled, onClick, 'aria-label': ariaLabel }, children),
     Space: ({ children }) => React.createElement('div', null, children),
+    Tag: ({ children }) => React.createElement('span', null, children),
+    Tooltip: ({ children }) => React.createElement(React.Fragment, null, children),
+    message: { success: jest.fn(), error: jest.fn() },
     Alert: ({ message }) => React.createElement('div', { role: 'alert' }, message),
     Empty: ({ description }) => React.createElement('div', null, description),
     Spin: () => React.createElement('div', null, 'Loading'),
@@ -79,6 +93,8 @@ describe('order information invoice tab', () => {
     root = createRoot(container)
     print = jest.fn()
     useReactToPrint.mockReturnValue(print)
+    RequestUtils.Get.mockReset()
+    RequestUtils.Post.mockReset()
     RequestUtils.Get.mockResolvedValue({ errorCode: 200, data: [record] })
   })
   afterEach(async () => {
@@ -89,7 +105,8 @@ describe('order information invoice tab', () => {
     // eslint-disable-next-line testing-library/no-unnecessary-act -- React DOM root.render requires act.
     await act(async () => root.render(<Invoice data={nextData || data} />))
   }
-  const button = name => [...container.querySelectorAll('button')].find(item => item.textContent === name)
+  const button = name => [...container.querySelectorAll('button')]
+    .find(item => item.textContent === name || item.getAttribute('aria-label') === name)
 
   it('starts at 85%, zooms the screen without scaling the printable content, and resets for another order', async () => {
     await mount()
@@ -133,9 +150,62 @@ describe('order information invoice tab', () => {
     await act(async () => button('In PDF').click())
     expect(print).toHaveBeenCalledTimes(1)
     expect(useReactToPrint.mock.calls.at(-1)[0].contentRef.current.textContent).toContain('HOÁ ĐƠN TỪ TEMPLATE')
+    const pdf = { addPage: jest.fn(), addImage: jest.fn(), save: jest.fn() }
+    html2canvas.mockResolvedValue({ toDataURL: jest.fn(() => 'data:image/jpeg;base64,test') })
+    jsPDF.mockImplementation(() => pdf)
+    await act(async () => button('Tải xuống PDF').click())
+    expect(pdf.addImage).toHaveBeenCalledTimes(1)
+    expect(pdf.save).toHaveBeenCalledWith('Mẫu hoá đơn-ORDER-34014.pdf')
     await mount({ customerOrder: { id: 34015, code: 'ORDER-34015', customerReceiverName: 'Khách tiếp theo' } })
     expect(container.textContent).toContain('Khách tiếp theo')
     expect(container.textContent).not.toContain('ORDER-34014')
+  })
+
+  it('edits manual PDF fields and submits invoice approval data at order level', async () => {
+    const manualTemplate = { nodes: [
+      { id: 'note', type: 'richText', content: '{{ input:customerOrder.customerNote }}' },
+    ] }
+    RequestUtils.Get.mockImplementation(path => Promise.resolve(path === '/erp/template/fetch'
+      ? { errorCode: 200, data: [{ ...record, data: manualTemplate }] }
+      : { errorCode: 200, data: null }))
+    RequestUtils.Post.mockResolvedValue({ errorCode: 200, message: 'Đã lưu', data: {} })
+    await mount({ ...data, customerOrder: { ...data.customerOrder, customerNote: 'Ghi chú cũ' } })
+    expect(RequestUtils.Get).toHaveBeenCalledWith('/erp/order/invoice-check', { orderId: 34014, type: 'invoice' })
+
+    const input = container.querySelector('input')
+    await act(async () => {
+      input.value = 'Ghi chú nhập trên PDF'
+      input.dispatchEvent(new Event('focusout', { bubbles: true }))
+      button('Chọn người phê duyệt').click()
+    })
+    await act(async () => button('Lưu hoá đơn').click())
+
+    expect(RequestUtils.Post).toHaveBeenCalledWith('/order/save', expect.objectContaining({
+      id: 34014,
+      aproval: { status: 1, type: 'invoice', userApproval: 1649 },
+      quoteConfig: { manualValues: { 'customerOrder.customerNote': 'Ghi chú nhập trên PDF' } },
+    }))
+    expect(container.textContent).toContain('Chờ duyệt')
+    expect(container.querySelector('input')).toBeNull()
+  })
+
+  it('shows decision actions to the invoice approver and submits the decision', async () => {
+    RequestUtils.Get.mockImplementation(path => Promise.resolve(path === '/erp/template/fetch'
+      ? { errorCode: 200, data: [record] }
+      : { errorCode: 200, data: { status: 1, type: 'invoice', userApproval: 2 } }))
+    RequestUtils.Post.mockResolvedValue({ errorCode: 200, data: {} })
+    await mount()
+    expect(button('Lưu hoá đơn')).toBeUndefined()
+    expect(button('Duyệt').disabled).toBe(false)
+    expect(button('Từ chối').disabled).toBe(false)
+
+    await act(async () => button('Duyệt').click())
+    expect(RequestUtils.Post).toHaveBeenCalledWith('/order/save', expect.objectContaining({
+      aproval: { status: 2, type: 'invoice', userApproval: 2 },
+    }))
+    expect(container.textContent).toContain('Đã duyệt')
+    expect(button('Duyệt').disabled).toBe(true)
+    expect(button('Từ chối').disabled).toBe(true)
   })
 
   it('allows switching active invoice templates and preserves imported PDF page positions', async () => {

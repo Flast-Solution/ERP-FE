@@ -2,11 +2,14 @@ import React, { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { strToU8, zipSync } from 'fflate'
 import HtmlTemplateContent from './HtmlTemplateContent'
+import { buildHtmlBindingOptions } from './HtmlTemplateDesigner'
 import { createHtmlDocumentTemplate, normalizeHtmlDefinition } from './model'
 import { importHtmlTemplateBytes, exportHtmlTemplateZip } from './package'
 import { getScopedTemplateFonts, sanitizeTemplateCss } from './sanitize'
+import { buildDocumentSchemaFromEntityFields, normalizeDocumentSchema } from '../../../services/DocumentTemplateService'
 
 jest.mock('@/containers/PreviewModal/uploadUtils', () => ({ resolveRuntimeAssetUrl: value => value }), { virtual: true })
+jest.mock('@flast-erp/core/utils', () => ({ RequestUtils: {} }), { virtual: true })
 const manifest = { version: 1, fields: { name: { label: 'Tên', mode: 'manual' } } }
 const html = '<div class="document"><span data-field="name"></span></div>'
 const make = () => createHtmlDocumentTemplate(html, manifest)
@@ -64,6 +67,33 @@ describe('HTML package validation and security', () => {
   })
 })
 
+describe('HTML order data options', () => {
+  const entityFields = [
+    { group: 'Đơn hàng', label: 'Mã đơn hàng', path: 'code', dataType: 'string' },
+    { group: 'Đơn hàng - Chi tiết', label: 'Tên sản phẩm', path: 'details.productName', dataType: 'string' },
+    { group: 'Đơn hàng - Chi tiết', label: 'Giá trị thuộc tính', path: 'details.skuDetails.values.text', dataType: 'string' },
+    { group: 'Thông tin đơn hàng - Chi tiết', label: 'Tên sản phẩm', path: 'details.productName', dataType: 'string' },
+  ]
+  const dataSchema = normalizeDocumentSchema(buildDocumentSchemaFromEntityFields(entityFields))
+
+  it('includes scalar and first-detail-row fields for a normal binding without duplicate paths', () => {
+    const options = buildHtmlBindingOptions(dataSchema, { mode: 'binding', path: '' }, { repeats: {} })
+    expect(options.map(option => option.value)).toEqual([
+      'customerOrder.code',
+      'customerOrder.details.0.productName',
+      'customerOrder.details.0.skuDetails.values.text',
+    ])
+    expect(options[1].label).toContain('dòng 1')
+  })
+
+  it('keeps collection bindings relative inside a detail repeat', () => {
+    const options = buildHtmlBindingOptions(dataSchema, { mode: 'binding', repeatId: 'items' }, {
+      repeats: { items: { source: 'customerOrder.details' } },
+    })
+    expect(options.map(option => option.value)).toEqual(['productName', 'skuDetails.values.text'])
+  })
+})
+
 describe('HTML field interaction', () => {
   let host
   let root
@@ -82,6 +112,9 @@ describe('HTML field interaction', () => {
     const onChange = jest.fn()
     render({ editable: true, data: { customerOrder: { htmlFields: { name: 'Old' } } }, onManualFieldChange: onChange })
     const input = host.querySelector('input')
+    expect(input.placeholder).toBe('Nhập Tên')
+    expect(input.dataset.documentManualInput).toBe('true')
+    expect(input.style.background).toContain('rgba(37, 99, 235')
     input.focus()
     act(() => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'New')
@@ -91,6 +124,23 @@ describe('HTML field interaction', () => {
     render({ editable: true, data: { customerOrder: { htmlFields: { name: 'New' } } }, onManualFieldChange: onChange })
     expect(document.activeElement).toBe(input)
     expect(input.value).toBe('New')
+  })
+  it('uses a configured placeholder and otherwise adds a format hint', () => {
+    const template = make()
+    template.htmlTemplate.fields.name = { ...template.htmlTemplate.fields.name, label: 'Ngày hoá đơn', format: 'date' }
+    // eslint-disable-next-line testing-library/no-unnecessary-act
+    act(() => root.render(<HtmlTemplateContent template={template} editable data={{ customerOrder: { htmlFields: {} } }} />))
+    expect(host.querySelector('input').placeholder).toBe('Nhập Ngày hoá đơn (DD/MM/YYYY)')
+    template.htmlTemplate = {
+      ...template.htmlTemplate,
+      fields: {
+        ...template.htmlTemplate.fields,
+        name: { ...template.htmlTemplate.fields.name, placeholder: 'Nhập theo mẫu INV-001' },
+      },
+    }
+    // eslint-disable-next-line testing-library/no-unnecessary-act
+    act(() => root.render(<HtmlTemplateContent template={template} editable data={{ customerOrder: { htmlFields: {} } }} />))
+    expect(host.querySelector('input').placeholder).toBe('Nhập theo mẫu INV-001')
   })
   it('renders read-only content as text, preserves clearing and selects configuration by field ID', () => {
     const template = make()

@@ -185,6 +185,8 @@ describe('imported PDF text inspector and rendering', () => {
     await mount(<DocumentNodeContent node={manual} data={manualData} preview editable onManualFieldChange={onManualFieldChange} />)
     const input = container.querySelector('input')
     expect(input.value).toBe('2000')
+    expect(input.placeholder).toBe('Nhập moq')
+    expect(input.style.background).toContain('rgba(37, 99, 235')
     await act(async () => {
       input.value = '3000'
       input.dispatchEvent(new Event('focusout', { bubbles: true }))
