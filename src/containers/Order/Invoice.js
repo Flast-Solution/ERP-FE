@@ -326,7 +326,16 @@ const Invoice = ({ data }) => {
             <span aria-label="Mức zoom PDF" aria-live="polite" style={{ minWidth: 44, textAlign: 'center' }}>{zoom}%</span>
             <Button type="text" aria-label="Phóng to PDF" icon={<PlusOutlined />} disabled={loading || !template || zoom >= 150} onClick={() => changeZoom(5)} />
           </div>
-          {loadError ? <Button icon={<ReloadOutlined />} onClick={refresh} loading={loading}>Tải lại mẫu</Button> : null}
+          <Tooltip title="Tải lại mẫu mới nhất">
+            <Button
+              aria-label="Tải lại mẫu hoá đơn"
+              icon={<ReloadOutlined />}
+              onClick={refresh}
+              loading={loading}
+            >
+              {loadError ? 'Tải lại mẫu' : null}
+            </Button>
+          </Tooltip>
           <Tooltip title="In hoá đơn"><Button aria-label="In PDF" type="text" icon={<PrinterOutlined />} onClick={printInvoice} disabled={loading || !template} /></Tooltip>
           <Tooltip title="Tải xuống PDF"><Button aria-label="Tải xuống PDF" type="text" icon={<DownloadOutlined />} loading={downloading} onClick={downloadInvoice} disabled={loading || !template} /></Tooltip>
         </ToolbarActions>

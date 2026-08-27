@@ -5,15 +5,17 @@ import HtmlTemplateContent from './HtmlTemplateContent'
 import { HTML_MODES } from './model'
 import { CanvasViewport, InspectorBody, PanelHeader, SidePanel } from '../styles'
 
+const toEntityPath = path => String(path || '').replace(/^customerOrder\./, '')
+
 const findCollectionBinding = (dataSchema, path) => dataSchema.find(item => {
   if (!item.scope) return false
-  const escapedScope = item.scope.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const escapedScope = toEntityPath(item.scope).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   return new RegExp(`^${escapedScope}\\.\\d+\\.`).test(path || '')
 })
 
 const getCollectionRowIndex = (field, collection) => {
   if (!collection?.scope) return Number(field?.rowIndex ?? 0)
-  const escapedScope = collection.scope.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const escapedScope = toEntityPath(collection.scope).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const match = String(field?.path || '').match(new RegExp(`^${escapedScope}\\.(\\d+)\\.`))
   return match ? Number(match[1]) : Number(field?.rowIndex ?? 0)
 }
@@ -25,12 +27,12 @@ export const buildHtmlBindingOptions = (dataSchema, field, definition) => {
   const options = dataSchema.flatMap(item => {
     if (repeatSource) {
       return item.scope === repeatSource
-        ? [{ value: item.relativePath, label: `${item.group || 'Chi tiết'} / ${item.label}` }]
+        ? [{ value: `${toEntityPath(item.scope)}.${item.relativePath}`, label: `${item.group || 'Chi tiết'} / ${item.label}` }]
         : []
     }
     const value = item.scope
-      ? `${item.scope}.${rowIndex}.${item.relativePath}`
-      : item.path
+      ? `${toEntityPath(item.scope)}.${rowIndex}.${item.relativePath}`
+      : toEntityPath(item.path)
     return [{
       value,
       label: `${item.group || 'Dữ liệu'} / ${item.label}${item.scope ? ` (dòng ${rowIndex + 1})` : ''}`,
@@ -81,9 +83,10 @@ const HtmlTemplateDesigner = ({ template, onChange, dataSchema = [], sampleData 
                 {options.length > 0 && field.mode === 'binding' && <Form.Item label="Chọn từ danh sách dữ liệu"><Select showSearch optionFilterProp="label" value={field.path || undefined} options={options} onChange={path => update({ path })} /></Form.Item>}
                 {bindingCollection && <Form.Item label="Dòng sản phẩm" extra="Dòng 1 là sản phẩm đầu tiên trong chi tiết đơn hàng."><InputNumber aria-label="Dòng dữ liệu đơn hàng" min={1} max={10001} value={bindingRowIndex + 1} onChange={value => {
                   const nextIndex = Math.max(0, (value || 1) - 1)
-                  update({ path: field.path.replace(`${bindingCollection.scope}.${bindingRowIndex}.`, `${bindingCollection.scope}.${nextIndex}.`), rowIndex: nextIndex })
+                  const scope = toEntityPath(bindingCollection.scope)
+                  update({ path: field.path.replace(`${scope}.${bindingRowIndex}.`, `${scope}.${nextIndex}.`), rowIndex: nextIndex })
                 }} /></Form.Item>}
-                <Form.Item label={field.repeatId || field.mode === 'sum' ? 'Đường dẫn trong mỗi dòng' : 'Đường dẫn dữ liệu'} extra={field.repeatId ? 'Ví dụ: productName, quantity, price' : 'Ví dụ: customer.name, customerOrder.code'}><Input aria-label="Đường dẫn dữ liệu" value={field.path} onChange={event => update({ path: event.target.value.trim() })} /></Form.Item>
+                <Form.Item label="Đường dẫn dữ liệu" extra={field.repeatId ? `Đường dẫn đầy đủ; hệ thống tự đọc theo từng dòng của ${definition.repeats[field.repeatId]?.source}.` : 'Ví dụ: customer.name, customerOrder.code'}><Input aria-label="Đường dẫn dữ liệu" value={field.path} onChange={event => update({ path: event.target.value.trim() })} /></Form.Item>
               </>}
               {(field.mode === 'sum' || (field.mode === 'sku' && !field.repeatId)) && <Form.Item label="Danh sách sản phẩm"><Input aria-label="Danh sách sản phẩm" value={field.source} onChange={event => update({ source: event.target.value.trim() })} /></Form.Item>}
               {field.mode === 'sku' && <>

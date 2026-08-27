@@ -14,7 +14,26 @@ export const createInvoiceOrder = ({ customerOrder = {}, customer, details }) =>
   return {
     ...customerOrder,
     details: Array.isArray(details) && details.length
-      ? details.map(detail => ({ ...detailsById.get(String(detail.id)), ...detail }))
+      ? details.map(detail => {
+        // view-on-edit uses detailId/key/totalPrice while the order entity uses
+        // id/code/total. Merge by the actual detail ID and keep the canonical
+        // discounted total used by document bindings (`details.total`).
+        const id = detail.id ?? detail.detailId
+        const original = detailsById.get(String(id))
+        const calculatedTotal = detail.totalPrice == null
+          ? undefined
+          : Number(detail.totalPrice) - Number(detail.discountAmount ?? 0)
+        return {
+          ...original,
+          ...detail,
+          id: id ?? original?.id,
+          code: detail.code ?? original?.code ?? detail.key ?? null,
+          name: detail.name ?? original?.name ?? detail.orderName ?? null,
+          total: detail.total ?? original?.total ?? calculatedTotal,
+          priceOff: detail.priceOff ?? original?.priceOff ?? detail.discountAmount ?? 0,
+          quoteConfig: detail.quoteConfig ?? original?.quoteConfig ?? null,
+        }
+      })
       : originalDetails,
     customer: {
       ...customerOrder.customer,

@@ -28,6 +28,14 @@ export const isSafeBindingPath = path => typeof path === 'string' && /^[a-zA-Z_]
   && !path.split('.').some(key => ['__proto__', 'prototype', 'constructor'].includes(key))
 const object = value => value && typeof value === 'object' && !Array.isArray(value)
 const validatePath = path => { if (path && !isSafeBindingPath(path)) throw new Error(`Đường dẫn dữ liệu không hợp lệ: ${path}`) }
+const toEntityPath = path => String(path || '').replace(/^customerOrder\./, '')
+
+export const getHtmlRepeatRows = (data, source) => {
+  const runtimeRows = getValueByPath(data, source, null)
+  if (Array.isArray(runtimeRows)) return runtimeRows
+  const entityRows = getValueByPath(data, toEntityPath(source), [])
+  return Array.isArray(entityRows) ? entityRows : []
+}
 
 export const normalizeHtmlDefinition = (definition, assets = {}) => {
   if (!object(definition) || typeof definition.html !== 'string' || !object(definition.fields)) throw new Error('Thiếu HTML hoặc cấu hình fields')
@@ -57,14 +65,29 @@ export const normalizeHtmlDefinition = (definition, assets = {}) => {
     const mode = field.mode || 'binding'
     const allowedModes = field.allowedModes || HTML_MODES.map(item => item.value)
     if (!Array.isArray(allowedModes) || !allowedModes.includes(mode) || allowedModes.some(value => !HTML_MODES.some(item => item.value === value))) throw new Error(`Chế độ trường không hợp lệ: ${id}`)
-    validatePath(field.path)
+    const repeatId = element.closest('[data-repeat]')?.dataset.repeat || null
+    const repeatSource = repeatId ? repeats[repeatId]?.source : ''
+    const entityRepeatSource = toEntityPath(repeatSource)
+    const rawPath = field.path || ''
+    // Older templates stored paths inside a repeat relatively (for example
+    // `total`). Normalize them to the complete entity path displayed by the
+    // editor while resolveHtmlField still reads against the current row.
+    const repeatRelativePath = repeatSource && rawPath.startsWith(`${repeatSource}.`)
+      ? rawPath.slice(repeatSource.length + 1)
+      : rawPath.startsWith(`${entityRepeatSource}.`)
+        ? rawPath.slice(entityRepeatSource.length + 1)
+        : rawPath
+    const path = mode === 'binding' && entityRepeatSource && repeatRelativePath
+      ? `${entityRepeatSource}.${repeatRelativePath}`
+      : toEntityPath(rawPath)
+    validatePath(path)
     validatePath(field.source)
     const rowIndex = Number(field.rowIndex ?? 0)
     if (!Number.isInteger(rowIndex) || rowIndex < 0 || rowIndex > 10000) throw new Error(`Dòng SKU không hợp lệ: ${id}`)
     fields[id] = {
-      label: String(field.label || id), mode, allowedModes, path: field.path || '',
+      label: String(field.label || id), mode, allowedModes, path,
       source: field.source || 'customerOrder.details', attribute: String(field.attribute || ''), rowIndex,
-      value: field.value ?? '', placeholder: String(field.placeholder || ''), format: field.format || 'text', repeatId: element.closest('[data-repeat]')?.dataset.repeat || null,
+      value: field.value ?? '', placeholder: String(field.placeholder || ''), format: field.format || 'text', repeatId,
     }
   })
   if (Object.keys(definition.fields).some(id => !Object.prototype.hasOwnProperty.call(fields, id))) throw new Error('Có cấu hình field không tồn tại trong HTML')
@@ -95,7 +118,7 @@ export const getHtmlManualDefaults = (template, data) => {
   return Object.fromEntries(Object.entries(definition?.fields || {}).flatMap(([id, field]) => {
     if (!safeId(id) || field.mode !== 'manual') return []
     const source = field.repeatId && definition.repeats?.[field.repeatId]?.source
-    const rows = source ? getValueByPath(data, source, []) : null
+    const rows = source ? getHtmlRepeatRows(data, source) : null
     const paths = source ? (Array.isArray(rows) ? rows.map((_, index) => getHtmlManualPath(id, field, definition, index)) : []) : [getHtmlManualPath(id, field, definition)]
     return paths.filter(isSafeBindingPath).map(path => [path, field.value ?? ''])
   }))
@@ -109,9 +132,25 @@ export const resolveHtmlField = (id, field, definition, data, row, rowIndex) => 
   const context = field.repeatId ? row : data
   if (field.mode === 'manual') value = get(data, getHtmlManualPath(id, field, definition, rowIndex), field.value)
   if (field.mode === 'static') value = field.value
-  if (field.mode === 'binding') value = getValueByPath(context, field.path, '')
+  if (field.mode === 'binding') {
+    const repeatSource = field.repeatId ? definition.repeats?.[field.repeatId]?.source : ''
+    const entityRepeatSource = toEntityPath(repeatSource)
+    // The editor stores the path returned by all-entities (for example
+    // details.total). Runtime data wraps order fields in customerOrder.
+    const bindingPath = repeatSource && field.path.startsWith(`${repeatSource}.`)
+      ? field.path.slice(repeatSource.length + 1)
+      : entityRepeatSource && field.path.startsWith(`${entityRepeatSource}.`)
+        ? field.path.slice(entityRepeatSource.length + 1)
+        : field.path
+    const missingValue = {}
+    const directValue = getValueByPath(context, bindingPath, missingValue)
+    value = directValue === missingValue && !field.repeatId
+      ? getValueByPath(context, `customerOrder.${bindingPath}`, '')
+      : directValue === missingValue ? '' : directValue
+  }
   if (field.mode === 'sku') {
-    const owner = field.repeatId ? row : getValueByPath(data, `${field.source}.${field.rowIndex}`, {})
+    const owner = field.repeatId ? row : getValueByPath(data, `${field.source}.${field.rowIndex}`,
+      getValueByPath(data, `${toEntityPath(field.source)}.${field.rowIndex}`, {}))
     value = field.attribute.trim() ? resolveBindingValue(owner, 'skuDetails.values.text', field.attribute, '') : ''
   }
   if (field.mode === 'sum') {
