@@ -35,7 +35,7 @@ export const importHtmlTemplateBytes = bytes => {
 export const exportHtmlTemplateZip = template => {
   const definition = normalizeHtmlDefinition(template.htmlTemplate)
   const fields = Object.fromEntries(Object.entries(definition.fields).map(([id, { repeatId, ...field }]) => [id, field]))
-  const manifest = { version: 1, name: template.name, documentType: template.documentType, orientation: template.page?.orientation, fields, repeats: definition.repeats }
+  const manifest = { version: 1, name: template.name, documentType: template.documentType, orientation: template.page?.orientation, fields, repeats: definition.repeats, sheetTables: definition.sheetTables }
   // Assets are embedded, so the exported package is independent of upload URLs.
   return zipSync({
     'template.html': strToU8(`<!doctype html><html><head><meta charset="utf-8"><style>${definition.css.replace(/</g, '\\3c ')}</style></head><body>${definition.html}</body></html>`),

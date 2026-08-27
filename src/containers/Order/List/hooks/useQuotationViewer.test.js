@@ -42,7 +42,7 @@ describe('quotation approval flow', () => {
   const setApprovalResponse = (approval, templates = [templateRecord]) => RequestUtils.Get.mockImplementation((path, params) => Promise.resolve({
     errorCode: 200,
     data: path === '/erp/template/invoice'
-      ? { templateData: JSON.stringify(template), customerOrder: { ...order, id: params.id } }
+      ? { customerOrder: { ...order, id: params.id } }
       : path === '/erp/template/fetch' ? templates : approval,
   }))
 
@@ -288,7 +288,7 @@ describe('quotation approval flow', () => {
     await mount()
     RequestUtils.Get.mockImplementation((path) => Promise.resolve(path === '/erp/order/invoice-check'
       ? { errorCode: 500, message: 'Check failed' }
-      : { errorCode: 200, data: { templateData: JSON.stringify(template), customerOrder: order } }))
+      : { errorCode: 200, data: { customerOrder: order } }))
     await act(async () => { await viewer.openQuotationViewer(order) })
     expect(viewer.quoteTemplate).toBeNull()
     expect(viewer.quoteLoading).toBe(false)

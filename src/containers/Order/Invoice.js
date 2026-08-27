@@ -39,17 +39,21 @@ import { RequestUtils } from '@flast-erp/core/utils'
 import DocumentTemplateService from '@/services/DocumentTemplateService'
 import { SUCCESS_CODE } from '@/configs'
 import DocumentTemplateContent from '@/components/DocumentTemplateEditor/DocumentTemplateContent'
+import SheetImportButton from '../../components/DocumentTemplateEditor/SheetImportButton'
+import { setSheetTableData } from '../../components/DocumentTemplateEditor/sheetImport'
 import { getValueByPath } from '../../components/DocumentTemplateEditor/utils'
 import { hasManualDocumentFields, setDocumentValueByPath } from '../../components/GeneratedDocumentViewer/manualEditing'
 import { DocumentToolbar, ToolbarActions } from '../../components/GeneratedDocumentViewer/styles'
+import { getPdfPageSlices } from '../../components/GeneratedDocumentViewer/pdfExport'
 import useGetMe from '../../hooks/useGetMe'
 import QuotationApproverSelect from './List/components/QuotationApproverSelect'
 import { QUOTATION_APPROVAL_STATUS } from './List/constants'
 import { mergeSavedQuotationOrder } from './List/utils/quotationMappers'
 import {
-  buildInvoicePayload,
+  buildInvoiceTemplatePayload,
   createInvoiceData,
   createInvoiceOrder,
+  createInvoiceOrderFromResponse,
   getInvoiceTemplates,
   parseInvoiceTemplate,
 } from './invoiceTemplateUtils'
@@ -79,14 +83,17 @@ const InvoiceDocumentToolbar = styled(DocumentToolbar)`
 const Invoice = ({ data }) => {
   const { user } = useGetMe()
   const contentRef = useRef(null)
+  const dataRef = useRef(data)
+  dataRef.current = data
   const [templates, setTemplates] = useState([])
   const [selectedId, setSelectedId] = useState('')
   const [loading, setLoading] = useState(true)
+  const [invoiceLoading, setInvoiceLoading] = useState(false)
   const [loadError, setLoadError] = useState('')
   const [reload, setReload] = useState(0)
   const [zoom, setZoom] = useState(85)
   const [sourceOrder, setSourceOrder] = useState(() => createInvoiceOrder(data))
-  const [documentData, setDocumentData] = useState({})
+  const [documents, setDocuments] = useState({})
   const [approval, setApproval] = useState(null)
   const [approverId, setApproverId] = useState()
   const [saving, setSaving] = useState(false)
@@ -97,6 +104,7 @@ const Invoice = ({ data }) => {
     && Number(user?.id) === Number(approval.userApproval))
   const readOnly = approvalStatus !== QUOTATION_APPROVAL_STATUS.DRAFT || isApprover
   const reviewDisabled = approvalStatus !== QUOTATION_APPROVAL_STATUS.PENDING
+  const isLoading = loading || invoiceLoading
 
   useEffect(() => {
     setZoom(85)
@@ -143,22 +151,54 @@ const Invoice = ({ data }) => {
     return () => { active = false }
   }, [data.customerOrder?.id, reload])
 
-  const { template, templateError } = useMemo(() => {
-    const record = templates.find(item => String(item.templateId) === selectedId)
-    if (!record) return {}
+  const parsedTemplates = useMemo(() => templates.map(record => {
     try {
-      return { template: parseInvoiceTemplate(record) }
+      return { record, template: parseInvoiceTemplate(record) }
     } catch {
-      return { templateError: 'Mẫu hoá đơn không hợp lệ. Vui lòng kiểm tra lại trong Tạo chứng từ.' }
+      return { record, error: 'Mẫu hoá đơn không hợp lệ. Vui lòng kiểm tra lại trong Tạo chứng từ.' }
     }
-  }, [templates, selectedId])
+  }), [templates])
+  const selectedTemplate = parsedTemplates.find(({ record }) => String(record.templateId) === selectedId)
+  const template = selectedTemplate?.template
+  const templateError = selectedTemplate?.error
+  const hasInvalidTemplate = parsedTemplates.some(item => item.error)
   useEffect(() => {
-    const nextOrder = createInvoiceOrder(data)
-    setSourceOrder(nextOrder)
-    setDocumentData(createInvoiceData({ customerOrder: nextOrder }, template))
-  }, [data, template])
+    const selected = parsedTemplates.find(({ record }) => String(record.templateId) === selectedId)
+    if (!selected?.template || !data.customerOrder?.id) return undefined
+    let active = true
+    setInvoiceLoading(true)
+    setLoadError('')
+    DocumentTemplateService.fetchInvoice(data.customerOrder.id, selected.record.name)
+      .then(response => {
+        if (!active) return
+        if (Number(response?.errorCode) !== SUCCESS_CODE) {
+          throw new Error(response?.message || `Không tải được dữ liệu mẫu ${selected.record.name}`)
+        }
+        const nextOrder = createInvoiceOrderFromResponse(response?.data, dataRef.current)
+        setSourceOrder(nextOrder)
+        setDocuments(current => ({
+          ...current,
+          [selectedId]: createInvoiceData(
+            { customerOrder: nextOrder }, selected.template, selected.record.templateId,
+          ),
+        }))
+      })
+      .catch(error => {
+        if (active) setLoadError(error?.message || `Không tải được dữ liệu mẫu ${selected.record.name}`)
+      })
+      .finally(() => {
+        if (active) setInvoiceLoading(false)
+      })
+    return () => { active = false }
+  }, [data.customerOrder?.id, parsedTemplates, selectedId])
 
-  const editableDocument = Boolean(template && !loading && !saving && !readOnly
+  const documentData = documents[selectedId] || {}
+  const setDocumentData = updater => setDocuments(current => ({
+    ...current,
+    [selectedId]: typeof updater === 'function' ? updater(current[selectedId] || {}) : updater,
+  }))
+
+  const editableDocument = Boolean(template && !isLoading && !saving && !readOnly
     && hasManualDocumentFields(template.nodes, template))
 
   const updateTableCell = ({ node, rowIndex, column, value }) => {
@@ -180,7 +220,11 @@ const Invoice = ({ data }) => {
   }
 
   const submitInvoice = async action => {
-    if (saving || !sourceOrder?.id || !template) return
+    if (saving || !sourceOrder?.id || !parsedTemplates.length) return
+    if (hasInvalidTemplate) {
+      message.error('Có mẫu hoá đơn không hợp lệ. Vui lòng kiểm tra lại trong Tạo chứng từ.')
+      return
+    }
     const reviewing = action === 'approve' || action === 'reject'
     if (reviewing && (!isApprover || reviewDisabled)) {
       message.error('Chỉ người được chỉ định mới có thể duyệt hoá đơn đang chờ duyệt')
@@ -198,13 +242,21 @@ const Invoice = ({ data }) => {
         : QUOTATION_APPROVAL_STATUS.PENDING
     setSaving(true)
     try {
-      const dataToSave = readOnly
-        ? createInvoiceData({ customerOrder: sourceOrder }, template)
-        : documentData
-      const payload = buildInvoicePayload(dataToSave, template, sourceOrder, selectedApprover, nextStatus)
+      const selected = parsedTemplates.find(({ record }) => String(record.templateId) === selectedId)
+      if (!selected?.template) throw new Error('Không xác định được mẫu hoá đơn đang chọn')
+      const invoice = {
+        templateId: selected.record.templateId,
+        template: selected.template,
+        data: readOnly
+          ? createInvoiceData({ customerOrder: sourceOrder }, selected.template, selected.record.templateId)
+          : documents[selectedId] || createInvoiceData(
+            { customerOrder: sourceOrder }, selected.template, selected.record.templateId,
+          ),
+      }
+      const payload = buildInvoiceTemplatePayload(invoice, sourceOrder, selectedApprover, nextStatus)
       const response = await RequestUtils.Post('/order/save', payload)
       if (Number(response?.errorCode) !== SUCCESS_CODE) {
-        throw new Error(response?.message || 'Lưu hoá đơn thất bại')
+        throw new Error(response?.message || `Lưu hoá đơn ${invoice.templateId} thất bại`)
       }
       const savedOrder = mergeSavedQuotationOrder(sourceOrder, payload, response?.data)
       const savedApproval = payload.aproval
@@ -213,7 +265,10 @@ const Invoice = ({ data }) => {
       setSourceOrder(savedOrder)
       setApproval(savedApproval)
       setApproverId(savedApproval?.userApproval == null ? undefined : Number(savedApproval.userApproval))
-      setDocumentData(createInvoiceData({ customerOrder: savedOrder }, template))
+      setDocuments(current => ({
+        ...current,
+        [selectedId]: createInvoiceData({ customerOrder: savedOrder }, selected.template, selected.record.templateId),
+      }))
       message.success(reviewing
         ? action === 'approve' ? 'Đã duyệt hoá đơn' : 'Đã từ chối hoá đơn'
         : response?.message || 'Lưu hoá đơn thành công')
@@ -253,6 +308,7 @@ const Invoice = ({ data }) => {
       if (!pages.length) throw new Error('Hoá đơn không có trang để xuất')
       const absolute = template.layout?.mode === 'absolute'
       let pdf
+      let pageIndex = 0
       for (const [index, page] of pages.entries()) {
         const canvas = await html2canvas(page, {
           scale: 2,
@@ -271,8 +327,41 @@ const Invoice = ({ data }) => {
           : fallbackHeight
         const pageOrientation = width > height ? 'landscape' : 'portrait'
         if (!pdf) pdf = new jsPDF({ orientation: pageOrientation, unit: 'mm', format: [width, height], compress: true })
-        else pdf.addPage([width, height], pageOrientation)
-        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, width, height, undefined, 'FAST')
+        const pageSlices = absolute
+          ? [{ offset: 0, height: canvas.height }]
+          : getPdfPageSlices(page, canvas.height, Math.max(1, Math.floor(canvas.width * height / width)))
+
+        for (const pageSlice of pageSlices) {
+          const pageCanvas = document.createElement('canvas')
+          const pageContext = pageCanvas.getContext('2d')
+          pageCanvas.width = canvas.width
+          pageCanvas.height = pageSlice.height
+          pageContext.fillStyle = '#ffffff'
+          pageContext.fillRect(0, 0, pageCanvas.width, pageCanvas.height)
+          pageContext.drawImage(
+            canvas,
+            0,
+            pageSlice.offset,
+            canvas.width,
+            pageSlice.height,
+            0,
+            0,
+            canvas.width,
+            pageSlice.height,
+          )
+          if (pageIndex > 0) pdf.addPage([width, height], pageOrientation)
+          pdf.addImage(
+            pageCanvas.toDataURL('image/jpeg', 0.95),
+            'JPEG',
+            0,
+            0,
+            width,
+            absolute ? height : pageSlice.height * width / canvas.width,
+            undefined,
+            'FAST',
+          )
+          pageIndex += 1
+        }
       }
       const orderCode = sourceOrder?.code ? `-${sourceOrder.code}` : ''
       pdf.save(`${template.name || 'Hoa-don'}${orderCode}.pdf`)
@@ -310,11 +399,20 @@ const Invoice = ({ data }) => {
           ) : null}
         </Space>
         <ToolbarActions>
-          {!readOnly && template ? (
-            <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={() => submitInvoice('save')}>
-              Lưu hoá đơn
-            </Button>
-          ) : null}
+          <SheetImportButton
+            template={template}
+            disabled={readOnly || isLoading || saving}
+            onImport={(id, table) => setDocumentData(current => setSheetTableData(current, id, table))}
+          />
+          <Button
+            type="primary"
+            icon={<SaveOutlined />}
+            loading={saving}
+            disabled={readOnly || isLoading || !parsedTemplates.length || hasInvalidTemplate}
+            onClick={() => submitInvoice('save')}
+          >
+            Lưu hoá đơn
+          </Button>
           {isApprover ? (
             <>
               <Button type="primary" icon={<CheckOutlined />} loading={saving} disabled={reviewDisabled || saving} onClick={() => submitInvoice('approve')}>Duyệt</Button>
@@ -322,9 +420,9 @@ const Invoice = ({ data }) => {
             </>
           ) : null}
           <div role="group" aria-label="Thu phóng PDF" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#eef1f5', borderRadius: 8, padding: '2px 4px' }}>
-            <Button type="text" aria-label="Thu nhỏ PDF" icon={<MinusOutlined />} disabled={loading || !template || zoom <= 50} onClick={() => changeZoom(-5)} />
+            <Button type="text" aria-label="Thu nhỏ PDF" icon={<MinusOutlined />} disabled={isLoading || !template || zoom <= 50} onClick={() => changeZoom(-5)} />
             <span aria-label="Mức zoom PDF" aria-live="polite" style={{ minWidth: 44, textAlign: 'center' }}>{zoom}%</span>
-            <Button type="text" aria-label="Phóng to PDF" icon={<PlusOutlined />} disabled={loading || !template || zoom >= 150} onClick={() => changeZoom(5)} />
+            <Button type="text" aria-label="Phóng to PDF" icon={<PlusOutlined />} disabled={isLoading || !template || zoom >= 150} onClick={() => changeZoom(5)} />
           </div>
           <Tooltip title="Tải lại mẫu mới nhất">
             <Button
@@ -336,11 +434,11 @@ const Invoice = ({ data }) => {
               {loadError ? 'Tải lại mẫu' : null}
             </Button>
           </Tooltip>
-          <Tooltip title="In hoá đơn"><Button aria-label="In PDF" type="text" icon={<PrinterOutlined />} onClick={printInvoice} disabled={loading || !template} /></Tooltip>
-          <Tooltip title="Tải xuống PDF"><Button aria-label="Tải xuống PDF" type="text" icon={<DownloadOutlined />} loading={downloading} onClick={downloadInvoice} disabled={loading || !template} /></Tooltip>
+          <Tooltip title="In hoá đơn"><Button aria-label="In PDF" type="text" icon={<PrinterOutlined />} onClick={printInvoice} disabled={isLoading || !template} /></Tooltip>
+          <Tooltip title="Tải xuống PDF"><Button aria-label="Tải xuống PDF" type="text" icon={<DownloadOutlined />} loading={downloading} onClick={downloadInvoice} disabled={isLoading || !template} /></Tooltip>
         </ToolbarActions>
       </InvoiceDocumentToolbar>
-      {loading ? <div style={{ padding: 40, textAlign: 'center' }}><Spin /></div>
+      {isLoading ? <div style={{ padding: 40, textAlign: 'center' }}><Spin /></div>
         : loadError || templateError ? <Alert type="error" showIcon message={loadError || templateError} />
           : !template ? <Empty description="Chưa có mẫu hoá đơn đang sử dụng. Vui lòng tạo hoặc kích hoạt mẫu loại invoice trong Tạo chứng từ." />
             : (

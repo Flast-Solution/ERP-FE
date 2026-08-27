@@ -124,7 +124,7 @@ FE gọi `POST /api/erp/template/save-data` với payload:
 - `invoice`: Chứng từ hoá đơn, dùng trong tab **Hoá đơn** của **Thông tin đơn hàng**.
 - `goods_issue`: Chứng từ xuất hàng.
 
-Hai màn hình chỉ chọn mẫu đang sử dụng đúng loại, không lấy mẫu loại kia làm dự phòng. FE đọc danh sách từ `/api/erp/template/fetch`; luồng báo giá vẫn dùng `/api/erp/template/invoice?id=...` để lấy dữ liệu đơn hàng. Phê duyệt báo giá giữ `type: "quote"`, không đổi theo `documentType` của mẫu.
+Hai màn hình chỉ chọn mẫu đang sử dụng đúng loại, không lấy mẫu loại kia làm dự phòng. FE đọc danh sách từ `/api/erp/template/fetch`; luồng báo giá vẫn dùng `/api/erp/template/invoice?id=...` để lấy `data.customerOrder`. Trường response `data.templateData` không được FE sử dụng và BE có thể bỏ. Phê duyệt báo giá giữ `type: "quote"`, không đổi theo `documentType` của mẫu.
 
 Payload lưu mẫu dùng `quotation`, `invoice`, `goods_issue` viết thường. FE vẫn đọc loại viết hoa từ BE.
 
