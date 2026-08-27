@@ -5,7 +5,7 @@ import { useReactToPrint } from 'react-to-print'
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import Invoice from './Invoice'
-import { getInvoiceTemplates, parseInvoiceTemplate } from './invoiceTemplateUtils'
+import { createInvoiceOrder, getInvoiceTemplates, parseInvoiceTemplate } from './invoiceTemplateUtils'
 import { normalizeDocumentType } from '../../services/DocumentTemplateService'
 
 jest.mock('@flast-erp/core/utils', () => ({ RequestUtils: { Get: jest.fn(), Post: jest.fn() } }), { virtual: true })
@@ -80,6 +80,40 @@ describe('invoice templates', () => {
 
   it('preserves the canonical lowercase invoice type', () => {
     expect(normalizeDocumentType('invoice')).toBe('invoice')
+  })
+
+  it('maps view-on-edit detailId and totalPrice back to the canonical invoice detail fields', () => {
+    const order = createInvoiceOrder({
+      customerOrder: {
+        details: [{ id: 34066, code: 'OPJV2625QTK-2', total: 1900000, priceOff: 100000, quoteConfig: { manualValues: { mark: 'A' } } }],
+      },
+      details: [{
+        detailId: 34066,
+        key: 'OPJV2625QTK-2',
+        quantity: 10,
+        price: 200000,
+        totalPrice: 2000000,
+        discountAmount: 100000,
+        quoteConfig: null,
+      }],
+    })
+    expect(order.details[0]).toMatchObject({
+      id: 34066,
+      code: 'OPJV2625QTK-2',
+      quantity: 10,
+      price: 200000,
+      total: 1900000,
+      priceOff: 100000,
+      quoteConfig: { manualValues: { mark: 'A' } },
+    })
+  })
+
+  it('calculates total from view-on-edit when the list detail is unavailable', () => {
+    const order = createInvoiceOrder({
+      customerOrder: {},
+      details: [{ detailId: 34064, totalPrice: 900000, discountAmount: 0 }],
+    })
+    expect(order.details[0]).toMatchObject({ id: 34064, total: 900000 })
   })
 })
 

@@ -1,8 +1,7 @@
 import React, { useId, useMemo } from 'react'
 import { Alert } from 'antd'
 import get from 'lodash/get'
-import { getValueByPath } from '../utils'
-import { getHtmlManualPath, getHtmlManualPlaceholder, normalizeHtmlDefinition, resolveHtmlField } from './model'
+import { getHtmlManualPath, getHtmlManualPlaceholder, getHtmlRepeatRows, normalizeHtmlDefinition, resolveHtmlField } from './model'
 import { getScopedTemplateFonts, sanitizeTemplateCss } from './sanitize'
 
 const elementStyle = element => Object.fromEntries(Array.from(element.style || []).map(property => [
@@ -29,8 +28,7 @@ const HtmlTemplateContent = ({ template, data = {}, editable = false, onManualFi
     if (node.nodeType !== 1) return null
     const repeatId = node.getAttribute('data-repeat')
     if (repeatId && !context.inRepeat) {
-      const rows = getValueByPath(data, definition.repeats[repeatId].source, [])
-      if (!Array.isArray(rows)) return null
+      const rows = getHtmlRepeatRows(data, definition.repeats[repeatId].source)
       return rows.map((row, rowIndex) => render(node, `${key}-${row?.id ?? rowIndex}`, { row, rowIndex, inRepeat: true }))
     }
     const tag = node.tagName.toLowerCase()

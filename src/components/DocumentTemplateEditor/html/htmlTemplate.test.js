@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { strToU8, zipSync } from 'fflate'
 import HtmlTemplateContent from './HtmlTemplateContent'
 import { buildHtmlBindingOptions } from './HtmlTemplateDesigner'
-import { createHtmlDocumentTemplate, normalizeHtmlDefinition } from './model'
+import { createHtmlDocumentTemplate, getHtmlRepeatRows, normalizeHtmlDefinition, resolveHtmlField } from './model'
 import { importHtmlTemplateBytes, exportHtmlTemplateZip } from './package'
 import { getScopedTemplateFonts, sanitizeTemplateCss } from './sanitize'
 import { buildDocumentSchemaFromEntityFields, normalizeDocumentSchema } from '../../../services/DocumentTemplateService'
@@ -79,19 +79,54 @@ describe('HTML order data options', () => {
   it('includes scalar and first-detail-row fields for a normal binding without duplicate paths', () => {
     const options = buildHtmlBindingOptions(dataSchema, { mode: 'binding', path: '' }, { repeats: {} })
     expect(options.map(option => option.value)).toEqual([
-      'customerOrder.code',
-      'customerOrder.details.0.productName',
-      'customerOrder.details.0.skuDetails.values.text',
+      'code',
+      'details.0.productName',
+      'details.0.skuDetails.values.text',
     ])
     expect(options[1].label).toContain('dòng 1')
   })
 
-  it('keeps collection bindings relative inside a detail repeat', () => {
+  it('shows complete collection paths inside a detail repeat', () => {
     const options = buildHtmlBindingOptions(dataSchema, { mode: 'binding', repeatId: 'items' }, {
       repeats: { items: { source: 'customerOrder.details' } },
     })
-    expect(options.map(option => option.value)).toEqual(['productName', 'skuDetails.values.text'])
+    expect(options.map(option => option.value)).toEqual([
+      'details.productName',
+      'details.skuDetails.values.text',
+    ])
   })
+
+  it('resolves complete and legacy relative paths against the current repeated row', () => {
+    const definition = { repeats: { items: { source: 'customerOrder.details' } } }
+    const field = { mode: 'binding', repeatId: 'items', path: 'details.total', format: 'decimal_en' }
+    expect(resolveHtmlField('amount', field, definition, {}, { total: 150000 }, 0)).toBe('150,000.00')
+    expect(resolveHtmlField('amount', { ...field, path: 'total' }, definition, {}, { total: 150000 }, 0)).toBe('150,000.00')
+    expect(resolveHtmlField('amount', { ...field, path: 'customerOrder.details.total' }, definition, {}, { total: 150000 }, 0)).toBe('150,000.00')
+  })
+
+  it('normalizes a legacy relative repeat path to the complete entity path', () => {
+    const template = createHtmlDocumentTemplate(
+      '<div data-repeat="items"><span data-field="amount"></span></div>',
+      {
+        version: 1,
+        repeats: { items: { source: 'customerOrder.details' } },
+        fields: { amount: { label: 'Tổng tiền', mode: 'binding', path: 'total' } },
+      },
+    )
+    expect(template.htmlTemplate.fields.amount.path).toBe('details.total')
+  })
+
+  it('resolves an API entity path against the internal customerOrder wrapper', () => {
+    const field = { mode: 'binding', repeatId: null, path: 'code', format: 'text' }
+    expect(resolveHtmlField('code', field, { repeats: {} }, { customerOrder: { code: 'OUHU3326TPC' } })).toBe('OUHU3326TPC')
+  })
+
+  it('reads repeat rows from both an API order payload and wrapped viewer data', () => {
+    const details = [{ id: 34064, total: 900000 }, { id: 34066, total: 1900000 }]
+    expect(getHtmlRepeatRows({ details }, 'customerOrder.details')).toBe(details)
+    expect(getHtmlRepeatRows({ customerOrder: { details } }, 'customerOrder.details')).toBe(details)
+  })
+
 })
 
 describe('HTML field interaction', () => {
@@ -108,6 +143,26 @@ describe('HTML field interaction', () => {
     // eslint-disable-next-line testing-library/no-unnecessary-act
     act(() => root.render(<HtmlTemplateContent template={make()} {...props} />))
   }
+  it('renders details.total for every invoice item row', () => {
+    const invoiceTemplate = createHtmlDocumentTemplate(
+      '<table><tbody data-repeat="items"><tr><td data-field="quantity"></td><td data-field="price"></td><td data-field="amount"></td></tr></tbody></table>',
+      {
+        version: 1,
+        repeats: { items: { source: 'customerOrder.details' } },
+        fields: {
+          quantity: { mode: 'binding', path: 'details.quantity', format: 'number_en' },
+          price: { mode: 'binding', path: 'details.price', format: 'decimal_en' },
+          amount: { mode: 'binding', path: 'details.total', format: 'decimal_en' },
+        },
+      },
+    )
+    // eslint-disable-next-line testing-library/no-unnecessary-act
+    act(() => root.render(<HtmlTemplateContent template={invoiceTemplate} data={{ customerOrder: { details: [
+      { quantity: 100, price: 9000, total: 900000 },
+      { quantity: 10, price: 200000, total: 1900000 },
+    ] } }} />))
+    expect(Array.from(host.querySelectorAll('[data-field="amount"]')).map(cell => cell.textContent)).toEqual(['900,000.00', '1,900,000.00'])
+  })
   it('emits the correct manual path and keeps input focus across updates', () => {
     const onChange = jest.fn()
     render({ editable: true, data: { customerOrder: { htmlFields: { name: 'Old' } } }, onManualFieldChange: onChange })
