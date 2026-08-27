@@ -33,7 +33,6 @@ import {
 } from '@ant-design/icons'
 import { useReactToPrint } from 'react-to-print'
 import styled from 'styled-components'
-import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { RequestUtils } from '@flast-erp/core/utils'
 import DocumentTemplateService from '@/services/DocumentTemplateService'
@@ -44,7 +43,11 @@ import { setSheetTableData } from '../../components/DocumentTemplateEditor/sheet
 import { getValueByPath } from '../../components/DocumentTemplateEditor/utils'
 import { hasManualDocumentFields, setDocumentValueByPath } from '../../components/GeneratedDocumentViewer/manualEditing'
 import { DocumentToolbar, ToolbarActions } from '../../components/GeneratedDocumentViewer/styles'
-import { getPdfPageSlices } from '../../components/GeneratedDocumentViewer/pdfExport'
+import {
+  captureDocumentPage,
+  getPdfPageSlices,
+  withPdfCaptureLayout,
+} from '../../components/GeneratedDocumentViewer/pdfExport'
 import useGetMe from '../../hooks/useGetMe'
 import QuotationApproverSelect from './List/components/QuotationApproverSelect'
 import { QUOTATION_APPROVAL_STATUS } from './List/constants'
@@ -303,66 +306,61 @@ const Invoice = ({ data }) => {
     if (!contentRef.current || downloading || !template) return
     setDownloading(true)
     try {
-      if (document.fonts?.ready) await document.fonts.ready
       const pages = Array.from(contentRef.current.querySelectorAll('.document-pdf-page'))
       if (!pages.length) throw new Error('Hoá đơn không có trang để xuất')
       const absolute = template.layout?.mode === 'absolute'
       let pdf
       let pageIndex = 0
-      for (const [index, page] of pages.entries()) {
-        const canvas = await html2canvas(page, {
-          scale: 2,
-          useCORS: true,
-          allowTaint: false,
-          backgroundColor: '#ffffff',
-          logging: false,
-        })
-        const fallbackWidth = orientation === 'landscape' ? 297 : 210
-        const fallbackHeight = orientation === 'landscape' ? 210 : 297
-        const width = absolute && template.pages?.[index]?.width
-          ? template.pages[index].width * 25.4 / 96
-          : fallbackWidth
-        const height = absolute && template.pages?.[index]?.height
-          ? template.pages[index].height * 25.4 / 96
-          : fallbackHeight
-        const pageOrientation = width > height ? 'landscape' : 'portrait'
-        if (!pdf) pdf = new jsPDF({ orientation: pageOrientation, unit: 'mm', format: [width, height], compress: true })
-        const pageSlices = absolute
-          ? [{ offset: 0, height: canvas.height }]
-          : getPdfPageSlices(page, canvas.height, Math.max(1, Math.floor(canvas.width * height / width)))
+      await withPdfCaptureLayout(contentRef.current, async () => {
+        for (const [index, page] of pages.entries()) {
+          const canvas = await captureDocumentPage(page)
+          const fallbackWidth = orientation === 'landscape' ? 297 : 210
+          const fallbackHeight = orientation === 'landscape' ? 210 : 297
+          const width = absolute && template.pages?.[index]?.width
+            ? template.pages[index].width * 25.4 / 96
+            : fallbackWidth
+          const height = absolute && template.pages?.[index]?.height
+            ? template.pages[index].height * 25.4 / 96
+            : fallbackHeight
+          const pageOrientation = width > height ? 'landscape' : 'portrait'
+          if (!pdf) pdf = new jsPDF({ orientation: pageOrientation, unit: 'mm', format: [width, height], compress: true })
+          const pageSlices = absolute
+            ? [{ offset: 0, height: canvas.height }]
+            : getPdfPageSlices(page, canvas.height, Math.max(1, Math.floor(canvas.width * height / width)))
 
-        for (const pageSlice of pageSlices) {
-          const pageCanvas = document.createElement('canvas')
-          const pageContext = pageCanvas.getContext('2d')
-          pageCanvas.width = canvas.width
-          pageCanvas.height = pageSlice.height
-          pageContext.fillStyle = '#ffffff'
-          pageContext.fillRect(0, 0, pageCanvas.width, pageCanvas.height)
-          pageContext.drawImage(
-            canvas,
-            0,
-            pageSlice.offset,
-            canvas.width,
-            pageSlice.height,
-            0,
-            0,
-            canvas.width,
-            pageSlice.height,
-          )
-          if (pageIndex > 0) pdf.addPage([width, height], pageOrientation)
-          pdf.addImage(
-            pageCanvas.toDataURL('image/jpeg', 0.95),
-            'JPEG',
-            0,
-            0,
-            width,
-            absolute ? height : pageSlice.height * width / canvas.width,
-            undefined,
-            'FAST',
-          )
-          pageIndex += 1
+          for (const pageSlice of pageSlices) {
+            const pageCanvas = document.createElement('canvas')
+            const pageContext = pageCanvas.getContext('2d')
+            pageCanvas.width = canvas.width
+            pageCanvas.height = pageSlice.height
+            pageContext.fillStyle = '#ffffff'
+            pageContext.fillRect(0, 0, pageCanvas.width, pageCanvas.height)
+            pageContext.drawImage(
+              canvas,
+              0,
+              pageSlice.offset,
+              canvas.width,
+              pageSlice.height,
+              0,
+              0,
+              canvas.width,
+              pageSlice.height,
+            )
+            if (pageIndex > 0) pdf.addPage([width, height], pageOrientation)
+            pdf.addImage(
+              pageCanvas.toDataURL('image/jpeg', 0.95),
+              'JPEG',
+              0,
+              0,
+              width,
+              absolute ? height : pageSlice.height * width / canvas.width,
+              undefined,
+              'FAST',
+            )
+            pageIndex += 1
+          }
         }
-      }
+      })
       const orderCode = sourceOrder?.code ? `-${sourceOrder.code}` : ''
       pdf.save(`${template.name || 'Hoa-don'}${orderCode}.pdf`)
       message.success('Đã tải hoá đơn PDF')

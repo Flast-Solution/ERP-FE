@@ -20,7 +20,6 @@ import {
   SaveOutlined,
   SendOutlined,
 } from '@ant-design/icons'
-import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { useReactToPrint } from 'react-to-print'
 import DocumentTemplateContent from '@/components/DocumentTemplateEditor/DocumentTemplateContent'
@@ -28,7 +27,7 @@ import SheetImportButton from '../DocumentTemplateEditor/SheetImportButton'
 import { setSheetTableData } from '../DocumentTemplateEditor/sheetImport'
 import { getValueByPath } from '@/components/DocumentTemplateEditor/utils'
 import { hasManualDocumentFields, setDocumentValueByPath } from './manualEditing'
-import { getPdfPageSlices } from './pdfExport'
+import { captureDocumentPage, getPdfPageSlices, withPdfCaptureLayout } from './pdfExport'
 import {
   DiscussionComposer,
   DiscussionHeader,
@@ -216,41 +215,37 @@ const GeneratedDocumentViewer = ({
     setDownloading(true)
 
     try {
-      if (document.fonts?.ready) {
-        await document.fonts.ready
-      }
-
       const pages = Array.from(documentRef.current.querySelectorAll('.generated-document-page'))
       const absolute = template?.layout?.mode === 'absolute'
       let pdf
       let pageIndex = 0
-      for (const [index, pageElement] of pages.entries()) {
-        const canvas = await html2canvas(pageElement, {
-          scale: 2, useCORS: true, allowTaint: false, backgroundColor: '#ffffff', logging: false,
-        })
-        const width = absolute && template.pages?.[index]?.width ? template.pages[index].width * 25.4 / 96 : pageWidth
-        const height = absolute && template.pages?.[index]?.height ? template.pages[index].height * 25.4 / 96 : pageHeight
-        const pageOrientation = width > height ? 'landscape' : 'portrait'
-        const format = absolute ? [width, height] : 'a4'
-        if (!pdf) pdf = new jsPDF({ orientation: pageOrientation, unit: 'mm', format, compress: true })
-        const pageSlices = absolute
-          ? [{ offset: 0, height: canvas.height }]
-          : getPdfPageSlices(pageElement, canvas.height, Math.max(1, Math.floor(canvas.width * height / width)))
+      await withPdfCaptureLayout(documentRef.current, async () => {
+        for (const [index, pageElement] of pages.entries()) {
+          const canvas = await captureDocumentPage(pageElement)
+          const width = absolute && template.pages?.[index]?.width ? template.pages[index].width * 25.4 / 96 : pageWidth
+          const height = absolute && template.pages?.[index]?.height ? template.pages[index].height * 25.4 / 96 : pageHeight
+          const pageOrientation = width > height ? 'landscape' : 'portrait'
+          const format = absolute ? [width, height] : 'a4'
+          if (!pdf) pdf = new jsPDF({ orientation: pageOrientation, unit: 'mm', format, compress: true })
+          const pageSlices = absolute
+            ? [{ offset: 0, height: canvas.height }]
+            : getPdfPageSlices(pageElement, canvas.height, Math.max(1, Math.floor(canvas.width * height / width)))
 
-        for (const pageSlice of pageSlices) {
-          const pageCanvas = document.createElement('canvas')
-          const pageContext = pageCanvas.getContext('2d')
-          pageCanvas.width = canvas.width
-          pageCanvas.height = pageSlice.height
-          pageContext.fillStyle = '#ffffff'
-          pageContext.fillRect(0, 0, pageCanvas.width, pageCanvas.height)
-          pageContext.drawImage(canvas, 0, pageSlice.offset, canvas.width, pageSlice.height, 0, 0, canvas.width, pageSlice.height)
-          if (pageIndex > 0) pdf.addPage(format, pageOrientation)
-          pdf.addImage(pageCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, width,
-            absolute ? height : pageSlice.height * width / canvas.width, undefined, 'FAST')
-          pageIndex += 1
+          for (const pageSlice of pageSlices) {
+            const pageCanvas = document.createElement('canvas')
+            const pageContext = pageCanvas.getContext('2d')
+            pageCanvas.width = canvas.width
+            pageCanvas.height = pageSlice.height
+            pageContext.fillStyle = '#ffffff'
+            pageContext.fillRect(0, 0, pageCanvas.width, pageCanvas.height)
+            pageContext.drawImage(canvas, 0, pageSlice.offset, canvas.width, pageSlice.height, 0, 0, canvas.width, pageSlice.height)
+            if (pageIndex > 0) pdf.addPage(format, pageOrientation)
+            pdf.addImage(pageCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, width,
+              absolute ? height : pageSlice.height * width / canvas.width, undefined, 'FAST')
+            pageIndex += 1
+          }
         }
-      }
+      })
       if (!pdf) throw new Error('Chứng từ không có trang để xuất')
       pdf.save(getPdfFileName(template, title, documentData))
       message.success('Đã tải chứng từ PDF')
