@@ -7,6 +7,21 @@ export const HTML_MODES = [
   { value: 'sku', label: 'Thuộc tính SKU' }, { value: 'static', label: 'Nội dung cố định' },
   { value: 'sum', label: 'Tổng một trường số' },
 ]
+const MANUAL_FORMAT_HINTS = {
+  date: 'DD/MM/YYYY',
+  number: 'chỉ nhập số',
+  number_en: 'ví dụ 4,867',
+  decimal_en: 'ví dụ 8,906.61',
+  currency: 'nhập số tiền',
+}
+
+export const getHtmlManualPlaceholder = field => {
+  const configured = String(field?.placeholder || '').trim()
+  if (configured) return configured
+  const label = String(field?.label || 'nội dung').trim()
+  const hint = MANUAL_FORMAT_HINTS[field?.format]
+  return `Nhập ${label}${hint ? ` (${hint})` : ''}`
+}
 const SAFE_ID = /^[a-zA-Z][a-zA-Z0-9_-]{0,79}$/
 const safeId = id => SAFE_ID.test(id) && !['constructor', 'prototype', '__proto__'].includes(id)
 export const isSafeBindingPath = path => typeof path === 'string' && /^[a-zA-Z_][\w-]*(?:\.(?:[a-zA-Z_][\w-]*|\d+))*$/.test(path)
@@ -49,7 +64,7 @@ export const normalizeHtmlDefinition = (definition, assets = {}) => {
     fields[id] = {
       label: String(field.label || id), mode, allowedModes, path: field.path || '',
       source: field.source || 'customerOrder.details', attribute: String(field.attribute || ''), rowIndex,
-      value: field.value ?? '', format: field.format || 'text', repeatId: element.closest('[data-repeat]')?.dataset.repeat || null,
+      value: field.value ?? '', placeholder: String(field.placeholder || ''), format: field.format || 'text', repeatId: element.closest('[data-repeat]')?.dataset.repeat || null,
     }
   })
   if (Object.keys(definition.fields).some(id => !Object.prototype.hasOwnProperty.call(fields, id))) throw new Error('Có cấu hình field không tồn tại trong HTML')

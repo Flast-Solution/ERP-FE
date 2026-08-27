@@ -4,6 +4,10 @@ import { resolveRuntimeAssetUrl, resolveUploadUrl } from './uploadUtils'
 describe('upload asset URLs', () => {
   const originalBaseUrl = axios.defaults.baseURL
 
+  beforeEach(() => {
+    axios.defaults.baseURL = '/api'
+  })
+
   afterEach(() => {
     axios.defaults.baseURL = originalBaseUrl
   })
@@ -37,6 +41,20 @@ describe('upload asset URLs', () => {
     axios.defaults.baseURL = 'https://api.example.com/api'
     expect(resolveUploadUrl('document-template/logo/logo.png')).toBe(
       'https://api.example.com/api/upload/folder/view?filename=document-template%2Flogo%2Flogo.png',
+    )
+  })
+
+  it('adds the deployed API origin to an API-relative image URL', () => {
+    axios.defaults.baseURL = 'http://157.10.199.138:9080/api'
+    expect(resolveRuntimeAssetUrl('/api/upload/folder/view?filename=document-template%2Flogo.png')).toBe(
+      'http://157.10.199.138:9080/api/upload/folder/view?filename=document-template%2Flogo.png',
+    )
+  })
+
+  it('moves a persisted localhost image URL to the deployed API origin', () => {
+    axios.defaults.baseURL = 'https://api.example.com/api'
+    expect(resolveRuntimeAssetUrl('http://localhost:3000/api/upload/folder/view?filename=logo.png')).toBe(
+      'https://api.example.com/api/upload/folder/view?filename=logo.png',
     )
   })
 })

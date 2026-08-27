@@ -24,8 +24,8 @@ import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { useReactToPrint } from 'react-to-print'
 import DocumentTemplateContent from '@/components/DocumentTemplateEditor/DocumentTemplateContent'
-import { hasHtmlManualFields, isSafeBindingPath } from '../DocumentTemplateEditor/html/model'
 import { getValueByPath } from '@/components/DocumentTemplateEditor/utils'
+import { hasManualDocumentFields, setDocumentValueByPath } from './manualEditing'
 import {
   DiscussionComposer,
   DiscussionHeader,
@@ -45,31 +45,6 @@ import {
 } from './styles'
 
 const EMPTY_COMMENTS = []
-
-const hasManualDocumentFields = (nodes = []) => nodes.some(node => (
-  (node?.type === 'dynamicTable' && node.columns?.some(column => column.inputMode === 'manual'))
-  || (node?.type === 'richText' && /{{\s*input(?:-list)?:[^{}]+?\s*}}/.test(node.content || ''))
-  || hasManualDocumentFields(node?.children ?? [])
-))
-
-const setValueByPath = (source, path, value) => {
-  if (!isSafeBindingPath(path)) return source
-  const keys = String(path || '').split('.').filter(Boolean)
-  if (!keys.length) return source
-
-  const root = Array.isArray(source) ? [...source] : { ...(source ?? {}) }
-  let cursor = root
-  keys.forEach((key, index) => {
-    if (index === keys.length - 1) {
-      cursor[key] = value
-      return
-    }
-    const currentValue = cursor[key]
-    cursor[key] = Array.isArray(currentValue) ? [...currentValue] : { ...(currentValue ?? {}) }
-    cursor = cursor[key]
-  })
-  return root
-}
 
 const findCrossingRange = (ranges, minimumTop, target) => ranges.reduce((selected, range) => {
   const crossesBoundary = range.top > minimumTop && range.top < target && range.bottom > target
@@ -189,6 +164,15 @@ const GeneratedDocumentViewer = ({
         .generated-document-page img { break-inside: avoid; }
         .generated-document-page thead { display: table-header-group; }
         .generated-document-page + .generated-document-page { break-before: page; }
+        [data-document-manual-input], [data-document-manual-path] {
+          border: 0 !important;
+          background: transparent !important;
+          box-shadow: none !important;
+          padding: 0 !important;
+        }
+        [data-document-manual-input]::placeholder, [data-document-manual-path]::placeholder {
+          color: transparent !important;
+        }
       }
     `,
   })
@@ -215,7 +199,7 @@ const GeneratedDocumentViewer = ({
 
   const editableDocument = Boolean(!readOnly && !loading && !documentSubmitting
     && (onSubmitDocument || onApproveDocument || onRejectDocument)
-    && (hasManualDocumentFields(template?.nodes) || hasHtmlManualFields(template)))
+    && hasManualDocumentFields(template?.nodes, template))
 
   const updateTableCell = ({ node, rowIndex, column, value }) => {
     if (!editableDocument || !node?.source || !column?.binding) return
@@ -223,15 +207,15 @@ const GeneratedDocumentViewer = ({
       const rows = getValueByPath(currentData, node.source, [])
       if (!Array.isArray(rows) || !rows[rowIndex]) return currentData
       const nextRows = rows.map((row, index) => (
-        index === rowIndex ? setValueByPath(row, column.binding, value) : row
+        index === rowIndex ? setDocumentValueByPath(row, column.binding, value) : row
       ))
-      return setValueByPath(currentData, node.source, nextRows)
+      return setDocumentValueByPath(currentData, node.source, nextRows)
     })
   }
 
   const updateManualField = (path, value) => {
     if (!editableDocument || !path) return
-    setDocumentData(currentData => setValueByPath(currentData, path, value))
+    setDocumentData(currentData => setDocumentValueByPath(currentData, path, value))
   }
 
   const changeZoom = (amount) => {

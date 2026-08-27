@@ -12,23 +12,41 @@ export const extractUploadItems = (response) => {
   return payload ? [payload] : []
 }
 
-const isAbsoluteUploadUrl = (value = '') => (
-  /^https?:\/\//i.test(String(value)) || String(value).startsWith('/api/')
-)
-
 const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1', '[::1]'])
+
+const isLocalUrl = (value) => {
+  try {
+    return LOCAL_HOSTNAMES.has(new URL(value).hostname)
+  } catch {
+    return false
+  }
+}
+
+const resolveApiAssetUrl = (apiPath) => {
+  const normalizedPath = `/${String(apiPath).replace(/^\/+/, '')}`
+  const baseUrl = String(axios.defaults.baseURL || '/api').replace(/\/+$/, '')
+
+  // Keep development URLs relative so the CRA proxy can forward them.
+  if (!/^https?:\/\//i.test(baseUrl) || isLocalUrl(baseUrl)) return normalizedPath
+
+  const pathWithoutApiPrefix = normalizedPath.replace(/^\/api(?=\/|$)/i, '')
+  return /\/api$/i.test(baseUrl)
+    ? `${baseUrl}${pathWithoutApiPrefix}`
+    : `${baseUrl}${normalizedPath}`
+}
 
 export const resolveRuntimeAssetUrl = (value) => {
   const url = toUploadText(value)
   if (!url || /^(?:data:|blob:|\/\/)/i.test(url)) return url
+  if (/^\/api(?:\/|$)/i.test(url)) return resolveApiAssetUrl(url)
   if (!/^https?:\/\//i.test(url)) return url
 
   try {
     const parsedUrl = new URL(url)
-    // Templates created in development used to persist the dev origin. Keep
-    // only the application-relative URL so the current deployed host is used.
+    // Replace a persisted development origin with the API base of the current
+    // environment. This also keeps old templates portable after deployment.
     if (LOCAL_HOSTNAMES.has(parsedUrl.hostname) && parsedUrl.pathname.startsWith('/api/')) {
-      return `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`
+      return resolveApiAssetUrl(`${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`)
     }
   } catch {
     return url
@@ -63,7 +81,9 @@ export const resolveUploadFilename = (item) => {
 export const resolveUploadUrl = (item) => {
   const filename = resolveUploadFilename(item)
   if (!filename) return ''
-  if (isAbsoluteUploadUrl(filename)) return resolveRuntimeAssetUrl(filename)
+  if (/^https?:\/\//i.test(filename) || /^\/api(?:\/|$)/i.test(filename)) {
+    return resolveRuntimeAssetUrl(filename)
+  }
   const baseUrl = String(axios.defaults.baseURL || '/api').replace(/\/$/, '')
   return resolveRuntimeAssetUrl(`${baseUrl}/upload/folder/view?filename=${encodeURIComponent(filename)}`)
 }

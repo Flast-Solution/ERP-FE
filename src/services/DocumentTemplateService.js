@@ -141,7 +141,7 @@ const DocumentTemplateService = {
 
   fetchInvoice: id => RequestUtils.Get(`${TEMPLATE_PATH}/invoice`, { id }),
 
-  checkInvoice: orderId => RequestUtils.Get('/erp/order/invoice-check', { orderId, type: 'quote' }),
+  checkInvoice: (orderId, type = 'quote') => RequestUtils.Get('/erp/order/invoice-check', { orderId, type }),
 }
 
 export default DocumentTemplateService

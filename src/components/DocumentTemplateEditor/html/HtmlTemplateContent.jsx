@@ -2,7 +2,7 @@ import React, { useId, useMemo } from 'react'
 import { Alert } from 'antd'
 import get from 'lodash/get'
 import { getValueByPath } from '../utils'
-import { getHtmlManualPath, normalizeHtmlDefinition, resolveHtmlField } from './model'
+import { getHtmlManualPath, getHtmlManualPlaceholder, normalizeHtmlDefinition, resolveHtmlField } from './model'
 import { getScopedTemplateFonts, sanitizeTemplateCss } from './sanitize'
 
 const elementStyle = element => Object.fromEntries(Array.from(element.style || []).map(property => [
@@ -57,8 +57,15 @@ const HtmlTemplateContent = ({ template, data = {}, editable = false, onManualFi
       const value = resolveHtmlField(id, field, definition, data, context.row, context.rowIndex)
       const path = getHtmlManualPath(id, field, definition, context.rowIndex)
       children = editable && field.mode === 'manual' ? (
-        <input aria-label={field.label} value={get(data, path, field.value) ?? ''} onChange={event => onManualFieldChange?.(path, event.target.value)}
-          style={{ width: '100%', minWidth: 20, font: 'inherit', color: 'inherit', textAlign: 'inherit', background: 'transparent', padding: 0, border: 0, borderBottom: '1px dotted #64748b' }} />
+        <input
+          aria-label={field.label}
+          data-document-manual-input="true"
+          value={get(data, path, field.value) ?? ''}
+          placeholder={getHtmlManualPlaceholder(field)}
+          title={`Nhập tay: ${field.label}`}
+          onChange={event => onManualFieldChange?.(path, event.target.value)}
+          style={{ width: '100%', minWidth: 36, minHeight: 24, boxSizing: 'border-box', font: 'inherit', color: 'inherit', textAlign: 'inherit', background: 'rgba(37, 99, 235, 0.07)', padding: '2px 5px', border: '1px dashed rgba(37, 99, 235, 0.55)', borderRadius: 3, outline: 0 }}
+        />
       ) : value || (onSelectField ? `[${field.label}]` : '\u00a0')
     } else children = Array.from(node.childNodes).map((child, index) => render(child, `${key}-${index}`, context))
     return ['img', 'br', 'hr', 'col'].includes(tag) ? React.createElement(tag, props) : React.createElement(tag, props, children)
@@ -66,7 +73,7 @@ const HtmlTemplateContent = ({ template, data = {}, editable = false, onManualFi
   const landscape = template.page?.orientation === 'landscape'
   return (
     <div className={`document-pdf-page ${pageClassName}`} data-html-scope={scope} style={{ position: 'relative', isolation: 'isolate', contain: 'layout style', width: landscape ? 1123 : 794, minHeight: landscape ? 794 : 1123, boxSizing: 'border-box', background: '#fff', margin: '0 auto 28px', color: '#000', fontFamily: 'Times New Roman', lineHeight: 'normal' }}>
-      <style>{`${css}\n@media print { [data-html-scope="${scope}"] { break-inside:auto!important; } [data-html-scope="${scope}"] > .document { break-inside:auto!important; } [data-html-scope="${scope}"] input { border:0!important; } }`}</style>
+      <style>{`${css}\n[data-html-scope="${scope}"] [data-document-manual-input="true"]::placeholder { color:#64748b;opacity:.72;font-style:italic; }\n[data-html-scope="${scope}"] [data-document-manual-input="true"]:focus { background:rgba(37,99,235,.12)!important;border-color:#2563eb!important;box-shadow:0 0 0 2px rgba(37,99,235,.16); }\n@media print { [data-html-scope="${scope}"] { break-inside:auto!important; } [data-html-scope="${scope}"] > .document { break-inside:auto!important; } [data-html-scope="${scope}"] input { border:0!important;background:transparent!important;box-shadow:none!important;padding:0!important; } }`}</style>
       {Array.from(doc.body.childNodes).map((node, index) => render(node, String(index)))}
     </div>
   )

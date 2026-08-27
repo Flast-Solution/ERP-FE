@@ -98,7 +98,14 @@ const writeManualValue = (owner, key, value) => {
   }
 }
 
-export const buildQuotationPayload = (data, template, originalOrder, approverId, approvalStatus = QUOTATION_APPROVAL_STATUS.PENDING) => {
+export const buildQuotationPayload = (
+  data,
+  template,
+  originalOrder,
+  approverId,
+  approvalStatus = QUOTATION_APPROVAL_STATUS.PENDING,
+  approvalType = 'quote',
+) => {
   // The viewer overlays manual values on bindings for rendering/formulas. Start
   // from the API snapshot so those overlays never overwrite business fields.
   const order = cloneDeep(originalOrder)
@@ -125,7 +132,7 @@ export const buildQuotationPayload = (data, template, originalOrder, approverId,
     },
     details,
     ...(approverId != null ? {
-      aproval: { status: approvalStatus, type: 'quote', userApproval: Number(approverId) },
+      aproval: { status: approvalStatus, type: approvalType, userApproval: Number(approverId) },
     } : {}),
     shippingCost: order.shippingCost ?? null,
     customerNote: order.customerNote ?? null,

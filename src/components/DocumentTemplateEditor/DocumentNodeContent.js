@@ -5,6 +5,7 @@ import { COMPONENT_TYPES } from './constants'
 import { getImportedSkuSettings } from './importedTextBindings'
 import { formatBindingValue, getValueByPath, resolveBindingValue, resolveNodeValue } from './utils'
 import { TablePlaceholder } from './styles'
+import { getHtmlManualPlaceholder } from './html/model'
 
 const resolveStyle = (style = {}) => ({
   fontFamily: style.fontFamily || 'Times New Roman',
@@ -73,6 +74,14 @@ const escapeHtml = value => String(value ?? '')
   .replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;')
 
+const manualPathLabel = path => {
+  const key = String(path || '').split('.').filter(Boolean).pop() || 'nội dung'
+  return key
+    .replace(/[-_]+/g, ' ')
+    .replace(/([a-z\d])([A-Z])/g, '$1 $2')
+    .toLowerCase()
+}
+
 const renderListItems = value => {
   const items = String(value ?? '')
     .split(/\r?\n/)
@@ -119,7 +128,8 @@ const renderRichTextHtml = ({ content, data, preview, editable, node }) => {
     const value = getValueByPath(data, path, '')
     let replacement = `[Nhập tay: ${escapeHtml(path)}]`
     if (preview && editable) {
-      replacement = `<input data-document-manual-path="${escapeHtml(path)}" value="${escapeHtml(value)}" placeholder="Nhập nội dung" style="display:block;width:100%;min-width:80px;height:28px;padding:2px 0;border:0;border-bottom:1px solid currentColor;border-radius:0;outline:none;color:inherit;background:transparent;font:inherit;text-align:inherit;box-sizing:border-box" />`
+      const placeholder = getHtmlManualPlaceholder({ label: manualPathLabel(path) })
+      replacement = `<input data-document-manual-path="${escapeHtml(path)}" value="${escapeHtml(value)}" placeholder="${escapeHtml(placeholder)}" title="Nhập tay: ${escapeHtml(manualPathLabel(path))}" style="display:block;width:100%;min-width:80px;min-height:28px;padding:2px 5px;border:1px dashed rgba(37,99,235,.55);border-radius:3px;outline:none;color:inherit;background:rgba(37,99,235,.07);font:inherit;text-align:inherit;box-sizing:border-box" />`
     } else if (preview) {
       replacement = value
         ? escapeHtml(formatBindingValue(value))
@@ -324,9 +334,14 @@ const DynamicTable = ({ node, data, preview, editable = false, onTableCellChange
                 <td key={column.id} style={{ border: cellBorder, padding: cellPadding, height: node.tableStyle?.rowMinHeight, verticalAlign: column.verticalAlign || 'middle', textAlign: column.align, color: column.color, backgroundColor: column.backgroundColor, whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}>
                   {isManual && preview && editable ? (
                     <Input
+                      data-document-manual-input="true"
                       variant="borderless"
                       value={value}
-                      placeholder={column.placeholder || 'Nhập nội dung'}
+                      placeholder={getHtmlManualPlaceholder({
+                        label: column.title || column.binding,
+                        placeholder: column.placeholder,
+                        format: column.format,
+                      })}
                       onChange={event => onTableCellChange?.({
                         node,
                         row,
@@ -334,7 +349,7 @@ const DynamicTable = ({ node, data, preview, editable = false, onTableCellChange
                         column,
                         value: event.target.value,
                       })}
-                      style={{ padding: 0, textAlign: column.align || 'left' }}
+                      style={{ minHeight: 28, padding: '2px 5px', textAlign: column.align || 'left', background: 'rgba(37, 99, 235, 0.07)', border: '1px dashed rgba(37, 99, 235, 0.55)', borderRadius: 3 }}
                     />
                   ) : column.cellTemplate
                     ? <span dangerouslySetInnerHTML={{ __html: sanitizeRichText(preview ? interpolateBindings(column.cellTemplate, row, { ...column, tableCell: true }) : column.cellTemplate) }} />
