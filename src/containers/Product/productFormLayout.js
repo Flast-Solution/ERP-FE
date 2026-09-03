@@ -1,4 +1,4 @@
-export const PRODUCT_FORM_LAYOUT_VERSION = 1;
+export const PRODUCT_FORM_LAYOUT_VERSION = 2;
 
 export const DEFAULT_PRODUCT_FORM_LAYOUT = [
   {
@@ -6,6 +6,7 @@ export const DEFAULT_PRODUCT_FORM_LAYOUT = [
     title: 'Thông tin chung',
     items: [
       'name',
+      'code',
       'serviceId',
       'providerId',
       'unit',
