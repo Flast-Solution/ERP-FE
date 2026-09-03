@@ -64,7 +64,8 @@ import {
 } from './productFormLayout';
 
 const PRODUCT_FORM_ITEMS = {
-  name: { label: 'Tên sản phẩm', md: 24 },
+  name: { label: 'Tên sản phẩm', md: 12 },
+  code: { label: 'Mã sản phẩm', md: 12 },
   serviceId: { label: 'Dịch vụ', md: 12 },
   providerId: { label: 'Nhà cung cấp', md: 12 },
   unit: { label: 'Đơn vị tính', md: 12 },
@@ -151,6 +152,14 @@ const ProductForm = () => {
             label="Tên sản phẩm"
             name="name"
             placeholder="Nhập tên sản phẩm"
+          />
+        );
+      case 'code':
+        return (
+          <FormInput
+            label="Mã sản phẩm"
+            name="code"
+            placeholder="Nhập mã sản phẩm"
           />
         );
       case 'serviceId':
