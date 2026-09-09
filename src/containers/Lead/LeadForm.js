@@ -128,7 +128,6 @@ const LeadDatePicker = ({
 
 const LeadForm = ({ listSale = [], submitting = false }) => {
   const { form, record } = useContext(FormContextCustom)
-  const [provinces, setProvinces] = useState([])
   const [workflows, setWorkflows] = useState([])
   const [loadingWorkflows, setLoadingWorkflows] = useState(false)
   const workflowOffsetRef = useRef(0)
@@ -148,10 +147,6 @@ const LeadForm = ({ listSale = [], submitting = false }) => {
     () => new Set(attachedWorkflowIds.map(String)),
     [attachedWorkflowIds],
   )
-
-  useEffect(() => {
-    RequestUtils.GetAsList('/province/find', { id: 0 }).then(setProvinces).catch(() => setProvinces([]))
-  }, [])
 
   const loadWorkflows = useCallback(async ({ reset = false } = {}) => {
     if (workflowLoadingRef.current || (!reset && !workflowHasMoreRef.current)) return
@@ -220,10 +215,6 @@ const LeadForm = ({ listSale = [], submitting = false }) => {
     return statuses
   }, [form])
 
-  const provinceOptions = useMemo(
-    () => provinces.map(item => ({ value: item.name, label: item.name })),
-    [provinces],
-  )
   const leadSourceOptions = useMemo(
     () => CHANNEL_SOURCE.map(item => ({ value: item.id, label: item.name })),
     [],
@@ -297,8 +288,6 @@ const LeadForm = ({ listSale = [], submitting = false }) => {
           <LeadInput required name="customerName" label="Họ và tên" code="contact_name" placeholder="Trần Thị Mai" />
           <LeadInput required name="customerMobile" label="Điện thoại" code="phone" placeholder="0901 234 567" />
           <LeadInput name="customerEmail" label="Email" code="email" placeholder="tranthimai@gmail.com" />
-          <LeadDatePicker name="birthday" label="Ngày sinh (tùy chọn)" code="birthday" placeholder="Chọn ngày sinh" />
-          <LeadSelect name="provinceName" label="Tỉnh / Thành phố" code="province" placeholder="Chọn Tỉnh / Thành phố" options={provinceOptions} />
           <LeadInput name="customerFacebook" label="Facebook" code="facebook" placeholder="Nhập Facebook" />
           <LeadInput name="address" label="Địa chỉ" code="address" placeholder="123 Nguyễn Văn Cừ, P. An Hòa, Q. Ninh Kiều, TP. Cần Thơ" fieldClassName="full" />
         </div>

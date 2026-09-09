@@ -37,7 +37,7 @@ const ProductFormProperty = ({ field }) => {
           required
           showSearch
           fnLoadData={(filter) => ProductAttrService.loadAll(filter)}
-          onData={(values) => _.merge(values, record?.dRe?.attrs ?? [])}
+          onData={(values) => _.uniqBy([...(values || []), ...(record?.dRe?.attrs ?? [])], 'id')}
           apiPath={"/erp/attributed/fetch"}
           apiAddNewItem='attributed/save'
           name={[name, 'attributedId']}
