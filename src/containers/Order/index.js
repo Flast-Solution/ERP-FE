@@ -39,6 +39,7 @@ import _ from 'lodash';
 import { HASH_MODAL, SUCCESS_CODE } from '@/configs';
 import OrderService, { getWarehouseByProduct } from '@/services/OrderService';
 import { useEffectAsync } from '@flast-erp/core/hooks';
+import { mergeSavedOrderLines, parseOrderLine } from './orderLine';
 
 const { Text } = Typography;
 const warrantyOptions = [
@@ -69,7 +70,8 @@ const ORDER_TEMPLATE = {
   profit: 0,
   status: 0,
   editable: false,
-  mSkuDetails: []
+  mSkuDetails: [],
+  orderLine: {}
 }
 
 function getLeadProducts(lead = {}) {
@@ -308,7 +310,7 @@ const BanHangPage = ({
       setShippingCost(Number(order.shippingCost ?? 0));
     }
     if (arrayNotEmpty(data)) {
-      setData(data);
+      setData(mergeSavedOrderLines(data, localOrder.savedDetails));
     }
   }, [localOrder]);
 
@@ -328,7 +330,7 @@ const BanHangPage = ({
     const suggestedProducts = lead ? getLeadProducts(lead) : leadProducts;
     const onAfterChoiseProduct = (values) => {
       let order = _.cloneDeep(ORDER_TEMPLATE);
-      const { mSkuDetails, mProduct, quantity, productId, productCode, skuId } = values;
+      const { mSkuDetails, mProduct, quantity, productId, productCode, skuId, orderLine } = values;
       /* Tạo Item trong list sản phẩm */
       order.key = randomString();
       order.note = values?.note ?? "";
@@ -338,6 +340,7 @@ const BanHangPage = ({
       order.productName = mProduct.name;
       order.unit = mProduct.unit ?? "N/A";
       order.mSkuDetails = mSkuDetails;
+      order.orderLine = orderLine ?? {};
       order.skuId = String(skuId);
       order.quantity = quantity;
       order.profit = Number(values?.profit ?? 0);
@@ -371,8 +374,8 @@ const BanHangPage = ({
       setData(datas => ([...datas, order]));
     };
 
-    InAppEvent.emit(HASH_POPUP, {
-      hash: "sku.add",
+    InAppEvent.emit(HASH_MODAL, {
+      hash: "#sku.add",
       title: "Thêm sản phẩm",
       data: {
         onSave: onAfterChoiseProduct,
@@ -405,8 +408,7 @@ const BanHangPage = ({
       title: 'SKU',
       dataIndex: 'mSkuDetails',
       key: 'mSkuDetails',
-      width: 260,
-      ellipsis: true
+      width: 260
     },
     {
       title: 'Bảo hành',
@@ -650,7 +652,19 @@ const BanHangPage = ({
         return <Text style={{ width: 120 }} ellipsis> {text || '(Chưa nhập)'} </Text>;
       }
       if (column.dataIndex === 'mSkuDetails') {
-        return <ShowSkuDetail skuDetails={record.mSkuDetails ?? record.skuDetails} width={260} />
+        const orderLineEntries = Object.entries(parseOrderLine(record.orderLine));
+
+        return (
+          <div>
+            <ShowSkuDetail skuDetails={record.mSkuDetails ?? record.skuDetails} width={260} />
+            {orderLineEntries.map(([key, value]) => (
+              <Text key={key} ellipsis style={{ display: 'block', width: 260 }} title={`${key}: ${value ?? ''}`}>
+                <strong>{key}: </strong>
+                <span>{String(value ?? '')}</span>
+              </Text>
+            ))}
+          </div>
+        );
       }
       const isFormatted = ['price', 'discountAmount', 'totalPrice'].includes(column.dataIndex);
       if (column.dataIndex === 'profit') {
@@ -684,7 +698,11 @@ const BanHangPage = ({
       const { message: eMsg, data: order, errorCode } = await RequestUtils.Post("/order/save", params);
       message.info(eMsg);
       if (errorCode === SUCCESS_CODE) {
-        setLocalOrder(pre => ({ orderId: order.id, reload: !pre.reload }));
+        setLocalOrder(pre => ({
+          orderId: order.id,
+          reload: !pre.reload,
+          savedDetails: order.details ?? []
+        }));
       }
     }
 

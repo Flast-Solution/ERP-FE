@@ -28,7 +28,7 @@ const ProductAttrService = {
   attrs: {},
   attrsValue: {},
   empty() {
-    /* this.allData = []; */
+    this.allData = [];
     this.attrs = {};
     this.cacheItems = {};
     this.attrsValue = {};
