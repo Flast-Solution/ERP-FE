@@ -20,7 +20,8 @@
 /**************************************************************************/
 
 import React, { useState, useCallback, useMemo, useRef } from 'react';
-import { Button, Col, Form, Row, Space, Tag, Typography, message } from 'antd';
+import { Button, Col, Form, Input, Row, Space, Tag, Typography, message } from 'antd';
+import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 
 import {
   FormSelectInfiniteProduct,
@@ -41,8 +42,19 @@ import {
   RequestUtils,
   createMSkuDetails
 } from '@flast-erp/core/utils';
+import {
+  buildOrderLine,
+  getDuplicateOrderLineKeys,
+  hasIncompleteOrderLineEntries,
+} from './orderLine';
 
-const AddSKU = ({ onSave, productId, leadProducts = [], closeModal }) => {
+const AddSKU = (props) => {
+  const {
+    onSave,
+    productId,
+    leadProducts = [],
+  } = props.data ?? props;
+  const { closeModal } = props;
 
   const [ form ] = Form.useForm();
   const [ inStocks, setInStocks ] = useState([]);
@@ -109,7 +121,7 @@ const AddSKU = ({ onSave, productId, leadProducts = [], closeModal }) => {
       skuRef.current = restoredSku;
       setSkuDetail(restoredSku);
     } else {
-      form.resetFields(['skuId', 'quantity', 'orderName', 'note']);
+      form.resetFields(['skuId', 'quantity', 'orderName', 'note', 'orderLineEntries']);
       form.setFieldsValue({
         productId: value,
         productCode: nextProduct?.code ?? null,
@@ -167,6 +179,26 @@ const AddSKU = ({ onSave, productId, leadProducts = [], closeModal }) => {
     const requiredProductIds = suggestedProducts.length > 0
       ? suggestedProducts.map(item => item.id)
       : [currentProductId];
+    const invalidOrderLineProductId = requiredProductIds.find(itemId => {
+      const entries = productDraftsRef.current[String(itemId)]?.values?.orderLineEntries;
+      return hasIncompleteOrderLineEntries(entries) || getDuplicateOrderLineKeys(entries).length > 0;
+    });
+
+    if (invalidOrderLineProductId != null) {
+      const invalidDraft = productDraftsRef.current[String(invalidOrderLineProductId)];
+      const duplicateKeys = getDuplicateOrderLineKeys(invalidDraft?.values?.orderLineEntries);
+      const invalidProduct = suggestedProducts.find(
+        item => String(item.id) === String(invalidOrderLineProductId),
+      );
+      message.warning(
+        duplicateKeys.length > 0
+          ? `Thông tin bổ sung của ${invalidProduct?.name || 'sản phẩm'} bị trùng key: ${duplicateKeys.join(', ')}`
+          : `Vui lòng nhập đủ key và value cho ${invalidProduct?.name || 'sản phẩm'}.`,
+      );
+      loadProduct(invalidOrderLineProductId, false);
+      return;
+    }
+
     const missingProductId = requiredProductIds.find(itemId => {
       const draft = productDraftsRef.current[String(itemId)];
       return !draft?.values?.skuId || Number(draft?.values?.quantity) <= 0;
@@ -183,8 +215,10 @@ const AddSKU = ({ onSave, productId, leadProducts = [], closeModal }) => {
 
     requiredProductIds.forEach(itemId => {
       const draft = productDraftsRef.current[String(itemId)];
+      const { orderLineEntries, ...draftValues } = draft.values;
       onSave({
-        ...draft.values,
+        ...draftValues,
+        orderLine: buildOrderLine(orderLineEntries),
         status: draft.values?.status ?? 0,
         mProduct: draft.product,
         mSkuDetails: createMSkuDetails(draft.sku?.skuDetails ?? []),
@@ -315,6 +349,54 @@ const AddSKU = ({ onSave, productId, leadProducts = [], closeModal }) => {
             placeholder='Ghi chú'
             name={"note"}
           />
+        </Col>
+        <Col span={24}>
+          <Typography.Title level={5}>Thông tin bổ sung</Typography.Title>
+          <Typography.Paragraph type="secondary">
+            Thêm các cặp key/value riêng cho dòng sản phẩm này.
+          </Typography.Paragraph>
+          <Form.List name="orderLineEntries">
+            {(fields, { add, remove }) => (
+              <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                {fields.map(field => (
+                  <Row key={field.key} gutter={12} align="top">
+                    <Col flex="1 1 240px">
+                      <Form.Item
+                        name={[field.name, 'key']}
+                        rules={[
+                          { required: true, whitespace: true, message: 'Vui lòng nhập key' },
+                        ]}
+                      >
+                        <Input placeholder="Key, ví dụ: color" />
+                      </Form.Item>
+                    </Col>
+                    <Col flex="1 1 320px">
+                      <Form.Item
+                        name={[field.name, 'value']}
+                        rules={[
+                          { required: true, whitespace: true, message: 'Vui lòng nhập value' },
+                        ]}
+                      >
+                        <Input placeholder="Value, ví dụ: Đỏ" />
+                      </Form.Item>
+                    </Col>
+                    <Col flex="40px">
+                      <Button
+                        danger
+                        type="text"
+                        aria-label="Xóa thông tin bổ sung"
+                        icon={<MinusCircleOutlined />}
+                        onClick={() => remove(field.name)}
+                      />
+                    </Col>
+                  </Row>
+                ))}
+                <Button type="dashed" icon={<PlusOutlined />} onClick={() => add()} block>
+                  Thêm thông tin
+                </Button>
+              </Space>
+            )}
+          </Form.List>
         </Col>
         <Col span={24}>
           <BtnSubmit

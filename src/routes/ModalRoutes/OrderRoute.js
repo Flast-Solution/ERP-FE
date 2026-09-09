@@ -23,6 +23,11 @@ import React from 'react';
 
 const OrderRoute = [
   {
+    path: 'sku.add',
+    Component: React.lazy(() => import('@/containers/Order/ModalAddSKU')),
+    modalOptions: { title: '', width: 900 }
+  },
+  {
     path: 'order.payment',
     Component: React.lazy(() => import('@/containers/Order/OrderPayment')),
     modalOptions: { title: '', width: 750 }
