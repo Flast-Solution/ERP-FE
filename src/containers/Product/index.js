@@ -32,6 +32,7 @@ import {
   serializeProductAssets,
   splitProductAssets,
 } from './productImages';
+import { mergeInitialProductProperties } from './productProperties';
 
 /**
  * @param [ {id: 10384, attributedId: 10023, attributedValueId: 10085}, ... ] oldSku
@@ -58,6 +59,8 @@ const Product = ({ closeModal, data }) => {
     log({ action: 'props', data });
     (async () => {
       let dRe = {}, skus = []
+      const allAttributes = await ProductAttrService.loadAll({ limit: 1000, page: 1 });
+      const initialAttributes = allAttributes.filter(attribute => attribute?.initial === true);
       if (arrayNotEmpty(data?.listProperties || [])) {
         let attrIds = data.listProperties.map(i => i.attributedId) ?? [];
         let attrValueIds = [];
@@ -66,8 +69,12 @@ const Product = ({ closeModal, data }) => {
         }
         const itemAttrs = await ProductAttrService.loadByIds(attrIds);
         const itemAttrValues = await ProductAttrService.loadValueByIds(attrValueIds);
-        dRe.attrs = itemAttrs;
+        dRe.attrs = Array.from(new Map(
+          [...itemAttrs, ...initialAttributes].map(item => [String(item.id), item]),
+        ).values());
         dRe.attrValues = itemAttrValues;
+      } else {
+        dRe.attrs = initialAttributes;
       }
       const sourceSkus = Array.isArray(data?.skus) ? data.skus : [];
       for (const iSkus of sourceSkus) {
@@ -88,7 +95,7 @@ const Product = ({ closeModal, data }) => {
         ...data,
         image: productAssets.images,
         file: productAssets.files,
-        listProperties: Array.isArray(data?.listProperties) ? data.listProperties : [],
+        listProperties: mergeInitialProductProperties(data?.listProperties, allAttributes),
         skus,
         dRe
       });
