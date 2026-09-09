@@ -52,7 +52,6 @@ import {
 import ProductFormPrice from './ProductFormPrice';
 import { PRODUCT_CURRENCIES, PRODUCT_STATUS } from '@/configs/localData';
 import { FormListStyles } from "@/css/global";
-import FormInfiniteQcProduct from '@/components/FormInfiniteQcProduct';
 import ProductImagesUpload from './ProductImagesUpload';
 import ProductFilesUpload from './ProductFilesUpload';
 import SortableProductBlock, { SortableProductItem } from './SortableProductLayout';
@@ -78,7 +77,6 @@ const PRODUCT_FORM_ITEMS = {
   listProperties: { label: 'Thiết lập sản phẩm', md: 24 },
   priceRanges: { label: 'Thiết lập khoảng giá bán', md: 24 },
   listOpenInfo: { label: 'Thông tin mở rộng', md: 24 },
-  qualityControl: { label: 'Kiểm định chất lượng', md: 24 },
 };
 
 const ProductForm = () => {
@@ -267,16 +265,6 @@ const ProductForm = () => {
             <FormListAddtion name="listOpenInfo" textAddNew="Thêm mới" showBtnInLeft={false}>
               <FormOpenInfo />
             </FormListAddtion>
-          </>
-        );
-      case 'qualityControl':
-        return (
-          <>
-            <Typography.Title level={5}>
-              <SwitcherOutlined />
-              <span style={{ marginLeft: 20 }}>Kiểm định chất lượng sản phẩm (Nếu có)</span>
-            </Typography.Title>
-            <FormInfiniteQcProduct placeholder="Chọn trong danh sách" />
           </>
         );
       default:

@@ -102,6 +102,8 @@ const OrderService = {
         item => String(item?.id) === String(detail?.productId)
       );
       detail.productCode = detail.productCode ?? mProduct?.code ?? null;
+      detail.productName = detail.productName ?? mProduct?.name ?? '';
+      detail.mSkuDetails = detail.mSkuDetails ?? detail.skuDetails ?? [];
       detail.warehouseOptions = getWarehouseByProduct(detail.skuId, mProduct);
       if (arrayEmpty(detail.warehouseOptions)) {
         continue;
