@@ -96,6 +96,7 @@ const normalizeLeadRecord = (item = {}) => {
   return {
     ...item,
     customerType: item.customerType ?? 'INDIVIDUAL',
+    enterpriseId: item.enterpriseId ?? currentBusiness.enterpriseId ?? currentBusiness.id,
     business: {
       companyName: currentBusiness.companyName ?? item.companyName,
       taxCode: currentBusiness.taxCode ?? item.taxCode,
@@ -147,6 +148,7 @@ const NewLead = ({ closeModal, data }) => {
 
       if (body.customerType !== 'BUSINESS') {
         body.business = null;
+        body.enterpriseId = null;
       } else {
         body.business = {
           companyName: body.business?.companyName ?? null,

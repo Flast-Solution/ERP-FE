@@ -395,15 +395,16 @@ const BanHangPage = ({
 
   const columns = [
     {
-      title: 'Mã',
-      dataIndex: 'skuId',
-      key: 'skuId',
-      width: 80
+      title: 'Tên sản phẩm',
+      dataIndex: 'productName',
+      key: 'productName',
+      width: 180,
+      ellipsis: true
     },
     {
-      title: 'Diễn giải',
+      title: 'SKU',
       dataIndex: 'mSkuDetails',
-      render: (mSkuDetails) => (<span />),
+      key: 'mSkuDetails',
       width: 260,
       ellipsis: true
     },
@@ -419,7 +420,7 @@ const BanHangPage = ({
       dataIndex: 'quantity',
       key: 'quantity',
       editable: true,
-      width: 90
+      width: 100
     },
     {
       title: 'Đơn giá',
@@ -446,7 +447,7 @@ const BanHangPage = ({
       title: 'Lợi nhuận (%)',
       dataIndex: 'profit',
       key: 'profit',
-      width: 120,
+      width: 130,
       render: (_, record) => (
         <InputNumber
           min={0}
@@ -458,13 +459,6 @@ const BanHangPage = ({
           style={{ width: '100%' }}
         />
       )
-    },
-    {
-      title: 'Thành tiền',
-      dataIndex: 'totalPrice',
-      key: 'totalPrice',
-      width: 150,
-      editable: true
     },
     {
       title: 'Phí ship',
@@ -497,6 +491,13 @@ const BanHangPage = ({
           style={{ width: '100%' }}
         />
       ) : null
+    },
+    {
+      title: 'Thành tiền',
+      dataIndex: 'totalPrice',
+      key: 'totalPrice',
+      width: 150,
+      editable: true
     },
     {
       title: 'Kho',
@@ -649,7 +650,7 @@ const BanHangPage = ({
         return <Text style={{ width: 120 }} ellipsis> {text || '(Chưa nhập)'} </Text>;
       }
       if (column.dataIndex === 'mSkuDetails') {
-        return <ShowSkuDetail skuDetails={record.mSkuDetails} width={260} />
+        return <ShowSkuDetail skuDetails={record.mSkuDetails ?? record.skuDetails} width={260} />
       }
       const isFormatted = ['price', 'discountAmount', 'totalPrice'].includes(column.dataIndex);
       if (column.dataIndex === 'profit') {
@@ -738,6 +739,9 @@ const BanHangPage = ({
         dataSource={data}
         columns={columns.map(col => ({
           ...col,
+          onHeaderCell: () => ({
+            style: { whiteSpace: 'nowrap' }
+          }),
           onCell: (record, index) => ({
             ...(col.onCell?.(record, index) ?? {}),
             editable: col.editable?.toString()
@@ -755,8 +759,8 @@ const BanHangPage = ({
             <Table.Summary.Cell index={5}></Table.Summary.Cell>
             <Table.Summary.Cell index={6}>{formatMoney(totalDiscount)}</Table.Summary.Cell>
             <Table.Summary.Cell index={7}></Table.Summary.Cell>
-            <Table.Summary.Cell index={8}>{formatMoney(totalSubOrder)}</Table.Summary.Cell>
-            <Table.Summary.Cell index={9}>{formatMoney(shippingCost)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={8}>{formatMoney(shippingCost)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={9}>{formatMoney(totalSubOrder)}</Table.Summary.Cell>
             <Table.Summary.Cell index={10} colSpan={4}></Table.Summary.Cell>
           </Table.Summary.Row>
         )}
