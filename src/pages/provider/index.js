@@ -15,6 +15,7 @@ import {
 import { useGetList } from '@flast-erp/core/hooks';
 import { RequestUtils, f5List } from '@flast-erp/core/utils';
 import ProviderFilter from './Filter';
+import useGetMe from '@/hooks/useGetMe';
 
 const STATUS_OPTIONS = [
   { id: 1, name: 'Kích hoạt' },
@@ -322,6 +323,10 @@ const ProviderForm = ({ record, onCancel, onSaved, disabled = false }) => {
 };
 
 const ProviderPage = () => {
+  const { hasPermission } = useGetMe();
+  const canCreate = hasPermission('supplier.create');
+  const canViewDetail = hasPermission('supplier.detail.view');
+  const canUpdate = hasPermission('supplier.update');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState('create');
   const [editingRecord, setEditingRecord] = useState({});
@@ -409,7 +414,7 @@ const ProviderPage = () => {
       align: 'center',
       render: (_, record) => (
         <Space size={4}>
-          <Tooltip title="Xem chi tiết">
+          {canViewDetail ? <Tooltip title="Xem chi tiết">
             <Button
               type="text"
               size="small"
@@ -417,8 +422,8 @@ const ProviderPage = () => {
               aria-label="Xem chi tiết"
               onClick={() => openDetail(record)}
             />
-          </Tooltip>
-          <Tooltip title="Chỉnh sửa">
+          </Tooltip> : null}
+          {canUpdate ? <Tooltip title="Chỉnh sửa">
             <Button
               type="text"
               size="small"
@@ -426,7 +431,7 @@ const ProviderPage = () => {
               aria-label="Chỉnh sửa"
               onClick={() => openForm(record)}
             />
-          </Tooltip>
+          </Tooltip> : null}
         </Space>
       ),
     },
@@ -445,7 +450,7 @@ const ProviderPage = () => {
         initialFilter={{ limit: 10, page: 1 }}
         filter={<ProviderFilter />}
         useGetAllQuery={useGetList}
-        hasCreate
+        hasCreate={canCreate}
         customClickCreate={() => openForm({})}
         apiPath="provider/fetch"
         columns={columns}

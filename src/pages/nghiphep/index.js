@@ -17,9 +17,10 @@ import {
 
 const User = () => {
 
-  const { isLeader, isManager } = useGetMe();
-
-  const canApprove = isLeader() || isManager();
+  const { hasPermission } = useGetMe();
+  const canCreate = hasPermission('hr.leave.create');
+  const canUpdate = hasPermission('hr.leave.update');
+  const canApprove = hasPermission(['hr.leave.approve', 'hr.leave.reject']);
   const textBtn = useCallback((item) => {
     let text = "Xem đơn";
     if (canApprove) {
@@ -105,7 +106,7 @@ const User = () => {
       ellipsis: true,
       render: (status) => NGHI_PHEP_STATUS_TEXT.find(i => i.id === status)?.name ?? '(Unknow)'
     },
-    {
+    (canUpdate || canApprove) && {
       title: "",
       width: 100,
       fixed: 'right',
@@ -113,7 +114,7 @@ const User = () => {
         <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size='small'>{textBtn(record)}</Button>
       )
     }
-  ];
+  ].filter(Boolean);
 
   const beforeSubmitFilter = useCallback((values) => {
     dateFormatOnSubmit(values, ['from', 'to']);
@@ -135,6 +136,7 @@ const User = () => {
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
         apiPath={'leave-of-absence/fetch'}
+        hasCreate={canCreate}
         customClickCreate={onCreateUser}
         columns={CUSTOM_ACTION}
       />

@@ -24,6 +24,7 @@ import { FuseUtils } from '@flast-erp/core/utils';
 import { useStore } from '@flast-erp/core/components';
 import { useLocation, useNavigate, matchPath } from "react-router-dom";
 import { AUTH_REDIRECT_URL_KEY } from '@/utils/sessionExpiry';
+import { hasClientPermission } from '@/utils/authUtils';
 
 const LOGIN_PATH = '/login';
 const PUBLIC_AUTHENTICATED_PREFIXES = [
@@ -55,8 +56,13 @@ const Authorization = (props) => {
         }, null);
         const matched = exactRoute ?? parentRoute;
         const isAuthenticatedPublicPath = PUBLIC_AUTHENTICATED_PREFIXES.some(path => pathname.startsWith(path));
+        const authenticated = Boolean(user?.id);
+        const requiredPermission = typeof matched?.permission === 'function'
+            ? matched.permission({ pathname, search: location.search, user })
+            : matched?.permission;
         const granted = matched
-            ? FuseUtils.hasPermission(matched.auth, (user?.id || '') !== '')
+            ? FuseUtils.hasPermission(matched.auth, authenticated)
+                && hasClientPermission(user, requiredPermission)
             : Boolean(user?.id && isAuthenticatedPublicPath);
         setAccessGranted(granted);
         /* eslint-disable-next-line */
@@ -74,9 +80,12 @@ const Authorization = (props) => {
             navigate(LOGIN_PATH, {
                 state: { redirectUrl: requestedUrl }
             });
-        } else {
+        } else if (pathname === LOGIN_PATH) {
             window.sessionStorage.removeItem(AUTH_REDIRECT_URL_KEY);
-            navigate(redirectUrl);
+            navigate(redirectUrl, { replace: true });
+        } else if (pathname !== '/permission-deny') {
+            window.sessionStorage.removeItem(AUTH_REDIRECT_URL_KEY);
+            navigate('/permission-deny', { replace: true });
         }
     }, [navigate, location, user])
 

@@ -13,7 +13,8 @@ import {
 } from '@/containers/Landing/landingRepository'
 import { clonePageSchema, DEFAULT_PAGE_SCHEMA } from '@/containers/Landing/pageSchema'
 import WebPageService from '@/services/WebPageService'
-import { Header, PageName, PageShell, TableCard, Toolbar } from './List.style'
+import useGetMe from '@/hooks/useGetMe'
+import { PageName, PageShell, TableCard, Toolbar } from './List.style'
 
 const formatDate = value => {
   if (!value) return '—'
@@ -72,6 +73,11 @@ const openEditor = (record, navigate) => {
 
 const LandingList = () => {
   const navigate = useNavigate()
+  const { hasPermission } = useGetMe()
+  const canCreate = hasPermission('web.landing.create')
+  const canUpdate = hasPermission('web.landing.update')
+  const canDuplicate = hasPermission('web.landing.duplicate')
+  const canDelete = hasPermission('web.landing.delete')
   const [keyword, setKeyword] = useState('')
   const [pages, setPages] = useState([])
   const [loading, setLoading] = useState(false)
@@ -235,31 +241,37 @@ const LandingList = () => {
             icon={<EyeOutlined />}
             onClick={() => window.open(getPreviewPath(record), '_blank')}
           />
-          <Button
-            type="text"
-            title="Chỉnh sửa"
-            icon={<EditOutlined />}
-            onClick={() => openEditor(record, navigate)}
-          />
-          <Button
-            type="text"
-            title="Sao chép"
-            icon={<CopyOutlined />}
-            onClick={() => duplicatePage(record)}
-          />
-          <Popconfirm
-            title="Xóa trang này?"
-            disabled={record.__source === 'api'}
-            onConfirm={() => removePage(record.id)}
-          >
+          {canUpdate && (
             <Button
-              danger
               type="text"
-              disabled={record.__source === 'api'}
-              title={record.__source === 'api' ? 'Chưa có API xóa trang' : 'Xóa'}
-              icon={<DeleteOutlined />}
+              title="Chỉnh sửa"
+              icon={<EditOutlined />}
+              onClick={() => openEditor(record, navigate)}
             />
-          </Popconfirm>
+          )}
+          {canDuplicate && (
+            <Button
+              type="text"
+              title="Sao chép"
+              icon={<CopyOutlined />}
+              onClick={() => duplicatePage(record)}
+            />
+          )}
+          {canDelete && (
+            <Popconfirm
+              title="Xóa trang này?"
+              disabled={record.__source === 'api'}
+              onConfirm={() => removePage(record.id)}
+            >
+              <Button
+                danger
+                type="text"
+                disabled={record.__source === 'api'}
+                title={record.__source === 'api' ? 'Chưa có API xóa trang' : 'Xóa'}
+                icon={<DeleteOutlined />}
+              />
+            </Popconfirm>
+          )}
         </Space>
       ),
     },
@@ -279,7 +291,11 @@ const LandingList = () => {
           onChange={event => setKeyword(event.target.value)}
           style={{ width: 340 }}
         />
-        <Space />
+        {canCreate && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+            Thêm trang
+          </Button>
+        )}
       </Toolbar>
       <TableCard>
         <Table
@@ -294,7 +310,7 @@ const LandingList = () => {
           }}
         />
       </TableCard>
-      <Drawer
+      {canCreate && <Drawer
         title="Thêm Landing Page"
         width={560}
         open={createOpen}
@@ -315,7 +331,7 @@ const LandingList = () => {
             <Checkbox>Yêu cầu người dùng đăng nhập</Checkbox>
           </Form.Item>
         </Form>
-      </Drawer>
+      </Drawer>}
     </PageShell>
   )
 }

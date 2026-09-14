@@ -34,8 +34,12 @@ import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import { Button, Col, Form, Row } from 'antd';
 import ModaleStyles from '@/pages/lead/style';
 import { useForm } from 'antd/es/form/Form';
+import useGetMe from '@/hooks/useGetMe';
 
 const ListWareHouse = () => {
+  const { hasPermission } = useGetMe();
+  const canCreate = hasPermission('inventory.warehouse.create');
+  const canUpdate = hasPermission('inventory.warehouse.update');
 
   const [ title ] = useState("Danh sách kho");
   const [ isOpen, setIsOpen ] = useState(false);
@@ -75,7 +79,7 @@ const ListWareHouse = () => {
       width: 200,
       ellipsis: true
     },
-    {
+    canUpdate && {
       title: "Thao tác",
       width: 120,
       fixed: 'right',
@@ -88,7 +92,7 @@ const ListWareHouse = () => {
         </Button>
       )
     }
-  ];
+  ].filter(Boolean);
 
   const onData = useCallback((values) => {
     const newData = { embedded: values, page: { pageSize: 10, total: 1 } }
@@ -134,12 +138,13 @@ const ListWareHouse = () => {
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
         apiPath={'warehouse/fetch-stock'}
+        hasCreate={canCreate}
         customClickCreate={onCreateLead}
         columns={CUSTOM_ACTION}
       />
       <ModaleStyles 
         title={<div style={{ color: '#fff' }}>{isEditing ? 'Cập nhật kho' : 'Tạo kho'}</div>}
-        open={isOpen} 
+        open={isOpen && (isEditing ? canUpdate : canCreate)}
         footer={false} 
         onCancel={() => {
           setIsOpen(false);

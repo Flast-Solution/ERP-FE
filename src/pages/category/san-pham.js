@@ -34,8 +34,13 @@ import Filter from '@/pages/category/Filter';
 import { RequestUtils, InAppEvent } from "@flast-erp/core/utils";
 import { GATEWAY, HASH_MODAL } from '@/configs';
 import { dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils';
+import useGetMe from '@/hooks/useGetMe';
 
 const CateSanPham = () => {
+  const { hasPermission } = useGetMe();
+  const canCreate = hasPermission('web.product_category.create');
+  const canUpdate = hasPermission('web.product_category.update');
+  const canDelete = hasPermission('web.product_category.delete');
 
   const onEdit = (item) => {
     let title = 'Sửa danh mục sản phẩm # ' + item.id;
@@ -109,18 +114,18 @@ const CateSanPham = () => {
       width: 120,
       render: (status) => (status || 0) === 0 ? 'Ngưng' : 'Kích hoạt'
     },
-    {
+    (canUpdate || canDelete) && {
       title: "",
       width: 140,
       fixed: 'right',
       render: (record) => (
         <Space gap={8}>
-          <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size='small'>Detail</Button>
-          <Button onClick={() => onDeleteCate(record)} size='small'>Xóa</Button>
+          {canUpdate ? <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size='small'>Detail</Button> : null}
+          {canDelete ? <Button onClick={() => onDeleteCate(record)} size='small'>Xóa</Button> : null}
         </Space>
       )
     }
-  ];
+  ].filter(Boolean);
 
   const beforeSubmitFilter = useCallback((values) => {
     dateFormatOnSubmit(values, ['from', 'to']);
@@ -142,6 +147,7 @@ const CateSanPham = () => {
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
         apiPath={'category/product/fetch'}
+        hasCreate={canCreate}
         customClickCreate={onCreateCateSanPHam}
         columns={CUSTOM_ACTION}
       />

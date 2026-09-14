@@ -51,6 +51,7 @@ import {
 import { DEPARTMENT_MAP_KEYS_VALUE } from '@/configs/localData';
 import UserService from '@/services/UserService';
 import { useNavigate } from 'react-router-dom';
+import useGetMe from '@/hooks/useGetMe';
 
 const STATUS_COLORS = {
   'Not Started': 'default',
@@ -90,6 +91,12 @@ const TITLE = "Danh sách dự án nội bộ";
 const TASK = () => {
 
   const navigate = useNavigate();
+  const { hasPermission } = useGetMe();
+  const canCreate = hasPermission('project.create');
+  const canViewDetail = hasPermission('project.detail.view');
+  const canUpdate = hasPermission('project.update');
+  const canDelete = hasPermission('project.delete');
+  const canUpdateProgress = hasPermission('project.progress.update');
   const [ editingProgress, setEditingProgress ] = useState(null);
   const [ tempProgress, setTempProgress ] = useState(0);
 
@@ -256,12 +263,12 @@ const TASK = () => {
           <Progress percent={record.progress} size="small" />
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
             <Text style={{ fontSize: '12px' }}>{record.progress}%</Text>
-            <Button 
-              type="text" 
+            {canUpdateProgress ? <Button
+              type="text"
               size="small" 
               icon={<EditOutlined />} 
               onClick={() => startEditingProgress(record.id, record.progress)}
-            />
+            /> : null}
           </div>
         </div>
       )
@@ -290,18 +297,18 @@ const TASK = () => {
       width: 130,
       render: (_, record) => (
         <Space size="middle">
-          <Button 
+          {canViewDetail ? <Button
             type="primary" 
             icon={<EyeOutlined />} 
             size="small"
             onClick={() => onView(record.id)} 
-          />
-          <Button 
+          /> : null}
+          {canUpdate ? <Button
             icon={<EditOutlined />} 
             size="small" 
             onClick={() => onEdit(record)} 
-          />
-          <Popconfirm
+          /> : null}
+          {canDelete ? <Popconfirm
             title="Xóa dự án"
             description="Bạn có chắc chắn muốn xóa dự án này ?"
             okText="Đồng ý"
@@ -313,7 +320,7 @@ const TASK = () => {
               icon={<DeleteOutlined />} 
               size="small"
             />
-          </Popconfirm>
+          </Popconfirm> : null}
         </Space>
       )
     }
@@ -353,7 +360,7 @@ const TASK = () => {
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
         apiPath={'works/fetch'}
-        hasCreate={true}
+        hasCreate={canCreate}
         customClickCreate={onEdit}
         columns={CUSTOM_ACTION}
       />

@@ -17,6 +17,7 @@ import EmployeeKpiDetail from './components/EmployeeKpiDetail';
 import IndicatorDrawer from './components/IndicatorDrawer';
 import KpiDashboard from './components/KpiDashboard';
 import { createKpiPeriods } from './constants';
+import useGetMe from '@/hooks/useGetMe';
 
 const getInitials = (name = '') => name
   .trim()
@@ -38,6 +39,11 @@ const getAverageProgress = (kpis = []) => {
 };
 
 const KpiPage = () => {
+  const { hasPermission } = useGetMe();
+  const canViewEmployee = hasPermission('kpi.employee.view');
+  const canCreate = hasPermission('kpi.indicator.create');
+  const canUpdate = hasPermission('kpi.indicator.update');
+  const canDelete = hasPermission('kpi.indicator.delete');
   const now = new Date();
   const currentYear = now.getFullYear();
   const periods = useMemo(() => createKpiPeriods(currentYear), [currentYear]);
@@ -168,8 +174,8 @@ const KpiPage = () => {
           loading={kpiLoading}
           period={selectedPeriod}
           onBack={() => setSelectedEmployee(null)}
-          onAdd={() => openIndicatorDrawer(selectedEmployeeView)}
-          onEdit={(indicator) => openIndicatorDrawer(selectedEmployeeView, indicator)}
+          onAdd={canCreate ? () => openIndicatorDrawer(selectedEmployeeView) : null}
+          onEdit={canUpdate ? (indicator) => openIndicatorDrawer(selectedEmployeeView, indicator) : null}
         />
       ) : (
         <KpiDashboard
@@ -177,17 +183,23 @@ const KpiPage = () => {
           employees={employees}
           loading={kpiLoading}
           periods={periods}
-          onAdd={() => openIndicatorDrawer(null)}
+          onAdd={canCreate ? () => openIndicatorDrawer(null) : null}
           onFilterChange={() => setAttentionOnly((current) => !current)}
           onPeriodChange={setPeriod}
           onSearchChange={setSearch}
-          onSelectEmployee={setSelectedEmployee}
+          onSelectEmployee={canViewEmployee ? setSelectedEmployee : null}
           period={period}
           search={search}
           selectedPeriod={selectedPeriod}
         />
       )}
-      <IndicatorDrawer drawer={drawer} onClose={closeIndicatorDrawer} onSaved={loadKpis} />
+      <IndicatorDrawer
+        drawer={{ ...drawer, open: drawer.open && (drawer.mode === 'edit' ? canUpdate : canCreate) }}
+        canDelete={canDelete}
+        canSave={drawer.mode === 'edit' ? canUpdate : canCreate}
+        onClose={closeIndicatorDrawer}
+        onSaved={loadKpis}
+      />
     </>
   );
 };

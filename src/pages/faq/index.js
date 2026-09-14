@@ -33,9 +33,13 @@ import {
   Description
 } from '@/css/cardStyle';
 import { Tooltip } from 'antd';
+import useGetMe from '@/hooks/useGetMe';
 
 const TITLE = 'Danh sách các FAQ của trang.';
 const FaqPage = () => {
+  const { hasPermission } = useGetMe();
+  const canCreate = hasPermission('web.faq.create');
+  const canUpdate = hasPermission('web.faq.update');
 
   const onEdit = (faq) => {
     const onAfterSubmit = (values) => {
@@ -58,10 +62,10 @@ const FaqPage = () => {
       />
       <CustomList
         filter={<Filter />}
-        hasCreate={true}
+        hasCreate={canCreate}
         onClickCreate={() => onEdit({})}
         apiPath={'faq/fetch'}
-        renderItem={(item) => <FaqCard item={item} onEdit={onEdit} /> }
+        renderItem={(item) => <FaqCard item={item} onEdit={canUpdate ? onEdit : null} /> }
       />
     </div>
   )
@@ -74,9 +78,9 @@ const FaqCard = ({ item, onEdit }) => {
         <Title ellipsis={{ tooltip: 'Sửa KPI' }}>
           {item.name}
         </Title>
-        <Tooltip title="Sửa FaQ">
+        {onEdit ? <Tooltip title="Sửa FaQ">
           <NoteIcon onClick={() => onEdit(item)} />
-        </Tooltip>
+        </Tooltip> : null}
       </TitleWrapper>
       <MetaInfo style={{marginBottom: 10}}>
         <Description 

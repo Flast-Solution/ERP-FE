@@ -26,6 +26,6 @@ const Instock = React.lazy(() => import('@/pages/inStock'));
 export const InstockConfig = {
     auth: authRoles.user,
     routes: [
-        { path: '/warehouse/trong-kho', element: <Instock /> }
+        { path: '/warehouse/trong-kho', permission: 'inventory.stock.view', element: <Instock /> }
     ]
 };

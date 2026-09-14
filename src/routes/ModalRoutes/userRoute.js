@@ -24,56 +24,67 @@ import React from 'react';
 const dataRoute = [
   {
     path: 'user.edit',
+    permission: ({ data }) => data?.id ? 'hr.employee.update' : 'hr.employee.create',
     Component: React.lazy(() => import('@/containers/UserAcount')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'nghiphep.edit',
+    permission: ({ data }) => data?.id ? 'hr.leave.update' : 'hr.leave.create',
     Component: React.lazy(() => import('@/containers/NghiPhep')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'nghiphep.confirm',
+    permission: ['hr.leave.approve', 'hr.leave.reject'],
     Component: React.lazy(() => import('@/containers/NghiPhep/NPConfirm')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'overtime.edit',
+    permission: ({ data }) => data?.id ? 'hr.overtime.update' : 'hr.overtime.create',
     Component: React.lazy(() => import('@/containers/Overtime')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'overtime.confirm',
+    permission: ['hr.overtime.approve', 'hr.overtime.reject'],
     Component: React.lazy(() => import('@/containers/Overtime/OVConfirm')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'booking.car.edit',
+    permission: ({ data }) => data?.id ? 'hr.booking.car.update' : 'hr.booking.car.create',
     Component: React.lazy(() => import('@/containers/Booking/BookingCar')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'booking.car.confirm',
+    permission: 'hr.booking.car.approve',
     Component: React.lazy(() => import('@/containers/Booking/BookingConfirm')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'booking.hotel.edit',
+    permission: ({ data }) => data?.id ? 'hr.booking.hotel.update' : 'hr.booking.hotel.create',
     Component: React.lazy(() => import('@/containers/Booking/BookingHotel')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'booking.hotel.confirm',
+    permission: 'hr.booking.hotel.approve',
     Component: React.lazy(() => import('@/containers/Booking/BookingConfirm')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'booking.flight.edit',
+    permission: ({ data }) => data?.id ? 'hr.booking.flight.update' : 'hr.booking.flight.create',
     Component: React.lazy(() => import('@/containers/Booking/BookingFlight')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'booking.flight.confirm',
+    permission: 'hr.booking.flight.approve',
     Component: React.lazy(() => import('@/containers/Booking/BookingConfirm')),
     modalOptions: { title: '', width: 750 }
   }

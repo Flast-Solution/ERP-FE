@@ -56,7 +56,7 @@ const getAssignment = (user = {}) => {
     override.grant,
     override.grants,
   )
-  const effective = collectCodes(user.permissions, user.authorities)
+  const effective = collectCodes(user.permissionsClient, user.permissions, user.authorities)
   const grants = explicitGrants.length
     ? explicitGrants
     : effective.filter(code => !inherited.includes(code))
@@ -262,8 +262,8 @@ const UserPermissionsPage = () => {
     setSaving(true)
     try {
       const next = normalizeAssignment(assignment)
-      const permissions = ALL_PERMISSION_CODES.filter(code => isEffective(next, code))
-      const response = await updateSystemUserPermissions(selectedUser, permissions)
+      const permissionsClient = ALL_PERMISSION_CODES.filter(code => isEffective(next, code))
+      const response = await updateSystemUserPermissions(selectedUser, permissionsClient)
       const succeeded = response?.success === true
         || Number(response?.errorCode) === SUCCESS_CODE
       if (!succeeded) throw new Error(response?.message || 'Lưu phân quyền không thành công')
@@ -272,7 +272,7 @@ const UserPermissionsPage = () => {
         String(getUserId(item)) === String(getUserId(selectedUser))
           ? {
             ...item,
-            permissions,
+            permissionsClient,
             permissionOverrides: {
               ...(item?.permissionOverrides ?? {}),
               grant: next.grants,
@@ -314,7 +314,7 @@ const UserPermissionsPage = () => {
     <PermissionPage className="my__content">
       <Helmet><title>Phân quyền</title></Helmet>
       <BreadcrumbCustom data={[{ title: 'Trang chủ' }, { title: 'Tài khoản' }, { title: 'Phân quyền' }]} />
-
+{/* 
       <div className="permission-intro">
         <div className="permission-intro__text">
           Checkbox của mỗi menu tương ứng trực tiếp với permission <strong>view</strong>.
@@ -325,7 +325,7 @@ const UserPermissionsPage = () => {
           <span><i className="revoked" />Đã thu hồi</span>
           <span><i className="none" />Chưa cấp</span>
         </div>
-      </div>
+      </div> */}
 
       <div className="permission-copy">
         <span className="permission-copy__label">Sao chép quyền từ tài khoản</span>

@@ -29,10 +29,14 @@ import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@flast-erp/core/util
 import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import { ShowSkuDetail } from '@/containers/Product/SkuView';
 import { HASH_MODAL } from '@/configs/constant';
+import useGetMe from '@/hooks/useGetMe';
 
 const ShipPage = () => {
 
   const [title] = useState("Đã giao");
+  const { hasPermission } = useGetMe();
+  const canUpdate = hasPermission('shipping.delivery.update');
+  const canPrint = hasPermission('shipping.delivery.print');
   const beforeSubmitFilter = useCallback((values) => {
     dateFormatOnSubmit(values, ['from', 'to']);
     return values;
@@ -62,7 +66,7 @@ const ShipPage = () => {
   }
 
   const CUSTOM_ACTION = [
-    {
+    ...(canUpdate || canPrint ? [{
       title: 'Mã S.Phẩm',
       dataIndex: 'warehouseProduct',
       width: 120,
@@ -150,10 +154,10 @@ const ShipPage = () => {
           size="small"
           onClick={() => onClickGiaoHang(record)}
         >
-          Cập nhật
+          {canUpdate ? 'Cập nhật' : 'Xem phiếu'}
         </Button>
       )
-    }
+    }] : [])
   ];
 
   return (
