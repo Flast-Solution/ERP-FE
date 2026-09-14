@@ -1,13 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Checkbox, Form, message, Select } from 'antd';
+import { Checkbox, message, Select, Space, Typography } from 'antd';
 import ProductAttrService from '@/services/ProductAttrService';
 import { SUCCESS_CODE } from '@/configs';
-import { syncSelectedProductProperties } from './productProperties';
 
-const ProductAttributeSelector = () => {
-  const form = Form.useFormInstance();
-  const properties = Form.useWatch('listProperties', form);
+const isDefaultAttribute = attribute => (
+  attribute?.initial === true || Number(attribute?.initial) === 1
+);
+
+const DefaultProductAttributeSelector = () => {
   const [attributes, setAttributes] = useState([]);
+  const [selectedIds, setSelectedIds] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -16,7 +18,10 @@ const ProductAttributeSelector = () => {
     setLoading(true);
     ProductAttrService.loadAll({ limit: 1000, page: 1 })
       .then(items => {
-        if (mounted) setAttributes(Array.isArray(items) ? items : []);
+        if (!mounted) return;
+        const nextAttributes = Array.isArray(items) ? items : [];
+        setAttributes(nextAttributes);
+        setSelectedIds(nextAttributes.filter(isDefaultAttribute).map(item => item.id));
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -27,35 +32,31 @@ const ProductAttributeSelector = () => {
     };
   }, []);
 
-  const selectedAttributeIds = useMemo(() => Array.from(new Set(
-    (Array.isArray(properties) ? properties : [])
-      .map(item => item?.attributedId)
-      .filter(id => id !== undefined && id !== null && id !== '')
-      .map(String),
-  )), [properties]);
-
   const options = useMemo(() => attributes
     .filter(item => item?.id !== undefined && item?.id !== null)
     .map(item => ({
-      value: String(item.id),
+      value: item.id,
       label: item.name || `Thuộc tính #${item.id}`,
     })), [attributes]);
 
-  const handleChange = async values => {
-    const previousAttributeIds = selectedAttributeIds;
-    form.setFieldValue('listProperties', syncSelectedProductProperties(properties, values));
+  const handleChange = async nextIds => {
+    const previousIds = selectedIds;
+    setSelectedIds(nextIds);
     setSaving(true);
     try {
-      const response = await ProductAttrService.updateDefault(attributes, values);
+      const selectedIdSet = new Set(nextIds.map(String));
+      const response = await ProductAttrService.updateDefault(attributes, nextIds);
       const succeeded = response?.success === true
         || Number(response?.errorCode) === SUCCESS_CODE;
       if (!succeeded) throw new Error(response?.message || 'Cập nhật thuộc tính mặc định không thành công');
-      message.success(response?.message || 'Đã cập nhật thuộc tính mặc định nhận diện tồn kho');
+
+      setAttributes(current => current.map(item => ({
+        ...item,
+        initial: selectedIdSet.has(String(item.id)),
+      })));
+      message.success(response?.message || 'Đã cập nhật thuộc tính mặc định');
     } catch (error) {
-      form.setFieldValue(
-        'listProperties',
-        syncSelectedProductProperties(properties, previousAttributeIds),
-      );
+      setSelectedIds(previousIds);
       message.error(error?.message || 'Không thể cập nhật thuộc tính mặc định');
     } finally {
       setSaving(false);
@@ -63,21 +64,22 @@ const ProductAttributeSelector = () => {
   };
 
   return (
-    <Form.Item label="Chọn thuộc tính mặc định nhận diện tồn kho">
+    <Space direction="vertical" size={4} style={{ width: 380 }}>
+      <Typography.Text strong>Chọn thuộc tính mặc định nhận diện tồn kho</Typography.Text>
       <Select
         allowClear
         showSearch
         mode="multiple"
+        maxTagCount="responsive"
         loading={loading || saving}
         disabled={saving}
-        value={selectedAttributeIds}
+        value={selectedIds}
         options={options}
         optionFilterProp="label"
-        placeholder="Chọn một hoặc nhiều thuộc tính"
-        maxTagCount="responsive"
+        placeholder="Chọn thuộc tính mặc định"
         optionRender={option => (
           <Checkbox
-            checked={selectedAttributeIds.includes(String(option.value))}
+            checked={selectedIds.some(id => String(id) === String(option.value))}
             style={{ pointerEvents: 'none' }}
           >
             {option.label}
@@ -85,8 +87,8 @@ const ProductAttributeSelector = () => {
         )}
         onChange={handleChange}
       />
-    </Form.Item>
+    </Space>
   );
 };
 
-export default ProductAttributeSelector;
+export default DefaultProductAttributeSelector;

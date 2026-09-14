@@ -36,6 +36,11 @@ const createOrderColumns = ({
   openWorkflowModal,
   openWorkflowProgressDrawer,
   navigate,
+  canViewDetail,
+  canUpdateOpportunity,
+  canViewQuotation,
+  canAttachWorkflow,
+  canViewWorkflow,
 }) => ([
   {
     title: 'Kinh doanh',
@@ -199,6 +204,11 @@ const createOrderColumns = ({
         openWorkflowModal={openWorkflowModal}
         openWorkflowProgressDrawer={openWorkflowProgressDrawer}
         navigate={navigate}
+        canViewDetail={canViewDetail}
+        canUpdateOpportunity={canUpdateOpportunity}
+        canViewQuotation={canViewQuotation}
+        canAttachWorkflow={canAttachWorkflow}
+        canViewWorkflow={canViewWorkflow}
       />
     ),
   },

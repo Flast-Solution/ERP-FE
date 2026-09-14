@@ -116,9 +116,9 @@ const KpiDashboard = ({
             {employees.length} thành viên — kỳ đánh giá {selectedPeriod.evaluation}
           </PageSubtitle>
         </div>
-        <AddButton type="primary" icon={<PlusOutlined />} onClick={onAdd}>
+        {onAdd ? <AddButton type="primary" icon={<PlusOutlined />} onClick={onAdd}>
           Thêm chỉ tiêu
-        </AddButton>
+        </AddButton> : null}
       </Header>
 
       <StatsGrid>
@@ -195,9 +195,9 @@ const KpiDashboard = ({
                 key={employee.id}
                 role="button"
                 tabIndex={0}
-                onClick={() => onSelectEmployee(employee)}
+                onClick={onSelectEmployee ? () => onSelectEmployee(employee) : undefined}
                 onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') onSelectEmployee(employee);
+                  if (onSelectEmployee && (event.key === 'Enter' || event.key === ' ')) onSelectEmployee(employee);
                 }}
               >
                 <MemberCell>

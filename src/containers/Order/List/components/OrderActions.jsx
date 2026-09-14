@@ -15,6 +15,11 @@ const OrderActions = ({
   openWorkflowModal,
   openWorkflowProgressDrawer,
   navigate,
+  canViewDetail,
+  canUpdateOpportunity,
+  canViewQuotation,
+  canAttachWorkflow,
+  canViewWorkflow,
 }) => {
   const workflowDetails = (record?.details ?? []).filter(detail => (
     Array.isArray(detail?.workflowInstances) && detail.workflowInstances.length > 0
@@ -28,7 +33,7 @@ const OrderActions = ({
     : hasParentWorkflowInstance
   const workflowMenuItems = isOpportunityList
     ? [
-      ...workflowDetails.map(detail => ({
+      ...(canViewWorkflow ? workflowDetails.map(detail => ({
         key: `progress:${detail.id}`,
         icon: <EyeOutlined />,
         label: (
@@ -36,25 +41,25 @@ const OrderActions = ({
             <strong>Mã&nbsp;</strong> {detail.code}
           </span>
         ),
-      })),
-      hasParentWorkflowInstance && workflowDetails.length === 0 && {
+      })) : []),
+      canViewWorkflow && hasParentWorkflowInstance && workflowDetails.length === 0 && {
         key: 'progress',
         icon: <EyeOutlined />,
         label: 'Xem tiến trình',
       },
-      !disableWorkflowAttach && {
+      canAttachWorkflow && !disableWorkflowAttach && {
         key: 'attach',
         icon: <ApartmentOutlined />,
         label: hasWorkflowInstance ? 'Gắn thêm workflow' : 'Gắn workflow',
       },
     ].filter(Boolean)
     : [
-      !disableWorkflowAttach && {
+      canAttachWorkflow && !disableWorkflowAttach && {
         key: 'attach',
         icon: <ApartmentOutlined />,
         label: hasParentWorkflowInstance ? 'Gắn thêm workflow' : 'Gắn workflow',
       },
-      (hasParentWorkflowInstance || showWorkflowProgressAction) && {
+      canViewWorkflow && (hasParentWorkflowInstance || showWorkflowProgressAction) && {
         key: 'progress',
         icon: <EyeOutlined />,
         label: 'Xem tiến trình',
@@ -93,14 +98,14 @@ const OrderActions = ({
 
   return (
     <Space gap={8}>
-      <Button
+      {canViewDetail ? <Button
         type="primary"
         size="small"
         onClick={() => onClickViewDetail(record)}
       >
         Chi tiết
-      </Button>
-      {!hideQuoteButton && (
+      </Button> : null}
+      {canViewQuotation && !hideQuoteButton && (
         <Button
           size="small"
           style={{ color: '#fa8c16' }}
@@ -143,7 +148,7 @@ const OrderActions = ({
           </Tooltip>
         </Dropdown>
       ) : null}
-      {record.type === 'cohoi' && (
+      {canUpdateOpportunity && record.type === 'cohoi' && (
         <Button
           size="small"
           style={{ color: '#16c5faff' }}

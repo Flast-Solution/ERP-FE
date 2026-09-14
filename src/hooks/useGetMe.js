@@ -22,6 +22,7 @@
 import { useCallback, useContext, useMemo } from 'react';
 import { DataContext } from '@flast-erp/core/components';
 import authRoles from '@/auth/authRoles';
+import { getClientPermissions, hasClientPermission } from '@/utils/authUtils';
 
 function useGetMe() {
     const { user, setMyData } = useContext(DataContext)
@@ -59,6 +60,8 @@ function useGetMe() {
 
     return {
         user,
+        permissionsClient: getClientPermissions(user),
+        hasPermission: permission => hasClientPermission(user, permission),
         setMe: (me) => setMyData(pre => ({ ...pre, user: me })),
         isLeader,
         isManager,

@@ -42,10 +42,11 @@ const normalizeUserProfiles = profiles => (
     : []
 )
 
-export const updateSystemUserPermissions = (user, permissions) => {
+export const updateSystemUserPermissions = (user, permissionsClient) => {
   const userId = user?.id ?? user?.userId
   const {
     permissionOverrides: _permissionOverrides,
+    permissionsClient: _permissionsClient,
     permissions: _permissions,
     ...userFields
   } = user ?? {}
@@ -54,7 +55,7 @@ export const updateSystemUserPermissions = (user, permissions) => {
     ...(Array.isArray(user?.userProfiles)
       ? { userProfiles: normalizeUserProfiles(user.userProfiles) }
       : {}),
-    permissions,
+    permissionsClient,
   }
 
   return RequestUtils.Post(USER_ACCOUNT_UPDATE_API, payload, { id: userId })

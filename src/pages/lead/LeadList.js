@@ -15,6 +15,7 @@ import { LEAD_WORKFLOW_ENTITY_TYPE } from '@/containers/Order/List/constants';
 import { enrichEntitiesWithWorkflowData } from '@/containers/Order/List/services/workflowApi';
 import { useWorkflowDrawer } from '@/contexts/WorkflowDrawerContext';
 import { getLeadStatusOption, mergeLeadStatusOptions } from './leadStatusOptions';
+import useGetMe from '@/hooks/useGetMe';
 
 const LEAD_API_PATH = 'data/lists';
 
@@ -25,6 +26,12 @@ const hasLeadWorkflow = record => (
 
 const LeadList = () => {
   const { openWorkflowDrawer } = useWorkflowDrawer();
+  const { hasPermission } = useGetMe();
+  const canCreate = hasPermission('sales.lead.create');
+  const canViewDetail = hasPermission(['sales.lead.detail.view', 'sales.lead.update']);
+  const canAssign = hasPermission('sales.lead.assign');
+  const canCreateOpportunity = hasPermission('sales.lead.convert_opportunity');
+  const canViewWorkflow = hasPermission('sales.lead.workflow.view');
 
   const [form] = Form.useForm();
   const [listSale, setListSale] = useState([]);
@@ -147,7 +154,7 @@ const LeadList = () => {
       width: 100,
       ellipsis: true
     },
-    {
+    canCreateOpportunity && {
       title: "Cơ hội",
       width: 100,
       fixed: 'right',
@@ -161,7 +168,7 @@ const LeadList = () => {
         </Button>
       )
     },
-    {
+    (canAssign || canViewDetail || canViewWorkflow) && {
       title: "Thao tác",
       width: 170,
       fixed: 'right',
@@ -170,15 +177,15 @@ const LeadList = () => {
         const hasWorkflow = hasLeadWorkflow(record);
         return (
           <div style={{ display: 'flex', gap: 20 }}>
-            <Tooltip style={{ cursor: 'pointer' }} title="Chuyển sale">
+            {canAssign ? <Tooltip style={{ cursor: 'pointer' }} title="Chuyển sale">
               <UserAddOutlined style={{ color: '#1677ff', fontSize: 16 }} onClick={() => {
                 setDetailRecord(record)
               }} />
-            </Tooltip>
-            <Tooltip style={{ cursor: 'pointer' }} title="Xem chi tiết Lead">
+            </Tooltip> : null}
+            {canViewDetail ? <Tooltip style={{ cursor: 'pointer' }} title="Xem chi tiết Lead">
               <EyeOutlined style={{ color: '#1677ff', fontSize: 16 }} onClick={() => onEdit(record)} />
-            </Tooltip>
-            <Tooltip style={{ cursor: 'pointer' }} title="Xem tiến trình Lead">
+            </Tooltip> : null}
+            {canViewWorkflow ? <Tooltip style={{ cursor: 'pointer' }} title="Xem tiến trình Lead">
               <InfoCircleOutlined
                 style={{
                   color: hasWorkflow ? '#52c41a' : '#bfbfbf',
@@ -187,12 +194,12 @@ const LeadList = () => {
                 }}
                 onClick={hasWorkflow ? () => openLeadProgress(record) : undefined}
               />
-            </Tooltip>
+            </Tooltip> : null}
           </div>
         );
       }
     }
-  ];
+  ].filter(Boolean);
 
   const beforeSubmitFilter = useCallback((values) => {
     dateFormatOnSubmit(values, ['from', 'to']);
@@ -237,6 +244,7 @@ const LeadList = () => {
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
         apiPath={LEAD_API_PATH}
+        hasCreate={canCreate}
         customClickCreate={onCreateLead}
         columns={CUSTOM_ACTION}
       />
@@ -247,7 +255,7 @@ const LeadList = () => {
             Chọn sale chăm sóc lead
           </div>
         }
-        open={(detailRecord?.id ?? 0) !== 0}
+        open={canAssign && (detailRecord?.id ?? 0) !== 0}
         footer={<NoFooter />}
         onCancel={() => setDetailRecord({})}
       >

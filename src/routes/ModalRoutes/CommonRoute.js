@@ -24,11 +24,13 @@ import React from 'react';
 const CommonRoute = [
   {
     path: 'work.edit',
+    permission: ({ data }) => data?.id ? 'project.update' : 'project.create',
     Component: React.lazy(() => import('@/containers/Works')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'customer.edit',
+    permission: 'customer.retail.address.manage',
     Component: React.lazy(() => import('@/containers/Customer/CustomerAddressForm')),
     modalOptions: { title: '', width: 750 }
   }

@@ -7,7 +7,7 @@ const CongnoConfigPage = React.lazy(() => import('@/pages/ketoan'));
 export const KeToanConfig = {
     auth    : authRoles.user,
     routes  : [
-        { path     : '/ke-toan/cong-no', element: <CongnoConfigPage /> },
-        { path     : '/ke-toan/confirm', element: <DuyetTienPage /> }
+        { path     : '/ke-toan/cong-no', permission: 'accounting.receivable.view', element: <CongnoConfigPage /> },
+        { path     : '/ke-toan/confirm', permission: 'accounting.payment_approval.view', element: <DuyetTienPage /> }
     ]
 };

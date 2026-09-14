@@ -24,11 +24,13 @@ import React from 'react';
 const productRoute = [
   {
     path: 'product.edit',
+    permission: ({ data }) => data?.id ? 'catalog.product.update' : 'catalog.product.create',
     Component: React.lazy(() => import('@/containers/Product')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'product.bom',
+    permission: 'catalog.product.bom.manage',
     Component: React.lazy(() => import('@/containers/Product/Bom')),
     modalOptions: { title: '', width: 750 }
   }

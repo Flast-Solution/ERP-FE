@@ -20,7 +20,7 @@
 /**************************************************************************/
 
 import React, { useCallback, useState } from 'react';
-import { Table, Button, InputNumber, Select, Typography, message } from 'antd';
+import { Table, Button, InputNumber, Select, Space, Typography, message } from 'antd';
 import { ShowSkuDetail } from '@/containers/Product/SkuView';
 import { arrayEmpty, arrayNotEmpty, formatMoney } from '@flast-erp/core/utils';
 import { formatterInputNumber, parserInputNumber } from '@flast-erp/core/utils';
@@ -42,6 +42,21 @@ import { useEffectAsync } from '@flast-erp/core/hooks';
 import { mergeSavedOrderLines, parseOrderLine } from './orderLine';
 
 const { Text } = Typography;
+const CURRENCY_VND = 'VND';
+const CURRENCY_USD = 'USD';
+const currencyOptions = [
+  { label: 'VND', value: CURRENCY_VND },
+  { label: 'USD', value: CURRENCY_USD }
+];
+
+const formatCurrencyAmount = (value, currency = CURRENCY_VND) => Number(value ?? 0).toLocaleString(
+  currency === CURRENCY_USD ? 'en-US' : 'vi-VN',
+  { style: 'currency', currency, maximumFractionDigits: currency === CURRENCY_USD ? 2 : 0 }
+);
+
+const getExchangeRate = (currency, exchangeRate) => (
+  currency === CURRENCY_USD ? Number(exchangeRate ?? 0) : 1
+);
 const warrantyOptions = [
   { name: '(Chưa có)', id: 1 },
   { name: '6 Tháng', id: 6 },
@@ -253,6 +268,12 @@ const calculateLineTotal = ({ item, shippingCost, formula }) => {
   });
 };
 
+const calculateConvertedLineTotal = ({ item, shippingCost, formula, currency, exchangeRate }) => {
+  const amount = calculateLineTotal({ item, shippingCost, formula })
+    ?? (Number(item?.price ?? 0) * Number(item?.quantity ?? 0));
+  return Math.round(amount * getExchangeRate(currency, exchangeRate));
+};
+
 const EditButton = ({
   editable,
   onEdit,
@@ -285,6 +306,8 @@ const BanHangPage = ({
   const [localOrder, setLocalOrder] = useState({ orderId, reload: false });
   const [customerOrder, setCustomerOrder] = useState();
   const [shippingCost, setShippingCost] = useState(0);
+  const [currency, setCurrency] = useState(CURRENCY_VND);
+  const [exchangeRate, setExchangeRate] = useState(1);
   const [calculationFormula, setCalculationFormula] = useState('');
 
   useEffectAsync(async () => {
@@ -308,6 +331,8 @@ const BanHangPage = ({
     if (order) {
       setCustomerOrder(order);
       setShippingCost(Number(order.shippingCost ?? 0));
+      setCurrency(order.currency === CURRENCY_USD ? CURRENCY_USD : CURRENCY_VND);
+      setExchangeRate(order.currency === CURRENCY_USD ? Number(order.exchangeRate ?? 1) : 1);
     }
     if (arrayNotEmpty(data)) {
       setData(mergeSavedOrderLines(data, localOrder.savedDetails));
@@ -353,7 +378,8 @@ const BanHangPage = ({
 
       order.skuPrices = skuPrices;
       order.productPrice = Number(mProduct?.price ?? mProduct?.priceRef ?? 0);
-      order.currency = mProduct?.currency ?? 'VND';
+      order.currency = currency;
+      order.exchangeRate = getExchangeRate(currency, exchangeRate);
 
       if (arrayNotEmpty(order.warehouseOptions)) {
         let warehouse = _.first(order.warehouseOptions);
@@ -366,11 +392,13 @@ const BanHangPage = ({
         quantity: order.quantity,
         product: mProduct
       });
-      order.totalPrice = calculateLineTotal({
+      order.totalPrice = calculateConvertedLineTotal({
         item: order,
         shippingCost,
-        formula: calculationFormula
-      }) ?? (order.price * order.quantity);
+        formula: calculationFormula,
+        currency,
+        exchangeRate
+      });
       setData(datas => ([...datas, order]));
     };
 
@@ -383,7 +411,7 @@ const BanHangPage = ({
         leadProducts: suggestedProducts,
       }
     });
-  }, [calculationFormula, leadProducts, shippingCost]);
+  }, [calculationFormula, currency, exchangeRate, leadProducts, shippingCost]);
 
   const onAddStock = useCallback(() => {
     const onAfterSubmit = (values) => {
@@ -425,7 +453,7 @@ const BanHangPage = ({
       width: 100
     },
     {
-      title: 'Đơn giá',
+      title: `Đơn giá (${currency})`,
       dataIndex: 'price',
       key: 'price',
       width: 120,
@@ -439,7 +467,7 @@ const BanHangPage = ({
       editable: true
     },
     {
-      title: 'Tiền CK',
+      title: `Tiền CK (${currency})`,
       dataIndex: 'discountAmount',
       key: 'discountAmount',
       width: 120,
@@ -463,7 +491,7 @@ const BanHangPage = ({
       )
     },
     {
-      title: 'Phí ship',
+      title: `Phí ship (${currency})`,
       dataIndex: 'shippingCost',
       key: 'shippingCost',
       width: 140,
@@ -474,17 +502,20 @@ const BanHangPage = ({
         <InputNumber
           min={0}
           value={shippingCost}
+          addonAfter={currency}
           onChange={value => {
             const nextShippingCost = Number(value ?? 0);
             setShippingCost(nextShippingCost);
             if (calculationFormula) {
               setData(current => current.map(item => ({
                 ...item,
-                totalPrice: calculateLineTotal({
+                totalPrice: calculateConvertedLineTotal({
                   item,
                   shippingCost: nextShippingCost,
-                  formula: calculationFormula
-                }) ?? item.totalPrice
+                  formula: calculationFormula,
+                  currency,
+                  exchangeRate
+                })
               })));
             }
           }}
@@ -495,7 +526,7 @@ const BanHangPage = ({
       ) : null
     },
     {
-      title: 'Thành tiền',
+      title: 'Thành tiền (VND)',
       dataIndex: 'totalPrice',
       key: 'totalPrice',
       width: 150,
@@ -540,7 +571,38 @@ const BanHangPage = ({
   let isOrder = (customerOrder?.id || 0) !== 0;
   const totalQuantity = data.reduce((sum, item) => sum + item.quantity, 0);
   const totalDiscount = data.reduce((sum, item) => sum + item.discountAmount, 0);
-  const totalSubOrder = data.reduce((sum, item) => sum + item.totalPrice - item.discountAmount, 0);
+  const totalSubOrder = data.reduce(
+    (sum, item) => sum + item.totalPrice - (item.discountAmount * getExchangeRate(currency, exchangeRate)),
+    0
+  );
+
+  const recalculateTotals = useCallback((nextCurrency, nextExchangeRate) => {
+    setData(current => current.map(item => ({
+      ...item,
+      currency: nextCurrency,
+      exchangeRate: getExchangeRate(nextCurrency, nextExchangeRate),
+      totalPrice: calculateConvertedLineTotal({
+        item,
+        shippingCost,
+        formula: calculationFormula,
+        currency: nextCurrency,
+        exchangeRate: nextExchangeRate
+      })
+    })));
+  }, [calculationFormula, shippingCost]);
+
+  const handleCurrencyChange = (nextCurrency) => {
+    const nextExchangeRate = nextCurrency === CURRENCY_USD ? exchangeRate : 1;
+    setCurrency(nextCurrency);
+    if (nextCurrency === CURRENCY_VND) setExchangeRate(1);
+    recalculateTotals(nextCurrency, nextExchangeRate);
+  };
+
+  const handleExchangeRateChange = (value) => {
+    const nextExchangeRate = Number(value ?? 0);
+    setExchangeRate(nextExchangeRate);
+    recalculateTotals(currency, nextExchangeRate);
+  };
 
   const editRow = (key) => {
     const newData = data.map(item => ({ ...item, editable: item.key === key }));
@@ -577,11 +639,13 @@ const BanHangPage = ({
       });
     }
     if (['quantity', 'price', 'profit'].includes(field)) {
-      target.totalPrice = calculateLineTotal({
+      target.totalPrice = calculateConvertedLineTotal({
         item: target,
         shippingCost,
-        formula: calculationFormula
-      }) ?? (target.quantity * target.price);
+        formula: calculationFormula,
+        currency,
+        exchangeRate
+      });
     }
     if (field === 'discountRate') {
       target.discountAmount = (target.price * target.quantity * target.discountRate) / 100;
@@ -645,6 +709,9 @@ const BanHangPage = ({
           style={{ width: '100%' }}
           formatter={formatterInputNumber}
           parser={parserInputNumber}
+          addonAfter={column.dataIndex === 'totalPrice' ? CURRENCY_VND : (
+            ['price', 'discountAmount'].includes(column.dataIndex) ? currency : undefined
+          )}
         />
       );
     } else {
@@ -670,7 +737,9 @@ const BanHangPage = ({
       if (column.dataIndex === 'profit') {
         return `${Number(text ?? 0)}%`;
       }
-      return isFormatted ? formatMoney(text) : text;
+      return isFormatted
+        ? formatCurrencyAmount(text, column.dataIndex === 'totalPrice' ? CURRENCY_VND : currency)
+        : text;
     }
   };
 
@@ -687,7 +756,9 @@ const BanHangPage = ({
           ...detail,
           skuDetails: detail.skuDetails ?? mSkuDetails ?? []
         })),
-        shippingCost: Number(shippingCost || 0)
+        shippingCost: Number(shippingCost || 0),
+        currency,
+        exchangeRate: getExchangeRate(currency, exchangeRate)
       };
       if (customerOrder?.id) {
         params.id = customerOrder.id;
@@ -727,7 +798,7 @@ const BanHangPage = ({
         details: data
       }
     });
-  }, [data, dataId, customer, customerOrder, shippingCost]);
+  }, [currency, data, dataId, customer, customerOrder, exchangeRate, shippingCost]);
 
   const onOpenFormPayment = useCallback(() => {
     InAppEvent.emit(HASH_MODAL, {
@@ -771,13 +842,41 @@ const BanHangPage = ({
         pagination={false}
         summary={() => (
           <Table.Summary.Row>
-            <Table.Summary.Cell index={0} colSpan={3}>Tổng cộng</Table.Summary.Cell>
+            <Table.Summary.Cell index={0} colSpan={3}>
+              <Space wrap size={12}>
+                <Text strong>Tổng cộng</Text>
+                <Space size={6}>
+                  <Text>Loại tiền</Text>
+                  <Select
+                    size="small"
+                    value={currency}
+                    options={currencyOptions}
+                    onChange={handleCurrencyChange}
+                    style={{ width: 90 }}
+                  />
+                </Space>
+                <Space size={6}>
+                  <Text>Tỷ giá</Text>
+                  <InputNumber
+                    size="small"
+                    min={currency === CURRENCY_USD ? 0.01 : 1}
+                    value={exchangeRate}
+                    disabled={currency === CURRENCY_VND}
+                    onChange={handleExchangeRateChange}
+                    formatter={formatterInputNumber}
+                    parser={parserInputNumber}
+                    addonAfter="VND"
+                    style={{ width: 170 }}
+                  />
+                </Space>
+              </Space>
+            </Table.Summary.Cell>
             <Table.Summary.Cell index={3}>{totalQuantity}</Table.Summary.Cell>
             <Table.Summary.Cell index={4}></Table.Summary.Cell>
             <Table.Summary.Cell index={5}></Table.Summary.Cell>
-            <Table.Summary.Cell index={6}>{formatMoney(totalDiscount)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={6}>{formatCurrencyAmount(totalDiscount, currency)}</Table.Summary.Cell>
             <Table.Summary.Cell index={7}></Table.Summary.Cell>
-            <Table.Summary.Cell index={8}>{formatMoney(shippingCost)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={8}>{formatCurrencyAmount(shippingCost, currency)}</Table.Summary.Cell>
             <Table.Summary.Cell index={9}>{formatMoney(totalSubOrder)}</Table.Summary.Cell>
             <Table.Summary.Cell index={10} colSpan={4}></Table.Summary.Cell>
           </Table.Summary.Row>

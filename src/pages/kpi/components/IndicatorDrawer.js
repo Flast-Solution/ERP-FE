@@ -20,7 +20,7 @@ const KPI_TYPE_OPTIONS = [
   { value: 'DATA', label: 'Lead' },
 ];
 
-const IndicatorDrawer = ({ drawer, onClose, onSaved }) => {
+const IndicatorDrawer = ({ drawer, canDelete = false, canSave = false, onClose, onSaved }) => {
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
   const frequency = Form.useWatch('frequency', form) || 'quarter';
@@ -256,14 +256,14 @@ const IndicatorDrawer = ({ drawer, onClose, onSaved }) => {
       )}
       footer={(
         <DrawerFooter $edit={isEdit}>
-          {isEdit && (
+          {isEdit && canDelete && (
             <DeleteButton danger icon={<DeleteOutlined />} onClick={onClose}>
               Xóa chỉ tiêu
             </DeleteButton>
           )}
           <FooterActions>
             <CancelButton type="text" onClick={onClose}>Hủy</CancelButton>
-            <SaveButton
+            {canSave ? <SaveButton
               htmlType="button"
               type="primary"
               icon={<SaveOutlined />}
@@ -272,7 +272,7 @@ const IndicatorDrawer = ({ drawer, onClose, onSaved }) => {
               onClick={handleSave}
             >
               Lưu chỉ tiêu
-            </SaveButton>
+            </SaveButton> : null}
           </FooterActions>
         </DrawerFooter>
       )}

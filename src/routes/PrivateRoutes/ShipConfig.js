@@ -26,6 +26,6 @@ const ShipPage = React.lazy(() => import('@/pages/ship'));
 export const ShipConfig = {
     auth: authRoles.user,
     routes: [
-        { path: '/ship', element: <ShipPage /> }
+        { path: '/ship', permission: 'shipping.delivery.view', element: <ShipPage /> }
     ]
 };

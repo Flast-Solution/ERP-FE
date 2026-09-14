@@ -24,6 +24,7 @@ import React from 'react';
 const Lead3DayRouter = [
   {
     path: 'lead3day.edit',
+    permission: 'sales.lead.overdue.update',
     Component: React.lazy(() => import('@/containers/Lead3DayForm')),
     modalOptions: { title: '', width: 750 }
   }

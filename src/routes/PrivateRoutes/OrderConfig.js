@@ -30,10 +30,13 @@ const ManufacturingLot = React.lazy(() => import('@/pages/order/ManufacturingLot
 export const OrderConfig = {
     auth: authRoles.user,
     routes: [
-        { path: '/sale/order/progress/:orderId', element: <OrderProgressPage /> },
-        { path: '/sale/order/progress', element: <OrderProgressPage /> },
-        { path: '/sale/order/*', element: <OrderPage /> },
-        { path: '/sale/order-production', element: <OrderProductionPage /> },
-        { path: '/sale/production/lots/create', element: <ManufacturingLot /> }
+        { path: '/sale/order/progress/:orderId', permission: 'sales.order.workflow.view', element: <OrderProgressPage /> },
+        { path: '/sale/order/progress', permission: 'sales.order.workflow.view', element: <OrderProgressPage /> },
+        { path: '/sale/order/after-sale', permission: 'sales.order.after_sale.view', element: <OrderPage /> },
+        { path: '/sale/order/cancelled', permission: 'sales.order.cancelled.view', element: <OrderPage /> },
+        { path: '/sale/order', permission: 'sales.order.view', element: <OrderPage /> },
+        { path: '/sale/order/*', permission: 'sales.order.view', element: <OrderPage /> },
+        { path: '/sale/order-production', permission: 'manufacturing.progress.view', element: <OrderProductionPage /> },
+        { path: '/sale/production/lots/create', permission: 'sales.order.lot.create', element: <ManufacturingLot /> }
     ]
 };

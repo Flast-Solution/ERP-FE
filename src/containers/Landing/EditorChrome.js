@@ -18,9 +18,14 @@ import {
 } from './EditorChrome.style'
 import { AgentStatus } from './AgentStatus'
 import { IconButton } from './IconButton'
+import useGetMe from '@/hooks/useGetMe'
 
 export function EditorChrome() {
   const navigate = useNavigate()
+  const { hasPermission } = useGetMe()
+  const canManageApi = hasPermission('web.landing.api.manage')
+  const canSaveDraft = hasPermission('web.landing.save_draft')
+  const canPublish = hasPermission('web.landing.publish')
 
   const device = useEditorStore((s) => s.device)
   const setDevice = useEditorStore((s) => s.setDevice)
@@ -109,20 +114,20 @@ export function EditorChrome() {
           </DeviceBtn>
         </DeviceToggle>
         <Sep />
-        <Tooltip title="Cấu hình API (⌘K)">
+        {canManageApi && <Tooltip title="Cấu hình API (⌘K)">
           <CfgWrap>
             <IconButton aria-label="Cấu hình API" variant="ghost" size="sm" disabled={viewMode !== 'edit'} onClick={() => setConfigOpen(true)}>
               <Gear />
             </IconButton>
             {apiCount > 0 && <CfgCount>{apiCount}</CfgCount>}
           </CfgWrap>
-        </Tooltip>
+        </Tooltip>}
       </BarCenter>
 
       <BarRight>
         <AgentStatus status={status} />
-        <Button variant="text" size="small" loading={building} disabled={building} onClick={() => saveDraft()}>Lưu nháp</Button>
-        <Button variant="text" size="small" loading={building} disabled={building} onClick={publish}>Xuất bản</Button>
+        {canSaveDraft && <Button variant="text" size="small" loading={building} disabled={building} onClick={() => saveDraft()}>Lưu nháp</Button>}
+        {canPublish && <Button variant="text" size="small" loading={building} disabled={building} onClick={publish}>Xuất bản</Button>}
         <Avatar>A</Avatar>
       </BarRight>
     </Bar>

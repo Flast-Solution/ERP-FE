@@ -44,9 +44,9 @@ const EmployeeKpiDetail = ({ employee, indicators = [], loading, period, onBack,
 
         <IndicatorHeading>
           <h2>Chỉ tiêu kỳ này</h2>
-          <DetailAddButton icon={<PlusOutlined />} onClick={onAdd}>
+          {onAdd ? <DetailAddButton icon={<PlusOutlined />} onClick={onAdd}>
             Thêm chỉ tiêu
-          </DetailAddButton>
+          </DetailAddButton> : null}
         </IndicatorHeading>
 
         <IndicatorList>
@@ -66,12 +66,12 @@ const EmployeeKpiDetail = ({ employee, indicators = [], loading, period, onBack,
                   </div>
                   <IndicatorActions>
                     <IndicatorCode>{indicator.type}</IndicatorCode>
-                    <EditButton
+                    {onEdit ? <EditButton
                       type="text"
                       aria-label={`Sửa ${indicator.name}`}
                       icon={<EditOutlined />}
                       onClick={() => onEdit(indicator)}
-                    />
+                    /> : null}
                   </IndicatorActions>
                 </IndicatorTop>
 

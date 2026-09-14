@@ -23,6 +23,7 @@ import { HASH_MODAL, HASH_MODAL_CLOSE } from '@/configs';
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { InAppEvent } from '@flast-erp/core/utils';
 import { DrawerCustom } from '@flast-erp/core/components';
+import useGetMe from '@/hooks/useGetMe';
 
 import ProductRoute from './ProductRoute.js';
 import OrderRoute from './OrderRoute';
@@ -72,6 +73,7 @@ const getModalRoute = (urlHash) => {
 };
 
 function ModalRoutes() {
+  const { hasPermission } = useGetMe();
 
   const [params, setParams] = useState({ open: false });
   const handleEventDraw = useCallback(({ hash, data, title }) => {
@@ -99,12 +101,16 @@ function ModalRoutes() {
     () => getModalRoute(params.hash),
     [params.hash],
   );
+  const requiredPermission = typeof ModalRoute?.permission === 'function'
+    ? ModalRoute.permission(params)
+    : ModalRoute?.permission;
+  const canOpen = hasPermission(requiredPermission);
 
   return (
     <DrawerCustom
       {...ModalRoute?.modalOptions}
       title={params?.title || ModalRoute?.modalOptions?.title}
-      open={params.open}
+      open={params.open && canOpen}
       onClose={closeModal}
     >
       <ModalRoute.Component closeModal={closeModal} {...params} />

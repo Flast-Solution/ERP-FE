@@ -31,8 +31,11 @@ import { DownloadOutlined } from '@ant-design/icons';
 const { Paragraph, Text } = Typography;
 const Car = () => {
 
-  const { isLeader, isManager } = useGetMe();
-  const showPreviewOnly = isLeader() || isManager();
+  const { hasPermission } = useGetMe();
+  const canCreate = hasPermission('hr.booking.car.create');
+  const canUpdate = hasPermission('hr.booking.car.update');
+  const canApprove = hasPermission('hr.booking.car.approve');
+  const canExport = hasPermission('hr.booking.car.export');
 
   useEffect(() => {
     CarService.fetch();
@@ -42,7 +45,7 @@ const Car = () => {
   const textBtn = useCallback((item) => {
     console.log(item)
     let text = "Xem đơn";
-    if (isLeader() || isManager()) {
+    if (canApprove) {
       const reEditStatus = item?.overTimeReality?.status ?? -1;
       const status = item.status;
       if (status === APP_FOLLOW_STATUS_WAITING || reEditStatus === APP_FOLLOW_STATUS_WAITING) {
@@ -56,12 +59,12 @@ const Car = () => {
       }
     }
     return text;
-  }, [isLeader, isManager]);
+  }, [canApprove]);
 
   const onEdit = (item) => {
     let title = 'Sửa đăng ký xe # ' + item.id;
     let hash = '#draw/booking.car.edit';
-    if (showPreviewOnly) {
+    if (canApprove) {
       title = 'Duyệt đăng ký xe # ' + item.id;
       hash = '#draw/booking.car.confirm';
     }
@@ -136,8 +139,8 @@ const Car = () => {
       fixed: 'right',
       render: (record) => (
         <Flex gap={'small'}>
-          <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size='small'>{textBtn(record)}</Button>
-          { Number(record.status) === APP_FOLLOW_STATUS_DONE && 
+          {(canUpdate || canApprove) && <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size='small'>{textBtn(record)}</Button>}
+          {canExport && Number(record.status) === APP_FOLLOW_STATUS_DONE &&
             <Button color="primary" variant="solid" onClick={() => onExport(record)} size='small'>{<DownloadOutlined />}</Button>
           }
         </Flex>
@@ -182,7 +185,7 @@ const Car = () => {
         useGetAllQuery={useGetList}
         onData={onLoadData}
         apiPath={'tickes-bus/fetch'}
-        customClickCreate={onCreate}
+        customClickCreate={canCreate ? onCreate : undefined}
         columns={CUSTOM_ACTION}
       />
     </div>

@@ -5,6 +5,7 @@ import { HeaderCompany, FormSelectAPI, CustomButton } from "@flast-erp/core/comp
 
 import { useReactToPrint } from "react-to-print";
 import { RequestUtils, arrayEmpty, f5List } from '@flast-erp/core/utils';
+import useGetMe from '@/hooks/useGetMe';
 
 const { Title, Text } = Typography;
 const generateListProduct = (warehouse, ship) => {
@@ -28,6 +29,9 @@ const generateListProduct = (warehouse, ship) => {
 }
 
 const DeliveryPager = ( { data }) => {
+  const { hasPermission } = useGetMe();
+  const canUpdate = hasPermission('shipping.delivery.update');
+  const canPrint = hasPermission('shipping.delivery.print');
   
   const contentRef = useRef();
   const reactToPrintFn = useReactToPrint({ contentRef });
@@ -142,25 +146,25 @@ const DeliveryPager = ( { data }) => {
 
     <Form form={form} onFinish={onFinish} >
       <Row gutter={24} style={{padding: 10}}>
-        <Col md={12} xs={24}>
+        {canUpdate && <Col md={12} xs={24}>
           <FormSelectAPI
             required
             apiPath="shipping/fetch-status"
             name="status"
             placeholder={"Chọn trạng thái"}
           />
-        </Col>
-        <Col md={10} xs={24}>
+        </Col>}
+        {canUpdate && <Col md={10} xs={24}>
           <CustomButton 
             htmlType="submit"
             variant="outlined" 
             title="Cập nhật trạng thái" 
             inRigth={false}
           />
-        </Col>
-        <Col md={2} xs={24}>
+        </Col>}
+        {canPrint && <Col md={2} xs={24}>
           <CustomButton onClick={reactToPrintFn} title="In phiếu" />
-        </Col>
+        </Col>}
       </Row>
     </Form>
   </>

@@ -1,5 +1,5 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { Button, DatePicker, Form, Input, Radio, Select, Tag, message } from 'antd'
+import { Button, DatePicker, Form, Input, Radio, Select, Spin, Tag, message } from 'antd'
 
 import {
   FormContextCustom,
@@ -15,7 +15,8 @@ import { LeadFormShell } from './styles'
 
 const WORKFLOW_FILTER_API = '/workflow/process/filter'
 const WORKFLOW_PAGE_SIZE = 10
-const ENTERPRISE_LIST_API = '/customer/customer-enterprise-all'
+const ENTERPRISE_LOOKUP_API = '/erp/customer/find-enterprise-code'
+const ENTERPRISE_LOOKUP_DEBOUNCE_MS = 500
 
 const getResponseItems = (response) => {
   const payload = response?.data ?? response
@@ -45,6 +46,17 @@ const mergeById = (currentItems, nextItems) => {
     }
   })
   return Array.from(itemsById.values())
+}
+
+const getResponseObject = (response) => {
+  const payload = response?.data ?? response
+  const candidates = [
+    payload?.enterprise,
+    payload?.data?.enterprise,
+    payload?.data,
+    payload,
+  ]
+  return candidates.find(item => item && typeof item === 'object' && !Array.isArray(item)) ?? null
 }
 
 const ASSET_BASE_URL = 'http://view.user.flast.vn/assets/icons'
@@ -127,18 +139,19 @@ const LeadDatePicker = ({
   </Form.Item>
 )
 
-const LeadForm = ({ listSale = [], submitting = false }) => {
+const LeadForm = ({ listSale = [], submitting = false, canSave = true }) => {
   const { form, record } = useContext(FormContextCustom)
-  const [enterprises, setEnterprises] = useState([])
-  const [loadingEnterprises, setLoadingEnterprises] = useState(false)
+  const [loadingEnterprise, setLoadingEnterprise] = useState(false)
   const [workflows, setWorkflows] = useState([])
   const [loadingWorkflows, setLoadingWorkflows] = useState(false)
   const workflowOffsetRef = useRef(0)
   const workflowLoadingRef = useRef(false)
   const workflowHasMoreRef = useRef(true)
   const workflowItemsRef = useRef([])
+  const enterpriseLookupSequenceRef = useRef(0)
   const isEditing = Boolean(record?.id)
   const customerType = Form.useWatch('customerType', form) ?? record?.customerType ?? 'INDIVIDUAL'
+  const taxCode = Form.useWatch(['business', 'taxCode'], form)
 
   const attachedWorkflowIds = useMemo(() => Array.from(new Set([
     ...(Array.isArray(record?.workflowInstances)
@@ -152,53 +165,52 @@ const LeadForm = ({ listSale = [], submitting = false }) => {
   )
 
   useEffect(() => {
-    let mounted = true
-    setLoadingEnterprises(true)
+    const normalizedTaxCode = String(taxCode ?? '').trim()
+    const lookupSequence = ++enterpriseLookupSequenceRef.current
 
-    RequestUtils.Get(ENTERPRISE_LIST_API)
-      .then((response) => {
-        if (!mounted) return
-        const nextEnterprises = getResponseItems(response)
-        setEnterprises(nextEnterprises)
-
-        const currentEnterpriseId = form.getFieldValue('enterpriseId')
-          ?? record?.enterpriseId
-          ?? record?.business?.enterpriseId
-          ?? record?.business?.id
-        const currentCompanyName = form.getFieldValue(['business', 'companyName'])
-          ?? record?.business?.companyName
-          ?? record?.companyName
-        if (!currentEnterpriseId && currentCompanyName) {
-          const normalizedName = String(currentCompanyName).trim().toLocaleLowerCase()
-          const matchingEnterprises = nextEnterprises.filter(item => (
-            String(item?.companyName ?? '').trim().toLocaleLowerCase() === normalizedName
-          ))
-          if (matchingEnterprises.length === 1) {
-            form.setFieldValue('enterpriseId', matchingEnterprises[0].id)
-          }
-        }
-      })
-      .catch(() => {
-        if (mounted) {
-          setEnterprises([])
-          message.error('Không tải được danh sách doanh nghiệp.')
-        }
-      })
-      .finally(() => {
-        if (mounted) setLoadingEnterprises(false)
-      })
-
-    return () => {
-      mounted = false
+    if (customerType !== 'BUSINESS' || !normalizedTaxCode) {
+      setLoadingEnterprise(false)
+      return undefined
     }
-  }, [
-    form,
-    record?.business?.companyName,
-    record?.business?.enterpriseId,
-    record?.business?.id,
-    record?.companyName,
-    record?.enterpriseId,
-  ])
+
+    const timeoutId = window.setTimeout(async () => {
+      setLoadingEnterprise(true)
+      try {
+        const response = await RequestUtils.Get(ENTERPRISE_LOOKUP_API, {
+          code: normalizedTaxCode,
+        })
+        if (lookupSequence !== enterpriseLookupSequenceRef.current) return
+
+        const enterprise = getResponseObject(response)
+        if (!enterprise || (!enterprise.id && !enterprise.companyName)) {
+          form.setFieldValue('enterpriseId', null)
+          return
+        }
+
+        const currentBusiness = form.getFieldValue('business') ?? {}
+        form.setFieldsValue({
+          enterpriseId: enterprise.id ?? null,
+          business: {
+            ...currentBusiness,
+            companyName: enterprise.companyName ?? currentBusiness.companyName,
+            contactName: enterprise.contactName ?? currentBusiness.contactName,
+            jobTitle: enterprise.jobTitle ?? currentBusiness.jobTitle,
+            website: enterprise.website ?? currentBusiness.website,
+          },
+        })
+      } catch (_) {
+        if (lookupSequence === enterpriseLookupSequenceRef.current) {
+          form.setFieldValue('enterpriseId', null)
+        }
+      } finally {
+        if (lookupSequence === enterpriseLookupSequenceRef.current) {
+          setLoadingEnterprise(false)
+        }
+      }
+    }, ENTERPRISE_LOOKUP_DEBOUNCE_MS)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [customerType, form, taxCode])
 
   const loadWorkflows = useCallback(async ({ reset = false } = {}) => {
     if (workflowLoadingRef.current || (!reset && !workflowHasMoreRef.current)) return
@@ -271,12 +283,6 @@ const LeadForm = ({ listSale = [], submitting = false }) => {
     () => CHANNEL_SOURCE.map(item => ({ value: item.id, label: item.name })),
     [],
   )
-  const enterpriseOptions = useMemo(() => enterprises.map(item => ({
-    value: item.id,
-    label: [item.companyName ?? `Doanh nghiệp #${item.id}`, item.taxCode]
-      .filter(Boolean)
-      .join(' — '),
-  })), [enterprises])
   const saleOptions = useMemo(() => listSale.map(item => ({
     value: item.id,
     label: item.fullName ?? item.name ?? item.username ?? `Nhân viên #${item.id}`,
@@ -301,28 +307,6 @@ const LeadForm = ({ listSale = [], submitting = false }) => {
       loadWorkflows()
     }
   }, [loadWorkflows])
-
-  const handleEnterpriseChange = useCallback((enterpriseId) => {
-    const enterprise = enterprises.find(item => String(item?.id) === String(enterpriseId))
-    form.setFieldsValue({
-      enterpriseId: enterprise?.id,
-      business: enterprise
-        ? {
-          companyName: enterprise.companyName ?? null,
-          taxCode: enterprise.taxCode ?? null,
-          contactName: enterprise.contactName ?? null,
-          jobTitle: enterprise.jobTitle ?? null,
-          website: enterprise.website ?? null,
-        }
-        : {
-          companyName: null,
-          taxCode: null,
-          contactName: null,
-          jobTitle: null,
-          website: null,
-        },
-    })
-  }, [enterprises, form])
 
   const handleSave = async () => {
     try {
@@ -376,19 +360,23 @@ const LeadForm = ({ listSale = [], submitting = false }) => {
           Doanh nghiệp — hiện khi chọn Doanh nghiệp ở trên
         </div>
         <div className={`pl-grid lead-business-grid ${customerType !== 'BUSINESS' ? 'is-disabled' : ''}`}>
-          <LeadSelect
+          <FormHidden name="enterpriseId" />
+          <LeadInput
+            name={['business', 'taxCode']}
+            label="Mã số thuế"
+            code="tax_code"
+            placeholder="0315123456"
+            disabled={customerType !== 'BUSINESS'}
+            suffix={loadingEnterprise ? <Spin size="small" /> : null}
+          />
+          <LeadInput
             required
-            name="enterpriseId"
+            name={['business', 'companyName']}
             label="Tên doanh nghiệp"
             code="company_name"
-            placeholder="Chọn doanh nghiệp"
+            placeholder="Nhập tên doanh nghiệp"
             disabled={customerType !== 'BUSINESS'}
-            fieldClassName="full"
-            options={enterpriseOptions}
-            loading={loadingEnterprises}
-            onChange={handleEnterpriseChange}
           />
-          <LeadInput name={['business', 'taxCode']} label="Mã số thuế" code="tax_code" placeholder="0315123456" disabled={customerType !== 'BUSINESS'} />
           <LeadInput required name={['business', 'contactName']} label="Người liên hệ" code="contact_name" placeholder="Nguyễn Văn Hùng" disabled={customerType !== 'BUSINESS'} />
           <LeadInput name={['business', 'jobTitle']} label="Chức vụ" code="job_title" placeholder="Giám đốc" disabled={customerType !== 'BUSINESS'} />
           <LeadInput name={['business', 'website']} label="Website" code="website" placeholder="https://sachfood.vn" disabled={customerType !== 'BUSINESS'} />
@@ -533,14 +521,14 @@ const LeadForm = ({ listSale = [], submitting = false }) => {
         </div>
       </LeadSection>
 
-      <footer className="pl-foot lead-form-actions">
+      {canSave ? <footer className="pl-foot lead-form-actions">
         <div className="pl-foot__actions">
           <Button className="btn btn--primary" loading={submitting} onClick={handleSave}>
             <img src={`${ASSET_BASE_URL}/save.svg`} alt="" width="14" height="14" />
             {record?.id ? 'Cập nhật Lead' : 'Lưu Lead'}
           </Button>
         </div>
-      </footer>
+      </footer> : null}
     </LeadFormShell>
   )
 }

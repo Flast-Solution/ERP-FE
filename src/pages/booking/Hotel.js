@@ -25,8 +25,11 @@ import { DownloadOutlined } from '@ant-design/icons';
 const { Paragraph, Text } = Typography;
 const Hotel = () => {
 
-  const { isLeader, isManager } = useGetMe();
-  const showPreviewOnly = isLeader() || isManager();
+  const { hasPermission } = useGetMe();
+  const canCreate = hasPermission('hr.booking.hotel.create');
+  const canUpdate = hasPermission('hr.booking.hotel.update');
+  const canApprove = hasPermission('hr.booking.hotel.approve');
+  const canExport = hasPermission('hr.booking.hotel.export');
 
   useEffect(() => {
     HotelService.fetch();
@@ -35,7 +38,7 @@ const Hotel = () => {
 
   const textBtn = useCallback((item) => {
     let text = "Xem thêm";
-    if (isLeader() || isManager()) {
+    if (canApprove) {
       const status = item.status;
       if (status === APP_FOLLOW_STATUS_WAITING) {
         text = "N.Check";
@@ -48,13 +51,13 @@ const Hotel = () => {
       }
     }
     return text;
-  }, [isLeader, isManager]);
+  }, [canApprove]);
 
   const onEdit = (item) => {
     let title = 'Sửa đăng ký nhà nghỉ , khách sạn # ' + item.id;
     let hash = '#draw/booking.hotel.edit';
     let lItem = item;
-    if (showPreviewOnly) {
+    if (canApprove) {
       title = 'Duyệt đăng ký nhà nghỉ , khách sạn # ' + item.id;
       hash = '#draw/booking.hotel.confirm';
       const { id, bookingList, note, infoHotel, status, createdAt, userId, userIdcheck, userIdappoved, userCreate } = item;
@@ -131,8 +134,8 @@ const Hotel = () => {
       fixed: 'right',
       render: (record) => (
         <Flex gap={'small'}>
-          <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size='small'>{textBtn(record)}</Button>
-          { Number(record.status) === APP_FOLLOW_STATUS_DONE && 
+          {(canUpdate || canApprove) && <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size='small'>{textBtn(record)}</Button>}
+          {canExport && Number(record.status) === APP_FOLLOW_STATUS_DONE &&
             <Button color="primary" variant="solid" onClick={() => onExport(record)} size='small'>{<DownloadOutlined />}</Button>
           }
         </Flex>
@@ -177,7 +180,7 @@ const Hotel = () => {
         useGetAllQuery={useGetList}
         onData={onLoadData}
         apiPath={'tickes-hotel/fetch'}
-        customClickCreate={onCreate}
+        customClickCreate={canCreate ? onCreate : undefined}
         columns={CUSTOM_ACTION}
       />
     </div>

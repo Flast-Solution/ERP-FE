@@ -74,10 +74,21 @@ const ListOrder = ({
   detailDrawerTitle,
 }) => {
   const navigate = useNavigate()
-  const { user } = useGetMe()
+  const { user, hasPermission } = useGetMe()
   const [copiedIndex, setCopiedIndex] = useState(null)
   const isOrderList = orderMode || filter.type === 'order'
   const isOpportunityList = filter.type === 'cohoi'
+  const canViewDetail = hasPermission(isOpportunityList
+    ? 'sales.opportunity.detail.view'
+    : 'sales.order.detail.view')
+  const canUpdateOpportunity = isOpportunityList && hasPermission('sales.opportunity.update')
+  const canViewQuotation = isOpportunityList && hasPermission('sales.quotation.view')
+  const canAttachWorkflow = hasPermission(isOpportunityList
+    ? 'sales.opportunity.workflow.attach'
+    : 'sales.order.workflow.attach')
+  const canViewWorkflow = hasPermission(isOpportunityList
+    ? 'sales.opportunity.workflow.view'
+    : 'sales.order.workflow.view')
   const [opportunityStatusOptions, setOpportunityStatusOptions] = useState([])
 
   useEffect(() => {
@@ -201,6 +212,11 @@ const ListOrder = ({
     openWorkflowModal: handleOpenWorkflowModal,
     openWorkflowProgressDrawer,
     navigate,
+    canViewDetail,
+    canUpdateOpportunity,
+    canViewQuotation,
+    canAttachWorkflow,
+    canViewWorkflow,
   })
 
   const orderLotExpandable = enableLotTree

@@ -30,6 +30,7 @@ import moment from 'moment';
 import dayjs from 'dayjs';
 import LeadForm from './LeadForm';
 import { resolveUploadFilename } from '@/containers/PreviewModal/uploadUtils';
+import useGetMe from '@/hooks/useGetMe';
 
 const DISPLAY_DATE_FORMAT = 'DD/MM/YYYY HH:mm:ss';
 const API_DATE_FORMAT = 'YYYY-MM-DD HH:mm:ss';
@@ -123,8 +124,13 @@ const NewLead = ({ closeModal, data }) => {
   const [form] = Form.useForm();
   const [record, setRecord] = useState(() => normalizeLeadRecord(item));
   const [submitting, setSubmitting] = useState(false);
+  const { hasPermission } = useGetMe();
+  const canSave = item?.id
+    ? hasPermission('sales.lead.update')
+    : hasPermission('sales.lead.create');
 
   const onSubmit = async (values) => {
+    if (!canSave) return;
     setSubmitting(true);
     try {
       const currentFormValues = form.getFieldsValue(true);
@@ -216,6 +222,7 @@ const NewLead = ({ closeModal, data }) => {
       <LeadForm
         listSale={listSale}
         submitting={submitting}
+        canSave={canSave}
       />
     </RestEditModal>
   )
