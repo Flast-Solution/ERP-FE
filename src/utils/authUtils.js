@@ -64,6 +64,10 @@ export const hasUserRole = (user, role) => getUserRoles(user).includes(role)
 
 export const isSuperAdmin = (user) => hasUserRole(user, 'ROLE_SUPER_ADMIN')
 
+export const canManagePermissions = (user) => (
+  hasUserRole(user, 'ROLE_SUPER_ADMIN') || hasUserRole(user, 'ROLE_ADMIN')
+)
+
 export const BUSINESS_UPDATED_EVENT = 'flast:user-business-updated'
 
 export const emitBusinessUpdated = (detail = {}) => {
