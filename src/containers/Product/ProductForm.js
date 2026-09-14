@@ -33,6 +33,7 @@ import {
 } from "@flast-erp/core/components";
 
 import ProductFormProperty from './ProductFormProperty';
+import ProductAttributeSelector from './ProductAttributeSelector';
 import { AppstoreOutlined, ReloadOutlined, SwitcherOutlined } from '@ant-design/icons';
 import {
   closestCenter,
@@ -227,6 +228,7 @@ const ProductForm = () => {
               <SwitcherOutlined />
               <span style={{ marginLeft: 20 }}>Thiết lập sản phẩm (Có tính nhận diện tồn kho)</span>
             </Typography.Title>
+            <ProductAttributeSelector />
             <FormListAddtion name="listProperties" textAddNew="Thêm mới thuộc tính">
               <ProductFormProperty />
             </FormListAddtion>

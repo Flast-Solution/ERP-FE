@@ -23,9 +23,11 @@ import React from 'react';
 import { authRoles } from '@/auth';
 
 const ListUserSystemPage = React.lazy(() => import('@/pages/userSystem'));
+const UserPermissionsPage = React.lazy(() => import('@/pages/userPermissions'));
 export const ListUserSystemConfig = {
     auth: authRoles.user,
     routes: [
-        { path: '/user/list-system', element: <ListUserSystemPage /> }
+        { path: '/user/list-system', element: <ListUserSystemPage /> },
+        { path: '/user/permissions', element: <UserPermissionsPage /> }
     ]
 };

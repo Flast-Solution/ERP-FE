@@ -29,3 +29,23 @@ export const mergeInitialProductProperties = (properties = [], attributes = []) 
 
   return [...currentProperties, ...initialProperties];
 };
+
+export const syncSelectedProductProperties = (properties = [], selectedAttributeIds = []) => {
+  const currentProperties = Array.isArray(properties) ? properties : [];
+  const currentByAttributeId = new Map(
+    currentProperties
+      .filter(item => item?.attributedId !== undefined && item?.attributedId !== null)
+      .map(item => [String(item.attributedId), item]),
+  );
+
+  return Array.from(new Set(
+    (Array.isArray(selectedAttributeIds) ? selectedAttributeIds : [])
+      .filter(id => id !== undefined && id !== null && id !== '')
+      .map(String),
+  )).map(attributeId => (
+    currentByAttributeId.get(attributeId) ?? {
+      attributedId: Number.isNaN(Number(attributeId)) ? attributeId : Number(attributeId),
+      attributedValueId: [],
+    }
+  ));
+};

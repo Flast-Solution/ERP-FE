@@ -51,7 +51,8 @@ import {
   BookOutlined,
   FieldTimeOutlined,
   UsergroupAddOutlined,
-  RotateLeftOutlined
+  RotateLeftOutlined,
+  SafetyCertificateOutlined
 } from '@ant-design/icons';
 
 import { useEffect, useState } from 'react';
@@ -62,7 +63,12 @@ import { useTranslation } from 'react-i18next';
 import { Link } from "react-router-dom";
 import SideBarStyles from './styles';
 import useGetMe from '@/hooks/useGetMe';
-import { BUSINESS_UPDATED_EVENT, getTokenPayload, isSuperAdmin } from '@/utils/authUtils';
+import {
+  BUSINESS_UPDATED_EVENT,
+  canManagePermissions,
+  getTokenPayload,
+  isSuperAdmin,
+} from '@/utils/authUtils';
 
 function getItem(label, key, icon, children) {
   return { key, icon, children, label };
@@ -88,6 +94,7 @@ function SideBar() {
   const { isCollapseSidebar: collapsed, toggleCollapse } = useCollapseSidebar();
   const { user } = useGetMe();
   const canManageBusinessUnits = isSuperAdmin(user);
+  const canManageUserPermissions = canManagePermissions(user);
   const [businessLogo, setBusinessLogo] = useState('');
 
   const bizId = user?.bizId ?? user?.biz_id ?? getTokenPayload()?.bizId ?? null;
@@ -204,7 +211,10 @@ function SideBar() {
       getItem(<Link to="/system/general-config">Cấu hình chung</Link>, 'general_config', <SettingOutlined />),
       getItem(<Link to="/system/document-templates">Tạo chứng từ</Link>, 'document_templates', <FileAddOutlined />),
       getItem(<Link to="/user/group">Team</Link>, 'user_group', <TeamOutlined />),
-      getItem(<Link to="/user/list-system">Tài khoản hệ thống</Link>, 'user_system', <SettingOutlined />)
+      getItem(<Link to="/user/list-system">Tài khoản hệ thống</Link>, 'user_system', <SettingOutlined />),
+      ...(canManageUserPermissions
+        ? [getItem(<Link to="/user/permissions">Phân quyền</Link>, 'user_permissions', <SafetyCertificateOutlined />)]
+        : [])
     ]),
     getItem('Quản lý hành chính', 'quan_ly_hanh_chinh', <SolutionOutlined />, [
       getItem(<Link to="/employee">Nhân viên</Link>, 'employee', <UsergroupAddOutlined />),
