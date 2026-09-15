@@ -1,5 +1,5 @@
 import React from 'react'
-import { Col, Row, Typography } from 'antd'
+import { Col, Row } from 'antd'
 import {
   FormHidden,
   FormInput,

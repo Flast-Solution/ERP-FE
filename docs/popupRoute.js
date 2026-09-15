@@ -1,0 +1,118 @@
+
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { HASH_POPUP, HASH_POPUP_CLOSE } from '@/configs/constant';
+import { InAppEvent } from '@flast-erp/core/utils';
+import { Modal } from 'antd';
+import { NoFooter } from '@flast-erp/core/components';
+import { createGlobalStyle } from 'styled-components';
+
+import Order from './Order';
+import NhapKho from './NhapKho';
+import Cusomter from './Customer';
+import KPI from './KPI';
+import WorkflowModal from './WorkflowModalRoute';
+
+const CustomModalStyles = createGlobalStyle`
+  .custom-modal {
+    top: 50%;
+    max-height: 90vh;
+    overflow: auto;
+  }
+  .custom-modal .ant-modal-content .ant-modal-header .ant-modal-title {
+    font-size: 20px;
+    font-weight: 500;
+  }
+`;
+
+const Common = [
+  {
+    path: 'task.add',
+    Component: React.lazy(() => import('@/containers/Works/TaskForm')),
+    modalOptions: { title: '', width: 600 }
+  },
+  {
+    path: 'material.add',
+    Component: React.lazy(() => import('@/containers/Material')),
+    modalOptions: { title: '', width: 600 }
+  },
+  {
+    path: 'calendar.add',
+    Component: React.lazy(() => import('@/containers/Calendar/AddAction')),
+    modalOptions: { title: '', width: 650 }
+  }
+];
+
+const modalRoutes = [
+  ...Common,
+  ...Order,
+  ...NhapKho,
+  ...Cusomter,
+  ...KPI,
+  ...WorkflowModal
+];
+
+const getPopupRoute = (currentModal) => {
+  const routeNotFound = { Component: () => <div /> }
+  if (!currentModal) {
+    return routeNotFound;
+  }
+  const modalRoute = modalRoutes.find(route => currentModal.includes(route.path));
+  if (modalRoute && modalRoute['Component']) {
+    return modalRoute;
+  }
+  return routeNotFound;
+};
+
+function MyPopup() {
+
+  const [params, setParams] = useState({ open: false });
+  const [reLoad, setReload] = useState(false);
+
+  const handleEventDraw = useCallback(({ hash, data, title }) => {
+    setParams({ open: true, hash, data, title });
+  }, []);
+
+  const handleCloseDraw = useCallback(() => {
+    setParams({ open: false });
+  }, []);
+
+  useEffect(() => {
+    InAppEvent.addEventListener(HASH_POPUP, handleEventDraw);
+    InAppEvent.addEventListener(HASH_POPUP_CLOSE, handleCloseDraw);
+    return () => {
+      InAppEvent.removeListener(HASH_POPUP, handleEventDraw);
+      InAppEvent.removeListener(HASH_POPUP_CLOSE, handleCloseDraw);
+    };
+  }, [handleEventDraw, handleCloseDraw]);
+
+  const closePopup = useCallback(() => {
+    setParams({ open: false });
+    setReload(pre => !pre);
+  }, []);
+
+  const PopupRoute = useMemo(
+    () => getPopupRoute(params.hash),
+    [params.hash]
+  );
+
+  return <>
+    <CustomModalStyles />
+    <Modal
+      {...PopupRoute?.modalOptions}
+      title={params?.title || ''}
+      open={params.open}
+      onCancel={closePopup}
+      footer={<NoFooter />}
+      wrapClassName="custom-modal"
+      width={PopupRoute?.modalOptions?.width || 800}
+    >
+      <PopupRoute.Component
+        reLoad={reLoad}
+        closeModal={closePopup}
+        {...(params.data || {})}
+      />
+    </Modal>
+  </>;
+}
+
+export default MyPopup;

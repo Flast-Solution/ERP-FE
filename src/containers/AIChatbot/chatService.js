@@ -12,7 +12,7 @@
  *   event: close data: ""               — server đóng session (idle timeout)
  */
 
-const BASE_URL     = 'https://ai.flast.vn'
+const BASE_URL     = 'http://127.0.0.1:8000'
 const PING_INTERVAL_MS = 60_000
 const SSE_DEBUG = process.env.NODE_ENV !== 'production'
 
@@ -102,6 +102,7 @@ export class ChatSession {
         session_id: this.sessionId,
         message,
         use_orchestrator: true,
+        model: "ornith-1.0-35b-Q4_K_M.gguf"
       }),
     })
 
@@ -252,7 +253,7 @@ export class ChatSession {
   // ─── SSE ───────────────────────────────────────────────────────────────────
 
   async _openSSE() {
-    const url = `${BASE_URL}/chat/stream?session_id=${this.sessionId}`
+    const url = `${BASE_URL}/chat/stream?session_id=${this.sessionId}&provider=local`
 
     try {
       const res = await fetch(url, {
