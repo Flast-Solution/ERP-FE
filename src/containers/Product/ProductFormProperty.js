@@ -83,7 +83,6 @@ const FormPropertiesValue = ({ name, filter }) => {
       <FormSelectAPI
         mode='multiple'
         searchKey='value'
-        required
         showSearch
         apiPath='/erp/attributed/fetch-value-by-id'
         apiAddNewItem='attributed/save-value-by-id'

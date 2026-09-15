@@ -19,9 +19,9 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useCallback, useEffect, useState } from 'react';
-import { message } from 'antd';
-import { RestEditModal } from "@flast-erp/core/components";
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Form, message, Modal } from 'antd';
+import { FormContextCustom } from "@flast-erp/core/components";
 
 import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import { arrayEmpty, arrayNotEmpty, f5List } from '@flast-erp/core/utils';
@@ -52,9 +52,52 @@ const GenerateSkuDetailsOnSubmit = (oldSku, newSku) => {
 }
 const log = (value) => console.log('[container.product.index] ', value);
 
-const Product = ({ closeModal, data }) => {
+const Product = ({ data, registerCloseGuard }) => {
 
+  const [form] = Form.useForm();
   const [ record, setRecord ] = useState({});
+  const confirmCloseRef = useRef(null);
+  const hasUnsavedChangesRef = useRef(false);
+  const isCreate = !data?.id;
+
+  const guardClose = useCallback((close) => {
+    if (!isCreate || !hasUnsavedChangesRef.current) {
+      close();
+      return;
+    }
+    if (confirmCloseRef.current) return;
+
+    confirmCloseRef.current = Modal.confirm({
+      title: 'Xác nhận thoát',
+      content: 'Thông tin sản phẩm đang nhập chưa được lưu. Bạn có chắc chắn muốn thoát?',
+      okText: 'Thoát',
+      okButtonProps: { danger: true },
+      cancelText: 'Tiếp tục nhập',
+      centered: true,
+      onOk: () => {
+        confirmCloseRef.current = null;
+        close();
+      },
+      onCancel: () => {
+        confirmCloseRef.current = null;
+      },
+    });
+  }, [isCreate]);
+
+  useEffect(() => {
+    if (!isCreate || !registerCloseGuard) return undefined;
+    const unregister = registerCloseGuard(guardClose);
+    return () => {
+      unregister?.();
+      confirmCloseRef.current?.destroy();
+      confirmCloseRef.current = null;
+    };
+  }, [guardClose, isCreate, registerCloseGuard]);
+
+  useEffect(() => {
+    hasUnsavedChangesRef.current = false;
+  }, [data]);
+
   useEffect(() => {
     log({ action: 'props', data });
     (async () => {
@@ -102,6 +145,20 @@ const Product = ({ closeModal, data }) => {
     })();
     return () => ProductAttrService.empty();
   }, [ data ]);
+
+  useEffect(() => {
+    form.setFieldsValue(record);
+  }, [form, record]);
+
+  const updateRecord = useCallback((values) => {
+    setRecord(curvals => ({ ...curvals, ...values }));
+  }, []);
+
+  const handleValuesChange = useCallback(() => {
+    if (isCreate) {
+      hasUnsavedChangesRef.current = true;
+    }
+  }, [isCreate]);
 
   const onSubmit = useCallback(async (datas) => {
     log({ action: 'onSubmit', datas });
@@ -153,21 +210,23 @@ const Product = ({ closeModal, data }) => {
     const { errorCode } = await RequestUtils.Post("/product/save", body, params);
     const isSuccess = errorCode === 200;
     if (isSuccess) {
+      hasUnsavedChangesRef.current = false;
       f5List('erp/product/fetch');
     }
     InAppEvent.normalInfo(isSuccess ? "Cập nhật thành công" : "Lỗi cập nhật, vui lòng thử lại sau");
   }, [ data ]);
 
   return (
-    <RestEditModal
-      isMergeRecordOnSubmit={false}
-      updateRecord={(values) => setRecord(curvals => ({ ...curvals, ...values }))}
-      onSubmit={onSubmit}
-      record={record}
-      closeModal={closeModal}
+    <Form
+      form={form}
+      layout="vertical"
+      onFinish={onSubmit}
+      onValuesChange={handleValuesChange}
     >
-      <ProductForm />
-    </RestEditModal>
+      <FormContextCustom.Provider value={{ form, record, updateRecord }}>
+        <ProductForm />
+      </FormContextCustom.Provider>
+    </Form>
   )
 }
 
