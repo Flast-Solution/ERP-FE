@@ -19,25 +19,58 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Helmet } from "react-helmet";
 import { BreadcrumbCustom } from '@flast-erp/core/components';
+import { useLocation } from 'react-router-dom';
 import ListOrder from '@/containers/Order/List';
+import { CoHoi7DayContent } from '@/pages/cohoi7Day';
+import { OrderCancelContent } from './Cancel';
+
+const ORDER_VIEWS = {
+  list: {
+    title: 'Danh sách đơn hàng',
+  },
+  afterSale: {
+    title: 'Đơn hàng chưa chăm sóc sau bán',
+  },
+  cancelled: {
+    title: 'Danh sách đơn hủy',
+  },
+};
 
 const OrderPage = () => {
-  const [ title ] = useState("Danh sách đơn hàng");
-  const urlParams = new URLSearchParams(window.location.search);
-  const filter = { type: "order", ...urlParams }
+  const { pathname, search } = useLocation();
+  const view = pathname === '/sale/order/after-sale'
+    ? 'afterSale'
+    : pathname === '/sale/order/cancelled'
+      ? 'cancelled'
+      : 'list';
+  const currentView = ORDER_VIEWS[view];
+  const filterParams = Object.fromEntries(new URLSearchParams(search).entries());
+  const filter = { type: 'order', ...filterParams };
 
-  return <>
-    <Helmet>
-      <title>{title}</title>
-    </Helmet>
-    <BreadcrumbCustom
-      data={[{ title: 'Trang chủ' }, { title: title }]}
-    />
-    <ListOrder filter={filter} />
-  </>
+  const renderContent = () => {
+    if (view === 'afterSale') {
+      return <CoHoi7DayContent type="order" />;
+    }
+    if (view === 'cancelled') {
+      return <OrderCancelContent />;
+    }
+    return <ListOrder filter={filter} />;
+  };
+
+  return (
+    <div>
+      <Helmet>
+        <title>{currentView.title}</title>
+      </Helmet>
+      <BreadcrumbCustom
+        data={[{ title: 'Trang chủ' }, { title: 'Đơn hàng' }, { title: currentView.title }]}
+      />
+      {renderContent()}
+    </div>
+  );
 };
 
 export default OrderPage;

@@ -21,14 +21,16 @@
 
 import React, { useCallback, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
+import { RestList, BreadcrumbCustom, DrawerCustom } from '@flast-erp/core/components';
 import CustomerFilter from './Filter';
 import { useGetList } from '@flast-erp/core/hooks';
-import { Button, Tag } from 'antd';
-import { RequestUtils, dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils';
+import { Button, Space, Tag, Tooltip } from 'antd';
+import { InAppEvent, RequestUtils, dateFormatOnSubmit, f5List, formatTime } from '@flast-erp/core/utils';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingCartOutlined } from '@ant-design/icons';
+import { EditOutlined, EyeOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import styled from 'styled-components';
+import EnterpriseForm from '@/containers/Order/EnterpriseForm';
+import { SUCCESS_CODE } from '@/configs';
 
 const StyledTag = styled(Tag)`
   cursor: pointer;
@@ -38,6 +40,8 @@ const ListEnterprise = () => {
 
   let navigate = useNavigate();
   const [ title ] = useState("Khách doanh nghiệp");
+  const [formDrawer, setFormDrawer] = useState({ open: false, enterprise: null });
+  const [editingId, setEditingId] = useState(null);
   const CUSTOM_ACTION = [
     {
       title: "Khách hàng",
@@ -80,8 +84,8 @@ const ListEnterprise = () => {
       title: "Đ.Hàng",
       dataIndex: 'numOfOrder',
       width: 90,
-      render: (value) => (Number.isInteger(value) && value > 0) ? (
-        <StyledTag color="blue" icon={<ShoppingCartOutlined />}>{value} Đơn</StyledTag>
+      render: (value, record) => (Number.isInteger(value) && value > 0) ? (
+        <StyledTag color="blue" icon={<ShoppingCartOutlined />} onClick={() => onHandleOrders(record)}>{value} Đơn</StyledTag>
       ) : '(Chưa có)'
     },
     {
@@ -96,11 +100,23 @@ const ListEnterprise = () => {
       width: 120,
       fixed: 'right',
       ellipsis: true,
-      render: (record) => record.numOfOrder ? (
-        <Button color="primary" variant="dashed" onClick={() => onHandleEdit(record)} size='small'>
-          Chi tiết
-        </Button>
-      ) : '(no order)'
+      align: 'center',
+      render: (_, record) => (
+        <Space size={4}>
+          <Tooltip title="Xem chi tiết doanh nghiệp">
+            <Button type="text" icon={<EyeOutlined />} onClick={() => onHandleDetail(record)} aria-label="Xem chi tiết doanh nghiệp" />
+          </Tooltip>
+          <Tooltip title="Chỉnh sửa doanh nghiệp">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              loading={editingId === record.id}
+              onClick={() => onHandleEdit(record)}
+              aria-label="Chỉnh sửa doanh nghiệp"
+            />
+          </Tooltip>
+        </Space>
+      )
     }
   ];
 
@@ -109,10 +125,33 @@ const ListEnterprise = () => {
     return values;
   }, []);
 
-  const onHandleEdit = (record) => {
+  const onHandleOrders = (record) => {
     let uri = RequestUtils.generateUrlGetParams("/sale/order", {enterpriseId: record.id});
     navigate(uri);
   };
+
+  const onHandleDetail = (record) => {
+    navigate(`/customer/enterprise/${record.id}`, { state: { enterprise: record } });
+  };
+
+  const onHandleEdit = async (record) => {
+    setEditingId(record.id);
+    try {
+      const response = await RequestUtils.Get('/erp/customer/info-enterprise', { id: record.id });
+      const enterprise = response?.data?.enterprise;
+      if (Number(response?.errorCode) !== SUCCESS_CODE || !enterprise) {
+        InAppEvent.normalError(response?.message || 'Không tải được thông tin doanh nghiệp');
+        return;
+      }
+      setFormDrawer({ open: true, enterprise });
+    } catch (error) {
+      InAppEvent.normalError(error?.message || 'Không tải được thông tin doanh nghiệp');
+    } finally {
+      setEditingId(null);
+    }
+  };
+
+  const closeFormDrawer = () => setFormDrawer({ open: false, enterprise: null });
 
   return (
     <div>
@@ -128,10 +167,27 @@ const ListEnterprise = () => {
         filter={<CustomerFilter taxCode={true} />}
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
-        hasCreate={false}
+        hasCreate
+        customClickCreate={() => setFormDrawer({ open: true, enterprise: null })}
         apiPath={'customer/fetch-customer-enterprise'}
         columns={CUSTOM_ACTION}
       />
+      <DrawerCustom
+        width={850}
+        open={formDrawer.open}
+        onClose={closeFormDrawer}
+        title={formDrawer.enterprise ? `Cập nhật doanh nghiệp #${formDrawer.enterprise.id}` : 'Thêm mới doanh nghiệp'}
+      >
+        <EnterpriseForm
+          key={formDrawer.enterprise?.id ?? 'create-enterprise'}
+          initialValues={formDrawer.enterprise ?? undefined}
+          onCancel={closeFormDrawer}
+          onSuccess={() => {
+            closeFormDrawer();
+            f5List('customer/fetch-customer-enterprise');
+          }}
+        />
+      </DrawerCustom>
     </div>
   )
 }

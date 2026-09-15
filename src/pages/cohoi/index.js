@@ -19,23 +19,43 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Helmet } from "react-helmet";
 import { BreadcrumbCustom } from '@flast-erp/core/components';
+import { useLocation } from 'react-router-dom';
 import ListOrder from '@/containers/Order/List';
+import { CoHoi7DayContent } from '@/pages/cohoi7Day';
+
+const COHOI_FILTER = { type: 'cohoi' };
+
+const COHOI_VIEWS = {
+  list: {
+    title: 'Danh sách cơ hội bán hàng',
+    content: () => <ListOrder filter={COHOI_FILTER} />,
+  },
+  sevenDay: {
+    title: 'Danh sách Cơ hội 7 ngày chưa ra đơn hàng',
+    content: () => <CoHoi7DayContent type="cohoi" />,
+  },
+};
 
 const CoHoiPage = () => {
-  const [ title ] = useState("Danh sách cơ hội bán hàng");
-  const filter = { type: "cohoi" }
-  return <>
-    <Helmet>
-      <title>{title}</title>
-    </Helmet>
-    <BreadcrumbCustom
-      data={[{ title: 'Trang chủ' }, { title: title }]}
-    />
-    <ListOrder filter={filter} />
-  </>
+  const { pathname } = useLocation();
+  const view = pathname === '/sale/co-hoi/seven-day' ? 'sevenDay' : 'list';
+  const currentView = COHOI_VIEWS[view];
+  const Content = currentView.content;
+
+  return (
+    <div>
+      <Helmet>
+        <title>{currentView.title}</title>
+      </Helmet>
+      <BreadcrumbCustom
+        data={[{ title: 'Trang chủ' }, { title: 'Cơ hội' }, { title: currentView.title }]}
+      />
+      <Content />
+    </div>
+  );
 };
 
 export default CoHoiPage;

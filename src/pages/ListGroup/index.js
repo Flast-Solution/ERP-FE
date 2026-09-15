@@ -29,8 +29,12 @@ import { HASH_MODAL } from '@/configs';
 import { InAppEvent } from '@flast-erp/core/utils';
 import { Button } from 'antd';
 import UserService from '@/services/UserService';
+import useGetMe from '@/hooks/useGetMe';
 
 const ListUserGroup = () => {
+  const { hasPermission } = useGetMe();
+  const canCreate = hasPermission('system.team.create');
+  const canUpdate = hasPermission('system.team.update');
 
   const [ title ] = useState("Danh sách tài khoản Team");
   const CUSTOM_ACTION = [
@@ -72,7 +76,7 @@ const ListUserGroup = () => {
       width: 200,
       ellipsis: true,
     },
-    {
+    canUpdate && {
       title: "Thao tác",
       width: 120,
       fixed: 'right',
@@ -82,7 +86,7 @@ const ListUserGroup = () => {
         </Button>
       )
     }
-  ];
+  ].filter(Boolean);
 
   const onData = useCallback(async (values) => {
     if(arrayNotEmpty(values)) {
@@ -131,7 +135,8 @@ const ListUserGroup = () => {
         filter={<LeadFilter />}
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
-        apiPath={'user-group/fetch'}
+        apiPath={'auth/user-group/fetch'}
+        hasCreate={canCreate}
         customClickCreate={onCreateLead}
         columns={CUSTOM_ACTION}
       />
@@ -140,5 +145,4 @@ const ListUserGroup = () => {
 }
 
 export default ListUserGroup
-
 

@@ -7,8 +7,12 @@ import EmployeeFilter from './EmployeeFilter';
 import { Button } from 'antd';
 import { InAppEvent } from "@flast-erp/core/utils";
 import { HASH_MODAL } from '@/configs';
+import useGetMe from '@/hooks/useGetMe';
 
 const Employee = () => {
+  const { hasPermission } = useGetMe();
+  const canCreate = hasPermission('hr.employee.create');
+  const canUpdate = hasPermission('hr.employee.update');
 
   const onEdit = (item) => InAppEvent.emit(HASH_MODAL, {
     hash: '#draw/user.edit',
@@ -63,7 +67,7 @@ const Employee = () => {
       ellipsis: true,
       render: (status) => status === 0 ? '(Nghỉ việc (Quit))' : 'Đang làm việc (Working)'
     },
-    {
+    canUpdate && {
       title: "",
       width: 80,
       fixed: 'right',
@@ -73,7 +77,7 @@ const Employee = () => {
         </div>
       )
     }
-  ];
+  ].filter(Boolean);
 
   return (
     <div className='my__content'>
@@ -89,6 +93,7 @@ const Employee = () => {
         filter={<EmployeeFilter />}
         useGetAllQuery={useGetList}
         apiPath={'user/fetch-user-department'}
+        hasCreate={canCreate}
         customClickCreate={onCreateUser}
         columns={CUSTOM_ACTION}
       />

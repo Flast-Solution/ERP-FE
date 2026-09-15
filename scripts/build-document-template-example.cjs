@@ -1,0 +1,15 @@
+const fs = require('fs')
+const path = require('path')
+const { zipSync } = require('fflate')
+const root = path.resolve(__dirname, '../examples/document-templates/htk-commercial-invoice')
+const files = {}
+const visit = dir => fs.readdirSync(dir, { withFileTypes: true }).forEach(entry => {
+  const filename = path.join(dir, entry.name)
+  if (entry.isDirectory()) visit(filename)
+  else files[path.relative(root, filename).split(path.sep).join('/')] = new Uint8Array(fs.readFileSync(filename))
+})
+visit(root)
+const output = path.resolve(__dirname, '../public/document-templates/htk-commercial-invoice.zip')
+fs.mkdirSync(path.dirname(output), { recursive: true })
+fs.writeFileSync(output, zipSync(files, { mtime: new Date(2026, 0, 1) }))
+console.log(output)

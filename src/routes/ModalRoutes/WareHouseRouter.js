@@ -24,16 +24,25 @@ import React from 'react';
 const WareHoseRouter = [
   {
     path: 'warehouse.edit',
+    permission: ({ data }) => data?.id ? 'inventory.receipt.update' : 'inventory.receipt.create',
     Component: React.lazy(() => import('@/containers/WareHouse')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'warehouse.delivery',
+    permission: 'inventory.delivery.create',
     Component: React.lazy(() => import('@/containers/WareHouse/GiaoHang')),
     modalOptions: { title: '', width: 750 }
   },
   {
+    path: 'stock.add',
+    permission: 'inventory.receipt.create',
+    Component: React.lazy(() => import('@/containers/WareHouse/ModalNhapKho')),
+    modalOptions: { title: '', width: 750 }
+  },
+  {
     path: 'ship.update',
+    permission: ['shipping.delivery.update', 'shipping.delivery.print'],
     Component: React.lazy(() => import('@/containers/Ship/DeliveryPager')),
     modalOptions: { title: '', width: 750 }
   }

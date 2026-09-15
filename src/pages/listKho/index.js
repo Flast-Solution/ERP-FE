@@ -34,16 +34,24 @@ import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import { Button, Col, Form, Row } from 'antd';
 import ModaleStyles from '@/pages/lead/style';
 import { useForm } from 'antd/es/form/Form';
+import useGetMe from '@/hooks/useGetMe';
 
 const ListWareHouse = () => {
+  const { hasPermission } = useGetMe();
+  const canCreate = hasPermission('inventory.warehouse.create');
+  const canUpdate = hasPermission('inventory.warehouse.update');
 
   const [ title ] = useState("Danh sách kho");
   const [ isOpen, setIsOpen ] = useState(false);
   const [ detailWareHouse, setDetailWareHouse ] = useState({});
   const [ form ] = useForm();
+  const isEditing = Boolean(detailWareHouse?.id);
 
   useEffect(() => {
-    form.setFieldsValue(detailWareHouse);
+    form.resetFields();
+    if (detailWareHouse?.id) {
+      form.setFieldsValue(detailWareHouse);
+    }
   }, [form, detailWareHouse])
 
   const CUSTOM_ACTION = [
@@ -71,7 +79,7 @@ const ListWareHouse = () => {
       width: 200,
       ellipsis: true
     },
-    {
+    canUpdate && {
       title: "Thao tác",
       width: 120,
       fixed: 'right',
@@ -84,7 +92,7 @@ const ListWareHouse = () => {
         </Button>
       )
     }
-  ];
+  ].filter(Boolean);
 
   const onData = useCallback((values) => {
     const newData = { embedded: values, page: { pageSize: 10, total: 1 } }
@@ -102,11 +110,15 @@ const ListWareHouse = () => {
   }
 
   const onHandleCreateWareHouse = async (value) => {
-    const data = detailWareHouse ? await RequestUtils.Post('/warehouse/update-stock', value) : await RequestUtils.Post('/warehouse/created-stock', value);
+    const payload = isEditing
+      ? { ...value, id: detailWareHouse.id }
+      : value;
+    const endpoint = isEditing ? '/warehouse/update-stock' : '/warehouse/created-stock';
+    const data = await RequestUtils.Post(endpoint, payload);
     if (data.errorCode) {
       f5List('warehouse/fetch-stock');
       setIsOpen(false);
-      InAppEvent.normalSuccess('Tạo kho thành công');
+      InAppEvent.normalSuccess(isEditing ? 'Cập nhật kho thành công' : 'Tạo kho thành công');
     }
   }
 
@@ -126,12 +138,13 @@ const ListWareHouse = () => {
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
         apiPath={'warehouse/fetch-stock'}
+        hasCreate={canCreate}
         customClickCreate={onCreateLead}
         columns={CUSTOM_ACTION}
       />
       <ModaleStyles 
-        title={<div style={{ color: '#fff' }}>Tạo kho</div>}
-        open={isOpen} 
+        title={<div style={{ color: '#fff' }}>{isEditing ? 'Cập nhật kho' : 'Tạo kho'}</div>}
+        open={isOpen && (isEditing ? canUpdate : canCreate)}
         footer={false} 
         onCancel={() => {
           setIsOpen(false);
@@ -184,7 +197,7 @@ const ListWareHouse = () => {
             </Row>
             <Form.Item style={{ display: 'flex', justifyContent: 'end', marginTop: 10 }}>
               <Button type="primary" htmlType="submit">
-                Submit
+                {isEditing ? 'Cập nhật' : 'Tạo mới'}
               </Button>
             </Form.Item>
           </Form>
@@ -195,4 +208,3 @@ const ListWareHouse = () => {
 }
 
 export default ListWareHouse
-

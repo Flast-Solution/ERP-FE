@@ -31,7 +31,7 @@ import EnterpriseForm from './EnterpriseForm';
 
 const OrderTabs = ({ data, title }) => {
 
-  const { customerOrder } = data;
+  const { customerOrder, hideInvoiceTab = false } = data;
   const [details, setDetails] = useState([]);
   const [customer, setCustomer] = useState();
 
@@ -70,7 +70,7 @@ const OrderTabs = ({ data, title }) => {
     }
   ];
 
-  const items = tabData.map(({ key, icon, label, component }) => ({
+  const items = tabData.filter(tab => !hideInvoiceTab || tab.key !== 'invoice').map(({ key, icon, label, component }) => ({
     key,
     label: (
       <span> {icon} {label} </span>

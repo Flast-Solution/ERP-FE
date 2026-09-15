@@ -62,7 +62,35 @@ export const getUserRoles = (user = {}) => {
 
 export const hasUserRole = (user, role) => getUserRoles(user).includes(role)
 
+const getPermissionValue = (permission) => {
+  if (!permission) return null
+  if (typeof permission === 'string') return permission
+  return permission.code ?? permission.permission ?? permission.authority ?? permission.name ?? null
+}
+
+export const getClientPermissions = (user = {}) => Array.from(new Set(
+  (Array.isArray(user?.permissionsClient)
+    ? user.permissionsClient
+    : typeof user?.permissionsClient === 'string'
+      ? user.permissionsClient.split(/[\s,]+/)
+      : [])
+    .map(getPermissionValue)
+    .filter(Boolean),
+))
+
+export const hasClientPermission = (user, permission) => {
+  if (!permission) return true
+  if (hasUserRole(user, 'ROLE_ADMIN') || hasUserRole(user, 'ROLE_SUPER_ADMIN')) return true
+  const required = Array.isArray(permission) ? permission : [permission]
+  const permissions = getClientPermissions(user)
+  return required.some(code => permissions.includes(code))
+}
+
 export const isSuperAdmin = (user) => hasUserRole(user, 'ROLE_SUPER_ADMIN')
+
+export const canManagePermissions = (user) => (
+  hasUserRole(user, 'ROLE_SUPER_ADMIN') || hasUserRole(user, 'ROLE_ADMIN')
+)
 
 export const BUSINESS_UPDATED_EVENT = 'flast:user-business-updated'
 

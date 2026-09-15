@@ -36,6 +36,7 @@ import { HASH_POPUP } from '@/configs/constant';
 import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import { DeleteOutlined } from '@ant-design/icons';
 import { SUCCESS_CODE } from '@/configs';
+import useGetMe from '@/hooks/useGetMe';
 
 const PROVIDER_FETCH_API = '/provider/fetch';
 const PROVIDER_PAGE_SIZE = 10;
@@ -207,6 +208,11 @@ const PopconfirmImport = ({ form, record }) => {
 };
 
 const MaterialPage = () => {
+	const { hasPermission } = useGetMe();
+	const canCreate = hasPermission('material.create');
+	const canUpdate = hasPermission('material.update');
+	const canDelete = hasPermission('material.delete');
+	const canImport = hasPermission('material.inventory.receipt');
 
 	const [ title ] = useState("Vật liệu - Nguyên vật liệu");
 	const [ form ] = Form.useForm();
@@ -291,20 +297,20 @@ const MaterialPage = () => {
 			width: 120,
 			render: (createdAt) => formatTime(createdAt)
 		},
-		{
+		(canUpdate || canImport || canDelete) && {
 			title: 'Action',
 			fixed: 'right',
 			width: 160,
 			render: (record) => (
 				<Space gap={8}>
-					<Button
+					{canUpdate ? <Button
 						type="primary"
 						size="small"
 						onClick={() => onClickViewDetail(record)}
 					>
 						Sửa
-					</Button>
-					<Popconfirm
+					</Button> : null}
+					{canImport ? <Popconfirm
 						placement="topLeft"
 						title="Chọn kho để nhập"
 						description={<PopconfirmImport form={form} record={record} />}
@@ -315,8 +321,8 @@ const MaterialPage = () => {
 						<Button size="small" style={{ color: "#fa8c16" }}>
 							Nhập kho
 						</Button>
-					</Popconfirm>
-					<Popconfirm
+					</Popconfirm> : null}
+					{canDelete ? <Popconfirm
 						onConfirm={() => onConfirmDelete(record.id)}
 						title="Xóa vật liệu"
 						description="Bạn có chắc chắn muốn xóa vật liệu này không?"
@@ -324,11 +330,11 @@ const MaterialPage = () => {
 						cancelText="Không"
 					>
 						<Button icon={<DeleteOutlined />} size='small' />
-					</Popconfirm>
+					</Popconfirm> : null}
 				</Space>
 			)
 		}
-  ];
+  ].filter(Boolean);
 
   const beforeSubmitFilter = useCallback((values) => {
 		dateFormatOnSubmit(values, ['from', 'to']);
@@ -348,7 +354,7 @@ const MaterialPage = () => {
 				filter={<Filter />}
 				beforeSubmitFilter={beforeSubmitFilter}
 				useGetAllQuery={useGetList}
-				hasCreate={true}
+				hasCreate={canCreate}
 				customClickCreate={() => onClickViewDetail({})}
 				apiPath={'/erp/material/fetch'}
 				columns={CUSTOM_ACTION}

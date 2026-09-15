@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { Col, Form, message, Row } from 'antd'
+import { Checkbox, Col, Form, message, Modal, Row } from 'antd'
 
 import {
   FormDatePicker,
@@ -33,7 +33,8 @@ import { RequestUtils, formatMoney } from '@flast-erp/core/utils'
 import OrderTextTableOnly from './OrderTextTableOnly';
 
 import { SUCCESS_CODE } from '@/configs';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import useGetMe from '@/hooks/useGetMe';
 
 const OptionPrice = [
   { title: 'Tiền mặt', name: 'tienmat' },
@@ -50,10 +51,18 @@ const VATOPTIONS = [
 const OrderPayment = ({ data, readOnly = false }) => {
 
   const [form] = Form.useForm();
+  const { hasPermission } = useGetMe();
   const watchedVat = Form.useWatch('vat', form);
   const watchedShip = Form.useWatch('shippingCost', form);
 
-  const { onSave, details, customerOrder } = data;
+  const { onSave, details, customer, customerOrder } = data;
+  const [convertedToOrder, setConvertedToOrder] = useState(customerOrder?.type === 'order');
+  const [convertingToOrder, setConvertingToOrder] = useState(false);
+  const canConvertToOrder = hasPermission(['sales.opportunity.save', 'sales.opportunity.update']);
+
+  useEffect(() => {
+    setConvertedToOrder(customerOrder?.type === 'order');
+  }, [customerOrder?.id, customerOrder?.type]);
 
   useEffect(() => {
     if (readOnly) return;
@@ -71,6 +80,52 @@ const OrderPayment = ({ data, readOnly = false }) => {
       onSave(data);
     }
   }, [onSave, customerOrder]);
+
+  const onConvertToOrder = useCallback(async () => {
+    if (convertedToOrder || convertingToOrder) return;
+
+    setConvertingToOrder(true);
+    try {
+      const normalizedDetails = (details ?? []).map(({ mSkuDetails, ...detail }) => ({
+        ...detail,
+        id: detail?.id ?? detail?.detailId,
+        skuDetails: detail?.skuDetails ?? mSkuDetails ?? [],
+        total: detail?.total ?? detail?.totalPrice,
+        priceOff: detail?.priceOff ?? detail?.discountAmount ?? 0
+      }));
+      const response = await RequestUtils.Post('/order/save', {
+        ...customerOrder,
+        customer,
+        details: normalizedDetails,
+        type: 'order'
+      });
+
+      if (Number(response?.errorCode) !== SUCCESS_CODE && response?.success !== true) {
+        throw new Error(response?.message || 'Không thể chuyển thành đơn hàng');
+      }
+
+      setConvertedToOrder(true);
+      message.success(response?.message || 'Đã chuyển thành đơn hàng');
+      onSave?.(response?.data);
+    } catch (error) {
+      message.error(error?.response?.data?.message || error?.message || 'Không thể chuyển thành đơn hàng');
+    } finally {
+      setConvertingToOrder(false);
+    }
+  }, [convertedToOrder, convertingToOrder, customer, customerOrder, details, onSave]);
+
+  const onRequestConvertToOrder = useCallback((event) => {
+    if (!event.target.checked || convertedToOrder || convertingToOrder) return;
+
+    Modal.confirm({
+      title: 'Xác nhận chuyển thành đơn hàng',
+      content: 'Cơ hội bán hàng sẽ được chuyển thành đơn hàng. Bạn có chắc chắn muốn tiếp tục?',
+      okText: 'Xác nhận',
+      cancelText: 'Hủy',
+      centered: true,
+      onOk: onConvertToOrder
+    });
+  }, [convertedToOrder, convertingToOrder, onConvertToOrder]);
 
   const subtotal = customerOrder?.subtotal || 0;
   const paid = customerOrder?.paid || 0;
@@ -138,6 +193,17 @@ const OrderPayment = ({ data, readOnly = false }) => {
   return (
     <div style={{ padding: 15 }}>
       <p><strong>Thông tin đơn hàng #{customerOrder?.code || ''}</strong></p>
+      {!readOnly && canConvertToOrder ? (
+        <div style={{ marginBottom: 16 }}>
+          <Checkbox
+            checked={convertedToOrder}
+            disabled={convertedToOrder || convertingToOrder}
+            onChange={onRequestConvertToOrder}
+          >
+            {convertingToOrder ? 'Đang chuyển thành đơn hàng...' : 'Chuyển thành đơn hàng'}
+          </Checkbox>
+        </div>
+      ) : null}
       <OrderTextTableOnly details={details} />
 
       {readOnly ? summaryBox : (

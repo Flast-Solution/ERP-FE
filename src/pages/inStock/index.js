@@ -21,7 +21,13 @@
 
 import React, { useCallback, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import { Button, Popconfirm, Form, message } from 'antd';
+import { Button, Popconfirm, Form, message, Tooltip } from 'antd';
+import {
+  EditOutlined,
+  EyeOutlined,
+  SwapOutlined,
+  TruckOutlined
+} from '@ant-design/icons';
 import { 
   RestList, 
   BreadcrumbCustom,
@@ -34,12 +40,19 @@ import { useGetList } from "@flast-erp/core/hooks";
 import { dateFormatOnSubmit, f5List, formatTime } from '@flast-erp/core/utils';
 import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import { ShowSkuDetail } from '@/containers/Product/SkuView';
-import { HASH_POPUP, HASH_MODAL } from '@/configs/constant';
+import { HASH_MODAL } from '@/configs/constant';
+import useGetMe from '@/hooks/useGetMe';
 
 const ListInStock = () => {
 
   const [title] = useState("Trong kho");
   const [form] = Form.useForm();
+  const { hasPermission } = useGetMe();
+  const canViewReceipt = hasPermission('inventory.receipt.view');
+  const canCreateReceipt = hasPermission('inventory.receipt.create');
+  const canUpdateReceipt = hasPermission('inventory.receipt.update');
+  const canTransfer = hasPermission('inventory.transfer.create');
+  const canDeliver = hasPermission('inventory.delivery.create');
 
   const beforeSubmitFilter = useCallback((values) => {
     dateFormatOnSubmit(values, ['from', 'to']);
@@ -50,10 +63,26 @@ const ListInStock = () => {
     const onAfterSubmit = (values) => {
       f5List("warehouse/fetch");
     };
-    InAppEvent.emit(HASH_POPUP, {
-      hash: "stock.add",
+    InAppEvent.emit(HASH_MODAL, {
+      hash: "#stock.add",
       title: "Nhập kho",
       data: { onSave: onAfterSubmit }
+    });
+  }, []);
+
+  const openStockForm = useCallback((record, mode) => {
+    const onAfterSubmit = () => {
+      f5List("warehouse/fetch");
+    };
+
+    InAppEvent.emit(HASH_MODAL, {
+      hash: "#stock.add",
+      title: mode === 'view' ? 'Chi tiết nhập kho' : 'Chỉnh sửa nhập kho',
+      data: {
+        mode,
+        model: record,
+        onSave: onAfterSubmit
+      }
     });
   }, []);
 
@@ -129,21 +158,39 @@ const ListInStock = () => {
       ellipsis: true,
       render: (inTime) => formatTime(inTime)
     },
-    {
-      title: 'Action',
+    ...(canViewReceipt || canUpdateReceipt || canDeliver || canTransfer ? [{
+      title: 'Thao tác',
       key: 'action',
       fixed: 'right',
-      width: 200,
+      width: 190,
       render: (record) => (
         <span style={{ display: 'flex', gap: 8 }}>
-          <Button
-            type="primary"
-            size="small"
-            onClick={() => onClickGiaoHang(record)}
-          >
-            Giao hàng
-          </Button>
-          <Popconfirm
+          {canViewReceipt && <Tooltip title="Xem chi tiết">
+            <Button
+              size="small"
+              icon={<EyeOutlined />}
+              aria-label="Xem chi tiết"
+              onClick={() => openStockForm(record, 'view')}
+            />
+          </Tooltip>}
+          {canUpdateReceipt && <Tooltip title="Chỉnh sửa">
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              aria-label="Chỉnh sửa"
+              onClick={() => openStockForm(record, 'edit')}
+            />
+          </Tooltip>}
+          {canDeliver && <Tooltip title="Giao hàng">
+            <Button
+              type="primary"
+              size="small"
+              icon={<TruckOutlined />}
+              aria-label="Giao hàng"
+              onClick={() => onClickGiaoHang(record)}
+            />
+          </Tooltip>}
+          {canTransfer && <Popconfirm
             placement="topLeft"
             title="Chọn kho để chuyển"
             description={
@@ -156,13 +203,18 @@ const ListInStock = () => {
             okText="Yes"
             cancelText="No"
           >
-            <Button size="small" style={{ color: "#fa8c16" }}>
-              Chuyển kho
-            </Button>
-          </Popconfirm>
+            <Tooltip title="Chuyển kho">
+              <Button
+                size="small"
+                icon={<SwapOutlined />}
+                aria-label="Chuyển kho"
+                style={{ color: "#fa8c16", borderColor: "#ffd591" }}
+              />
+            </Tooltip>
+          </Popconfirm>}
         </span>
       )
-    }
+    }] : [])
   ];
 
   return (
@@ -180,7 +232,7 @@ const ListInStock = () => {
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
         apiPath={'warehouse/fetch'}
-        customClickCreate={onCreateImportProduct}
+        customClickCreate={canCreateReceipt ? onCreateImportProduct : undefined}
         columns={CUSTOM_ACTION}
       />
     </div>

@@ -4,7 +4,7 @@
  * Zustand store cho Form Builder.
  *
  * State:
- *   templateMeta   — thông tin FormTemplate (id, name, domain, description, enabled)
+ *   templateMeta   — thông tin FormTemplate (id, name, domain, description, enabled, displayMode)
  *   fields         — mảng FormTemplateField đang build, theo thứ tự canvas
  *   selectedId     — id field đang được chọn trong canvas (highlight + hiện panel phải)
  *   dirtyFieldKeys — Set<string> các field_key đã tồn tại trong DB (id != null)
@@ -35,6 +35,7 @@ import { immer } from 'zustand/middleware/immer';
 import { nanoid } from 'nanoid';
 import { getDefaultConfig } from '@/utils/fieldTypes';
 import { slugifyFieldKey } from '@/utils/slugify';
+import { DEFAULT_FORM_SUBMIT_BUTTON, normalizeFormSubmitButton } from '@/utils/formSubmitButton';
 
 // ─── Factory: tạo field mới từ type ─────────────────────────────────────────
 
@@ -285,6 +286,9 @@ const useFormBuilderStore = create(
       domain     : '',
       description: '',
       enabled    : true,
+      displayMode: 'NORMAL',
+      microFrontendUrl: '',
+      submitButton: { ...DEFAULT_FORM_SUBMIT_BUTTON },
     },
 
     fields    : [],       // FormTemplateField[]
@@ -314,6 +318,11 @@ const useFormBuilderStore = create(
           domain     : template.domain,
           description: template.description ?? '',
           enabled    : template.enabled ?? true,
+          displayMode: template.displayMode ?? 'NORMAL',
+          microFrontendUrl: template.microFrontendUrl
+            ?? template.sourceComponent?.microFrontendUrl
+            ?? '',
+          submitButton: normalizeFormSubmitButton(template.submitButton),
         };
 
         state.fields = normalizeFieldList(
@@ -575,7 +584,16 @@ const useFormBuilderStore = create(
 
     reset() {
       set(state => {
-        state.templateMeta  = { id: null, name: '', domain: '', description: '', enabled: true };
+        state.templateMeta  = {
+          id: null,
+          name: '',
+          domain: '',
+          description: '',
+          enabled: true,
+          displayMode: 'NORMAL',
+          microFrontendUrl: '',
+          submitButton: { ...DEFAULT_FORM_SUBMIT_BUTTON },
+        };
         state.fields        = [];
         state.selectedId    = null;
         state.savedFieldKeys = new Set();

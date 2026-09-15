@@ -5,6 +5,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { message } from "antd";
 import { RequestUtils } from "@flast-erp/core/utils";
 import useFormBuilderStore from "@/store/useFormBuilderStore";
+import { normalizeFormSubmitButton } from "@/utils/formSubmitButton";
 import { parseJsxToSchema } from "@/containers/PreviewModal/parseJSXSchema";
 import styled from "styled-components";
 
@@ -44,6 +45,13 @@ const getTemplateCode = (template = {}) => {
     ?? template.jsx_code
     ?? template.jsxCode
     ?? template.code
+    ?? ''
+}
+
+const getTemplateRemoteUrl = (template = {}) => {
+  const sourceComponent = getTemplateSourceComponent(template)
+  return template.microFrontendUrl
+    ?? sourceComponent?.microFrontendUrl
     ?? ''
 }
 
@@ -170,6 +178,9 @@ const BuilderPage = () => {
         domain: template.domain ?? '',
         description: template.description ?? '',
         enabled: template.enabled ?? true,
+        displayMode: template.displayMode ?? template.displayType ?? template.viewType ?? 'NORMAL',
+        microFrontendUrl: getTemplateRemoteUrl(template),
+        submitButton: normalizeFormSubmitButton(template.submitButton),
       },
       fields: enrichTemplateFieldsFromCode(template),
       code,

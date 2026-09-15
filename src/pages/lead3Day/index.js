@@ -19,22 +19,40 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
 import LeadFilter from './LeadFilter';
 import { useGetList } from "@flast-erp/core/hooks";
 import { Button, Tag } from 'antd';
-import { arrayEmpty, dateFormatOnSubmit } from '@flast-erp/core/utils';
-import { getColorStatusLead, getStatusLead } from '@/configs/constant';
+import { dateFormatOnSubmit } from '@flast-erp/core/utils';
 import { HASH_MODAL } from '@/configs';
 import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import { cloneDeep } from 'lodash';
 import { CHANNEL_SOURCE_MAP_KEYS } from '@/configs/localData';
+import { getLeadStatusOption, mergeLeadStatusOptions } from '@/pages/lead/leadStatusOptions';
 
-const Lead3DayPage = () => {
+export const Lead3DayContent = () => {
+  const [services, setServices] = useState([]);
+  const [leadStatuses, setLeadStatuses] = useState([]);
 
-  const [title] = useState("Khách hàng 3 ngày chưa ra cơ hội bán hàng");
+  useEffect(() => {
+    RequestUtils.GetAsList('/service/list')
+      .then(items => setServices(Array.isArray(items) ? items : []))
+      .catch(() => setServices([]));
+    RequestUtils.GetAsList('/entity-status/list-by-type', { type: 'LEAD' })
+      .then(setLeadStatuses)
+      .catch(() => setLeadStatuses([]));
+  }, []);
+
+  const statusOptions = useMemo(
+    () => mergeLeadStatusOptions(leadStatuses),
+    [leadStatuses],
+  );
+  const serviceNameById = useMemo(
+    () => new Map(services.map(service => [String(service.id), service.name])),
+    [services],
+  );
 
   const onEdit = (item) => {
     let title = 'Cập nhật tương tác khách hàng# ' + item.id;
@@ -44,12 +62,6 @@ const Lead3DayPage = () => {
   }
 
   const CUSTOM_ACTION = [
-    {
-      title: "N.Viên",
-      dataIndex: 'staff',
-      width: 150,
-      ellipsis: true
-    },
     {
       title: "K.Hàng",
       dataIndex: 'customerName',
@@ -64,9 +76,10 @@ const Lead3DayPage = () => {
     },
     {
       title: "Dịch vụ",
-      dataIndex: 'serviceName',
+      dataIndex: 'serviceId',
       width: 100,
-      ellipsis: true
+      ellipsis: true,
+      render: (serviceId) => serviceNameById.get(String(serviceId)) || '-'
     },
     {
       title: "Nguồn",
@@ -76,18 +89,26 @@ const Lead3DayPage = () => {
     },
     {
       title: "S.Phẩm",
-      dataIndex: 'productName',
+      dataIndex: 'productNames',
       width: 100,
-      ellipsis: true
+      ellipsis: true,
+      render: (productNames) => (
+        Array.isArray(productNames) && productNames.length > 0
+          ? productNames.join(', ')
+          : '-'
+      )
     },
     {
       title: "Trạng thái",
       dataIndex: 'status',
       width: 100,
       ellipsis: true,
-      render: (status) => (
-        <Tag color={getColorStatusLead(status)}>{getStatusLead(status)}</Tag>
-      )
+      render: (status) => {
+        const statusItem = getLeadStatusOption(status, leadStatuses);
+        return statusItem
+          ? <Tag color={statusItem.color || undefined}>{statusItem.name}</Tag>
+          : '-';
+      }
     },
     {
       title: "K.Doanh",
@@ -114,41 +135,33 @@ const Lead3DayPage = () => {
     }
   ];
 
-  const onData = useCallback(async (values) => {
-    if (arrayEmpty(values.embedded)) {
-      return values;
-    }
-    const services = await RequestUtils.GetAsList('/service/list');
-    for (let item of values.embedded) {
-      item.serviceName = services.find(i => i.id === item.serviceId)?.name ?? "";
-    }
-    return values;
-  }, []);
-
   const beforeSubmitFilter = useCallback((values) => {
     dateFormatOnSubmit(values, ['from', 'to']);
     return values;
   }, []);
 
   return (
+    <RestList
+      xScroll={1200}
+      initialFilter={{ limit: 10, page: 1 }}
+      filter={<LeadFilter statusOptions={statusOptions} />}
+      beforeSubmitFilter={beforeSubmitFilter}
+      useGetAllQuery={useGetList}
+      hasCreate={false}
+      apiPath={'cs/3day-fetch'}
+      columns={CUSTOM_ACTION}
+    />
+  )
+}
+
+const Lead3DayPage = () => {
+  const title = 'Khách hàng 3 ngày chưa ra cơ hội bán hàng'
+
+  return (
     <div>
-      <Helmet>
-        <title>{title}</title>
-      </Helmet>
-      <BreadcrumbCustom
-        data={[{ title: 'Trang chủ' }, { title: title }]}
-      />
-      <RestList
-        xScroll={1200}
-        onData={onData}
-        initialFilter={{ limit: 10, page: 1 }}
-        filter={<LeadFilter />}
-        beforeSubmitFilter={beforeSubmitFilter}
-        useGetAllQuery={useGetList}
-        hasCreate={false}
-        apiPath={'cs/3day-fetch'}
-        columns={CUSTOM_ACTION}
-      />
+      <Helmet><title>{title}</title></Helmet>
+      <BreadcrumbCustom data={[{ title: 'Trang chủ' }, { title }]} />
+      <Lead3DayContent />
     </div>
   )
 }

@@ -198,7 +198,25 @@ const WorkflowDesignerEditor = ({ businessTypeOptions = [], businessTypeLoading,
     const { valid, errors, warnings } = validateFlow(nodes, edges, stepTypes)
 
     if (!valid) {
-      errors.forEach((error) => message.warning(error))
+      const uniqueErrors = [...new Set(errors)]
+      message.warning({
+        key: 'workflow-validation',
+        content: uniqueErrors.length === 1
+          ? uniqueErrors[0]
+          : `Workflow còn ${uniqueErrors.length} cấu hình chưa hợp lệ.`,
+        duration: 4,
+      })
+      Modal.warning({
+        title: 'Cần kiểm tra lại workflow',
+        content: (
+          <div style={{ maxHeight: 320, overflow: 'auto' }}>
+            {uniqueErrors.map((error) => (
+              <div key={error} style={{ marginBottom: 8 }}>• {error}</div>
+            ))}
+          </div>
+        ),
+        okText: 'Đã hiểu',
+      })
       return
     }
 

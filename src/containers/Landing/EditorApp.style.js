@@ -12,18 +12,29 @@ export const Root = styled.div`
   height: 100vh;
 `
 
+export const Workspace = styled.div`
+  display: flex;
+  flex: 1;
+  min-height: 0;
+`
+
 export const Stage = styled.main`
   flex: 1;
+  min-width: 0;
   overflow: auto;
+  scroll-behavior: smooth;
   display: flex;
   justify-content: center;
   padding: ${t.s16} ${t.s12} 120px;
   background:
-    radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0) 0 0 / 22px 22px,
+    radial-gradient(circle at 1px 1px, rgba(16,16,24,0.08) 1px, transparent 0) 0 0 / 22px 22px,
     ${t.surfaceBase};
 `
 
 export const Frame = styled.div`
+  position: relative;
+  /* Tạo containing block cho position:fixed — overlay/menu nằm trong khung preview */
+  transform: translateZ(0);
   width: 100%;
   max-width: ${({ $mobile }) => ($mobile ? '400px' : '1280px')};
   align-self: flex-start;

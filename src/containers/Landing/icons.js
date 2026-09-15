@@ -44,6 +44,12 @@ export const Phone = () => (
   </svg>
 )
 
+export const Code = () => (
+  <svg {...ic({ width: 17, height: 17 })}>
+    <path d="m8 9-4 3 4 3M16 9l4 3-4 3M14 5l-4 14" />
+  </svg>
+)
+
 export const Cursor = () => (
   <svg {...ic({ width: 17, height: 17 })}>
     <path d="m4 4 7 17 2.5-7L20 11z" />

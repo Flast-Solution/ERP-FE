@@ -39,13 +39,15 @@ import ProductAttrService from '@/services/ProductAttrService';
  * ]
 */
 
-const ProductFormPrice = ({ listProperties }) => {
+const ProductFormPrice = ({ listProperties = [] }) => {
 
   const [ dataInOptions, setDataInOptions ] = useState([]);
   
   useEffect(() => {
     let attrs = [], attrValues = [];
-    for (let item of listProperties) {
+    const properties = Array.isArray(listProperties) ? listProperties : [];
+
+    for (let item of properties) {
       if (isEmpty(item) || !item.attributedId || !item.attributedValueId) {
         continue;
       }
@@ -93,6 +95,12 @@ const FormListCascader = ({ field, dataInOptions }) => {
         >
           <FormListPriceRange />
         </FormListAddtion>
+      </Col>
+      <Col md={24} xs={24} style={{ marginTop: 12 }}>
+        <FormInput
+          name={[name, 'note']}
+          placeholder={"Ghi chú"}
+        />
       </Col>
     </Row>
   )

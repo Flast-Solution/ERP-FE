@@ -1,3 +1,4 @@
+import { forwardRef } from 'react'
 import { Button } from 'antd'
 
 /**
@@ -19,9 +20,13 @@ const SIZE_MAP = {
   lg: 'large',
 }
 
-export function IconButton({ variant = 'ghost', size = 'md', round = false, children, ...rest }) {
+export const IconButton = forwardRef(function IconButton(
+  { variant = 'ghost', size = 'md', round = false, children, ...rest },
+  ref,
+) {
   return (
     <Button
+      ref={ref}
       type={VARIANT_MAP[variant] ?? 'text'}
       size={SIZE_MAP[size] ?? 'middle'}
       shape={round ? 'circle' : 'default'}
@@ -29,4 +34,4 @@ export function IconButton({ variant = 'ghost', size = 'md', round = false, chil
       {...rest}
     />
   )
-}
+})

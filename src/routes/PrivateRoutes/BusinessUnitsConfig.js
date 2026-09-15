@@ -6,6 +6,6 @@ const BusinessUnitsPage = React.lazy(() => import('@/pages/businessUnits'))
 export const BusinessUnitsConfig = {
   auth: authRoles.user,
   routes: [
-    { path: '/system/business-units', element: <BusinessUnitsPage /> },
+    { path: '/system/business-units', permission: 'system.business_unit.view', element: <BusinessUnitsPage /> },
   ],
 }

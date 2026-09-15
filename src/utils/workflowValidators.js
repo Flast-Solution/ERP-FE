@@ -84,6 +84,12 @@ export const normalizeWorkflowStepType = (type, stepTypes = [], node = {}) => {
 
 const CANONICAL_STEP_TYPES = ['start', 'end', 'approval', 'revision', 'condition', 'process']
 
+export const isWorkflowStepHidden = (valueOrNode) => {
+  const value = valueOrNode?.data ? valueOrNode.data.hidden : valueOrNode
+  if (value === true || value === 1) return true
+  return ['true', '1'].includes(String(value ?? '').trim().toLowerCase())
+}
+
 const getStepTypeMatchCandidates = (stepType) => [
   stepType?.key,
   stepType?.id,
@@ -155,9 +161,24 @@ export const validateBeforeExport = (nodes, edges, stepTypes = []) => {
     return errors // không check thêm nếu rỗng
   }
 
+  const hiddenTargetCodes = new Set(
+    nodes.flatMap(node => (node?.data?.buttons ?? []))
+      .filter(button => button?.type === 'OPEN_HIDDEN_STEP')
+      .map(button => String(button?.targetStepCode ?? '').trim())
+      .filter(Boolean),
+  )
+  const isHiddenNode = node => isWorkflowStepHidden(node)
+    || hiddenTargetCodes.has(String(node?.data?.code ?? ''))
+    || hiddenTargetCodes.has(String(node?.id ?? ''))
+  const visibleNodes = nodes.filter(node => !isHiddenNode(node))
+  const visibleNodeIds = new Set(visibleNodes.map(node => node.id))
+  const visibleEdges = edges.filter(edge => (
+    visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
+  ))
+
   // 2. Phải có đúng 1 start node theo topology:
   // không có đầu vào và có ít nhất 1 đầu ra.
-  const startNodes = nodes.filter((n) => getNodeTopologyType(n, edges) === 'start')
+  const startNodes = visibleNodes.filter((n) => getNodeTopologyType(n, visibleEdges) === 'start')
   if (startNodes.length === 0) {
     errors.push('Thiếu step bắt đầu: cần có 1 bước không có đầu vào và có đầu ra')
   } else if (startNodes.length > 1) {
@@ -166,7 +187,7 @@ export const validateBeforeExport = (nodes, edges, stepTypes = []) => {
 
   // 3. Phải có ít nhất 1 end node theo topology:
   // có đầu vào và không có đầu ra.
-  const endNodes = nodes.filter((n) => getNodeTopologyType(n, edges) === 'end')
+  const endNodes = visibleNodes.filter((n) => getNodeTopologyType(n, visibleEdges) === 'end')
   if (endNodes.length === 0) {
     errors.push('Thiếu step kết thúc: cần có ít nhất 1 bước có đầu vào và không có đầu ra')
   }
@@ -191,11 +212,11 @@ export const validateBeforeExport = (nodes, edges, stepTypes = []) => {
   })
 
   // 6. Orphan nodes — node không có edge nào kết nối (trừ nếu chỉ có 1 node)
-  if (nodes.length > 1) {
+  if (visibleNodes.length > 1) {
     const connectedIds = new Set(
-      edges.flatMap((e) => [e.source, e.target])
+      visibleEdges.flatMap((e) => [e.source, e.target])
     )
-    const orphans = nodes.filter((n) => !connectedIds.has(n.id))
+    const orphans = visibleNodes.filter((n) => !connectedIds.has(n.id))
     if (orphans.length > 0) {
       const labels = orphans.map((n) => `"${n.data?.name || n.data?.label || n.id}"`)
       errors.push(`Step chưa kết nối: ${labels.join(', ')}`)
@@ -213,6 +234,41 @@ export const validateBeforeExport = (nodes, edges, stepTypes = []) => {
     }
   })
 
+  // 8. Button của step phải trỏ tới step hợp lệ. Button chuyển bước cần có edge;
+  // button mở form phụ chỉ được trỏ tới step ẩn.
+  const nodesByCode = new Map(nodes.map(node => [String(node.data?.code ?? node.id), node]))
+  nodes.forEach((node) => {
+    const sourceName = node.data?.name ?? node.data?.label ?? node.id
+    const buttons = Array.isArray(node.data?.buttons) ? node.data.buttons : []
+    if (isHiddenNode(node) && !(node.data?.forms ?? []).length) {
+      errors.push(`Bước ẩn "${sourceName}" chưa được gắn form`)
+    }
+    buttons.forEach((button, index) => {
+      const targetCode = String(button?.targetStepCode ?? '').trim()
+      const buttonName = button?.label || `Button ${index + 1}`
+      const targetNode = nodesByCode.get(targetCode)
+      if (!button?.label?.trim()) {
+        errors.push(`Step "${sourceName}": button #${index + 1} chưa có tên`)
+      }
+      if (!targetCode || !targetNode) {
+        errors.push(`Button "${buttonName}" của step "${sourceName}" chưa có bước đích hợp lệ`)
+        return
+      }
+
+      if (button.type === 'OPEN_HIDDEN_STEP' && !isHiddenNode(targetNode)) {
+        errors.push(`Button "${buttonName}" phải trỏ tới một bước ẩn`)
+      }
+      if (button.type === 'TRANSITION') {
+        const hasTransition = edges.some(edge => (
+          edge.source === node.id && edge.target === targetNode.id
+        ))
+        if (!hasTransition) {
+          errors.push(`Button "${buttonName}" chưa có transition tới "${targetNode.data?.name ?? targetCode}"`)
+        }
+      }
+    })
+  })
+
   return errors
 }
 
@@ -220,7 +276,7 @@ export const validateBeforeExport = (nodes, edges, stepTypes = []) => {
 // Validation đầy đủ hơn, dùng khi save lên API
 // Trả về { valid: boolean, errors: string[], warnings: string[] }
 export const validateFlow = (nodes, edges, stepTypes = []) => {
-  const errors = validateBeforeExport(nodes, edges, stepTypes)
+  const errors = [...new Set(validateBeforeExport(nodes, edges, stepTypes))]
   const warnings = []
 
   // Warning: guard có config rỗng
@@ -252,7 +308,7 @@ export const validateFlow = (nodes, edges, stepTypes = []) => {
   return {
     valid: errors.length === 0,
     errors,
-    warnings,
+    warnings: [...new Set(warnings)],
   }
 }
 

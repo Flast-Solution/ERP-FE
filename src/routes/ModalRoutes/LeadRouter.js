@@ -24,11 +24,15 @@ import React from 'react';
 const LeadRoute = [
   {
     path: 'lead.collection',
+    permission: 'sales.lead.stage.update',
     Component: React.lazy(() => import('@/containers/Lead/LeadCollectionForm')),
     modalOptions: { title: '', width: 750 }
   },
   {
     path: 'lead.edit',
+    permission: ({ data }) => data?.record?.id
+      ? ['sales.lead.detail.view', 'sales.lead.update']
+      : 'sales.lead.create',
     Component: React.lazy(() => import('@/containers/Lead')),
     modalOptions: { title: '', width: 750 }
   }

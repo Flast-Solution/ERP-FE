@@ -60,7 +60,7 @@ export const CtxClose = styled.button`
   opacity: .7;
 
   svg { width: 11px; height: 11px; display: block; }
-  &:hover { opacity: 1; background: rgba(255,255,255,.12); }
+  &:hover { opacity: 1; background: ${t.surfaceActive}; }
 `
 
 export const Spacer = styled.span`flex: 1;`

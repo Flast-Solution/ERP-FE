@@ -1,0 +1,211 @@
+import {
+  COMPONENT_TYPES,
+  DEFAULT_NODE_LAYOUT,
+  DEFAULT_STYLE,
+  DOCUMENT_SCHEMA_VERSION,
+} from './constants'
+
+export const createNodeId = () => `document-node-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+const createDefaultColumns = (schema = []) => {
+  const firstCollection = schema.find(field => field.scope)?.scope
+  const itemFields = schema.filter(field => field.scope === firstCollection).slice(0, 4)
+  return itemFields.map(field => ({
+    id: createNodeId(),
+    title: field.label,
+    binding: field.relativePath ?? String(field.path || '').replace(`${firstCollection}.`, ''),
+    inputMode: 'binding',
+    placeholder: '',
+    format: field.dataType === 'number' ? 'number' : 'text',
+    align: field.dataType === 'number' ? 'right' : 'left',
+  }))
+}
+
+export const createDocumentNode = (type, dataSchema = []) => {
+  const firstField = dataSchema.find(field => !field.scope)
+  const firstCollection = dataSchema.find(field => field.scope)?.scope ?? ''
+  const common = {
+    id: createNodeId(),
+    type,
+    visible: true,
+    layout: { ...DEFAULT_NODE_LAYOUT },
+    style: { ...DEFAULT_STYLE },
+  }
+
+  switch (type) {
+    case COMPONENT_TYPES.TEXT:
+      return { ...common, content: 'Nhập nội dung văn bản', style: { ...common.style, fontSize: 16 } }
+    case COMPONENT_TYPES.RICH_TEXT:
+      return {
+        ...common,
+        content: '<strong>Tiêu đề</strong><br />Nội dung: {{ field.path }}',
+        style: { ...common.style, whiteSpace: 'pre-wrap' },
+      }
+    case COMPONENT_TYPES.CONTAINER:
+      return {
+        ...common,
+        layout: { ...common.layout, minHeight: 180 },
+        children: [],
+        grid: { columns: 12, rows: null, rowHeight: 80, columnGap: 0, rowGap: 0 },
+        style: { ...common.style, padding: 8, marginBottom: 0, borderWidth: 1, borderColor: '#94a3b8' },
+      }
+    case COMPONENT_TYPES.DATA_FIELD:
+      return {
+        ...common,
+        label: firstField?.label ?? 'Trường dữ liệu',
+        binding: firstField?.path ?? '',
+        format: 'text',
+        mockValue: '',
+        fallback: '-',
+      }
+    case COMPONENT_TYPES.MANUAL_FIELD:
+      return { ...common, label: 'Trường nhập tay', placeholder: 'Nhập nội dung', required: false }
+    case COMPONENT_TYPES.TABLE:
+      return {
+        ...common,
+        source: firstCollection,
+        columns: createDefaultColumns(dataSchema),
+        repeatHeader: true,
+        headerRows: [],
+        summaryRows: [],
+        tableStyle: { borderWidth: 1, borderColor: '#111827', headerBackgroundColor: '#f3f4f6', cellPadding: 8 },
+        style: { ...common.style, padding: 0 },
+      }
+    case COMPONENT_TYPES.IMAGE:
+      return { ...common, src: '', alt: 'Hình ảnh', height: 120 }
+    case COMPONENT_TYPES.LOGO:
+      return { ...common, src: '', alt: 'Logo', height: 72, style: { ...common.style, textAlign: 'center' } }
+    case COMPONENT_TYPES.QR_CODE:
+      return { ...common, label: 'QR Code', binding: firstField?.path ?? '', size: 96 }
+    case COMPONENT_TYPES.BARCODE:
+      return { ...common, label: 'Barcode', binding: firstField?.path ?? '', height: 64 }
+    case COMPONENT_TYPES.DATE:
+      return {
+        ...common,
+        label: dataSchema.find(field => !field.scope && field.dataType === 'date')?.label ?? firstField?.label ?? 'Ngày lập',
+        binding: dataSchema.find(field => !field.scope && field.dataType === 'date')?.path ?? firstField?.path ?? '',
+        format: 'date',
+        fallback: '-',
+      }
+    case COMPONENT_TYPES.RECTANGLE:
+      return { ...common, height: 80, style: { ...common.style, borderWidth: 1 } }
+    case COMPONENT_TYPES.LINE:
+    case COMPONENT_TYPES.DIVIDER:
+      return { ...common, style: { ...common.style, padding: 0, borderWidth: 0, marginBottom: 12 } }
+    case COMPONENT_TYPES.SIGNATURE:
+      return { ...common, title: 'Người ký', subtitle: '(Ký và ghi rõ họ tên)', height: 120, style: { ...common.style, textAlign: 'center' } }
+    default:
+      return common
+  }
+}
+
+export const createEmptyTemplate = ({ name = 'Mẫu chứng từ', documentType = 'quotation' } = {}) => ({
+  schemaVersion: DOCUMENT_SCHEMA_VERSION,
+  name,
+  documentType,
+  page: {
+    size: 'A4',
+    orientation: 'portrait',
+    margin: { top: 24, right: 24, bottom: 24, left: 24 },
+  },
+  layout: {
+    columns: 12,
+    columnGap: 12,
+    rowGap: 8,
+  },
+  nodes: [],
+})
+
+export const getValueByPath = (source, path, fallback = '') => {
+  if (!path) return fallback
+
+  const resolvePath = (current, keys) => {
+    if (!keys.length) return current
+    if (current === undefined || current === null) return undefined
+    if (Array.isArray(current)) {
+      if (/^\d+$/.test(keys[0])) return resolvePath(current[Number(keys[0])], keys.slice(1))
+      return current.flatMap(item => {
+        const itemValue = resolvePath(item, keys)
+        if (itemValue === undefined || itemValue === null) return []
+        return Array.isArray(itemValue) ? itemValue : [itemValue]
+      })
+    }
+
+    const [key, ...remainingKeys] = keys
+    return resolvePath(current?.[key], remainingKeys)
+  }
+
+  const value = resolvePath(source, String(path).split('.').filter(Boolean))
+  return value === undefined || value === null || value === '' ? fallback : value
+}
+
+export const formatBindingValue = (value, format = 'text') => {
+  if (value === undefined || value === null || value === '') return ''
+  if (Array.isArray(value)) {
+    return value
+      .flat(Infinity)
+      .filter(item => item !== undefined && item !== null && item !== '')
+      .map(item => formatBindingValue(item, format))
+      .join('\n')
+  }
+  if (format === 'number') {
+    const numericValue = Number(value)
+    return Number.isFinite(numericValue) ? numericValue.toLocaleString('vi-VN') : value
+  }
+  if (format === 'number_en' || format === 'decimal_en') {
+    const numericValue = Number(value)
+    const decimals = format === 'decimal_en' ? 2 : undefined
+    return Number.isFinite(numericValue)
+      ? numericValue.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+      : value
+  }
+  if (format === 'currency') {
+    const numericValue = Number(value)
+    return Number.isFinite(numericValue)
+      ? numericValue.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })
+      : value
+  }
+  if (format === 'date') {
+    const date = new Date(value)
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('vi-VN')
+  }
+  return String(value)
+}
+
+const normalizeSkuAttributeLabel = value => String(value ?? '')
+  .trim()
+  .replace(/\s+/g, ' ')
+  .toLocaleUpperCase('vi-VN')
+
+// Supports both table-relative paths and absolute paths for PDF text blocks.
+export const resolveBindingValue = (source, binding, skuAttributeLabel, fallback = '') => {
+  const keys = String(binding || '').split('.')
+  const skuIndex = keys.indexOf('skuDetails')
+  const label = normalizeSkuAttributeLabel(skuAttributeLabel)
+  if (skuIndex < 0 || !label) return getValueByPath(source, binding, fallback)
+
+  const owners = skuIndex === 0 ? source : getValueByPath(source, keys.slice(0, skuIndex).join('.'), null)
+  const resolveOwner = owner => {
+    const attribute = (Array.isArray(owner?.skuDetails) ? owner.skuDetails : []).find(
+      item => normalizeSkuAttributeLabel(item?.text) === label,
+    )
+    return getValueByPath(attribute, keys.slice(skuIndex + 1).join('.'), fallback)
+  }
+  return Array.isArray(owners) ? owners.map(resolveOwner) : resolveOwner(owners)
+}
+
+export const resolveNodeValue = (node, data) => formatBindingValue(
+  resolveBindingValue(
+    data,
+    node?.binding,
+    node?.pdfContentMode === 'binding' ? '' : node?.skuAttributeLabel,
+    node?.mockValue !== undefined && node?.mockValue !== '' ? node.mockValue : (node?.fallback ?? ''),
+  ),
+  node?.format,
+)
+
+export const serializeTemplate = (template) => ({
+  ...template,
+  schemaVersion: DOCUMENT_SCHEMA_VERSION,
+  updatedAt: new Date().toISOString(),
+})

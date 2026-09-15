@@ -48,10 +48,6 @@ import { ListAcountGroupConfig } from './ListUserGroupConfig';
 import { ListUserSystemConfig } from './ListUserSysTemConfig';
 import { BusinessUnitsConfig } from './BusinessUnitsConfig';
 
-/* CSKH */
-import { Lead3DayConfig } from './Lead3DayConfig'
-import { Cohoi7DayConfig } from './Cohoi7DayConfig';
-
 /* Kế  toán */
 import { KeToanConfig } from './KeToanConfig';
 
@@ -60,7 +56,7 @@ import { NewfeedConfig } from './NewFeedConfig';
 import { DragDropConfig } from './DragDropOrderConfig';
 
 /* Web */
-import { WebConfig } from './WebConfig';
+import { PublicWebConfig, WebConfig } from './WebConfig';
 import { WorkflowDesignerConfig } from './WorkflowDesignerConfig';
 import { ProductionControlConfig } from './ProductionControlConfig';
 
@@ -68,6 +64,7 @@ import { ProductionControlConfig } from './ProductionControlConfig';
 import { HRConfig } from './HRConfig';
 
 const routeConfigs = [
+    PublicWebConfig,
     LoginConfig,
     KpiConfig,
     ProductConfig,
@@ -75,7 +72,6 @@ const routeConfigs = [
     ProductionControlConfig,
     CommonConfig,
     LeadConfig,
-    Lead3DayConfig,
     CohoiConfig,
     InstockConfig,
     WareHouseConfig,
@@ -83,7 +79,6 @@ const routeConfigs = [
     ListAcountConfig,
     ListAcountGroupConfig,
     BusinessUnitsConfig,
-    Cohoi7DayConfig,
     KeToanConfig,
     ListUserSystemConfig,
     NewfeedConfig,

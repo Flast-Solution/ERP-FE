@@ -5,6 +5,6 @@ const KPIPage = React.lazy(() => import('@/pages/kpi'));
 export const KpiConfig = {
     auth    : authRoles.user,
     routes  : [
-        { path     : '/kpi', element: <KPIPage /> }
+        { path     : '/kpi', permission: 'kpi.view', element: <KPIPage /> }
     ]
 };

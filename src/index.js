@@ -24,6 +24,13 @@ import ReactDOM from 'react-dom/client';
 import axios from 'axios';
 import App from '@/App';
 import { GATEWAY } from '@/configs';
+import {
+  handleUnauthorized,
+  hasAccessToken,
+  isAccessTokenExpired,
+  scheduleAccessTokenExpiry,
+  startAccessTokenExpiryMonitor,
+} from '@/utils/sessionExpiry';
 
 // RequestUtils (@flast-erp/core) builds url as baseURL + path, then calls axios.get(url).
 // With a relative baseURL like '/api', axios combines baseURL again → /api/api/...
@@ -35,6 +42,28 @@ const resolveApiBaseUrl = (gateway) => {
 
 axios.defaults.withCredentials = true;
 axios.defaults.baseURL = resolveApiBaseUrl(GATEWAY);
+axios.interceptors.request.use(
+  config => {
+    const token = window.localStorage.getItem('jwt_access_token');
+    if (token && isAccessTokenExpired(token)) {
+      handleUnauthorized();
+      return Promise.reject(new axios.Cancel('Access token expired'));
+    }
+    scheduleAccessTokenExpiry(token);
+    return config;
+  },
+  error => Promise.reject(error)
+);
+axios.interceptors.response.use(
+  response => response,
+  error => {
+    if (error?.response?.status === 401 && hasAccessToken()) {
+      handleUnauthorized();
+    }
+    return Promise.reject(error);
+  }
+);
+startAccessTokenExpiryMonitor();
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<App />);

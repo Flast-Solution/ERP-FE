@@ -28,7 +28,7 @@ const ProductAttrService = {
   attrs: {},
   attrsValue: {},
   empty() {
-    /* this.allData = []; */
+    this.allData = [];
     this.attrs = {};
     this.cacheItems = {};
     this.attrsValue = {};
@@ -57,6 +57,33 @@ const ProductAttrService = {
     }
     this.allData = data?.embedded ?? [];
     return this.allData;
+  },
+  async updateDefault(attributes = [], selectedIds = []) {
+    const allAttributes = (Array.isArray(attributes) ? attributes : [])
+      .filter(item => item && typeof item === 'object' && item.id !== undefined && item.id !== null);
+    const selectedIdSet = new Set(
+      (Array.isArray(selectedIds) ? selectedIds : []).map(String),
+    );
+    const payload = allAttributes.map(item => ({
+      ...item,
+      initial: selectedIdSet.has(String(item.id)),
+    }));
+    const response = await RequestUtils.Post('/erp/attributed/update-default', payload);
+    if (response?.errorCode !== SUCCESS_CODE && response?.success !== true) {
+      return response;
+    }
+
+    this.allData = this.allData.map(item => ({
+      ...item,
+      initial: selectedIdSet.has(String(item.id)),
+    }));
+    Object.keys(this.attrs).forEach(id => {
+      this.attrs[id] = {
+        ...this.attrs[id],
+        initial: selectedIdSet.has(String(id)),
+      };
+    });
+    return response;
   },
   async loadByIds(ids = []) {
     if (!ids || arrayEmpty(ids)) {

@@ -88,6 +88,25 @@ export const ToolbarDomain = styled.code`
   flex-shrink: 0;
 `
 
+export const DisplayModeControl = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+
+  .ant-select-selector {
+    min-height: 30px !important;
+    align-items: center;
+  }
+`
+
+export const DisplayModeLabel = styled.span`
+  color: #595959;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+`
+
 // ─── Preview split button ─────────────────────────────────────────────────────
 // Thiết kế: 2 nửa liền mạch, ngăn cách bằng đường dọc 1px
 // Height 28px theo design spec

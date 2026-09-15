@@ -25,19 +25,9 @@ import {
   FormInput,
   FormSelect
 } from '@flast-erp/core/components';
-import { STATUS_LEAD } from '@/configs/constant';
 import { CHANNEL_SOURCE } from '@/configs/localData';
 
-const statusData = [
-  { id: STATUS_LEAD.CREATE_DATA, name: 'Tạo dữ liệu' },
-  { id: STATUS_LEAD.DO_NOT_MANUFACTORY, name: 'Không sản xuất' },
-  { id: STATUS_LEAD.IS_CONTACT, name: 'Đang liên lạc' },
-  { id: STATUS_LEAD.CONTACT_LATER, name: 'Liên hệ sau' },
-  { id: STATUS_LEAD.KO_LIEN_HE_DUOC, name: 'Không liên hệ được' },
-  { id: STATUS_LEAD.THANH_CO_HOI, name: 'Thành cơ hội' },
-]
-
-const LeadFilter = () => {
+const LeadFilter = ({ statusOptions = [] }) => {
   return (
     <>
       <Row gutter={16}>
@@ -49,8 +39,14 @@ const LeadFilter = () => {
         </Col>
         <Col xl={6} lg={6} md={6} xs={24}>
           <FormInput
-            name={'customerEmail'}
-            placeholder="Email"
+            name={'customerName'}
+            placeholder="Khách hàng"
+          />
+        </Col>
+        <Col xl={6} lg={6} md={6} xs={24}>
+          <FormInput
+            name={'productNames'}
+            placeholder="Sản phẩm"
           />
         </Col>
         <Col xl={6} lg={6} md={6} xs={24}>
@@ -69,7 +65,7 @@ const LeadFilter = () => {
             label="Trạng thái"
             valueProp="id"
             titleProp='name'
-            resourceData={statusData || []}
+            resourceData={statusOptions}
             placeholder='Lọc theo trạng thái'
           />
         </Col>

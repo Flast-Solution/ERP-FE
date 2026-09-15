@@ -19,12 +19,13 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useState, useCallback } from 'react';
-import { Col, Form, message, Row } from 'antd';
-import { 
-  FormContextCustom, 
-  FormSelectInfiniteProduct, 
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { Button, Col, Form, message, Row } from 'antd';
+import {
+  FormContextCustom,
+  FormSelectInfiniteProduct,
   BtnSubmit,
+  FormInput,
   FormSelect,
 	FormInputNumber,
 	FormSelectInfiniteProvider,
@@ -39,17 +40,65 @@ import { isEmpty } from 'lodash';
 import { RequestUtils, createMSkuDetails } from '@flast-erp/core/utils';
 import { useEffectAsync } from '@flast-erp/core/hooks';
 
+const getFormValues = (model = {}) => ({
+  id: model?.id ?? null,
+  productId: model?.productId ?? model?.product?.id ?? null,
+  skuId: model?.skuId ?? model?.sku?.id ?? model?.skuDetailCode ?? null,
+  quantity: model?.quantity ?? null,
+  providerId: model?.providerId ?? model?.provider?.id ?? null,
+  providerOrderCode: model?.providerOrderCode ?? null,
+  stockId: model?.stockId ?? model?.warehouseId ?? model?.stock?.id ?? null
+});
+
 const ModalNhapKho = ({
   product,
-  onSave = (values) => values
+  onSave,
+  data,
+  closeModal
 }) => {
 
   const [ form ] = Form.useForm();
   const [ inStocks, setInStocks ] = useState([]);
   const [ skus, setSkus ] = useState([]);
   const [ record, setRecord ] = useState({});
-  const [ mProduct, setProduct ] = useState(product || {});
+  const model = useMemo(() => data?.model ?? data?.record ?? {}, [data]);
+  const mode = data?.mode ?? 'create';
+  const readOnly = mode === 'view';
+  const isEdit = mode === 'edit' || Boolean(model?.id);
+  const [ mProduct, setProduct ] = useState(product || data?.product || model?.product || {});
   const [ sku, setSkuDetail ] = useState();
+  const handleSave = onSave || data?.onSave;
+
+  useEffect(() => {
+    const values = getFormValues(model);
+    form.setFieldsValue(values);
+    setRecord(model);
+  }, [form, model]);
+
+  useEffectAsync(async () => {
+    const productId = model?.productId ?? model?.product?.id ?? product?.id;
+    if (!productId) {
+      return;
+    }
+
+    let selectedProduct = product || model?.product;
+    if (!Array.isArray(selectedProduct?.skus) || selectedProduct.skus.length === 0) {
+      const response = await RequestUtils.Get('/product/find-by-id', { id: productId });
+      if (response?.errorCode === 200) {
+        selectedProduct = response.data;
+      }
+    }
+
+    if (!selectedProduct) {
+      return;
+    }
+
+    const selectedSkuId = model?.skuId ?? model?.sku?.id ?? model?.skuDetailCode;
+    const productSkus = Array.isArray(selectedProduct?.skus) ? selectedProduct.skus : [];
+    setProduct(selectedProduct);
+    setSkus(productSkus);
+    setSkuDetail(productSkus.find(item => String(item?.id) === String(selectedSkuId)));
+  }, [model, product]);
 
   useEffectAsync(async() => {
     if (!mProduct?.id) {
@@ -60,17 +109,33 @@ const ModalNhapKho = ({
   }, [mProduct]);
 
   const onFinish = useCallback(async (values) => {
-    const mSkuDetails = createMSkuDetails(sku?.skuDetails ?? []);
+    const mSkuDetails = sku
+      ? createMSkuDetails(sku?.skuDetails ?? [])
+      : (model?.mSkuDetails ?? model?.skuDetails ?? []);
     const { skuId } = values;
 
-    const skuName = mProduct?.skus.find(sku => sku.id === skuId)?.name || '';
-    let model = { ...values, skuName };
-    const endpoint = model?.id ? ('/warehouse/updated?id=' + model.id) : '/warehouse/created';
+    const skuName = mProduct?.skus?.find(item => String(item?.id) === String(skuId))?.name
+      || model?.skuName
+      || '';
+    const submitModel = {
+      ...values,
+      ...(isEdit ? { id: model.id } : {}),
+      skuName
+    };
+    const endpoint = isEdit ? '/warehouse/updated' : '/warehouse/created';
 
-    const { message: msg, data, errorCode } = await RequestUtils.Post(endpoint, { model, mSkuDetails });
+    const { message: msg, data: responseData, errorCode } = await RequestUtils.Post(
+      endpoint,
+      { model: submitModel, mSkuDetails }
+    );
+    if (errorCode !== 200) {
+      message.error(msg);
+      return;
+    }
     message.success(msg);
-    onSave({ data, errorCode });
-  }, [onSave, sku, mProduct]);
+    handleSave?.({ data: responseData, errorCode });
+    closeModal?.();
+  }, [closeModal, handleSave, isEdit, model, sku, mProduct]);
 
   const onChangeGetSelectedItem = (value, nProduct) => {
     setSkus(nProduct?.skus || []);
@@ -95,13 +160,13 @@ const ModalNhapKho = ({
   }, []);
 
   return (
-    <Form form={form} layout="vertical" onFinish={onFinish}>
+    <Form form={form} layout="vertical" onFinish={onFinish} disabled={readOnly}>
       <FormContextCustom.Provider value={{ form, record, updateRecord }}>
         <Row gutter={16}>
           <Col span={24}>
             <FormHidden name="id" />
           </Col>
-          <Col span={12}>
+          <Col md={12} xs={24}>
             <FormSelectInfiniteProduct
               label='Chọn sản phẩm'
               placeholder='Chọn sản phẩm'
@@ -110,7 +175,7 @@ const ModalNhapKho = ({
               onChangeGetSelectedItem={onChangeGetSelectedItem}
             />
           </Col>
-          <Col span={12}>
+          <Col md={12} xs={24}>
             <FormSelect
               label='SKU'
               name='skuId'
@@ -125,7 +190,7 @@ const ModalNhapKho = ({
           <Col span={24} style={{marginBottom: 20}}>
             {memoSkuDetail}
           </Col>
-          <Col span={12}>
+          <Col md={12} xs={24}>
             <FormInputNumber
               label='Số lượng'
               name='quantity'
@@ -136,7 +201,7 @@ const ModalNhapKho = ({
               messageRequire='Số lượng không được để trống'
             />
           </Col>
-          <Col span={12}>
+          <Col md={12} xs={24}>
             <FormSelectInfiniteProvider
               label='Nhà cung cấp'
               name='providerId'
@@ -145,7 +210,14 @@ const ModalNhapKho = ({
               messageRequire='Nhà cung cấp không được để trống'
             />
           </Col>
-          <Col span={24}>
+          <Col md={12} xs={24}>
+            <FormInput
+              label='Mã đơn NCC'
+              name='providerOrderCode'
+              placeholder='Nhập mã đơn nhà cung cấp'
+            />
+          </Col>
+          <Col md={12} xs={24}>
             <FormInfiniteStock
               label='Kho hàng'
               name='stockId'
@@ -162,7 +234,13 @@ const ModalNhapKho = ({
             />
           </Col>
           <Col span={24}>
-            <BtnSubmit marginTop={10} text='Hoàn thành' />
+            {readOnly ? (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+                <Button disabled={false} onClick={() => closeModal?.()}>Đóng</Button>
+              </div>
+            ) : (
+              <BtnSubmit marginTop={10} text={isEdit ? 'Cập nhật' : 'Hoàn thành'} />
+            )}
           </Col>
         </Row>
       </FormContextCustom.Provider>

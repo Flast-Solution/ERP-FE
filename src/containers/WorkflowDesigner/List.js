@@ -5,6 +5,7 @@ import { RestList } from '@flast-erp/core/components'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { SUCCESS_CODE } from '@/configs'
 import Filter from './Filter'
+import useGetMe from '@/hooks/useGetMe'
 
 const API_PATH = 'workflow/process/filter'
 const USER_LIST_API = '/auth/user-bussiness/list-user'
@@ -265,6 +266,9 @@ export const fetchWorkflowDetail = async (record) => {
 }
 
 const WorkflowDesignerList = ({ onCreate, onEdit }) => {
+  const { hasPermission } = useGetMe()
+  const canCreate = hasPermission('workflow.process.create')
+  const canUpdate = hasPermission('workflow.process.update')
   const [editingId, setEditingId] = useState(null)
 
   const handleEdit = useCallback(async (record) => {
@@ -303,7 +307,7 @@ const WorkflowDesignerList = ({ onCreate, onEdit }) => {
     {
       title: 'Số bước',
       dataIndex: 'stepCount',
-      width: 90,
+      width: 100,
       align: 'center',
     },
     {
@@ -332,7 +336,7 @@ const WorkflowDesignerList = ({ onCreate, onEdit }) => {
       width: 150,
       render: value => value ? (FLOW_TYPE_LABELS[value] ?? value) : '',
     },
-    {
+    canUpdate && {
       title: 'Action',
       key: 'actions',
       fixed: 'right',
@@ -349,7 +353,7 @@ const WorkflowDesignerList = ({ onCreate, onEdit }) => {
         </Button>
       ),
     },
-  ], [editingId, handleEdit])
+  ].filter(Boolean), [canUpdate, editingId, handleEdit])
 
   const onData = useCallback(async (response) => {
     const userMap = await fetchUserMap()
@@ -374,7 +378,7 @@ const WorkflowDesignerList = ({ onCreate, onEdit }) => {
       xScroll={1320}
       initialFilter={{ limit: 10, offset: '0', page: 1 }}
       filter={<Filter />}
-      hasCreate
+      hasCreate={canCreate}
       customClickCreate={onCreate}
       beforeSubmitFilter={beforeSubmitFilter}
       onData={onData}

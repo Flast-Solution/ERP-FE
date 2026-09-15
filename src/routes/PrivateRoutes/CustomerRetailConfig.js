@@ -25,12 +25,14 @@ import { authRoles } from '@/auth';
 const CustomerRetail = React.lazy(() => import('@/pages/customer'));
 const CustomerProfile = React.lazy(() => import('@/pages/customer/CustomerProfile'));
 const EnterpriseList = React.lazy(() => import('@/pages/customer/ListEnterprise'));
+const EnterpriseProfile = React.lazy(() => import('@/pages/customer/EnterpriseProfile'));
 
 export const CustomerConfig = {
     auth: authRoles.user,
     routes: [
-        { path: '/sale/m-customer', element: <CustomerRetail /> },
-        { path: '/customer/:id', element: <CustomerProfile /> },
-        { path: '/customer/enterprise', element: <EnterpriseList /> },
+        { path: '/sale/m-customer', permission: 'customer.retail.view', element: <CustomerRetail /> },
+        { path: '/customer/:id', permission: 'customer.retail.detail.view', element: <CustomerProfile /> },
+        { path: '/customer/enterprise', permission: 'customer.enterprise.view', element: <EnterpriseList /> },
+        { path: '/customer/enterprise/:id', permission: 'customer.enterprise.detail.view', element: <EnterpriseProfile /> },
     ]
 };

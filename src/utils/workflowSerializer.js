@@ -2,6 +2,7 @@ import { RequestUtils } from '@flast-erp/core/utils'
 import { DEFAULT_STEP, DEFAULT_TRANSITION } from '@/store/workflowConstants'
 import {
   getNodeTopologyType,
+  isWorkflowStepHidden,
   normalizeWorkflowStepType,
   resolveNodeProcessTypeKey,
 } from './workflowValidators'
@@ -24,6 +25,48 @@ const normalizeRolesToArray = (roles) => {
 }
 
 const firstArray = (...values) => values.find(Array.isArray) ?? []
+
+const normalizeStepConfig = (config) => {
+  if (config && typeof config === 'object' && !Array.isArray(config)) {
+    return config
+  }
+  if (typeof config !== 'string' || !config.trim()) return {}
+
+  try {
+    const parsed = JSON.parse(config)
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+  } catch (_) {
+    return {}
+  }
+}
+
+const sanitizeStepConfig = (config) => Object.fromEntries(
+  Object.entries(normalizeStepConfig(config)).filter(([key]) => (
+    key !== 'saveSubmitLog' && key !== 'assigneeId'
+  )),
+)
+
+const normalizeStepButtons = (value) => {
+  let buttons = value
+  if (typeof buttons === 'string' && buttons.trim()) {
+    try {
+      buttons = JSON.parse(buttons)
+    } catch (_) {
+      buttons = []
+    }
+  }
+  if (!Array.isArray(buttons)) return []
+
+  return buttons.map((button, index) => ({
+    id: button?.id ?? `button_${index + 1}`,
+    label: button?.label ?? button?.name ?? `Button ${index + 1}`,
+    type: button?.type ?? button?.actionType ?? button?.action_type ?? 'TRANSITION',
+    targetStepCode: button?.targetStepCode ?? button?.target_step_code ?? null,
+    style: button?.style ?? button?.buttonStyle ?? button?.button_style ?? 'DEFAULT',
+    requireSubmission: button?.requireSubmission ?? button?.require_submission ?? false,
+    order: button?.order ?? index,
+  }))
+}
 
 const getStepActions = (step = {}) => firstArray(
   step.actions,
@@ -65,6 +108,19 @@ const serializeAllowedRoles = (roles) => {
  * }
  */
 export const flowToJson = ({ nodes, edges, process, stepTypes = [] }) => {
+  const hiddenTargetCodes = new Set(
+    nodes.flatMap(node => (node?.data?.buttons ?? []))
+      .filter(button => button?.type === 'OPEN_HIDDEN_STEP')
+      .map(button => String(button?.targetStepCode ?? '').trim())
+      .filter(Boolean),
+  )
+  const normalizedNodes = nodes.map(node => {
+    const referencedAsHidden = hiddenTargetCodes.has(String(node?.data?.code ?? ''))
+      || hiddenTargetCodes.has(String(node?.id ?? ''))
+    return referencedAsHidden && !isWorkflowStepHidden(node)
+      ? { ...node, data: { ...node.data, hidden: true } }
+      : node
+  })
   const stepCodeByNodeId = nodes.reduce((map, node) => {
     map.set(node.id, node.data?.code ?? node.id)
     return map
@@ -72,7 +128,7 @@ export const flowToJson = ({ nodes, edges, process, stepTypes = [] }) => {
 
   return {
     process: serializeProcess(process),
-    steps: nodes.map((node, index) => serializeStep(node, index, stepTypes, edges)),
+    steps: normalizedNodes.map((node, index) => serializeStep(node, index, stepTypes, edges)),
     transitions: edges.map((edge, index) =>
       serializeTransition(edge, index, stepCodeByNodeId)
     ),
@@ -126,11 +182,12 @@ export const jsonToFlow = (raw, stepTypes = []) => {
     id: raw.process?.id ?? raw.id ?? raw.processId ?? raw.process_id ?? null,
   })
 
-  const nodes = (raw.steps ?? []).map((step) => {
+  const rawNodes = (raw.steps ?? []).map((step) => {
     const stepCode = step.code ?? step.stepCode ?? step.step_code ?? ''
     const name = step.name ?? step.displayName ?? step.display_name ?? step.stepName ?? step.step_name ?? stepCode
     const typeValue = getStepProcessTypeRef(step)
     const nodeId = getStepNodeId(step)
+    const rawConfig = normalizeStepConfig(step.config)
     const nodeData = {
         ...DEFAULT_STEP,
         id: step.id ?? null,
@@ -144,6 +201,10 @@ export const jsonToFlow = (raw, stepTypes = []) => {
         description: step.description ?? '',
         sortOrder: step.sortOrder ?? step.sort_order ?? null,
         enabled: step.enabled ?? true,
+        hidden: isWorkflowStepHidden(step.hidden ?? step.isHidden ?? step.is_hidden ?? false),
+        buttons: normalizeStepButtons(step.buttons ?? step.stepButtons ?? step.step_buttons),
+        config: sanitizeStepConfig(rawConfig),
+        saveSubmitLog: step.saveSubmitLog ?? false,
         forms: normalizeStepForms(step),
         actions: getStepActions(step).map(deserializeAction),
     }
@@ -157,6 +218,20 @@ export const jsonToFlow = (raw, stepTypes = []) => {
         type: resolveNodeProcessTypeKey(nodeData, stepTypes),
       },
     }
+  })
+
+  const hiddenTargetCodes = new Set(
+    rawNodes.flatMap(node => (node?.data?.buttons ?? []))
+      .filter(button => button?.type === 'OPEN_HIDDEN_STEP')
+      .map(button => String(button?.targetStepCode ?? '').trim())
+      .filter(Boolean),
+  )
+  const nodes = rawNodes.map(node => {
+    const referencedAsHidden = hiddenTargetCodes.has(String(node?.data?.code ?? ''))
+      || hiddenTargetCodes.has(String(node?.id ?? ''))
+    return referencedAsHidden
+      ? { ...node, data: { ...node.data, hidden: true } }
+      : node
   })
 
   const edges = (raw.transitions ?? []).map((t) => {
@@ -404,15 +479,81 @@ const getTransitionStepRef = (transition = {}, direction) => {
   return value != null ? String(value) : ''
 }
 
-const normalizeProcess = (process = {}) => ({
-  ...process,
-  id: process?.id ?? null,
-  processKey: process?.processKey ?? process?.process_key ?? process?.key ?? process?.code ?? '',
-  name: process?.name ?? 'Untitled',
-  code: process?.code ?? process?.processKey ?? process?.process_key ?? 'untitled',
-  description: process?.description ?? '',
-  flowType: process?.flowType ?? process?.flow_type ?? '',
+const normalizeStatusConfiguration = (item = {}) => ({
+  stepProcessIds: firstArray(
+    item.stepProcessIds,
+    item.stepTypeIds,
+    item.listStepProcessId,
+    item.list_step_process_id,
+  ),
+  statusName: item.statusName ?? item.text ?? '',
+  scope: item.scope ?? 'current',
+  color: item.color ?? null,
 })
+
+export const normalizeProcessStatusConfigurations = (value) => {
+  if (Array.isArray(value)) {
+    return value.map(normalizeStatusConfiguration)
+  }
+
+  if (value && typeof value === 'object') {
+    const items = firstArray(value.items, value.configurations, value.listStatus)
+    return items.map(normalizeStatusConfiguration)
+  }
+
+  if (typeof value !== 'string' || !value.trim()) {
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(value)
+    return normalizeProcessStatusConfigurations(parsed)
+  } catch (_) {
+    const configurations = []
+    const itemPattern = /ProcessUpdateItem\[listStepProcessId=\[([^\]]*)\],\s*text=([\s\S]*?),\s*color=([^\]]*)\]/g
+    let match = itemPattern.exec(value)
+
+    while (match) {
+      const stepProcessIds = match[1]
+        .split(',')
+        .map(item => item.trim())
+        .filter(Boolean)
+        .map(item => {
+          const numberValue = Number(item)
+          return Number.isSafeInteger(numberValue) ? numberValue : item
+        })
+      const rawColor = match[3].trim()
+
+      configurations.push({
+        stepProcessIds,
+        statusName: match[2].trim(),
+        scope: 'current',
+        color: rawColor === 'null' ? null : rawColor,
+      })
+      match = itemPattern.exec(value)
+    }
+
+    return configurations
+  }
+}
+
+const normalizeProcess = (process = {}) => {
+  const configuredStatuses = Array.isArray(process?.statusConfigurations)
+    && process.statusConfigurations.length > 0
+    ? process.statusConfigurations
+    : (process?.listStatus ?? process?.list_status)
+
+  return {
+    ...process,
+    id: process?.id ?? null,
+    processKey: process?.processKey ?? process?.process_key ?? process?.key ?? process?.code ?? '',
+    name: process?.name ?? 'Untitled',
+    code: process?.code ?? process?.processKey ?? process?.process_key ?? 'untitled',
+    description: process?.description ?? '',
+    flowType: process?.flowType ?? process?.flow_type ?? '',
+    statusConfigurations: normalizeProcessStatusConfigurations(configuredStatuses),
+  }
+}
 
 /*
   Keep legacy shape in comments for quick mental mapping:
@@ -498,6 +639,13 @@ const serializeStep = (node, index, stepTypes = [], edges = []) => {
     position: node.position,
     sortOrder: node.data?.sortOrder ?? index,
     enabled: node.data?.enabled ?? true,
+    hidden: isWorkflowStepHidden(node),
+    buttons: normalizeStepButtons(node.data?.buttons).map((button, buttonIndex) => ({
+      ...button,
+      order: button.order ?? buttonIndex,
+    })),
+    config: sanitizeStepConfig(node.data?.config),
+    saveSubmitLog: node.data?.saveSubmitLog ?? false,
     form: serializeFormId(node.data?.forms ?? []),
     actions: (node.data?.actions ?? []).map(serializeAction),
   }

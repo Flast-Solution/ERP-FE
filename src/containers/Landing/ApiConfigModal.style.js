@@ -214,7 +214,7 @@ export const FileChipX = styled.button`
   opacity: .6;
   border-radius: 50%;
 
-  &:hover { opacity: 1; background: rgba(255,255,255,.1); }
+  &:hover { opacity: 1; background: ${t.surfaceActive}; }
 `
 
 export const SearchWrap = styled.div`position: relative;`

@@ -26,6 +26,6 @@ const MaterialPage = React.lazy(() => import('@/pages/material'));
 export const MaterialConfig = {
     auth: authRoles.admin,
     routes: [
-        { path: '/material', element: <MaterialPage /> }
+        { path: '/material', permission: 'material.view', element: <MaterialPage /> }
     ]
 };

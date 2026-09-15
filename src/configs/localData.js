@@ -102,6 +102,19 @@ export const PRODUCT_STATUS = [
   { value: 1, text: 'Kích hoạt', color: 'green' }
 ];
 
+export const PRODUCT_CURRENCIES = [
+  { value: 'VND', text: 'VND — Việt Nam Đồng (₫)' },
+  { value: 'USD', text: 'USD — Đô la Mỹ ($)' },
+  { value: 'EUR', text: 'EUR — Euro (€)' },
+  { value: 'GBP', text: 'GBP — Bảng Anh (£)' },
+  { value: 'JPY', text: 'JPY — Yên Nhật (¥)' },
+  { value: 'CNY', text: 'CNY — Nhân dân tệ (¥)' },
+  { value: 'KRW', text: 'KRW — Won Hàn Quốc (₩)' },
+  { value: 'SGD', text: 'SGD — Đô la Singapore (S$)' },
+  { value: 'THB', text: 'THB — Baht Thái (฿)' },
+  { value: 'AUD', text: 'AUD — Đô la Úc (A$)' }
+];
+
 export const USER_STATUS = [
   { value: 0, text: 'Ngưng', color: 'red' },
   { value: 1, text: 'Kích hoạt', color: 'green' }

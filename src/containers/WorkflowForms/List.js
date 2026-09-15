@@ -891,7 +891,10 @@ const FormDataListModal = ({ template, open, reloadKey, bizId, onCancel, onAddDa
 }
 
 const WorkflowFormsList = ({ onCreate }) => {
-  const { user: profile } = useGetMe()
+  const { user: profile, hasPermission } = useGetMe()
+  const canCreate = hasPermission('workflow.form.create')
+  const canUpdate = hasPermission('workflow.form.update')
+  const canAddData = hasPermission('workflow.submission.create')
   const bizId = useMemo(() => resolveBizId(profile), [profile])
   const reloadDataTimerRef = useRef(null)
   const [dataListTemplate, setDataListTemplate] = useState(null)
@@ -1001,7 +1004,7 @@ const WorkflowFormsList = ({ onCreate }) => {
       width: 170,
       ellipsis: true,
     },
-    {
+    (canUpdate || canAddData) && {
       title: '',
       key: 'actions',
       fixed: 'right',
@@ -1012,17 +1015,17 @@ const WorkflowFormsList = ({ onCreate }) => {
           trigger={['click']}
           menu={{
             items: [
-              {
+              canUpdate && {
                 key: 'edit',
                 icon: <EditOutlined />,
                 label: 'Chỉnh sửa form',
               },
-              {
+              canAddData && {
                 key: 'add-data',
                 icon: <FormOutlined />,
                 label: 'Thêm dữ liệu',
               },
-            ],
+            ].filter(Boolean),
             onClick: ({ key, domEvent }) => {
               domEvent?.stopPropagation()
               if (key === 'edit') {
@@ -1045,7 +1048,7 @@ const WorkflowFormsList = ({ onCreate }) => {
         </Dropdown>
       ),
     },
-  ], [entryLoadingId, handleAddData, handleEditForm])
+  ].filter(Boolean), [canAddData, canUpdate, entryLoadingId, handleAddData, handleEditForm])
 
   const beforeSubmitFilter = useCallback((values = {}) => {
     const nextValues = Object.fromEntries(
@@ -1101,6 +1104,7 @@ const WorkflowFormsList = ({ onCreate }) => {
         xScroll={1060}
         initialFilter={{ limit: 10, offset: '0', page: 1 }}
         filter={<Filter />}
+        hasCreate={canCreate}
         customClickCreate={() => onCreate()}
         beforeSubmitFilter={beforeSubmitFilter}
         onData={onData}

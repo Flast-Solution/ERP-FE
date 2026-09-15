@@ -24,23 +24,69 @@ import { useGetList } from "@flast-erp/core/hooks";
 import { Helmet } from "react-helmet";
 import { RestList, BreadcrumbCustom, CustomImage } from '@flast-erp/core/components';
 import Filter from './Filter';
-import { Button, Space } from 'antd';
-import { InAppEvent } from "@flast-erp/core/utils";
-import { GATEWAY, HASH_MODAL } from 'configs';
+import { Button, Dropdown, Space, Tooltip } from 'antd';
+import { ApartmentOutlined, EyeOutlined } from '@ant-design/icons';
+import { f5List, InAppEvent } from "@flast-erp/core/utils";
+import { HASH_MODAL } from 'configs';
 import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils';
 import ProductAttrService from '@/services/ProductAttrService';
 import { cloneDeep } from 'lodash';
 import SkuView, { PriceView } from '@/containers/Product/SkuView';
 import { Link } from 'react-router-dom';
+import WorkflowAttachModal from '@/containers/Order/List/components/WorkflowAttachModal';
+import WorkflowProgressDrawer from '@/containers/Order/List/components/WorkflowProgressDrawer';
+import useWorkflowModal from '@/containers/Order/List/hooks/useWorkflowModal';
+import useWorkflowProgressDrawer from '@/containers/Order/List/hooks/useWorkflowProgressDrawer';
+import { PRODUCT_WORKFLOW_ENTITY_TYPE } from '@/containers/Order/List/constants';
+import { enrichEntitiesWithWorkflowData } from '@/containers/Order/List/services/workflowApi';
+import { getProductImagePreviewUrl } from '@/containers/Product/productImages';
+import useGetMe from '@/hooks/useGetMe';
+
+const PRODUCT_API_PATH = 'erp/product/fetch';
 
 const Index = () => {
+  const { hasPermission } = useGetMe();
+  const canCreate = hasPermission('catalog.product.create');
+  const canUpdate = hasPermission('catalog.product.update');
+  const canManageBom = hasPermission('catalog.product.bom.manage');
+  const canAttachWorkflow = hasPermission('catalog.product.workflow.attach');
+  const canViewWorkflow = hasPermission('catalog.product.workflow.view');
+
+  const {
+    workflowModalOpen,
+    workflowLoading,
+    workflowAttaching,
+    workflows,
+    selectedOrder,
+    selectedWorkflowEntityType,
+    workflowTargets,
+    selectedWorkflowIdsByTarget,
+    initialWorkflowIdsByTarget,
+    setWorkflowIdsForTarget,
+    canSubmit,
+    openWorkflowModal,
+    closeWorkflowModal,
+    handleAttachWorkflow,
+  } = useWorkflowModal({
+    onAttached: () => f5List(PRODUCT_API_PATH),
+  });
+
+  const {
+    workflowProgressDrawerOpen,
+    workflowProgressDrawerLoading,
+    workflowProgressOrder,
+    workflowProgressOrderDetail,
+    workflowProgressInstances,
+    openWorkflowProgressDrawer,
+    closeWorkflowProgressDrawer,
+  } = useWorkflowProgressDrawer();
 
   const onEdit = (item) => {
     let title = 'Sửa sản phẩm # ' + item.id;
     let hash = '#draw/product.edit';
     let data = cloneDeep(item);
     let skus = [], listProperties = [];
-    for (const property of item.listProperties) {
+    for (const property of item.listProperties || []) {
       let attr = listProperties.find(i => i.attributedId === property.attributedId);
       if (attr) {
         attr.attributedValueId.push(property.attributedValueId);
@@ -49,10 +95,10 @@ const Index = () => {
         listProperties.push(attr);
       }
     }
-    for (const iSkus of item.skus) {
-      let item = { id: iSkus?.id, name: iSkus.name, skuPrices: iSkus.skuPrices || [] }
+    for (const iSkus of item.skus || []) {
+      let item = { id: iSkus?.id, name: iSkus.name, note: iSkus?.note, skuPrices: iSkus.skuPrices || [] }
       let details = [];
-      for (const detail of iSkus.skuDetails) {
+      for (const detail of iSkus.skuDetails || []) {
         details.push({ id: detail?.id, attributedId: detail.attributedId, attributedValueId: detail.attributedValueId });
       }
       item.sku = details;
@@ -66,7 +112,10 @@ const Index = () => {
   const onCreateProduct = () => InAppEvent.emit(HASH_MODAL, {
     hash: '#draw/product.edit',
     title: 'Tạo mới sản phẩm',
-    data: {}
+    data: {
+      image: [],
+      file: [],
+    }
   });
 
   const onAddBom = (item) => InAppEvent.emit(HASH_MODAL, {
@@ -88,11 +137,11 @@ const Index = () => {
       dataIndex: 'image',
       width: 150,
       ellipsis: true,
-      render: (image) => image ? (
+      render: (image) => getProductImagePreviewUrl(image) ? (
         <CustomImage
           preview={false}
           width={50}
-          src={String(GATEWAY).concat(image)}
+          src={getProductImagePreviewUrl(image)}
           alt='image'
         />
       ) : ('Chưa có')
@@ -102,7 +151,9 @@ const Index = () => {
       key: 'name',
       width: 200,
       ellipsis: true,
-      render: (record) => <Link to={`/product/edit/${record.id}`}>{record.name}</Link>
+      render: (record) => canUpdate
+        ? <Link to={`/product/edit/${record.id}`}>{record.name}</Link>
+        : record.name
     },
     {
       title: "SKus",
@@ -134,12 +185,49 @@ const Index = () => {
     },
     {
       title: "",
-      width: 150,
+      width: 190,
       fixed: 'right',
       render: (record) => (
         <Space gap={8}>
-          <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size='small'>Detail</Button>
-          <Button onClick={() => onAddBom(record)} size='small'>Bom</Button>
+          {canUpdate ? <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size='small'>Detail</Button> : null}
+          {canManageBom ? <Button onClick={() => onAddBom(record)} size='small'>Bom</Button> : null}
+          {(canAttachWorkflow || (canViewWorkflow && record?.workflowInstances?.length)) ? <Dropdown
+            trigger={['click']}
+            menu={{
+              items: [
+                canAttachWorkflow && {
+                  key: 'attach',
+                  icon: <ApartmentOutlined />,
+                  label: record?.workflowInstances?.length ? 'Gắn thêm workflow' : 'Gắn workflow',
+                },
+                canViewWorkflow && record?.workflowInstances?.length && {
+                  key: 'progress',
+                  icon: <EyeOutlined />,
+                  label: 'Xem tiến trình',
+                },
+              ].filter(Boolean),
+              onClick: ({ key, domEvent }) => {
+                domEvent?.stopPropagation();
+                if (key === 'attach') {
+                  openWorkflowModal(record, PRODUCT_WORKFLOW_ENTITY_TYPE);
+                }
+                if (key === 'progress') {
+                  openWorkflowProgressDrawer(record, record, {
+                    entityName: PRODUCT_WORKFLOW_ENTITY_TYPE,
+                    entityLabel: 'sản phẩm',
+                  });
+                }
+              },
+            }}
+          >
+            <Tooltip title={record?.workflowInstances?.length ? 'Xem tiến trình workflow' : 'Gắn workflow'}>
+              <Button
+                size="small"
+                icon={record?.workflowInstances?.length ? <EyeOutlined /> : <ApartmentOutlined />}
+                onClick={event => event.stopPropagation()}
+              />
+            </Tooltip>
+          </Dropdown> : null}
           {/* <Button onClick={() => onAddChecklist(record)} size='small'>Checklist</Button> */}
         </Space>
       )
@@ -151,7 +239,7 @@ const Index = () => {
     return values;
   }, []);
 
-  const onData = useCallback((values) => {
+  const onData = useCallback(async (values) => {
     if (arrayEmpty(values.embedded)) {
       return values;
     }
@@ -162,7 +250,7 @@ const Index = () => {
     }
     ProductAttrService.loadByIds(attrsId);
     ProductAttrService.loadValueByIds(attrsValuesId);
-    return values;
+    return enrichEntitiesWithWorkflowData(values, PRODUCT_WORKFLOW_ENTITY_TYPE);
   }, []);
 
   return (
@@ -180,9 +268,36 @@ const Index = () => {
         filter={<Filter />}
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
-        apiPath={'erp/product/fetch'}
+        apiPath={PRODUCT_API_PATH}
+        hasCreate={canCreate}
         customClickCreate={onCreateProduct}
         columns={CUSTOM_ACTION}
+      />
+      <WorkflowAttachModal
+        open={workflowModalOpen}
+        onCancel={closeWorkflowModal}
+        onOk={handleAttachWorkflow}
+        confirmLoading={workflowAttaching}
+        workflowTargets={workflowTargets}
+        selectedWorkflowIdsByTarget={selectedWorkflowIdsByTarget}
+        initialWorkflowIdsByTarget={initialWorkflowIdsByTarget}
+        setWorkflowIdsForTarget={setWorkflowIdsForTarget}
+        workflows={workflows}
+        workflowLoading={workflowLoading}
+        selectedOrder={selectedOrder}
+        selectedWorkflowEntityType={selectedWorkflowEntityType}
+        canSubmit={canSubmit}
+        entityLabel="Sản phẩm"
+      />
+      <WorkflowProgressDrawer
+        open={workflowProgressDrawerOpen}
+        loading={workflowProgressDrawerLoading}
+        order={workflowProgressOrder}
+        orderDetail={workflowProgressOrderDetail}
+        workflowInstances={workflowProgressInstances}
+        onClose={closeWorkflowProgressDrawer}
+        entityLabel="Sản phẩm"
+        entityType={PRODUCT_WORKFLOW_ENTITY_TYPE}
       />
     </>
   )

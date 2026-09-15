@@ -26,6 +26,6 @@ const WareHouse = React.lazy(() => import('@/pages/listKho'));
 export const WareHouseConfig = {
     auth: authRoles.user,
     routes: [
-        { path: '/warehouse/danh-sach-kho', element: <WareHouse /> }
+        { path: '/warehouse/danh-sach-kho', permission: 'inventory.warehouse.view', element: <WareHouse /> }
     ]
 };

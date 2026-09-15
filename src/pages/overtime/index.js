@@ -19,12 +19,15 @@ const { Paragraph, Text } = Typography;
 
 const Overtime = () => {
 
-  const { isLeader } = useGetMe();
-  const showPreviewOnly = isLeader();
+  const { hasPermission } = useGetMe();
+  const canCreate = hasPermission('hr.overtime.create');
+  const canUpdate = hasPermission('hr.overtime.update');
+  const canApprove = hasPermission(['hr.overtime.approve', 'hr.overtime.reject']);
+  const showPreviewOnly = canApprove;
 
   const textBtn = useCallback((item) => {
     let text = "Xem đơn";
-    if (isLeader()) {
+    if (canApprove) {
       const reEditStatus = item?.overTimeReality?.status ?? item.status;
       if (reEditStatus === NGHI_PHEP_STATUS_WAITING) {
         text = "Duyệt";
@@ -33,7 +36,7 @@ const Overtime = () => {
       }
     }
     return text;
-  }, [isLeader]);
+  }, [canApprove]);
   
   const onEdit = (item) => {
     let title = 'Sửa đơn làm thêm giờ # ' + item.id;
@@ -96,7 +99,7 @@ const Overtime = () => {
       ellipsis: true,
 			render: (item) => NGHI_PHEP_STATUS_TEXT.find(i => i.id === (item?.overTimeReality?.status ?? item.status ))?.name ?? '(Unknow)'
     },
-		{
+		(canUpdate || canApprove) && {
       title:"",
       width:100,
       fixed:'right',
@@ -104,7 +107,7 @@ const Overtime = () => {
         <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size='small'>{textBtn(record)}</Button>
       )
     }
-	];
+	].filter(Boolean);
 
   const beforeSubmitFilter = useCallback((values) => {
     dateFormatOnSubmit(values, ['from', 'to']);
@@ -126,6 +129,7 @@ const Overtime = () => {
         beforeSubmitFilter={beforeSubmitFilter}
 				useGetAllQuery={ useGetList }
 				apiPath={'over-time/fetch'}
+        hasCreate={canCreate}
         customClickCreate={onCreate}
 				columns={CUSTOM_ACTION}
 			/>

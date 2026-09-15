@@ -40,6 +40,13 @@ const Filter = () => {
         />
       </Col>
       <Col xl={6} lg={6} md={6} xs={24}>
+        <FormInput
+          label="Tìm theo dữ liệu workflow"
+          name="workflowDataKeyword"
+          placeholder="Tìm theo dữ liệu workflow"
+        />
+      </Col>
+      <Col xl={6} lg={6} md={6} xs={24}>
         <FormDatePicker
           format='YYYY-MM-DD'
           name='from'
