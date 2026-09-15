@@ -4,7 +4,7 @@ import { EyeOutlined, InfoCircleOutlined, UserAddOutlined } from '@ant-design/ic
 import LeadFilter from './LeadFilter';
 import { useGetList } from "@flast-erp/core/hooks";
 import { Button, Form, Tag, Tooltip } from 'antd';
-import { RequestUtils, dateFormatOnSubmit, f5List } from '@flast-erp/core/utils';
+import { RequestUtils, dateFormatOnSubmit, f5List, formatDateDayjs } from '@flast-erp/core/utils';
 import { HASH_MODAL } from '@/configs';
 import { InAppEvent } from '@flast-erp/core/utils';
 import { cloneDeep } from 'lodash';
@@ -18,6 +18,11 @@ import { getLeadStatusOption, mergeLeadStatusOptions } from './leadStatusOptions
 import useGetMe from '@/hooks/useGetMe';
 
 const LEAD_API_PATH = 'data/lists';
+const INTEREST_LEVELS = {
+  HIGH: { label: 'Cao', color: 'red' },
+  MEDIUM: { label: 'Trung bình', color: 'gold' },
+  LOW: { label: 'Thấp', color: 'blue' },
+};
 
 const hasLeadWorkflow = record => (
   (Array.isArray(record?.workflowInstances) && record.workflowInstances.length > 0)
@@ -140,6 +145,26 @@ const LeadList = () => {
           ? <Tag color={statusItem.color || undefined}>{statusItem.name}</Tag>
           : '-';
       }
+    },
+    {
+      title: "Độ ưu tiên",
+      dataIndex: 'interestLevel',
+      width: 120,
+      render: (interestLevel) => {
+        const priority = INTEREST_LEVELS[String(interestLevel ?? '').toUpperCase()];
+        return priority
+          ? <Tag color={priority.color}>{priority.label}</Tag>
+          : '-';
+      }
+    },
+    {
+      title: "Lịch hẹn",
+      dataIndex: 'nextAppointmentAt',
+      width: 160,
+      ellipsis: true,
+      render: (nextAppointmentAt) => nextAppointmentAt
+        ? formatDateDayjs(nextAppointmentAt, 'DD/MM/YYYY HH:mm')
+        : '-'
     },
     {
       title: "Ngày",

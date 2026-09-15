@@ -69,7 +69,6 @@ const ProductAttributeSelector = () => {
         showSearch
         mode="multiple"
         loading={loading || saving}
-        disabled={saving}
         value={selectedAttributeIds}
         options={options}
         optionFilterProp="label"

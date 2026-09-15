@@ -40,7 +40,6 @@ import useWorkflowProgressDrawer from '@/containers/Order/List/hooks/useWorkflow
 import { PRODUCT_WORKFLOW_ENTITY_TYPE } from '@/containers/Order/List/constants';
 import { enrichEntitiesWithWorkflowData } from '@/containers/Order/List/services/workflowApi';
 import { getProductImagePreviewUrl } from '@/containers/Product/productImages';
-import DefaultProductAttributeSelector from './DefaultProductAttributeSelector';
 import useGetMe from '@/hooks/useGetMe';
 
 const PRODUCT_API_PATH = 'erp/product/fetch';
@@ -49,7 +48,6 @@ const Index = () => {
   const { hasPermission } = useGetMe();
   const canCreate = hasPermission('catalog.product.create');
   const canUpdate = hasPermission('catalog.product.update');
-  const canManageAttributes = hasPermission('catalog.product.attribute.manage');
   const canManageBom = hasPermission('catalog.product.bom.manage');
   const canAttachWorkflow = hasPermission('catalog.product.workflow.attach');
   const canViewWorkflow = hasPermission('catalog.product.workflow.view');
@@ -273,7 +271,6 @@ const Index = () => {
         apiPath={PRODUCT_API_PATH}
         hasCreate={canCreate}
         customClickCreate={onCreateProduct}
-        customActions={canManageAttributes ? <DefaultProductAttributeSelector /> : null}
         columns={CUSTOM_ACTION}
       />
       <WorkflowAttachModal

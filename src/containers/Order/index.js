@@ -325,6 +325,20 @@ const BanHangPage = ({
 
   useEffectAsync(async (isMounted) => {
     const { customer, order, data } = await OrderService.getOrderOnEdit(localOrder.orderId);
+    console.log('[OpportunityEdit][3. Component data]', {
+      requestedOrderId: localOrder.orderId,
+      currency: order?.currency,
+      exchangeRate: order?.exchangeRate,
+      orderTotal: order?.total,
+      details: (data ?? []).map(detail => ({
+        id: detail?.id,
+        price: detail?.price,
+        quantity: detail?.quantity,
+        discountAmount: detail?.discountAmount,
+        total: detail?.total,
+        totalPrice: detail?.totalPrice
+      }))
+    });
     if (customer) {
       setCustomer(customer);
     }
