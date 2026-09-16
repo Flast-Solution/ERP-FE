@@ -34,6 +34,10 @@ export const CohoiConfig = {
         { path: '/sale/ban-hang', permission: ({ search }) => new URLSearchParams(search).has('dataId')
             ? 'sales.lead.convert_opportunity'
             : 'sales.opportunity.create', element: <BanHangPage /> },
-        { path: '/sale/ban-hang/:orderId', permission: 'sales.opportunity.update', element: <BanHangPage /> }
+        { path: '/sale/ban-hang/:orderId', permission: ({ search }) => (
+            new URLSearchParams(search).get('type') === 'order'
+                ? 'sales.order.update'
+                : 'sales.opportunity.update'
+        ), element: <BanHangPage /> }
     ]
 };

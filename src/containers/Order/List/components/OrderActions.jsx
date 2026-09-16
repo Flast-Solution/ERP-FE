@@ -17,6 +17,7 @@ const OrderActions = ({
   navigate,
   canViewDetail,
   canUpdateOpportunity,
+  canUpdateOrder,
   canViewQuotation,
   canAttachWorkflow,
   canViewWorkflow,
@@ -153,6 +154,15 @@ const OrderActions = ({
           size="small"
           style={{ color: '#16c5faff' }}
           onClick={() => navigate(String('/sale/ban-hang/').concat(record.id))}
+        >
+          <EditFilled />
+        </Button>
+      )}
+      {canUpdateOrder && record.type === 'order' && (
+        <Button
+          size="small"
+          style={{ color: '#16c5faff' }}
+          onClick={() => navigate(`/sale/ban-hang/${record.id}?type=order`)}
         >
           <EditFilled />
         </Button>

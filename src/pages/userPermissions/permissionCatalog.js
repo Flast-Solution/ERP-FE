@@ -66,6 +66,7 @@ export const PERMISSION_MENUS = [
   ]),
   menu('Đơn hàng', 'Danh sách đơn hàng', '/sale/order', [
     p('Xem danh sách đơn hàng', 'sales.order.view'), p('Xem chi tiết', 'sales.order.detail.view'),
+    p('Chỉnh sửa đơn hàng', 'sales.order.update'),
     p('Gắn workflow', 'sales.order.workflow.attach'), p('Xem workflow', 'sales.order.workflow.view'),
     p('Thực hiện workflow', 'sales.order.workflow.execute'), p('Cập nhật công ty', 'sales.order.company.update'),
     p('Quản lý hợp đồng', 'sales.order.contract.manage'),
@@ -253,4 +254,3 @@ export const PERMISSION_MENUS = [
 export const ALL_PERMISSION_CODES = Array.from(new Set(
   PERMISSION_MENUS.flatMap(item => item.functions.map(fn => fn.code)),
 ))
-

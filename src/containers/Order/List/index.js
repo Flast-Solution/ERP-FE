@@ -82,6 +82,7 @@ const ListOrder = ({
     ? 'sales.opportunity.detail.view'
     : 'sales.order.detail.view')
   const canUpdateOpportunity = isOpportunityList && hasPermission('sales.opportunity.update')
+  const canUpdateOrder = isOrderList && hasPermission('sales.order.update')
   const canViewQuotation = isOpportunityList && hasPermission('sales.quotation.view')
   const canAttachWorkflow = hasPermission(isOpportunityList
     ? 'sales.opportunity.workflow.attach'
@@ -215,6 +216,7 @@ const ListOrder = ({
     navigate,
     canViewDetail,
     canUpdateOpportunity,
+    canUpdateOrder,
     canViewQuotation,
     canAttachWorkflow,
     canViewWorkflow,

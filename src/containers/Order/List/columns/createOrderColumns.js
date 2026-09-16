@@ -124,6 +124,7 @@ const createOrderColumns = ({
   navigate,
   canViewDetail,
   canUpdateOpportunity,
+  canUpdateOrder,
   canViewQuotation,
   canAttachWorkflow,
   canViewWorkflow,
@@ -288,6 +289,7 @@ const createOrderColumns = ({
         navigate={navigate}
         canViewDetail={canViewDetail}
         canUpdateOpportunity={canUpdateOpportunity}
+        canUpdateOrder={canUpdateOrder}
         canViewQuotation={canViewQuotation}
         canAttachWorkflow={canAttachWorkflow}
         canViewWorkflow={canViewWorkflow}
