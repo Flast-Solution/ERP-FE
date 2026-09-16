@@ -122,6 +122,7 @@ Quyền duyệt báo giá phải kết hợp với `userApproval` và trạng th
 |---|---|---:|---|
 | Đơn hàng | Xem, tìm kiếm và lọc danh sách | ✅ | `sales.order.view` |
 | Đơn hàng | Xem chi tiết: thanh toán, hóa đơn, công ty | ✅ | `sales.order.detail.view` |
+| Đơn hàng | Chỉnh sửa đơn hàng | ✅ | `sales.order.update` |
 | Đơn hàng | Xem đơn hủy | ✅ | `sales.order.cancelled.view` |
 | Chăm sóc sau bán | Xem đơn hàng chưa chăm sóc | ✅ | `sales.order.after_sale.view` |
 | Chăm sóc sau bán | Cập nhật kết quả chăm sóc | ✅ | `sales.order.after_sale.update` |

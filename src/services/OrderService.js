@@ -68,9 +68,9 @@ const normalizeOrderDetail = (detail, product, order) => {
     ...detail,
     key: detail?.key ?? detail?.code ?? String(detail?.id),
     detailId: detail?.detailId ?? detail?.id,
-    // "Số đơn" của từng dòng chỉ lấy từ details[].code.
+    // API view-on-edit có thể trả mã dòng ở `data[].key` thay vì `code`.
     // Không dùng orderName (ví dụ "Bán lẻ") hoặc orderCode làm giá trị thay thế.
-    code: detail?.code ?? '',
+    code: detail?.code ?? detail?.key ?? '',
     dayQuote: detail?.dayQuote ?? null,
     productCode: detail?.productCode ?? product?.code ?? null,
     productName: detail?.productName ?? product?.name ?? '',
