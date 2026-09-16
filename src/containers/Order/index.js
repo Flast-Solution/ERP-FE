@@ -42,6 +42,9 @@ import { useEffectAsync } from '@flast-erp/core/hooks';
 import { mergeSavedOrderLines, parseOrderLine } from './orderLine';
 import styled from 'styled-components';
 import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+
+dayjs.extend(customParseFormat);
 
 const { Text } = Typography;
 const CURRENCY_VND = 'VND';
@@ -77,6 +80,17 @@ const formatCurrencyAmount = (value, currency = CURRENCY_VND) => Number(value ??
 const getExchangeRate = (currency, exchangeRate) => (
   currency === CURRENCY_USD ? Number(exchangeRate ?? 0) : 1
 );
+const parseDayQuote = value => {
+  if (!value) return null;
+  if (typeof value === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+    return dayjs(value, 'DD/MM/YYYY', true);
+  }
+  return dayjs(value);
+};
+const formatDayQuoteForPayload = value => {
+  const dateValue = parseDayQuote(value);
+  return dateValue?.isValid() ? dateValue.format('DD/MM/YYYY') : null;
+};
 const warrantyOptions = [
   { name: '(Chưa có)', id: 1 },
   { name: '6 Tháng', id: 6 },
@@ -88,7 +102,7 @@ const ORDER_TEMPLATE = {
   key: "1",
   note: "",
   detailId: null,
-  orderName: "",
+  code: "",
   dayQuote: null,
   productId: null,
   productCode: "",
@@ -396,7 +410,7 @@ const BanHangPage = ({
       /* Tạo Item trong list sản phẩm */
       order.key = randomString();
       order.note = values?.note ?? "";
-      order.orderName = values?.orderName ?? "";
+      order.code = values?.code ?? "";
       order.productId = productId;
       order.productCode = productCode ?? mProduct.code ?? null;
       order.productName = mProduct.name;
@@ -483,15 +497,15 @@ const BanHangPage = ({
   const columns = [
     {
       title: 'Số đơn',
-      dataIndex: 'orderName',
-      key: 'orderName',
+      dataIndex: 'code',
+      key: 'code',
       width: 150,
       render: (value, record) => (
         <Input
           value={value}
           maxLength={100}
           placeholder="Nhập số đơn"
-          onChange={event => handleChange(record.key, 'orderName', event.target.value)}
+          onChange={event => handleChange(record.key, 'code', event.target.value)}
         />
       )
     },
@@ -628,7 +642,7 @@ const BanHangPage = ({
       key: 'dayQuote',
       width: 150,
       render: (value, record) => {
-        const dateValue = value ? dayjs(value) : null;
+        const dateValue = parseDayQuote(value);
         return (
           <DatePicker
             allowClear
@@ -638,7 +652,7 @@ const BanHangPage = ({
             onChange={date => handleChange(
               record.key,
               'dayQuote',
-              date ? date.startOf('day').valueOf() : null,
+              date ? date.format('DD/MM/YYYY') : null,
             )}
             style={{ width: '100%' }}
           />
@@ -891,6 +905,7 @@ const BanHangPage = ({
         customer: mCustomer,
         details: data.map(({ mSkuDetails, ...detail }) => ({
           ...detail,
+          dayQuote: formatDayQuoteForPayload(detail.dayQuote),
           skuDetails: detail.skuDetails ?? mSkuDetails ?? []
         })),
         shippingCost: Number(shippingCost || 0),
@@ -974,7 +989,7 @@ const BanHangPage = ({
             editable: col.editable?.toString()
           }),
           render: [
-            'orderName',
+            'code',
             'profit',
             'shippingCost',
             'salePrice',

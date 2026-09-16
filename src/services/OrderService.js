@@ -64,11 +64,13 @@ const normalizeOrderDetail = (detail, product, order) => {
     ? Number(responseTotal)
     : Math.round(Number(responseTotal) * exchangeRate);
 
-  return {
+  const normalizedDetail = {
     ...detail,
     key: detail?.key ?? detail?.code ?? String(detail?.id),
     detailId: detail?.detailId ?? detail?.id,
-    orderName: detail?.orderName ?? detail?.name ?? '',
+    // "Số đơn" của từng dòng chỉ lấy từ details[].code.
+    // Không dùng orderName (ví dụ "Bán lẻ") hoặc orderCode làm giá trị thay thế.
+    code: detail?.code ?? '',
     dayQuote: detail?.dayQuote ?? null,
     productCode: detail?.productCode ?? product?.code ?? null,
     productName: detail?.productName ?? product?.name ?? '',
@@ -90,6 +92,9 @@ const normalizeOrderDetail = (detail, product, order) => {
     editable: false,
     warehouseOptions: getWarehouseByProduct(detail?.skuId, product)
   };
+  delete normalizedDetail.orderName;
+  delete normalizedDetail.orderCode;
+  return normalizedDetail;
 }
 
 const OrderService = {
@@ -132,7 +137,11 @@ const OrderService = {
 
     for (let item of response.embedded) {
       const { details } = item;
-      item.products = details.map((detail, id) => ({ id: id + 1, name: detail.productName }));
+      item.products = details.map((detail, id) => ({
+        id: id + 1,
+        code: detail?.code,
+        name: detail?.productName,
+      }));
       item.detailstatus = details.map((detail, id) => ({ ...getColorMeta(detail), id: id + 1 }));
       // Keep details for creating batch inspection
       // delete item.details;
@@ -152,11 +161,23 @@ const OrderService = {
     const order = payload?.order && typeof payload.order === 'object'
       ? payload.order
       : payload;
-    const details = Array.isArray(payload?.data)
-      ? payload.data
-      : Array.isArray(order?.details)
-        ? order.details
-        : [];
+    const orderDetails = Array.isArray(order?.details) ? order.details : [];
+    const editableDetails = Array.isArray(payload?.data) ? payload.data : [];
+    const details = editableDetails.length > 0
+      ? editableDetails.map((detail, index) => {
+        const sourceDetail = orderDetails.find(item => (
+          String(item?.id) === String(detail?.id ?? detail?.detailId)
+        )) ?? orderDetails[index];
+
+        return sourceDetail
+          ? {
+            ...sourceDetail,
+            ...detail,
+            code: detail?.code ?? sourceDetail?.code,
+          }
+          : detail;
+      })
+      : orderDetails;
     const customer = normalizeOrderCustomer(order, payload?.customer);
 
     console.log('[OpportunityEdit][1. API response]', {
@@ -167,6 +188,10 @@ const OrderService = {
       total: order?.total,
       details: details.map(detail => ({
         id: detail?.id,
+        detailId: detail?.detailId,
+        code: detail?.code,
+        name: detail?.name,
+        orderName: detail?.orderName,
         price: detail?.price,
         quantity: detail?.quantity,
         priceOff: detail?.priceOff,
@@ -216,6 +241,7 @@ const OrderService = {
       details: normalizedDetails.map(detail => ({
         id: detail?.id,
         detailId: detail?.detailId,
+        code: detail?.code,
         price: detail?.price,
         quantity: detail?.quantity,
         discountAmount: detail?.discountAmount,

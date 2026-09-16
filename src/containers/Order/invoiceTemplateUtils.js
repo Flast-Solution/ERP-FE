@@ -58,7 +58,7 @@ export const createInvoiceOrder = ({ customerOrder = {}, customer, details }) =>
           ...detail,
           id: id ?? original?.id,
           code: detail.code ?? original?.code ?? detail.key ?? null,
-          name: detail.name ?? original?.name ?? detail.orderName ?? null,
+          name: detail.name ?? original?.name ?? detail.code ?? detail.orderCode ?? detail.orderName ?? null,
           total: detail.total ?? original?.total ?? calculatedTotal,
           priceOff: detail.priceOff ?? original?.priceOff ?? detail.discountAmount ?? 0,
           quoteConfig: detail.quoteConfig ?? original?.quoteConfig ?? null,

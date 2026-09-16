@@ -199,6 +199,7 @@ const ListOrder = ({
 
   const columns = createOrderColumns({
     isOpportunityList,
+    showOrderDetailTooltip: isOpportunityList || isOrderList,
     opportunityStatusOptions,
     copiedIndex,
     setCopiedIndex,
