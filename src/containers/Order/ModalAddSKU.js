@@ -337,9 +337,9 @@ const AddSKU = (props) => {
             resourceData={OrderService.getListOrderName()}
             valueProp='name'
             titleProp='name'
-            label='Tên đơn'
+            label='Số đơn'
             name='orderName'
-            placeholder={'Nhập tên đơn nếu có'}
+            placeholder={'Nhập số đơn nếu có'}
           />
         </Col>
         <Col span={24}>
