@@ -69,6 +69,7 @@ const normalizeOrderDetail = (detail, product, order) => {
     key: detail?.key ?? detail?.code ?? String(detail?.id),
     detailId: detail?.detailId ?? detail?.id,
     orderName: detail?.orderName ?? detail?.name ?? '',
+    dayQuote: detail?.dayQuote ?? null,
     productCode: detail?.productCode ?? product?.code ?? null,
     productName: detail?.productName ?? product?.name ?? '',
     unit: detail?.unit ?? product?.unit ?? '(Chưa có)',
