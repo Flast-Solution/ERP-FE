@@ -8,7 +8,13 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Input, Select, Spin } from 'antd'
-import { ApiOutlined, ClockCircleOutlined, SearchOutlined, SwapOutlined } from '@ant-design/icons'
+import {
+  ApiOutlined,
+  ClockCircleOutlined,
+  InboxOutlined,
+  SearchOutlined,
+  SwapOutlined,
+} from '@ant-design/icons'
 import moment from 'moment'
 import {
   useConversationList,
@@ -18,6 +24,7 @@ import {
   useCounts,
   useSortMode,
   useOmniStore,
+  CHANNEL_STATUS,
   CHANNEL_TYPE,
   CONVERSATION_STATUS,
   SCOPE,
@@ -39,8 +46,8 @@ import {
   AssigneeChip,
   WindowChip,
   UnreadDot,
-  ListEmpty,
 } from './listStyles'
+import EmptyState from './EmptyState'
 
 /* ---------------------------------------------------------------- */
 
@@ -73,14 +80,24 @@ const initialsOf = (name = '') => {
 
 const channelInitial = (channelType) => (channelType === CHANNEL_TYPE.FACEBOOK ? 'f' : 'Z')
 
-/* Rút gọn thời gian còn lại: 2g10, 45p */
+/* Ba mức hiển thị theo độ gấp. Dưới 10 phút thì đếm từng giây —
+   lúc đó con số nhảy liên tục chính là tín hiệu "phải trả lời ngay",
+   mạnh hơn bất kỳ màu nào. */
 const shortRemaining = (ms) => {
-  const minutes = Math.floor(ms / 60_000)
+  const totalSeconds = Math.floor(ms / 1000)
+  if (totalSeconds < CRITICAL_THRESHOLD / 1000) {
+    const m = Math.floor(totalSeconds / 60)
+    const sec = totalSeconds % 60
+    return `${m}:${String(sec).padStart(2, '0')}`
+  }
+  const minutes = Math.floor(totalSeconds / 60)
   const hours = Math.floor(minutes / 60)
   return hours > 0 ? `${hours}g${String(minutes % 60).padStart(2, '0')}` : `${minutes}p`
 }
 
 const URGENT_THRESHOLD = 3 * 3600_000
+/* Dưới mốc này thì đếm từng giây */
+const CRITICAL_THRESHOLD = 10 * 60_000
 
 /* ---------------------------------------------------------------- */
 
@@ -89,8 +106,15 @@ const ConversationRow = memo(({ item, active, onOpen, tick }) => {
   const status = STATUS_CHIP[item.status]
 
   /* tick chỉ để ép tính lại mỗi phút, giá trị thực lấy từ helper */
-  const remaining = useMemo(() => getWindowRemaining(item), [item])
-  const windowState = remaining <= 0 ? 'closed' : remaining < URGENT_THRESHOLD ? 'urgent' : 'ok'
+  const remaining = useMemo(() => getWindowRemaining(item), [item, tick])
+  const windowState =
+    remaining <= 0
+      ? 'closed'
+      : remaining < CRITICAL_THRESHOLD
+        ? 'critical'
+        : remaining < URGENT_THRESHOLD
+          ? 'urgent'
+          : 'ok'
 
   return (
     <Row $active={active} $unread={unread} onClick={() => onOpen(item.id)}>
@@ -136,7 +160,8 @@ const ConversationRow = memo(({ item, active, onOpen, tick }) => {
             ) : (
               <>
                 <ClockCircleOutlined />
-                còn {shortRemaining(remaining)}
+                {windowState === 'critical' ? '' : 'còn '}
+                {shortRemaining(remaining)}
               </>
             )}
           </WindowChip>
@@ -149,7 +174,14 @@ ConversationRow.displayName = 'ConversationRow'
 
 /* ---------------------------------------------------------------- */
 
-const ConversationList = ({ onOpen, onLoadMore, onFilter, onReconnect, mobileActive }) => {
+const ConversationList = ({
+  onOpen,
+  onLoadMore,
+  onFilter,
+  onReconnect,
+  onOpenChannelSetting,
+  mobileActive,
+}) => {
   const conversations = useConversationList()
   const activeId = useActiveId()
   const filters = useFilters()
@@ -162,15 +194,36 @@ const ConversationList = ({ onOpen, onLoadMore, onFilter, onReconnect, mobileAct
 
   const scrollRef = useRef(null)
 
-  /* MỘT đồng hồ cho cả danh sách, 60 giây một nhịp.
-     Để mỗi dòng tự setInterval thì 50 hội thoại là 50 timer. */
-  const [tick, setTick] = useState(0)
-  useEffect(() => {
-    const timer = setInterval(() => setTick((v) => v + 1), 60_000)
-    return () => clearInterval(timer)
-  }, [])
+  /* "Chưa có tin nào" chỉ đúng khi người dùng chưa lọc gì.
+     Có lọc mà rỗng là chuyện khác hẳn. */
+  const isPristine =
+    !filters.keyword &&
+    !filters.channelAccountId &&
+    filters.status === null &&
+    filters.scope === SCOPE.ALL
 
-  const brokenChannel = useMemo(() => channels.find((c) => c.status === 2), [channels])
+  /* MỘT đồng hồ cho cả danh sách — mỗi dòng tự setInterval thì
+     50 hội thoại là 50 timer chạy song song.
+     Nhịp thích ứng: chỉ chạy từng giây khi thực sự có hội thoại
+     sắp hết hạn, còn lại 30 giây một nhịp cho nhẹ. */
+  const [tick, setTick] = useState(0)
+  const [fastTick, setFastTick] = useState(false)
+
+  useEffect(() => {
+    const timer = setInterval(() => setTick((v) => v + 1), fastTick ? 1000 : 30_000)
+    return () => clearInterval(timer)
+  }, [fastTick])
+
+  /* Xét lại nhịp sau mỗi lần tick hoặc khi danh sách đổi */
+  useEffect(() => {
+    const needFast = conversations.some((c) => {
+      const remaining = getWindowRemaining(c)
+      return remaining > 0 && remaining < CRITICAL_THRESHOLD
+    })
+    setFastTick((prev) => (prev === needFast ? prev : needFast))
+  }, [conversations, tick])
+
+  const brokenChannel = useMemo(() => channels.find((c) => c.status === CHANNEL_STATUS.TOKEN_ERROR), [channels])
 
   /* Sắp xếp ở client — dữ liệu đã có sẵn, không cần gọi lại API */
   const sorted = useMemo(() => {
@@ -183,7 +236,7 @@ const ConversationList = ({ onOpen, onLoadMore, onFilter, onReconnect, mobileAct
       if (rb <= 0 && ra > 0) return -1
       return ra - rb
     })
-  }, [conversations, sortMode])
+  }, [conversations, sortMode, tick])
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current
@@ -216,6 +269,52 @@ const ConversationList = ({ onOpen, onLoadMore, onFilter, onReconnect, mobileAct
       </span>
     ),
   }))
+
+  /* Ba ca rỗng khác nhau, xử lý khác nhau:
+     chưa nối kênh -> dẫn sang cấu hình; đã nối mà chưa có tin -> chờ;
+     có tin nhưng bộ lọc không khớp -> gợi ý bỏ lọc. */
+  const renderEmpty = () => {
+    if (channels.length === 0) {
+      return (
+        <EmptyState
+          icon={<ApiOutlined />}
+          title="Chưa nối kênh nào"
+          description="Nối Zalo OA hoặc Facebook fanpage để tin nhắn khách chảy về đây."
+          action={
+            <Button type="primary" onClick={onOpenChannelSetting}>
+              Nối kênh
+            </Button>
+          }
+        />
+      )
+    }
+
+    if (isPristine) {
+      return (
+        <EmptyState
+          icon={<InboxOutlined />}
+          title="Chưa có tin nhắn nào"
+          description="Zalo OA và Facebook đã nối xong. Tin nhắn mới của khách sẽ hiện ở đây."
+        />
+      )
+    }
+
+    return (
+      <EmptyState
+        icon={<SearchOutlined />}
+        title={
+          filters.scope === SCOPE.UNREPLIED
+            ? 'Không còn tin chờ trả lời'
+            : 'Không có hội thoại nào khớp'
+        }
+        description={
+          filters.scope === SCOPE.UNREPLIED
+            ? 'Mọi khách đã được trả lời. Xem tab Tất cả để duyệt lại.'
+            : 'Thử bỏ bớt bộ lọc hoặc đổi từ khoá tìm kiếm.'
+        }
+      />
+    )
+  }
 
   return (
     <ListPane $mobileActive={mobileActive}>
@@ -307,13 +406,7 @@ const ConversationList = ({ onOpen, onLoadMore, onFilter, onReconnect, mobileAct
           </div>
         )}
 
-        {!loading && sorted.length === 0 && (
-          <ListEmpty>
-            {filters.scope === SCOPE.UNREPLIED
-              ? 'Không còn tin nào chờ trả lời.'
-              : 'Chưa có hội thoại nào ở bộ lọc này.'}
-          </ListEmpty>
-        )}
+        {!loading && sorted.length === 0 && renderEmpty()}
       </ScrollArea>
     </ListPane>
   )

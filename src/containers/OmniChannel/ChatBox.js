@@ -18,6 +18,7 @@ import {
   MessageOutlined,
   PaperClipOutlined,
   PictureOutlined,
+  SelectOutlined,
   SendOutlined,
   StopOutlined,
   UserAddOutlined,
@@ -43,9 +44,9 @@ import {
   SystemLine,
   Bubble,
   Composer,
-  ChatEmpty,
   ACCENT,
 } from './chatStyles'
+import EmptyState from './EmptyState'
 
 /* Chấm màu trong ô chọn trạng thái — nhìn thấy màu trước khi đọc chữ */
 const STATUS_OPTIONS = [
@@ -232,10 +233,11 @@ const ChatBox = ({
   if (!conversation) {
     return (
       <ChatPane $mobileActive={mobileActive}>
-        <ChatEmpty>
-          Chọn một hội thoại để bắt đầu.
-          <span style={{ fontSize: 12 }}>Tin chưa trả lời được xếp lên đầu danh sách.</span>
-        </ChatEmpty>
+        <EmptyState
+          icon={<SelectOutlined />}
+          title="Chưa chọn hội thoại"
+          description="Chọn một hội thoại ở danh sách bên trái để đọc và trả lời khách."
+        />
       </ChatPane>
     )
   }

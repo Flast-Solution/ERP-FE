@@ -15,6 +15,7 @@ import {
   InboxOutlined,
   PhoneOutlined,
   PlusOutlined,
+  ReloadOutlined,
   SearchOutlined,
   ShopOutlined,
   ShoppingOutlined,
@@ -42,8 +43,8 @@ import {
   StatCard,
   TimelineItem,
   EmptyCard,
-  PaneEmpty,
 } from './contextStyles'
+import EmptyState from './EmptyState'
 
 const REF_META = {
   [REF_TYPE.LEAD]: { accent: '#1677ff', tint: '#e6f4ff', label: 'Lead' },
@@ -135,6 +136,7 @@ const ContextPanel = ({
   onFindCustomer,
   onCreateOpportunity,
   onOpenSibling,
+  onReloadContext,
 }) => {
   const context = useActiveContext()
   const loading = useOmniStore((s) => s.contextLoading)
@@ -156,7 +158,17 @@ const ContextPanel = ({
     ]
   }, [context])
 
-  if (!activeId) return <ContextPane $open={open} />
+  if (!activeId) {
+    return (
+      <ContextPane $open={open}>
+        <EmptyState
+          icon={<UserOutlined />}
+          title="Chưa có khách"
+          description="Thông tin khách, công nợ và lịch sử đơn sẽ hiện ở đây."
+        />
+      </ContextPane>
+    )
+  }
 
   if (loading && !context) {
     return (
@@ -166,10 +178,24 @@ const ContextPanel = ({
     )
   }
 
+  /* Chỉ vào đây khi gọi API thất bại thật (mạng, 500).
+     Hội thoại chưa có khách KHÔNG phải lỗi — nó trả customer = null
+     và rơi vào nhánh "Khách chưa gắn" bên dưới. */
   if (error) {
     return (
       <ContextPane $open={open}>
-        <PaneEmpty>{error}</PaneEmpty>
+        <EmptyState
+          icon={<ExclamationCircleOutlined />}
+          title="Không tải được thông tin"
+          description={error}
+          action={
+            onReloadContext && (
+              <Button icon={<ReloadOutlined />} onClick={onReloadContext}>
+                Thử lại
+              </Button>
+            )
+          }
+        />
       </ContextPane>
     )
   }

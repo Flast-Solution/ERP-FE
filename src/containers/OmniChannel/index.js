@@ -21,6 +21,7 @@ const OmniChannel = () => {
   const {
     loadConversations,
     applyFilter,
+    reloadContext,
     openConversation,
     sendMessage,
     notifyTyping,
@@ -91,6 +92,7 @@ const OmniChannel = () => {
         onOpen={openConversation}
         onLoadMore={loadConversations}
         onFilter={applyFilter}
+        onOpenChannelSetting={() => window.location.assign('/profile?tab=omni')}
       />
 
       <ChatBox
@@ -107,6 +109,7 @@ const OmniChannel = () => {
         onCreateLead={handleCreateLead}
         onFindCustomer={handleFindCustomer}
         onCreateOpportunity={handleCreateOpportunity}
+        onReloadContext={reloadContext}
         onOpenSibling={openConversation}
       />
     </InboxWrapper>

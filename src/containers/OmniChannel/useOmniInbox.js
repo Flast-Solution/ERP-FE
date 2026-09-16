@@ -145,6 +145,19 @@ export const useOmniInbox = () => {
     [store]
   )
 
+  /* Tải lại riêng cột phải — cho nút "Thử lại" khi API lỗi */
+  const reloadContext = useCallback(async () => {
+    const conversationId = store.getState().activeId
+    if (!conversationId) return
+    store.getState().setContextLoading(true)
+    try {
+      const ctx = await omniApi.fetchContext(conversationId)
+      store.getState().setContext(conversationId, ctx)
+    } catch (e) {
+      store.getState().setContextError(e.message || 'Không tải được thông tin khách')
+    }
+  }, [store])
+
   /* ---------- gửi tin (optimistic) ---------- */
 
   const sendMessage = useCallback(
@@ -258,6 +271,7 @@ export const useOmniInbox = () => {
   return {
     loadConversations,
     applyFilter,
+    reloadContext,
     openConversation,
     sendMessage,
     notifyTyping,

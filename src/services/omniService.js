@@ -27,13 +27,13 @@ const USE_MOCK = true
  * caller phân biệt được các nhánh nghiệp vụ (vd: trùng SĐT). */
 const unwrap = (res) => {
   const { data, errorCode, message } = res || {}
-  if (errorCode !== SUCCESS_CODE) {
-    const err = new Error(message || 'Có lỗi xảy ra')
-    err.errorCode = errorCode
-    err.payload = data
-    throw err
+  if (errorCode === SUCCESS_CODE) {
+    return data
   }
-  return data
+  const err = new Error(message || 'Có lỗi xảy ra')
+  err.errorCode = errorCode
+  err.payload = data
+  throw err
 }
 
 const realApi = {
@@ -63,6 +63,18 @@ const realApi = {
 
   changeStatus: (conversationId, status) =>
     RequestUtils.Post(`/omni/conversation/${conversationId}/status`, { status }).then(unwrap),
+
+  startConnect: (channelType) =>
+    RequestUtils.Post('/omni/channel-account/connect', { channelType }).then(unwrap),
+
+  disconnectChannel: (channelAccountId) =>
+    RequestUtils.Post(`/omni/channel-account/${channelAccountId}/disconnect`).then(unwrap),
+
+  deleteChannel: (channelAccountId) =>
+    RequestUtils.Delete(`/omni/channel-account/${channelAccountId}`).then(unwrap),
+
+  searchCustomers: (keyword) =>
+    RequestUtils.Get('/omni/customer/search', { keyword }).then(unwrap),
 
   /* Upload trước, lấy về danh sách file đã lưu, rồi mới gửi tin */
   uploadAttachment: (file) => {
@@ -328,6 +340,7 @@ class MockSocket {
  * ==================================================================== */
 
 let socketInstance = null
+
 export const getOmniSocket = ({ url, token, bizId } = {}) => {
   if (!socketInstance) {
     socketInstance = USE_MOCK ? new MockSocket() : new OmniSocket({ url, token, bizId })

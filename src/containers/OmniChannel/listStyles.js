@@ -388,6 +388,17 @@ export const WindowChip = styled.span`
       color: #fff;
       background: #ff4d4f;
     `}
+
+  /* Dưới 10 phút: đỏ đặc như đã hết hạn, nhưng còn cứu được.
+     Chữ số nhảy từng giây là tín hiệu chính, màu chỉ hỗ trợ. */
+  ${(p) =>
+    p.$state === 'critical' &&
+    css`
+      color: #fff;
+      background: #f5222d;
+      font-variant-numeric: tabular-nums;
+    `}
+
   ${(p) =>
     p.$state === 'urgent' &&
     css`
@@ -417,12 +428,4 @@ export const UnreadDot = styled.span`
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-`
-
-export const ListEmpty = styled.div`
-  padding: 48px 24px;
-  text-align: center;
-  color: #8c8c8c;
-  font-size: 13px;
-  line-height: 1.6;
 `

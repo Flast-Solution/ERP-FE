@@ -25,6 +25,13 @@ export const CHANNEL_LABEL = {
   [CHANNEL_TYPE.FACEBOOK]: 'Facebook',
 }
 
+/* Trạng thái kênh đã nối. Không viết số trực tiếp ở bất kỳ đâu. */
+export const CHANNEL_STATUS = {
+  DISCONNECTED: 0,   /* admin chủ động ngắt — giữ lịch sử, nối lại được */
+  ACTIVE: 1,
+  TOKEN_ERROR: 2,    /* token hỏng/hết hạn — cần nối lại */
+}
+
 export const CONVERSATION_STATUS = {
   NEW: 0,
   PROCESSING: 1,
@@ -143,7 +150,7 @@ export const useOmniStore = create((set, get) => ({
   markChannelError: (channelAccountId) =>
     set((s) => ({
       channels: s.channels.map((c) =>
-        c.id === channelAccountId ? { ...c, status: 2 } : c
+        c.id === channelAccountId ? { ...c, status: CHANNEL_STATUS.TOKEN_ERROR } : c
       ),
     })),
 
@@ -363,7 +370,6 @@ export const useOmniStore = create((set, get) => ({
     }
 
     const existed = conversations.some((c) => c.id === conversation.id)
-
     const patch = {
       lastMessageAt: message.sentAt,
       lastMessageSnippet: conversation.lastMessageSnippet,
@@ -373,31 +379,26 @@ export const useOmniStore = create((set, get) => ({
         : {}),
     }
 
+    const applyPatch = (c) => {
+      if (c.id !== conversation.id) {
+        return c
+      }
+      const keepUnread = isActive || message.direction === DIRECTION.OUTBOUND
+      return {
+        ...c,
+        ...patch,
+        unreadCount: keepUnread ? c.unreadCount : (c.unreadCount || 0) + 1
+      }
+    }
+
     if (existed) {
-      set((s) => ({
-        conversations: sortByRecent(
-          s.conversations.map((c) =>
-            c.id === conversation.id
-              ? {
-                  ...c,
-                  ...patch,
-                  unreadCount:
-                    isActive || message.direction === DIRECTION.OUTBOUND
-                      ? c.unreadCount
-                      : (c.unreadCount || 0) + 1,
-                }
-              : c
-          )
-        ),
-      }))
+      set((s) => ({ conversations: sortByRecent(s.conversations.map(applyPatch)) }))
       return
     }
 
     /* Hội thoại mới hoàn toàn — chỉ chèn nếu khớp bộ lọc đang bật */
     if (matchFilters({ ...conversation, ...patch }, filters)) {
-      set((s) => ({
-        conversations: sortByRecent([{ ...conversation, ...patch }, ...s.conversations]),
-      }))
+      set((s) => ({ conversations: sortByRecent([{ ...conversation, ...patch }, ...s.conversations]) }))
     }
   },
 

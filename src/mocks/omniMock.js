@@ -9,7 +9,14 @@
 /* Khi BE xong: đổi import trong omniService.js, KHÔNG sửa component.     */
 /**************************************************************************/
 
-import { CHANNEL_TYPE, CONVERSATION_STATUS, DIRECTION, MSG_TYPE, REF_TYPE } from '@/store/omniStore'
+import {
+  CHANNEL_STATUS,
+  CHANNEL_TYPE,
+  CONVERSATION_STATUS,
+  DIRECTION,
+  MSG_TYPE,
+  REF_TYPE,
+} from '@/store/omniStore'
 
 /* Nhân viên đang đăng nhập — dùng cho tab "Của tôi" */
 const CURRENT_USER_ID = 31
@@ -31,7 +38,7 @@ export const MOCK_CHANNELS = [
     externalId: 'oa_388120',
     name: 'Flast Dệt May',
     avatar: '',
-    status: 1,
+    status: CHANNEL_STATUS.ACTIVE,
     tokenExpireAt: new Date(now + 40 * 60_000).toISOString(),
   },
   {
@@ -40,7 +47,7 @@ export const MOCK_CHANNELS = [
     externalId: 'oa_412009',
     name: 'Flast Đồng Phục',
     avatar: '',
-    status: 1,
+    status: CHANNEL_STATUS.ACTIVE,
     tokenExpireAt: new Date(now + 55 * 60_000).toISOString(),
   },
   {
@@ -50,7 +57,7 @@ export const MOCK_CHANNELS = [
     externalId: '10215540',
     name: 'Flast Solution',
     avatar: '',
-    status: 2,
+    status: CHANNEL_STATUS.TOKEN_ERROR,
     tokenExpireAt: ago(120),
   },
 ]
@@ -132,6 +139,25 @@ export const MOCK_CONVERSATIONS = [
     assignedUserId: 42,
     assignedUserName: 'Hạnh',
     customerId: 6102,
+  },
+  {
+    /* Sắp hết hạn — còn ~7 phút. Dùng để kiểm mức đếm từng giây. */
+    id: 1233,
+    channelAccountId: 7,
+    channelType: CHANNEL_TYPE.FACEBOOK,
+    identityId: 97,
+    displayName: 'Chị Mai Hương',
+    channelAccountName: 'Flast Solution',
+    avatar: '',
+    lastMessageAt: ago(24 * 60 - 7),
+    lastMessageSnippet: 'Cho mình xin bảng giá áo sơ mi nữ',
+    lastInboundAt: ago(24 * 60 - 7),
+    lastDirection: DIRECTION.INBOUND,
+    unreadCount: 2,
+    status: CONVERSATION_STATUS.NEW,
+    assignedUserId: null,
+    assignedUserName: null,
+    customerId: null,
   },
   {
     /* Cửa sổ trả lời ĐÃ ĐÓNG — Zalo 48h, tin cuối của khách 60h trước.
@@ -503,11 +529,39 @@ export const omniMockApi = {
     return { items: MOCK_MESSAGES[conversationId] || [], nextCursor: null }
   },
 
+  /* MỌI hội thoại đều có context. Khách vừa nhắn lần đầu thì
+     customer = null và timeline rỗng, nhưng identity luôn có —
+     đó là điều kiện để cột phải hiện được nút Tạo lead. */
   async fetchContext(conversationId) {
     await delay(300)
     const payload = MOCK_CONTEXT[conversationId]
-    if (!payload) throw new Error('Không tìm thấy ngữ cảnh hội thoại')
-    return payload
+    if (payload) return payload
+
+    /* Chưa dựng sẵn -> sinh từ hội thoại tương ứng */
+    const conversation = MOCK_CONVERSATIONS.find((c) => c.id === conversationId)
+    if (!conversation) throw new Error('Hội thoại không tồn tại')
+
+    return {
+      conversationId,
+      identity: {
+        id: conversation.identityId,
+        channelType: conversation.channelType,
+        channelAccountId: conversation.channelAccountId,
+        channelAccountName: conversation.channelAccountName || '',
+        externalUserId: `ext_${conversation.identityId}`,
+        displayName: conversation.displayName,
+        avatar: conversation.avatar || '',
+        firstMessageAt: conversation.lastInboundAt,
+        lastInboundAt: conversation.lastInboundAt,
+        referralLabel: null,
+        linked: false,
+        linkedAt: null,
+        linkedByName: null,
+      },
+      customer: null,
+      siblingIdentities: [],
+      timeline: [],
+    }
   },
 
   async sendMessage(conversationId, { content, attachments }) {
@@ -530,6 +584,34 @@ export const omniMockApi = {
       sentAt: new Date().toISOString(),
       sendState: 'sent',
     }
+  },
+
+  /* Bắt đầu luồng OAuth — BE trả về URL để chuyển hướng sang
+     Zalo/Facebook. Mock chỉ trả URL giả. */
+  async startConnect(channelType) {
+    await delay(300)
+    return {
+      authUrl: channelType === CHANNEL_TYPE.FACEBOOK
+      ? 'https://www.facebook.com/v21.0/dialog/oauth?...'
+      : 'https://oauth.zaloapp.com/v4/oa/permission?...',
+    }
+  },
+
+  async disconnectChannel(channelAccountId) {
+    await delay(400)
+    const idx = MOCK_CHANNELS.findIndex((c) => c.id === channelAccountId)
+    if (idx >= 0) {
+      MOCK_CHANNELS[idx] = { ...MOCK_CHANNELS[idx], status: CHANNEL_STATUS.DISCONNECTED }
+    }
+    return true
+  },
+
+  /* Gỡ hẳn kênh khỏi danh sách. Chỉ cho phép với kênh đã ngắt. */
+  async deleteChannel(channelAccountId) {
+    await delay(400)
+    const idx = MOCK_CHANNELS.findIndex((c) => c.id === channelAccountId)
+    if (idx >= 0) MOCK_CHANNELS.splice(idx, 1)
+    return true
   },
 
   /* Tìm khách cũ theo tên hoặc SĐT — phục vụ nút "Tìm khách cũ" */
