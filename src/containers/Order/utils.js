@@ -29,7 +29,7 @@ export const renderArrayColor = (datas, colors) => {
   }
   return datas.map((item, index) => (
     <div key={item.id} style={{ color: colors[index]?.color || 'inherit' }}>
-      {item.id} - {item.name}
+      {item.name} - {item.code || item.id}
     </div>
   ));
 }
@@ -39,7 +39,7 @@ export const ORDER_COLUMN_ACTION = [
     title: 'Mã đơn',
     dataIndex: 'code',
     key: 'code',
-    width: 150,
+    width: 200,
     ellipsis: true
   },
   {
@@ -53,8 +53,7 @@ export const ORDER_COLUMN_ACTION = [
     title: 'Sản phẩm',
     dataIndex: 'products',
     key: 'products',
-    width: 150,
-    ellipsis: true,
+    width: 300,
     render: (products, record) => renderArrayColor(products, record.detailstatus)
   },
   {
