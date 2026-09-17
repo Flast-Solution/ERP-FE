@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from 'react'
 import { Button, Select, Spin, Typography } from 'antd'
+import { BarChartOutlined } from '@ant-design/icons'
 
 import useGetMe from '@/hooks/useGetMe'
 import { useWorkflowProgress } from '@/pages/order/progress/hooks/useWorkflowProgress'
@@ -470,7 +471,7 @@ const WorkflowInstanceContent = ({
 
             <div>
               <div className="pl-section__head" style={{ marginBottom: 16 }}>
-                <img src={`${LEAD_ASSET_BASE_URL}/bar-chart-3.svg`} alt="" width="15" height="15" />
+                <BarChartOutlined style={{ fontSize: 15 }} aria-hidden="true" />
                 <span className="t-body-strong">Lead score</span>
               </div>
               <LeadWorkflowScore lead={lead} />
