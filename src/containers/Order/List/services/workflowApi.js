@@ -1,7 +1,6 @@
 import { RequestUtils } from '@flast-erp/core/utils'
 import {
   WORKFLOW_FILTER_API,
-  ORDER_WORKFLOW_ATTACH_API,
   WORKFLOW_INSTANCE_BY_ENTITY_API,
   WORKFLOW_PROCESS_FIND_API,
   WORKFLOW_PREVIEW_API,
@@ -27,12 +26,17 @@ export const fetchWorkflowList = async (flowType) => {
   return resolveWorkflowList(response)
 }
 
-export const attachWorkflow = async ({ processId, entityType, entityId }) => {
-  return RequestUtils.Post(ORDER_WORKFLOW_ATTACH_API, {
-    processId,
-    entityType,
-    entityId,
-  })
+export const attachWorkflow = async () => {
+  // Tạm thời không khởi tạo workflow từ FE.
+  // return RequestUtils.Post('/workflow/process/start', {
+  //   processId,
+  //   entityType,
+  //   entityId,
+  // })
+  return {
+    success: false,
+    message: 'Chức năng khởi tạo workflow đang tạm tắt.',
+  }
 }
 
 export const fetchWorkflowInstancesByEntity = async ({ entityName, entityIds }) => {

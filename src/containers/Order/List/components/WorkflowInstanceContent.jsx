@@ -410,8 +410,9 @@ const WorkflowInstanceContent = ({
 
               <div className="pl-lockrow">
                 <img src={`${LEAD_ASSET_BASE_URL}/shield.svg`} alt="" />
-                <span>Bước hiện tại không thể sửa trực tiếp — chỉ chuyển qua các action được cấu hình.</span>
-                <span className="lockval">workflow (read-only)</span>
+                <span title="Bước hiện tại không thể sửa trực tiếp — chỉ chuyển qua các action được cấu hình.">
+                  Bước hiện tại không thể sửa trực tiếp — chỉ chuyển qua các action được cấu hình.
+                </span>
               </div>
 
               {configuredButtons.length ? (
