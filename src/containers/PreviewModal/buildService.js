@@ -121,8 +121,29 @@ const sanitizeFormCheckboxProps = (code = '') => String(code).replace(
     .replace(/\s+options=\{(?:[^{}]|\{[^{}]*\})*\}/g, ''),
 )
 
+// Các remote form cũ chỉ đọc response dạng mảng hoặc response.data. Một số API
+// trong repo (ví dụ user/list) trả danh sách trong embedded, khiến Select rỗng
+// dù request thành công. Nâng cấp đúng biểu thức mapper cũ trước khi build và
+// giữ nguyên toàn bộ phần JSX người dùng đã tùy chỉnh.
+const upgradeLegacySelectApiMapper = (code = '') => String(code).replace(
+  /\(Array\.isArray\(response\)\s*\?\s*response\s*:\s*\(response\?\.data\s*\?\?\s*\[\]\)\)\.map/g,
+  `(Array.isArray(response)
+    ? response
+    : Array.isArray(response?.data)
+      ? response.data
+      : response?.embedded
+        ?? response?.data?.embedded
+        ?? response?.items
+        ?? response?.data?.items
+        ?? response?.content
+        ?? response?.data?.content
+        ?? []).map`,
+)
+
 export const prepareJsxForRemoteBuild = (code = '') => {
-  let jsx = sanitizeFormCheckboxProps(normalizeBuildJsxCode(code))
+  let jsx = upgradeLegacySelectApiMapper(
+    sanitizeFormCheckboxProps(normalizeBuildJsxCode(code)),
+  )
 
   jsx = jsx.replace(/^import\s+FormBlockPreview\s+from\s+['"][^'"]+['"]\s*;?\s*\n?/gm, '')
   jsx = jsx.replace(/^import\s+\{\s*FormBlockPreview\s*,?\s*([^}]*)\}\s+from\s+['"][^'"]+['"]\s*;?\s*\n?/gm, (_, rest) => {

@@ -255,7 +255,7 @@ const getValueByDataExpression = (item, expression = '') => {
 const createSelectApiOnData = (dataLabel, dataValue) => {
   if (!dataLabel || !dataValue) return undefined
 
-  return (response) => (Array.isArray(response) ? response : (response?.data ?? [])).map(data => ({
+  return (response) => getSelectApiItems(response).map(data => ({
     label: getValueByDataExpression(data, dataLabel),
     value: getValueByDataExpression(data, dataValue),
   }))
@@ -265,8 +265,11 @@ const getSelectApiItems = (payload) => {
   if (Array.isArray(payload)) return payload
   if (Array.isArray(payload?.data)) return payload.data
   if (Array.isArray(payload?.embedded)) return payload.embedded
+  if (Array.isArray(payload?.data?.embedded)) return payload.data.embedded
   if (Array.isArray(payload?.items)) return payload.items
+  if (Array.isArray(payload?.data?.items)) return payload.data.items
   if (Array.isArray(payload?.content)) return payload.content
+  if (Array.isArray(payload?.data?.content)) return payload.data.content
   return []
 }
 

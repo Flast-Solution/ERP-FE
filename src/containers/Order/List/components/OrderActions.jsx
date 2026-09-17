@@ -167,16 +167,19 @@ const OrderActions = ({
           <EditFilled />
         </Button>
       )}
-      {extraActions?.map((action, index) => (
+      {extraActions?.filter(action => action.visible?.(record) !== false).map((action, index) => {
+        const { visible, ...buttonAction } = action
+        return (
         <Button
-          key={index}
+          key={action.key ?? action.children ?? index}
           size="small"
-          {...action}
+          {...buttonAction}
           onClick={() => action.onClick(record)}
         >
           {action.children}
         </Button>
-      ))}
+        )
+      })}
     </Space>
   )
 }

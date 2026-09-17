@@ -12,7 +12,7 @@ import WorkflowProductCard from './WorkflowProductCard'
 import WorkflowEntityCard from './WorkflowEntityCard'
 import { getFormSubmitButtonConfig } from '@/utils/formSubmitButton'
 
-const { Text, Title } = Typography
+const { Text } = Typography
 const LEAD_ASSET_BASE_URL = 'http://view.user.flast.vn/assets/icons'
 
 const LeadWorkflowTracker = ({ steps, currentStep, selectedStepCode, onStepClick }) => {
@@ -490,10 +490,7 @@ const WorkflowInstanceContent = ({
 
       <section className="workflow-detail-drawer__block">
         <div className="workflow-detail-drawer__process-head">
-          <div>
-            <Text className="workflow-detail-drawer__eyebrow">QUY TRÌNH</Text>
-            <Title level={3}>{workflowName}</Title>
-          </div>
+          <Text className="workflow-detail-drawer__eyebrow">QUY TRÌNH</Text>
           <Text type="secondary">
             {workflowState.workflow?.processKey ?? ''}
             {workflowState.steps.length ? ` · ${workflowState.steps.length} bước` : ''}
