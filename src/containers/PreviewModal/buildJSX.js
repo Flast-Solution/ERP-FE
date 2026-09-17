@@ -204,7 +204,20 @@ function buildProps(field) {
         if (hasDataMapping) {
           props.push({
             key: 'onData',
-            value: `{(response) => (Array.isArray(response) ? response : (response?.data ?? [])).map((data) => ({ label: ${dataLabel}, value: ${dataValue} }))}`,
+            value: `{(response) => {
+              const items = Array.isArray(response)
+                ? response
+                : Array.isArray(response?.data)
+                  ? response.data
+                  : response?.embedded
+                    ?? response?.data?.embedded
+                    ?? response?.items
+                    ?? response?.data?.items
+                    ?? response?.content
+                    ?? response?.data?.content
+                    ?? []
+              return (Array.isArray(items) ? items : []).map((data) => ({ label: ${dataLabel}, value: ${dataValue} }))
+            }}`,
             kind: 'raw',
           })
         }

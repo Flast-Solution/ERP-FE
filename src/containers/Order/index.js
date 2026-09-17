@@ -915,6 +915,7 @@ const BanHangPage = ({
       };
       if (customerOrder?.id) {
         params.id = customerOrder.id;
+        params.code = customerOrder.code ?? '';
       }
       if (dataId) {
         params.dataId = dataId;
@@ -975,6 +976,23 @@ const BanHangPage = ({
 
   return (
     <>
+      {customerOrder?.id ? (
+        <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Text strong>
+            {customerOrder.type === 'order' ? 'Mã đơn hàng' : 'Mã cơ hội'}
+          </Text>
+          <Input
+            value={customerOrder.code ?? ''}
+            maxLength={100}
+            placeholder="Nhập mã"
+            onChange={event => setCustomerOrder(current => ({
+              ...current,
+              code: event.target.value
+            }))}
+            style={{ width: 320 }}
+          />
+        </div>
+      ) : null}
       <OpportunityTable
         bordered
         scroll={{ x: 2700 }}

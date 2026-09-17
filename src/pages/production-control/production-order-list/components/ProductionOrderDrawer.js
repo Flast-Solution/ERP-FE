@@ -41,6 +41,7 @@ const ProductionOrderDrawer = ({
         onLoadMoreWaitingOrders={onLoadMoreWaitingOrders}
         onCancel={onClose}
         onNext={onNext}
+        submitting={savingOrder}
       />
     ) : (
       <BomConfirmation

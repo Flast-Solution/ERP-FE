@@ -54,14 +54,9 @@ export const useProductionOrderFlow = ({
     })
   }, [closeFlow])
 
-  const goToConfirmation = useCallback((values) => {
-    setPendingOrder(values)
-    setStep(2)
-  }, [])
-
   const backToCreate = useCallback(() => setStep(1), [])
 
-  const finishFlow = useCallback(async ({ productionOrder, materialConfirmation }) => {
+  const saveProductionOrder = useCallback(async ({ productionOrder, materialConfirmation = {} }) => {
     const isEdit = drawerMode === 'edit'
     const payload = buildManufacturePayload({ productionOrder, materialConfirmation, isEdit })
 
@@ -90,6 +85,27 @@ export const useProductionOrderFlow = ({
     }
   }, [closeFlow, drawerMode, onSaved])
 
+  const goToConfirmation = useCallback(async (values) => {
+    setPendingOrder(values)
+
+    const orderDetails = values?.orderDetails ?? []
+    const productDetails = values?.productDetails ?? {}
+    const allDetailsHaveProvider = orderDetails.length > 0 && orderDetails.every((detail, index) => {
+      const detailKey = String(detail?.id ?? index)
+      const providerId = productDetails?.[detailKey]?.providerId
+        ?? detail?.providerId
+        ?? detail?.provider?.id
+      return providerId !== undefined && providerId !== null && providerId !== ''
+    })
+
+    if (allDetailsHaveProvider) {
+      await saveProductionOrder({ productionOrder: values })
+      return
+    }
+
+    setStep(2)
+  }, [saveProductionOrder])
+
   return {
     open,
     drawerMode,
@@ -102,6 +118,6 @@ export const useProductionOrderFlow = ({
     cancelOrder,
     goToConfirmation,
     backToCreate,
-    finishFlow,
+    finishFlow: saveProductionOrder,
   }
 }

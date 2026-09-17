@@ -279,6 +279,32 @@
       gap: 6px;
     }
 
+    .pl-lockrow {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      flex-wrap: nowrap;
+      gap: 10px;
+
+      > img {
+        flex: 0 0 auto;
+      }
+
+      > span:not(.lockval) {
+        min-width: 0;
+        overflow: hidden;
+        flex: 1 1 auto;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .lockval {
+        margin-left: auto;
+        flex: 0 0 auto;
+        white-space: nowrap;
+      }
+    }
+
     .lead-workflow-form {
       min-height: 80px;
 
