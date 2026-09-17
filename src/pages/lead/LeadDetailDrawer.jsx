@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
 import { Button, Drawer } from 'antd'
+import { BarChartOutlined } from '@ant-design/icons'
 import moment from 'moment'
 
 import { CHANNEL_SOURCE_MAP_KEYS } from '@/configs/localData'
@@ -234,7 +235,7 @@ const LeadDetailDrawer = ({ open, lead, listSale = [], onClose, onWorkflowAction
 
           <div>
             <div className="pl-section__head lead-detail-section-head">
-              <img src={`${ASSET_BASE_URL}/bar-chart-3.svg`} alt="" width="15" height="15" />
+              <BarChartOutlined style={{ fontSize: 15 }} aria-hidden="true" />
               <span className="t-body-strong">Lead score</span>
               <span className="code-chip">score</span>
             </div>
