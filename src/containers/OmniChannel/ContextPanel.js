@@ -88,17 +88,19 @@ const colorOf = (text = '') => {
 }
 
 const channelInitial = (channelType) => (channelType === CHANNEL_TYPE.FACEBOOK ? 'f' : 'Z')
-
 const shortRemaining = (ms) => {
   const minutes = Math.floor(ms / 60_000)
   const hours = Math.floor(minutes / 60)
-  if (hours >= 6) return `${hours} giờ`
+  if (hours >= 6) {
+    return `${hours} giờ`
+  }
   return hours > 0 ? `${hours}g${String(minutes % 60).padStart(2, '0')}` : `${minutes}p`
 }
 
 /* ---------------------------------------------------------------- */
 
 const ChannelLine = ({ item, onOpen }) => {
+
   const remaining = getWindowRemaining(item)
   const state = remaining <= 0 ? 'closed' : remaining < URGENT_THRESHOLD ? 'urgent' : 'ok'
 
@@ -118,8 +120,7 @@ const ChannelLine = ({ item, onOpen }) => {
           còn {shortRemaining(remaining)}
         </WindowChip>
       ) : (
-        /* Còn nhiều thời gian: chữ xám, không tô chip — tránh
-           biến cả khối thành bảng màu khi mọi thứ đều ổn */
+        /* Còn nhiều thời gian: chữ xám */
         <span style={{ fontSize: 12, color: '#8c8c8c', flexShrink: 0 }}>
           còn {shortRemaining(remaining)}
         </span>
@@ -200,11 +201,12 @@ const ContextPanel = ({
     )
   }
 
-  if (!context) return <ContextPane $open={open} />
+  if (!context) {
+    return <ContextPane $open={open} />
+  }
 
   const { identity, customer, timeline = [] } = context
   const channelLabel = identity.channelType === CHANNEL_TYPE.FACEBOOK ? 'Facebook' : 'Zalo'
-
   return (
     <ContextPane $open={open}>
       <IdentityHead

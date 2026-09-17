@@ -57,8 +57,6 @@ const STATUS_CHIP = {
   [CONVERSATION_STATUS.DONE]: { text: 'Đã xong', color: '#389e0d', bg: '#f6ffed' },
 }
 
-/* Màu avatar chọn theo tên — mỗi khách giữ một màu cố định qua các
-   lần tải, không nhảy màu mỗi lần render */
 const AVATAR_COLORS = [
   '#7265e6', '#00a2ae', '#f56a00', '#1677ff',
   '#eb2f96', '#13c2c2', '#52c41a', '#fa8c16',
@@ -66,15 +64,21 @@ const AVATAR_COLORS = [
 
 const colorOf = (text = '') => {
   let sum = 0
-  for (let i = 0; i < text.length; i += 1) sum += text.charCodeAt(i)
+  for (let i = 0; i < text.length; i += 1) {
+    sum += text.charCodeAt(i)
+  }
   return AVATAR_COLORS[sum % AVATAR_COLORS.length]
 }
 
 /* Tên tiếng Việt thường 3-4 từ, lấy chữ đầu của từ đầu + từ cuối */
 const initialsOf = (name = '') => {
   const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (!parts.length) return '?'
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  if (!parts.length) {
+    return '?'
+  }
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase()
+  }
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
@@ -101,20 +105,19 @@ const CRITICAL_THRESHOLD = 10 * 60_000
 
 /* ---------------------------------------------------------------- */
 
-const ConversationRow = memo(({ item, active, onOpen, tick }) => {
+const ConversationRow = memo(({ item, active, onOpen }) => {
+
   const unread = item.unreadCount > 0
   const status = STATUS_CHIP[item.status]
 
   /* tick chỉ để ép tính lại mỗi phút, giá trị thực lấy từ helper */
-  const remaining = useMemo(() => getWindowRemaining(item), [item, tick])
+  const remaining = useMemo(() => getWindowRemaining(item), [item])
   const windowState =
     remaining <= 0
-      ? 'closed'
-      : remaining < CRITICAL_THRESHOLD
-        ? 'critical'
-        : remaining < URGENT_THRESHOLD
-          ? 'urgent'
-          : 'ok'
+      ? 'closed' : remaining < CRITICAL_THRESHOLD
+      ? 'critical' : remaining < URGENT_THRESHOLD
+      ? 'urgent'
+      : 'ok'
 
   return (
     <Row $active={active} $unread={unread} onClick={() => onOpen(item.id)}>
@@ -137,7 +140,6 @@ const ConversationRow = memo(({ item, active, onOpen, tick }) => {
         </div>
 
         <div className="snippet">{item.lastMessageSnippet}</div>
-
         <div className="line-chips">
           {status && (
             <StatusChip $color={status.color} $bg={status.bg}>
@@ -236,12 +238,16 @@ const ConversationList = ({
       if (rb <= 0 && ra > 0) return -1
       return ra - rb
     })
-  }, [conversations, sortMode, tick])
+  }, [conversations, sortMode])
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current
-    if (!el || loading || !hasMore) return
-    if (el.scrollHeight - el.scrollTop - el.clientHeight < 150) onLoadMore()
+    if (!el || loading || !hasMore) {
+      return
+    }
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 150) {
+      onLoadMore()
+    }
   }, [loading, hasMore, onLoadMore])
 
   const scopeTabs = [
@@ -302,15 +308,13 @@ const ConversationList = ({
     return (
       <EmptyState
         icon={<SearchOutlined />}
-        title={
-          filters.scope === SCOPE.UNREPLIED
-            ? 'Không còn tin chờ trả lời'
-            : 'Không có hội thoại nào khớp'
+        title={ filters.scope === SCOPE.UNREPLIED
+          ? 'Không còn tin chờ trả lời'
+          : 'Không có hội thoại nào khớp'
         }
-        description={
-          filters.scope === SCOPE.UNREPLIED
-            ? 'Mọi khách đã được trả lời. Xem tab Tất cả để duyệt lại.'
-            : 'Thử bỏ bớt bộ lọc hoặc đổi từ khoá tìm kiếm.'
+        description={ filters.scope === SCOPE.UNREPLIED
+          ? 'Mọi khách đã được trả lời. Xem tab Tất cả để duyệt lại.'
+          : 'Thử bỏ bớt bộ lọc hoặc đổi từ khoá tìm kiếm.'
         }
       />
     )
@@ -366,8 +370,7 @@ const ConversationList = ({
         <ChannelAlert>
           <ApiOutlined className="icon" />
           <span className="grow">
-            {brokenChannel.name} hết hạn token — tin mới không tải về từ{' '}
-            {moment(brokenChannel.tokenExpireAt).format('HH:mm')}.
+            {brokenChannel.name} hết hạn token.
           </span>
           <Button size="small" onClick={() => onReconnect?.(brokenChannel)}>
             Nối lại
@@ -410,6 +413,6 @@ const ConversationList = ({
       </ScrollArea>
     </ListPane>
   )
-}
+};
 
-export default ConversationList
+export default ConversationList;

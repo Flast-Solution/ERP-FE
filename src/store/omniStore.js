@@ -288,6 +288,23 @@ export const useOmniStore = create((set, get) => ({
       return { messages: { ...s.messages, [conversationId]: next } }
     }),
 
+  /* Khách đã xem tới tin nào -> mọi tin outbound trước đó thành 'read'.
+     Nền tảng chỉ báo mốc cuối, không báo từng tin. */
+  markMessagesRead: (conversationId, lastMessageId) =>
+    set((s) => {
+      const current = s.messages[conversationId]
+      if (!current) return s
+      let reached = false
+      const next = current.map((m) => {
+        if (reached) return m
+        if (m.id === lastMessageId) reached = true
+        return m.direction === DIRECTION.OUTBOUND && m.sendState === SEND_STATE.SENT
+          ? { ...m, sendState: SEND_STATE.READ }
+          : m
+      })
+      return { messages: { ...s.messages, [conversationId]: next } }
+    }),
+
   /* Đánh dấu tin optimistic gửi lỗi để hiện nút gửi lại */
   markMessageFailed: (conversationId, tempId) =>
     set((s) => ({
@@ -379,26 +396,34 @@ export const useOmniStore = create((set, get) => ({
         : {}),
     }
 
-    const applyPatch = (c) => {
+    const updateConversation = (c, conversation, patch, isActive, message) => {
       if (c.id !== conversation.id) {
-        return c
+        return c;
       }
-      const keepUnread = isActive || message.direction === DIRECTION.OUTBOUND
+      const shouldKeepUnread = isActive || message.direction === DIRECTION.OUTBOUND;
       return {
         ...c,
         ...patch,
-        unreadCount: keepUnread ? c.unreadCount : (c.unreadCount || 0) + 1
-      }
+        unreadCount: shouldKeepUnread
+          ? c.unreadCount
+          : (c.unreadCount || 0) + 1
+      };
     }
 
     if (existed) {
-      set((s) => ({ conversations: sortByRecent(s.conversations.map(applyPatch)) }))
+      set((s) => ({
+        conversations: sortByRecent(s.conversations.map((c) =>
+          updateConversation(c, conversation, patch, isActive, message)
+        ))
+      }))
       return
     }
 
     /* Hội thoại mới hoàn toàn — chỉ chèn nếu khớp bộ lọc đang bật */
     if (matchFilters({ ...conversation, ...patch }, filters)) {
-      set((s) => ({ conversations: sortByRecent([{ ...conversation, ...patch }, ...s.conversations]) }))
+      set((s) => ({
+        conversations: sortByRecent([{ ...conversation, ...patch }, ...s.conversations]),
+      }))
     }
   },
 
@@ -414,7 +439,7 @@ export const useOmniStore = create((set, get) => ({
       hasMore: true,
       filters: { ...DEFAULT_FILTERS },
       contextError: null,
-    }),
+    })
 }))
 
 /* ======================================================================

@@ -17,7 +17,81 @@ import { RequestUtils } from '@flast-erp/core/utils'
 import { SUCCESS_CODE } from '@/configs'
 import { omniMockApi, startMockRealtime } from '@/mocks/omniMock'
 
-const USE_MOCK = true
+const USE_MOCK_API    = false
+const USE_MOCK_SOCKET = false
+
+export const buildWsUrl = () => {
+  const explicit = process.env.REACT_APP_OMNI_WS_URL
+  if (explicit) {
+    return explicit;
+  }
+  const origin = process.env.REACT_APP_WS_ORIGIN || window.location.origin
+  return `${origin.replace(/^http/, 'ws')}/api/erp/ws/omni`
+}
+
+/* ======================================================================
+ * Chuẩn hoá thời gian
+ * ==================================================================== */
+
+/* BE trả thời gian dạng epoch GIÂY (1789632120), JS lại tính theo
+ * mili giây — new Date(1789632120) ra năm 1970.
+ *
+ * Chuẩn hoá tại ĐÚNG MỘT CHỖ này, ngay biên vào dữ liệu. Store và
+ * component chỉ làm việc với chuỗi ISO, không cần biết BE gửi kiểu gì.
+ * Mai BE đổi sang mili giây hay ISO thì chỉ sửa hàm dưới. */
+
+/* Tên trường thời gian: mọi key kết thúc bằng At/_at, cộng vài ngoại lệ */
+const isTimeKey = (key) =>
+  /(At|_at)$/.test(key) || key === 'timestamp' || key === 'time'
+
+/* 10 chữ số = giây, 13 chữ số = mili giây. Mốc 10^11 nằm giữa hai
+ * khoảng nên phân biệt được mà không cần BE nói trước. */
+const toISO = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+  if (typeof value === 'string') {
+    /* Chuỗi số thuần cũng gặp: "1789632120" */
+    if (/^\d{10}$/.test(value)) {
+      return new Date(Number(value) * 1000).toISOString()
+    }
+    if (/^\d{13}$/.test(value)) {
+      return new Date(Number(value)).toISOString()
+    }
+    return value
+  }
+  if (typeof value === 'number') {
+    const ms = value < 1e11 ? value * 1000 : value
+    return new Date(ms).toISOString()
+  }
+  return value
+}
+
+/* Đi đệ quy qua payload, chỉ đụng vào trường thời gian.
+ * Giữ nguyên mảng, object lồng nhau và mọi kiểu dữ liệu khác. */
+export const normalizeTimes = (input) => {
+  if (Array.isArray(input)) {
+    return input.map(normalizeTimes)
+  }
+  if (input === null || typeof input !== 'object') {
+    return input
+  }
+  /* Date, File, FormData... không phải object dữ liệu thuần */
+  if (input instanceof Date || input instanceof Blob) {
+    return input
+  }
+
+  const out = {}
+  Object.keys(input).forEach((key) => {
+    const value = input[key]
+    if (isTimeKey(key)) {
+      out[key] = toISO(value)
+      return
+    }
+    out[key] = normalizeTimes(value)
+  })
+  return out
+}
 
 /* ======================================================================
  * REST
@@ -28,7 +102,7 @@ const USE_MOCK = true
 const unwrap = (res) => {
   const { data, errorCode, message } = res || {}
   if (errorCode === SUCCESS_CODE) {
-    return data
+    return normalizeTimes(data)
   }
   const err = new Error(message || 'Có lỗi xảy ra')
   err.errorCode = errorCode
@@ -38,53 +112,53 @@ const unwrap = (res) => {
 
 const realApi = {
   fetchChannels: () =>
-    RequestUtils.Get('/omni/channel-account').then(unwrap),
+    RequestUtils.Get('/erp/omni/channel-account').then(unwrap),
 
   fetchConversations: ({ filters = {}, cursor = null } = {}) =>
-    RequestUtils.Get('/omni/conversation', { ...filters, cursor }).then(unwrap),
+    RequestUtils.Get('/erp/omni/conversation', { ...filters, cursor }).then(unwrap),
 
   fetchMessages: (conversationId, { cursor } = {}) =>
-    RequestUtils.Get(`/omni/conversation/${conversationId}/messages`, { cursor }).then(unwrap),
+    RequestUtils.Get(`/erp/omni/conversation/${conversationId}/messages`, { cursor }).then(unwrap),
 
   fetchContext: (conversationId) =>
-    RequestUtils.Get(`/omni/conversation/${conversationId}/context`).then(unwrap),
+    RequestUtils.Get(`/erp/omni/conversation/${conversationId}/context`).then(unwrap),
 
   sendMessage: (conversationId, body) =>
-    RequestUtils.Post(`/omni/conversation/${conversationId}/send`, body).then(unwrap),
+    RequestUtils.Post(`/erp/omni/conversation/${conversationId}/send`, body).then(unwrap),
 
   linkCustomer: (identityId, customerId) =>
-    RequestUtils.Post(`/omni/identity/${identityId}/link`, { customerId }).then(unwrap),
+    RequestUtils.Post(`/erp/omni/identity/${identityId}/link`, { customerId }).then(unwrap),
 
   createLead: (conversationId, body) =>
-    RequestUtils.Post(`/omni/conversation/${conversationId}/create-lead`, body).then(unwrap),
+    RequestUtils.Post(`/erp/omni/conversation/${conversationId}/create-lead`, body).then(unwrap),
 
   assignUser: (conversationId, assignedUserId) =>
-    RequestUtils.Post(`/omni/conversation/${conversationId}/assign`, { assignedUserId }).then(unwrap),
+    RequestUtils.Post(`/erp/omni/conversation/${conversationId}/assign`, { assignedUserId }).then(unwrap),
 
   changeStatus: (conversationId, status) =>
-    RequestUtils.Post(`/omni/conversation/${conversationId}/status`, { status }).then(unwrap),
+    RequestUtils.Post(`/erp/omni/conversation/${conversationId}/status`, { status }).then(unwrap),
 
   startConnect: (channelType) =>
-    RequestUtils.Post('/omni/channel-account/connect', { channelType }).then(unwrap),
+    RequestUtils.Post('/erp/omni/channel-account/connect', { channelType }).then(unwrap),
 
   disconnectChannel: (channelAccountId) =>
-    RequestUtils.Post(`/omni/channel-account/${channelAccountId}/disconnect`).then(unwrap),
+    RequestUtils.Post(`/erp/omni/channel-account/${channelAccountId}/disconnect`).then(unwrap),
 
   deleteChannel: (channelAccountId) =>
-    RequestUtils.Delete(`/omni/channel-account/${channelAccountId}`).then(unwrap),
+    RequestUtils.Delete(`/erp/omni/channel-account/${channelAccountId}`).then(unwrap),
 
   searchCustomers: (keyword) =>
-    RequestUtils.Get('/omni/customer/search', { keyword }).then(unwrap),
+    RequestUtils.Get('/erp/omni/customer/search', { keyword }).then(unwrap),
 
   /* Upload trước, lấy về danh sách file đã lưu, rồi mới gửi tin */
   uploadAttachment: (file) => {
     const form = new FormData()
     form.append('file', file)
-    return RequestUtils.Post('/omni/attachment/upload', form).then(unwrap)
+    return RequestUtils.Post('/erp/omni/attachment/upload', form).then(unwrap)
   },
-}
+};
 
-export const omniApi = USE_MOCK ? omniMockApi : realApi
+export const omniApi = USE_MOCK_API ? omniMockApi : realApi
 
 /* ======================================================================
  * WebSocket
@@ -92,6 +166,8 @@ export const omniApi = USE_MOCK ? omniMockApi : realApi
 
 /* Sự kiện server -> client */
 export const WS_EVENT = {
+  READY: 'ready',                         /* server xác nhận xác thực xong */
+  UNAUTHORIZED: 'unauthorized',           /* token sai/hết hạn — KHÔNG nối lại */
   MESSAGE_NEW: 'message.new',             /* tin mới (khách hoặc đồng nghiệp gửi) */
   CONVERSATION_UPDATED: 'conversation.updated', /* đổi trạng thái / người phụ trách */
   TYPING: 'typing',                       /* đồng nghiệp đang gõ */
@@ -102,6 +178,7 @@ export const WS_EVENT = {
 
 /* Lệnh client -> server */
 export const WS_COMMAND = {
+  AUTH: 'auth',                           /* khung đầu tiên sau khi mở kết nối */
   SUBSCRIBE: 'subscribe',                 /* theo dõi 1 hội thoại đang mở */
   UNSUBSCRIBE: 'unsubscribe',
   TYPING: 'typing',
@@ -130,23 +207,41 @@ export class OmniSocket {
     this.pingTimer = null
     this.retry = 0
     this.closedByUser = false
+    this.authed = false
     this.seq = 0
+
+    /* Máy ngủ dậy hoặc mạng có lại: nối ngay thay vì đợi hết backoff.
+       Sale gập laptop buổi trưa, mở ra là phải thấy tin mới luôn. */
+    this._onWake = () => {
+      if (this.closedByUser) {
+        return
+      }
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        return
+      }
+      this.retry = 0
+      this.connect()
+    }
+    window.addEventListener('online', this._onWake)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') this._onWake()
+    })
   }
 
   /* ---------------- vòng đời ---------------- */
 
   connect() {
-    if (this.ws && this.ws.readyState <= WebSocket.OPEN) return
-    this.closedByUser = false
+    if (this.ws && this.ws.readyState <= WebSocket.OPEN) {
+      return
+    }
 
+    this.closedByUser = false
     const qs = `?token=${encodeURIComponent(this.token)}&bizId=${this.bizId}`
     this.ws = new WebSocket(`${this.url}${qs}`)
 
     this.ws.onopen = () => {
       this.retry = 0
-      this._emit('__state', { connected: true })
-      /* Kết nối lại thì đăng ký lại các hội thoại đang mở */
-      this.subscribed.forEach((id) => this._raw(WS_COMMAND.SUBSCRIBE, { conversationId: id }))
+      this._raw(WS_COMMAND.AUTH, { token: this.token, bizId: this.bizId })
       this._startPing()
     }
 
@@ -161,10 +256,13 @@ export class OmniSocket {
     }
 
     this.ws.onclose = () => {
+      this.authed = false
       this._stopPing()
       this._emit('__state', { connected: false })
       this._rejectAllPending(new Error('Mất kết nối'))
-      if (!this.closedByUser) this._scheduleReconnect()
+      if (!this.closedByUser) {
+        this._scheduleReconnect()
+      }
     }
 
     this.ws.onerror = () => {
@@ -174,6 +272,8 @@ export class OmniSocket {
 
   close() {
     this.closedByUser = true
+    this.authed = false
+    window.removeEventListener('online', this._onWake)
     this._stopPing()
     this.subscribed.clear()
     this._rejectAllPending(new Error('Đã đóng kết nối'))
@@ -185,7 +285,10 @@ export class OmniSocket {
    * nhiều tab cùng reconnect sẽ đấm sập gateway. */
   _scheduleReconnect() {
     this.retry += 1
-    const wait = Math.min(1000 * 2 ** (this.retry - 1), MAX_BACKOFF)
+    const base = Math.min(1000 * 2 ** (this.retry - 1), MAX_BACKOFF)
+    /* Jitter: nhiều tab cùng mất kết nối sẽ nối lại lệch nhau,
+       tránh đấm sập gateway đúng lúc nó vừa hồi. */
+    const wait = base * (0.5 + Math.random() * 0.5)
     setTimeout(() => this.connect(), wait)
   }
 
@@ -197,14 +300,18 @@ export class OmniSocket {
   }
 
   _stopPing() {
-    if (this.pingTimer) clearInterval(this.pingTimer)
+    if (this.pingTimer) {
+      clearInterval(this.pingTimer)
+    }
     this.pingTimer = null
   }
 
   /* ---------------- đăng ký sự kiện ---------------- */
 
   on(event, fn) {
-    if (!this.handlers.has(event)) this.handlers.set(event, new Set())
+    if (!this.handlers.has(event)) {
+      this.handlers.set(event, new Set())
+    }
     this.handlers.get(event).add(fn)
     return () => this.handlers.get(event)?.delete(fn)
   }
@@ -214,6 +321,25 @@ export class OmniSocket {
   }
 
   _dispatch(payload) {
+    /* Xác thực xong mới coi là "đã kết nối" và mới đăng ký lại
+       các hội thoại đang mở. Báo connected sớm hơn sẽ hiện chấm
+       xanh trong lúc server còn chưa cho phép gì. */
+    if (payload.event === WS_EVENT.READY) {
+      this.authed = true
+      this._emit('__state', { connected: true })
+      this.subscribed.forEach((id) => this._raw(WS_COMMAND.SUBSCRIBE, { conversationId: id }))
+      return
+    }
+
+    /* Token hỏng: nối lại bao nhiêu lần cũng vô ích, chỉ tạo bão
+       kết nối. Dừng hẳn và báo lên để UI xử lý (thường là đăng nhập lại). */
+    if (payload.event === WS_EVENT.UNAUTHORIZED) {
+      this.closedByUser = true
+      this._emit(WS_EVENT.UNAUTHORIZED, payload.data)
+      this.ws?.close()
+      return
+    }
+
     /* Phản hồi cho lệnh có requestId -> giải quyết promise đang chờ */
     if (payload.event === WS_EVENT.ACK && payload.requestId) {
       const entry = this.pending.get(payload.requestId)
@@ -224,13 +350,16 @@ export class OmniSocket {
       }
       return
     }
-    this._emit(payload.event, payload.data)
+    /* Sự kiện WS đi qua cùng một bộ chuẩn hoá thời gian với REST */
+    this._emit(payload.event, normalizeTimes(payload.data))
   }
 
   /* ---------------- gửi lệnh ---------------- */
 
   _raw(command, data, requestId) {
-    if (this.ws?.readyState !== WebSocket.OPEN) return false
+    if (this.ws?.readyState !== WebSocket.OPEN) {
+      return false
+    }
     this.ws.send(JSON.stringify({ command, data, requestId }))
     return true
   }
@@ -274,13 +403,20 @@ export class OmniSocket {
   /* Chỉ theo dõi chi tiết hội thoại đang mở. Danh sách bên trái
    * luôn nhận được message.new ở mức tóm tắt, không cần subscribe. */
   subscribe(conversationId) {
-    if (this.subscribed.has(conversationId)) return
+    if (this.subscribed.has(conversationId)) {
+      return
+    }
     this.subscribed.add(conversationId)
-    this.emit(WS_COMMAND.SUBSCRIBE, { conversationId })
+    /* Chưa authed thì bỏ qua — onready sẽ đăng ký lại cả Set */
+    if (this.authed) {
+      this.emit(WS_COMMAND.SUBSCRIBE, { conversationId })
+    }
   }
 
   unsubscribe(conversationId) {
-    if (!this.subscribed.delete(conversationId)) return
+    if (!this.subscribed.delete(conversationId)) {
+      return
+    }
     this.emit(WS_COMMAND.UNSUBSCRIBE, { conversationId })
   }
 
@@ -318,7 +454,9 @@ class MockSocket {
   }
 
   on(event, fn) {
-    if (!this.handlers.has(event)) this.handlers.set(event, new Set())
+    if (!this.handlers.has(event)) {
+      this.handlers.set(event, new Set())
+    }
     this.handlers.get(event).add(fn)
     return () => this.handlers.get(event)?.delete(fn)
   }
@@ -340,10 +478,11 @@ class MockSocket {
  * ==================================================================== */
 
 let socketInstance = null
-
 export const getOmniSocket = ({ url, token, bizId } = {}) => {
   if (!socketInstance) {
-    socketInstance = USE_MOCK ? new MockSocket() : new OmniSocket({ url, token, bizId })
+    socketInstance = USE_MOCK_SOCKET
+      ? new MockSocket()
+      : new OmniSocket({ url: url || buildWsUrl(), token, bizId })
   }
   return socketInstance
 }

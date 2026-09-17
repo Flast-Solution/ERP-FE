@@ -21,16 +21,17 @@
 
 export const SUCCESS_CODE = 200;
 export const GATE_EVN = {
-  Loc: process.env.REACT_APP_API_BASE_URL || '/api',
+  Loc: process.env.REACT_APP_API_BASE_URL,
+  WS: process.env.REACT_APP_API_WS_URL,
   Pro: 'https://biz.api.flast.vn',
-  Web: 'https://flast-vn',
-  AiA: 'https://service.aicuatui.vn'
+  Web: 'https://flast-vn'
 };
 
-export const GATEWAY = GATE_EVN['Loc'];
+export const GATEWAY  = GATE_EVN['Loc'];
+export const WS_URL   = GATE_EVN['WS'];
 export const BASE_URL = GATEWAY;
 export const CHANGE_STORE = 'CHANGE_STORE';
-export const UPLOAD_PATH = GATEWAY + '/uploads';
+export const UPLOAD_PATH  = GATEWAY + '/uploads';
 
 export const API = {
   SINGIN: '/auth/login'
