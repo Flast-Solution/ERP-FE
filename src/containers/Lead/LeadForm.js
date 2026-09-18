@@ -1,6 +1,5 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, DatePicker, Form, Input, Radio, Select, Spin, Tag, message } from 'antd'
-
 import {
   FormContextCustom,
   FormHidden,
@@ -10,7 +9,6 @@ import {
 import { RequestUtils } from '@flast-erp/core/utils'
 import { CHANNEL_SOURCE } from '@/configs/localData'
 import FormFileUpload from '@/containers/PreviewModal/FormFileUpload'
-
 import { LeadFormShell } from './styles'
 
 const WORKFLOW_FILTER_API = '/workflow/process/filter'
@@ -140,10 +138,12 @@ const LeadDatePicker = ({
 )
 
 const LeadForm = ({ listSale = [], submitting = false, canSave = true }) => {
+
   const { form, record } = useContext(FormContextCustom)
-  const [loadingEnterprise, setLoadingEnterprise] = useState(false)
-  const [workflows, setWorkflows] = useState([])
-  const [loadingWorkflows, setLoadingWorkflows] = useState(false)
+  const [ loadingEnterprise, setLoadingEnterprise ] = useState(false)
+  const [ workflows, setWorkflows ] = useState([])
+  const [ loadingWorkflows, setLoadingWorkflows ] = useState(false)
+
   const workflowOffsetRef = useRef(0)
   const workflowLoadingRef = useRef(false)
   const workflowHasMoreRef = useRef(true)
@@ -159,12 +159,13 @@ const LeadForm = ({ listSale = [], submitting = false, canSave = true }) => {
       : []),
     record?.workflowProcessId,
   ].filter(id => id !== undefined && id !== null && id !== ''))), [record])
+
   const attachedWorkflowIdSet = useMemo(
     () => new Set(attachedWorkflowIds.map(String)),
-    [attachedWorkflowIds],
-  )
+  [attachedWorkflowIds], )
 
   useEffect(() => {
+
     const normalizedTaxCode = String(taxCode ?? '').trim()
     const lookupSequence = ++enterpriseLookupSequenceRef.current
 
@@ -213,7 +214,9 @@ const LeadForm = ({ listSale = [], submitting = false, canSave = true }) => {
   }, [customerType, form, taxCode])
 
   const loadWorkflows = useCallback(async ({ reset = false } = {}) => {
-    if (workflowLoadingRef.current || (!reset && !workflowHasMoreRef.current)) return
+    if (workflowLoadingRef.current || (!reset && !workflowHasMoreRef.current)) {
+      return
+    }
 
     const offset = reset ? 0 : workflowOffsetRef.current
     workflowLoadingRef.current = true
@@ -281,12 +284,13 @@ const LeadForm = ({ listSale = [], submitting = false, canSave = true }) => {
 
   const leadSourceOptions = useMemo(
     () => CHANNEL_SOURCE.map(item => ({ value: item.id, label: item.name })),
-    [],
-  )
+  [], )
+
   const saleOptions = useMemo(() => listSale.map(item => ({
     value: item.id,
     label: item.fullName ?? item.name ?? item.username ?? `Nhân viên #${item.id}`,
   })), [listSale])
+
   const workflowOptions = useMemo(() => mergeById([
     ...(Array.isArray(record?.workflowInstances)
       ? record.workflowInstances.map(instance => instance?.process ?? {
@@ -294,7 +298,7 @@ const LeadForm = ({ listSale = [], submitting = false, canSave = true }) => {
         name: instance?.processName,
       })
       : []),
-    record?.workflowProcess,
+    record?.workflowProcess
   ].filter(Boolean), workflows).map(item => ({
     value: item.id,
     label: item.name ?? item.processKey ?? item.code ?? `Workflow #${item.id}`,
@@ -531,6 +535,6 @@ const LeadForm = ({ listSale = [], submitting = false, canSave = true }) => {
       </footer> : null}
     </LeadFormShell>
   )
-}
+};
 
-export default LeadForm
+export default LeadForm;

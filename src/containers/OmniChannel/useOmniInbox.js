@@ -16,7 +16,7 @@ import { omniApi, getOmniSocket, destroyOmniSocket, WS_EVENT } from '@/services/
 import { jwtService} from '@flast-erp/core/utils';
 import { useStore } from '@flast-erp/core/components';
 import { WS_URL } from '@/configs';
-import useGetMe from '@/hosks/useGetMe';
+import useGetMe from '@/hooks/useGetMe';
 
 export const useOmniInbox = () => {
 
@@ -60,8 +60,10 @@ export const useOmniInbox = () => {
       store.getState().receiveMessage(payload)
     )
     
+    /* KHÔNG dùng patchConversation trực tiếp: hội thoại có thể vừa
+       rời khỏi tab đang xem, hoặc vừa sang tay người khác. */
     const offUpdated = socket.on(WS_EVENT.CONVERSATION_UPDATED, (c) =>
-      store.getState().patchConversation(c.id, c)
+      store.getState().applyConversationUpdate(c)
     )
 
     const offChannelError = socket.on(WS_EVENT.CHANNEL_ERROR, ({ channelAccountId, name }) => {
@@ -279,8 +281,7 @@ export const useOmniInbox = () => {
       if (res.timelineItem) {
         store.getState().addTimelineItem(conversationId, res.timelineItem)
       }
-      /* Lead có thể rơi vào tay sale khác — nói rõ để người tạo
-         không ngồi đợi khách trả lời trong hội thoại không còn của mình. */
+      /* Lead có thể rơi vào tay sale khác — nói rõ để người tạo. */
       if (res.assignedUserId != null) {
         store.getState().patchConversation(conversationId, {
           assignedUserId: res.assignedUserId,
