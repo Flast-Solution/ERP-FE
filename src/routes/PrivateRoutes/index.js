@@ -62,6 +62,7 @@ import { ProductionControlConfig } from './ProductionControlConfig';
 
 /* HR - Quản lý hành chính */
 import { HRConfig } from './HRConfig';
+import { OmniConfig } from './OmniConfig';
 
 const routeConfigs = [
     PublicWebConfig,
@@ -87,6 +88,7 @@ const routeConfigs = [
     DragDropConfig,
     WebConfig,
     HRConfig,
+    OmniConfig,
     WorkflowDesignerConfig
 ];
 

@@ -31,6 +31,7 @@ import NhapKho from './NhapKho';
 import Cusomter from './Customer';
 import KPI from './KPI';
 import WorkflowModal from './WorkflowModalRoute';
+import Omni from './Omni';
 
 const CustomModalStyles = createGlobalStyle`
   .custom-modal {
@@ -68,7 +69,8 @@ const modalRoutes = [
   ...NhapKho,
   ...Cusomter,
   ...KPI,
-  ...WorkflowModal
+  ...WorkflowModal,
+  ...Omni
 ];
 
 const getPopupRoute = (currentModal) => {
