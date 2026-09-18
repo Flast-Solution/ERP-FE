@@ -27,19 +27,10 @@ const MANUFACTURE_STATUS_CREATE_DEFAULTS = {
 };
 const PROVIDER_FETCH_API = '/provider/fetch';
 
+/** GET /provider/fetch → data.embedded = Provider[] */
 const getProviderItems = (response) => {
-  const payload = response?.data ?? response;
-  const candidates = [
-    payload?.embedded,
-    payload?.content,
-    payload?.items,
-    payload?.data?.embedded,
-    payload?.data?.content,
-    payload?.data?.items,
-    payload?.data,
-    payload,
-  ];
-  return candidates.find(Array.isArray) ?? [];
+  const embedded = response?.data?.embedded;
+  return Array.isArray(embedded) ? embedded : [];
 };
 
 const formatOrderDate = (value) => {

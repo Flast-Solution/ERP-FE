@@ -2,16 +2,10 @@ export const getProductId = (product = {}) => (
   product.productId ?? product.product?.id ?? product.id
 );
 
-export const getResponseItems = (response) => {
-  const payload = response?.data ?? response;
-  const candidates = [
-    payload?.data,
-    payload?.items,
-    payload?.content,
-    payload?.embedded,
-    payload,
-  ];
-  return candidates.find(Array.isArray) ?? [];
+/** GET /product-material/find-by-product/{id} → data = BomVersion[] */
+export const getBomVersions = (response) => {
+  const versions = response?.data;
+  return Array.isArray(versions) ? versions : [];
 };
 
 export const getInventoryQuantity = (material = {}) => (

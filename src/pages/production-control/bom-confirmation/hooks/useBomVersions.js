@@ -7,7 +7,7 @@ import {
   buildBomSelectionValues,
   buildProducts,
   getBomStatusLabel,
-  getResponseItems,
+  getBomVersions,
   mergeBomMaterialRows,
   resolveDefaultBom,
 } from '../utils';
@@ -73,7 +73,7 @@ export const useBomVersions = ({ productionOrder, form, onVersionChange }) => {
       const results = await Promise.all(products.map(async (product) => {
         try {
           const response = await RequestUtils.Get(`/product-material/find-by-product/${product.id}`, {});
-          return { product, items: getResponseItems(response), failed: false };
+          return { product, items: getBomVersions(response), failed: false };
         } catch (error) {
           return { product, items: [], failed: true };
         }
@@ -86,23 +86,13 @@ export const useBomVersions = ({ productionOrder, form, onVersionChange }) => {
         message.warning(`Không tải được BOM của ${failedProducts.length} sản phẩm.`);
       }
 
-      const nextBomVersions = results.flatMap(({ product, items }) => {
-        const versions = items.some(item => Array.isArray(item?.productMaterials))
-          ? items
-          : [{
-              bomProductId: null,
-              productId: product.id,
-              version: 'v1.0',
-              status: 1,
-              productMaterials: items,
-            }];
-
-        return versions.map(bom => ({
+      const nextBomVersions = results.flatMap(({ product, items }) => (
+        items.map(bom => ({
           ...bom,
           productId: bom.productId ?? product.id,
           productName: product.name,
-        }));
-      });
+        }))
+      ));
 
       setBomVersions(nextBomVersions);
       const defaultBoms = Object.fromEntries(bomItems.map((item) => {

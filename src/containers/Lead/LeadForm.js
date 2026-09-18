@@ -18,24 +18,31 @@ const WORKFLOW_PAGE_SIZE = 10
 const ENTERPRISE_LOOKUP_API = '/erp/customer/find-enterprise-code'
 const ENTERPRISE_LOOKUP_DEBOUNCE_MS = 500
 
-const getResponseItems = (response) => {
-  const payload = response?.data ?? response
-  return [
-    payload?.embedded,
-    payload?.items,
-    payload?.content,
-    payload?.records,
-    payload?.data?.embedded,
-    payload?.data?.items,
-    payload?.data?.content,
-    payload?.data,
-    payload,
-  ].find(Array.isArray) ?? []
+/** FormSelectAPI onData nhận sẵn body.data từ API. */
+const asSelectOptions = (value) => (Array.isArray(value) ? value : [])
+
+/**
+ * GET /workflow/process/filter
+ * body.data = { embedded: Process[], page: { totalElements } }
+ */
+const getWorkflowFilterResult = (response) => {
+  const payload = response?.data ?? {}
+  return {
+    items: Array.isArray(payload.embedded) ? payload.embedded : [],
+    totalElements: Number(payload.page?.totalElements ?? 0),
+  }
 }
 
-const getResponsePage = (response) => {
-  const payload = response?.data ?? response
-  return payload?.page ?? payload?.data?.page ?? {}
+/**
+ * GET /erp/customer/find-enterprise-code
+ * body.data = Enterprise object
+ */
+const getEnterpriseFromLookup = (response) => {
+  const enterprise = response?.data
+  if (!enterprise || typeof enterprise !== 'object' || Array.isArray(enterprise)) {
+    return null
+  }
+  return enterprise
 }
 
 const mergeById = (currentItems, nextItems) => {
@@ -46,17 +53,6 @@ const mergeById = (currentItems, nextItems) => {
     }
   })
   return Array.from(itemsById.values())
-}
-
-const getResponseObject = (response) => {
-  const payload = response?.data ?? response
-  const candidates = [
-    payload?.enterprise,
-    payload?.data?.enterprise,
-    payload?.data,
-    payload,
-  ]
-  return candidates.find(item => item && typeof item === 'object' && !Array.isArray(item)) ?? null
 }
 
 const ASSET_BASE_URL = 'http://view.user.flast.vn/assets/icons'
@@ -153,12 +149,13 @@ const LeadForm = ({ listSale = [], submitting = false, canSave = true }) => {
   const customerType = Form.useWatch('customerType', form) ?? record?.customerType ?? 'INDIVIDUAL'
   const taxCode = Form.useWatch(['business', 'taxCode'], form)
 
-  const attachedWorkflowIds = useMemo(() => Array.from(new Set([
-    ...(Array.isArray(record?.workflowInstances)
-      ? record.workflowInstances.map(instance => instance?.processId)
-      : []),
-    record?.workflowProcessId,
-  ].filter(id => id !== undefined && id !== null && id !== ''))), [record])
+  const attachedWorkflowIds = useMemo(
+    () => Array.from(new Set(
+      (Array.isArray(record?.workflowProcessIds) ? record.workflowProcessIds : [])
+        .filter(id => id !== undefined && id !== null && id !== ''),
+    )),
+    [record?.workflowProcessIds],
+  )
   const attachedWorkflowIdSet = useMemo(
     () => new Set(attachedWorkflowIds.map(String)),
     [attachedWorkflowIds],
@@ -181,7 +178,7 @@ const LeadForm = ({ listSale = [], submitting = false, canSave = true }) => {
         })
         if (lookupSequence !== enterpriseLookupSequenceRef.current) return
 
-        const enterprise = getResponseObject(response)
+        const enterprise = getEnterpriseFromLookup(response)
         if (!enterprise || (!enterprise.id && !enterprise.companyName)) {
           form.setFieldValue('enterpriseId', null)
           return
@@ -225,8 +222,7 @@ const LeadForm = ({ listSale = [], submitting = false, canSave = true }) => {
         offset: String(offset),
         type: 'LEAD',
       })
-      const nextItems = getResponseItems(response)
-      const pageInfo = getResponsePage(response)
+      const { items: nextItems, totalElements } = getWorkflowFilterResult(response)
       const mergedItems = mergeById(
         reset ? [] : workflowItemsRef.current,
         nextItems,
@@ -234,7 +230,6 @@ const LeadForm = ({ listSale = [], submitting = false, canSave = true }) => {
       workflowItemsRef.current = mergedItems
       setWorkflows(mergedItems)
 
-      const totalElements = Number(pageInfo?.totalElements ?? pageInfo?.total_elements ?? 0)
       const hasMore = totalElements > 0
         ? mergedItems.length < totalElements
         : nextItems.length >= WORKFLOW_PAGE_SIZE
@@ -262,19 +257,15 @@ const LeadForm = ({ listSale = [], submitting = false, canSave = true }) => {
   }, [loadWorkflows])
 
   const normalizeLeadStatuses = useCallback((response) => {
-    const statuses = getResponseItems(response)
+    // FormSelectAPI onData: body.data = Status[]
+    const statuses = asSelectOptions(response)
     const currentStatus = form?.getFieldValue('status')
     if (
       form
       && statuses.length
       && (currentStatus === undefined || currentStatus === null || currentStatus === '')
     ) {
-      const initialStatus = statuses.find(status => (
-        ['NEW', 'CREATE_DATA'].includes(
-          String(status?.code ?? status?.value ?? '').toUpperCase(),
-        )
-      )) ?? statuses[0]
-      form.setFieldValue('status', initialStatus?.id ?? initialStatus?.value ?? initialStatus?.code)
+      form.setFieldValue('status', statuses[0]?.id)
     }
     return statuses
   }, [form])
@@ -285,21 +276,16 @@ const LeadForm = ({ listSale = [], submitting = false, canSave = true }) => {
   )
   const saleOptions = useMemo(() => listSale.map(item => ({
     value: item.id,
-    label: item.fullName ?? item.name ?? item.username ?? `Nhân viên #${item.id}`,
+    label: item.fullName || item.name || `Nhân viên #${item.id}`,
   })), [listSale])
-  const workflowOptions = useMemo(() => mergeById([
-    ...(Array.isArray(record?.workflowInstances)
-      ? record.workflowInstances.map(instance => instance?.process ?? {
-        id: instance?.processId,
-        name: instance?.processName,
-      })
-      : []),
-    record?.workflowProcess,
-  ].filter(Boolean), workflows).map(item => ({
-    value: item.id,
-    label: item.name ?? item.processKey ?? item.code ?? `Workflow #${item.id}`,
-    disabled: item.enabled === false,
-  })), [record, workflows])
+  const workflowOptions = useMemo(() => {
+    const attachedStubs = attachedWorkflowIds.map(id => ({ id }))
+    return mergeById(attachedStubs, workflows).map(item => ({
+      value: item.id,
+      label: item.name || item.code || `Workflow #${item.id}`,
+      disabled: item.enabled === false,
+    }))
+  }, [attachedWorkflowIds, workflows])
 
   const handleWorkflowPopupScroll = useCallback((event) => {
     const target = event.currentTarget
@@ -403,7 +389,7 @@ const LeadForm = ({ listSale = [], submitting = false, canSave = true }) => {
               className="pl-select"
               apiPath="erp/service/list"
               apiAddNewItem="erp/service/create"
-              onData={getResponseItems}
+              onData={asSelectOptions}
               label="Dịch vụ"
               name="serviceId"
               valueProp="id"
