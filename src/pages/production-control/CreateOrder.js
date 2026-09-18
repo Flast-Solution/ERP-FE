@@ -11,7 +11,7 @@ import {
   FormSelect,
   FormSelectAPI,
 } from '@flast-erp/core/components';
-import { formatMoney } from '@flast-erp/core/utils';
+import { formatMoney, RequestUtils } from '@flast-erp/core/utils';
 import ProductionPage from './styles';
 import { createSnowflakeId } from '@/utils/snowflake';
 import {
@@ -24,6 +24,22 @@ const MANUFACTURE_STATUS_FILTER = { type: 'MANUFACTURE' };
 const MANUFACTURE_STATUS_CREATE_DEFAULTS = {
   color: '#64748b',
   entityType: 'MANUFACTURE',
+};
+const PROVIDER_FETCH_API = '/provider/fetch';
+
+const getProviderItems = (response) => {
+  const payload = response?.data ?? response;
+  const candidates = [
+    payload?.embedded,
+    payload?.content,
+    payload?.items,
+    payload?.data?.embedded,
+    payload?.data?.content,
+    payload?.data?.items,
+    payload?.data,
+    payload,
+  ];
+  return candidates.find(Array.isArray) ?? [];
 };
 
 const formatOrderDate = (value) => {
@@ -62,6 +78,7 @@ const CreateOrder = ({
   onLoadMoreWaitingOrders,
   onNext,
   onCancel,
+  submitting = false,
 }) => {
   const readOnly = mode === 'view';
   const [form] = Form.useForm();
@@ -69,10 +86,28 @@ const CreateOrder = ({
   const initializedEditRef = useRef(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [productionRows, setProductionRows] = useState([]);
+  const [providers, setProviders] = useState([]);
+  const [providerLoading, setProviderLoading] = useState(false);
   const [productionOrderCode] = useState(() => (
     initialValues?.productionOrderCode || `LSX-${createSnowflakeId()}`
   ));
   const watchedProductDetails = Form.useWatch('productDetails', form) ?? {};
+
+  useEffect(() => {
+    let mounted = true;
+    setProviderLoading(true);
+    RequestUtils.Get(PROVIDER_FETCH_API, {})
+      .then((response) => {
+        if (mounted) setProviders(getProviderItems(response));
+      })
+      .catch(() => {
+        if (mounted) setProviders([]);
+      })
+      .finally(() => {
+        if (mounted) setProviderLoading(false);
+      });
+    return () => { mounted = false; };
+  }, []);
 
   const createProductionRow = useCallback((product = null) => {
     rowSequenceRef.current += 1;
@@ -91,7 +126,10 @@ const CreateOrder = ({
     initializedEditRef.current = true;
     setSelectedOrder(order);
     setProductionRows((initialValues?.orderDetails ?? []).map(createProductionRow));
-  }, [createProductionRow, initialValues?.salesOrderId, initialValues?.orderDetails, initialValues?.order, waitingOrders]);
+    form.setFieldsValue({
+      productDetails: initialValues?.productDetails ?? {},
+    });
+  }, [createProductionRow, form, initialValues?.salesOrderId, initialValues?.orderDetails, initialValues?.order, initialValues?.productDetails, waitingOrders]);
 
   const selectedDetailIds = useMemo(() => new Set(
     productionRows.map(row => row.product?.id).filter(id => id != null).map(String),
@@ -101,6 +139,13 @@ const CreateOrder = ({
     if (!row.product?.id) return total;
     return total + Number(watchedProductDetails?.[String(row.product.id)]?.target ?? 0);
   }, 0);
+
+  const selectedProductsHaveProvider = productionRows.length > 0
+    && productionRows.every((row) => {
+      if (row.product?.id == null) return false;
+      const providerId = watchedProductDetails?.[String(row.product.id)]?.providerId;
+      return providerId !== undefined && providerId !== null && providerId !== '';
+    });
 
   const handleOrderChange = (value) => {
     const order = waitingOrders.find(item => String(item.id) === String(value)) ?? null;
@@ -133,6 +178,7 @@ const CreateOrder = ({
       form.setFieldValue(['productDetails', String(product.id)], {
         target: product.target,
         deadline: undefined,
+        providerId: product.providerId ?? product.provider?.id,
       });
     }
   };
@@ -320,6 +366,20 @@ const CreateOrder = ({
                             )}
                             style={{ width: '100%' }}
                           />
+                          <FormSelect
+                            name={['productDetails', String(product.id), 'providerId']}
+                            label="Nhà cung cấp"
+                            placeholder="Chọn nhà cung cấp (nếu thuê ngoài)"
+                            resourceData={providers}
+                            valueProp="id"
+                            titleProp="name"
+                            loading={providerLoading}
+                            allowClear
+                            showSearch
+                            optionFilterProp="label"
+                            initialValue={product.providerId ?? product.provider?.id}
+                            style={{ width: '100%' }}
+                          />
                           {(product.skuDetails ?? []).map((attribute, attributeIndex) => (
                             <div className="production-child-attribute" key={`${product.id}-${attributeIndex}`}>
                               <span>{attribute.text}</span>
@@ -363,17 +423,21 @@ const CreateOrder = ({
 
           <footer className="foot production-create-foot">
             <span className="foot-note">
-              Chỉ các mã đơn con được chọn mới được gộp vào lệnh sản xuất này. BOM của sản phẩm phải ở trạng thái đang sử dụng.
+              {selectedProductsHaveProvider
+                ? 'Lệnh có nhà cung cấp sẽ được lưu ngay, không cần xác nhận vật tư.'
+                : 'Chỉ các mã đơn con được chọn mới được gộp vào lệnh sản xuất này. BOM của sản phẩm phải ở trạng thái đang sử dụng.'}
             </span>
             <div className="actions">
               <CustomButton title={readOnly ? 'Đóng' : 'Hủy'} variant="outlined" color="default" inRigth={false} onClick={onCancel} />
               {!readOnly && (
                 <CustomButton
-                  title="Tiếp tục xác nhận vật tư"
+                  title={selectedProductsHaveProvider ? 'Lưu lệnh sản xuất' : 'Tiếp tục xác nhận vật tư'}
                   type="primary"
                   htmlType="submit"
                   icon={<SaveOutlined />}
                   inRigth={false}
+                  loading={submitting}
+                  disabled={submitting}
                 />
               )}
             </div>

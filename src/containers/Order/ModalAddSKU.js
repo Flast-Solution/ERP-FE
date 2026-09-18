@@ -26,15 +26,14 @@ import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import {
   FormSelectInfiniteProduct,
   FormSelect,
+  FormInput,
   FormInputNumber,
   BtnSubmit,
-  FormAutoComplete,
   FormTextArea
 } from '@flast-erp/core/components';
 
 import _, { isEmpty } from 'lodash';
 import InStockTable from '@/containers/WareHouse/InStockTable'
-import OrderService from '@/services/OrderService';
 import { useEffectAsync } from '@flast-erp/core/hooks';
 import { ShowSkuDetail } from '@/containers/Product/SkuView';
 import {
@@ -121,7 +120,7 @@ const AddSKU = (props) => {
       skuRef.current = restoredSku;
       setSkuDetail(restoredSku);
     } else {
-      form.resetFields(['skuId', 'quantity', 'orderName', 'note', 'orderLineEntries']);
+      form.resetFields(['skuId', 'quantity', 'code', 'note', 'orderLineEntries']);
       form.setFieldsValue({
         productId: value,
         productCode: nextProduct?.code ?? null,
@@ -176,10 +175,14 @@ const AddSKU = (props) => {
     };
     productDraftsRef.current[String(currentProductId)] = currentDraft;
 
-    const requiredProductIds = suggestedProducts.length > 0
-      ? suggestedProducts.map(item => item.id)
-      : [currentProductId];
-    const invalidOrderLineProductId = requiredProductIds.find(itemId => {
+    const selectedProductIds = Object.entries(productDraftsRef.current)
+      .filter(([, draft]) => (
+        draft?.values?.productId != null
+        && draft?.values?.skuId != null
+        && Number(draft?.values?.quantity) > 0
+      ))
+      .map(([itemId, draft]) => draft.values.productId ?? itemId);
+    const invalidOrderLineProductId = selectedProductIds.find(itemId => {
       const entries = productDraftsRef.current[String(itemId)]?.values?.orderLineEntries;
       return hasIncompleteOrderLineEntries(entries) || getDuplicateOrderLineKeys(entries).length > 0;
     });
@@ -190,30 +193,17 @@ const AddSKU = (props) => {
       const invalidProduct = suggestedProducts.find(
         item => String(item.id) === String(invalidOrderLineProductId),
       );
+      const invalidProductName = invalidDraft?.product?.name || invalidProduct?.name || 'sản phẩm';
       message.warning(
         duplicateKeys.length > 0
-          ? `Thông tin bổ sung của ${invalidProduct?.name || 'sản phẩm'} bị trùng key: ${duplicateKeys.join(', ')}`
-          : `Vui lòng nhập đủ key và value cho ${invalidProduct?.name || 'sản phẩm'}.`,
+          ? `Thông tin bổ sung của ${invalidProductName} bị trùng key: ${duplicateKeys.join(', ')}`
+          : `Vui lòng nhập đủ key và value cho ${invalidProductName}.`,
       );
       loadProduct(invalidOrderLineProductId, false);
       return;
     }
 
-    const missingProductId = requiredProductIds.find(itemId => {
-      const draft = productDraftsRef.current[String(itemId)];
-      return !draft?.values?.skuId || Number(draft?.values?.quantity) <= 0;
-    });
-
-    if (missingProductId != null) {
-      const missingProduct = suggestedProducts.find(
-        item => String(item.id) === String(missingProductId),
-      );
-      message.warning(`Vui lòng cấu hình SKU và số lượng cho ${missingProduct?.name || 'sản phẩm còn thiếu'}.`);
-      loadProduct(missingProductId, false);
-      return;
-    }
-
-    requiredProductIds.forEach(itemId => {
+    selectedProductIds.forEach(itemId => {
       const draft = productDraftsRef.current[String(itemId)];
       const { orderLineEntries, ...draftValues } = draft.values;
       onSave({
@@ -224,7 +214,7 @@ const AddSKU = (props) => {
         mSkuDetails: createMSkuDetails(draft.sku?.skuDetails ?? []),
       });
     });
-    message.success(`Đã thêm ${requiredProductIds.length} sản phẩm vào cơ hội bán hàng.`);
+    message.success(`Đã thêm ${selectedProductIds.length} sản phẩm vào cơ hội bán hàng.`);
     if (typeof closeModal === 'function') {
       closeModal();
     }
@@ -333,13 +323,10 @@ const AddSKU = (props) => {
           />
         </Col>
         <Col span={12}>
-          <FormAutoComplete
-            resourceData={OrderService.getListOrderName()}
-            valueProp='name'
-            titleProp='name'
-            label='Tên đơn'
-            name='orderName'
-            placeholder={'Nhập tên đơn nếu có'}
+          <FormInput
+            label='Số đơn'
+            name='code'
+            placeholder={'Nhập số đơn nếu có'}
           />
         </Col>
         <Col span={24}>
@@ -401,9 +388,7 @@ const AddSKU = (props) => {
         <Col span={24}>
           <BtnSubmit
             marginTop={0}
-            text={suggestedProducts.length > 1
-              ? `Hoàn thành ${suggestedProducts.length} sản phẩm`
-              : 'Hoàn thành'}
+            text="Hoàn thành"
           />
         </Col>
       </Row>

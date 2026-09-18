@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from 'react'
 import { Button, Select, Spin, Typography } from 'antd'
+import { BarChartOutlined } from '@ant-design/icons'
 
 import useGetMe from '@/hooks/useGetMe'
 import { useWorkflowProgress } from '@/pages/order/progress/hooks/useWorkflowProgress'
@@ -12,7 +13,7 @@ import WorkflowProductCard from './WorkflowProductCard'
 import WorkflowEntityCard from './WorkflowEntityCard'
 import { getFormSubmitButtonConfig } from '@/utils/formSubmitButton'
 
-const { Text, Title } = Typography
+const { Text } = Typography
 const LEAD_ASSET_BASE_URL = 'http://view.user.flast.vn/assets/icons'
 
 const LeadWorkflowTracker = ({ steps, currentStep, selectedStepCode, onStepClick }) => {
@@ -410,8 +411,9 @@ const WorkflowInstanceContent = ({
 
               <div className="pl-lockrow">
                 <img src={`${LEAD_ASSET_BASE_URL}/shield.svg`} alt="" />
-                <span>Bước hiện tại không thể sửa trực tiếp — chỉ chuyển qua các action được cấu hình.</span>
-                <span className="lockval">workflow (read-only)</span>
+                <span title="Bước hiện tại không thể sửa trực tiếp — chỉ chuyển qua các action được cấu hình.">
+                  Bước hiện tại không thể sửa trực tiếp — chỉ chuyển qua các action được cấu hình.
+                </span>
               </div>
 
               {configuredButtons.length ? (
@@ -469,7 +471,7 @@ const WorkflowInstanceContent = ({
 
             <div>
               <div className="pl-section__head" style={{ marginBottom: 16 }}>
-                <img src={`${LEAD_ASSET_BASE_URL}/bar-chart-3.svg`} alt="" width="15" height="15" />
+                <BarChartOutlined style={{ fontSize: 15 }} aria-hidden="true" />
                 <span className="t-body-strong">Lead score</span>
               </div>
               <LeadWorkflowScore lead={lead} />
@@ -490,10 +492,7 @@ const WorkflowInstanceContent = ({
 
       <section className="workflow-detail-drawer__block">
         <div className="workflow-detail-drawer__process-head">
-          <div>
-            <Text className="workflow-detail-drawer__eyebrow">QUY TRÌNH</Text>
-            <Title level={3}>{workflowName}</Title>
-          </div>
+          <Text className="workflow-detail-drawer__eyebrow">QUY TRÌNH</Text>
           <Text type="secondary">
             {workflowState.workflow?.processKey ?? ''}
             {workflowState.steps.length ? ` · ${workflowState.steps.length} bước` : ''}

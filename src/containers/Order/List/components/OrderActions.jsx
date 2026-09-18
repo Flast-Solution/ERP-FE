@@ -17,6 +17,7 @@ const OrderActions = ({
   navigate,
   canViewDetail,
   canUpdateOpportunity,
+  canUpdateOrder,
   canViewQuotation,
   canAttachWorkflow,
   canViewWorkflow,
@@ -157,16 +158,28 @@ const OrderActions = ({
           <EditFilled />
         </Button>
       )}
-      {extraActions?.map((action, index) => (
+      {canUpdateOrder && record.type === 'order' && (
         <Button
-          key={index}
           size="small"
-          {...action}
+          style={{ color: '#16c5faff' }}
+          onClick={() => navigate(`/sale/ban-hang/${record.id}?type=order`)}
+        >
+          <EditFilled />
+        </Button>
+      )}
+      {extraActions?.filter(action => action.visible?.(record) !== false).map((action, index) => {
+        const { visible, ...buttonAction } = action
+        return (
+        <Button
+          key={action.key ?? action.children ?? index}
+          size="small"
+          {...buttonAction}
           onClick={() => action.onClick(record)}
         >
           {action.children}
         </Button>
-      ))}
+        )
+      })}
     </Space>
   )
 }

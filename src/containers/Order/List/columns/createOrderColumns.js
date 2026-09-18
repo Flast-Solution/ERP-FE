@@ -1,11 +1,96 @@
 import React from 'react'
-import { Tag } from 'antd'
+import { Divider, Tag, Tooltip, Typography } from 'antd'
 import { CopyOutlined } from '@ant-design/icons'
 import { formatMoney, formatTime } from '@flast-erp/core/utils'
 import { renderArrayColor } from '../../utils'
 import { copyToClipboard } from '../utils/clipboard'
 import OrderActions from '../components/OrderActions'
 import { STATUS_LEAD } from '@/configs/constant'
+import { parseOrderLine } from '../../orderLine'
+
+const { Text } = Typography
+
+const OpportunityOrderTooltip = ({ details }) => {
+  const orderDetails = Array.isArray(details) ? details : []
+
+  if (orderDetails.length === 0) {
+    return <span>Chưa có thông tin SKU và thông tin bổ sung.</span>
+  }
+
+  return (
+    <div style={{ maxHeight: 360, overflowY: 'auto', paddingRight: 4 }}>
+      {orderDetails.map((detail, detailIndex) => {
+        const skuDetails = Array.isArray(detail?.skuDetails) ? detail.skuDetails : []
+        const orderLineEntries = Object.entries(parseOrderLine(detail?.orderLine))
+
+        return (
+          <div key={detail?.id ?? detail?.code ?? detailIndex}>
+            {detailIndex > 0 && <Divider style={{ margin: '10px 0' }} />}
+            <Text strong style={{ color: 'inherit' }}>
+              {detailIndex + 1}. {detail?.productName || detail?.code || 'Sản phẩm'}
+            </Text>
+
+            <div style={{ marginTop: 6 }}>
+              <Text strong style={{ color: 'inherit' }}>SKU:</Text>
+              {skuDetails.length > 0 ? skuDetails.map((sku, skuIndex) => (
+                <div key={`${sku?.text || 'sku'}-${skuIndex}`} style={{ paddingLeft: 12 }}>
+                  {sku?.text || 'Thuộc tính'}:{' '}
+                  {(Array.isArray(sku?.values) ? sku.values : [])
+                    .map(value => value?.text ?? value?.value ?? value?.id)
+                    .filter(value => value !== undefined && value !== null && value !== '')
+                    .join(', ') || '-'}
+                </div>
+              )) : <span style={{ marginLeft: 6 }}>Chưa có</span>}
+            </div>
+
+            <div style={{ marginTop: 6 }}>
+              <Text strong style={{ color: 'inherit' }}>Thông tin bổ sung:</Text>
+              {orderLineEntries.length > 0 ? orderLineEntries.map(([key, value]) => (
+                <div key={key} style={{ paddingLeft: 12 }}>
+                  {key}: {String(value ?? '-')}
+                </div>
+              )) : <span style={{ marginLeft: 6 }}>Chưa có</span>}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+const OrderCodeCell = ({
+  text,
+  record,
+  index,
+  copiedIndex,
+  setCopiedIndex,
+  showDetails,
+}) => {
+  const code = (
+    <span
+      onClick={() => copyToClipboard(text, setCopiedIndex, index)}
+      style={{
+        cursor: 'pointer',
+        color: copiedIndex === index ? '#52c41a' : 'inherit',
+        transition: 'color 0.3s ease',
+      }}
+    >
+      <CopyOutlined style={{ marginRight: 8 }} />
+      {text}
+    </span>
+  )
+
+  return showDetails ? (
+    <Tooltip
+      placement="rightTop"
+      mouseEnterDelay={0.2}
+      styles={{ root: { maxWidth: 560 } }}
+      title={<OpportunityOrderTooltip details={record?.details} />}
+    >
+      {code}
+    </Tooltip>
+  ) : code
+}
 
 const OPPORTUNITY_HIDDEN_COLUMN_KEYS = new Set([
   'opportunityAt',
@@ -23,6 +108,7 @@ const DEFAULT_OPPORTUNITY_STATUS = {
 
 const createOrderColumns = ({
   isOpportunityList,
+  showOrderDetailTooltip,
   opportunityStatusOptions,
   copiedIndex,
   setCopiedIndex,
@@ -38,6 +124,7 @@ const createOrderColumns = ({
   navigate,
   canViewDetail,
   canUpdateOpportunity,
+  canUpdateOrder,
   canViewQuotation,
   canAttachWorkflow,
   canViewWorkflow,
@@ -53,28 +140,24 @@ const createOrderColumns = ({
     title: 'Mã đơn',
     dataIndex: 'code',
     key: 'code',
-    width: 150,
+    width: 200,
     ellipsis: true,
     render: (text, record, index) => (
-      <span
-        onClick={() => copyToClipboard(text, setCopiedIndex, index)}
-        style={{
-          cursor: 'pointer',
-          color: copiedIndex === index ? '#52c41a' : 'inherit',
-          transition: 'color 0.3s ease',
-        }}
-      >
-        <CopyOutlined style={{ marginRight: 8 }} />
-        {text}
-      </span>
+      <OrderCodeCell
+        text={text}
+        record={record}
+        index={index}
+        copiedIndex={copiedIndex}
+        setCopiedIndex={setCopiedIndex}
+        showDetails={showOrderDetailTooltip}
+      />
     ),
   },
   {
     title: 'Sản phẩm',
     dataIndex: 'products',
     key: 'products',
-    width: 150,
-    ellipsis: true,
+    width: 300,
     render: (products, record) => renderArrayColor(products, record.detailstatus),
   },
   {
@@ -206,6 +289,7 @@ const createOrderColumns = ({
         navigate={navigate}
         canViewDetail={canViewDetail}
         canUpdateOpportunity={canUpdateOpportunity}
+        canUpdateOrder={canUpdateOrder}
         canViewQuotation={canViewQuotation}
         canAttachWorkflow={canAttachWorkflow}
         canViewWorkflow={canViewWorkflow}

@@ -74,6 +74,10 @@ export const buildManufacturePayload = ({ productionOrder = {}, materialConfirma
 
     return {
       productId: product.productId,
+      providerId: detailValues.providerId
+        ?? product.providerId
+        ?? product.provider?.id
+        ?? null,
       bomProductId: bomSelection.bomProductId ?? product.bomProductId ?? null,
       target,
       unitPrice,
@@ -137,6 +141,7 @@ export const mapManufactureOrder = (record, manufactureStatuses = MANUFACTURE_SY
       total: Number(detail.totalPrice ?? orderDetail?.total ?? (Number(target) * Number(unitPrice))),
       bomProductId: detail.bomProductId,
       bomProduct: detail.bomProduct,
+      providerId: detail.providerId ?? orderDetail?.providerId ?? orderDetail?.provider?.id ?? null,
     }
   })
   const effectiveOrderDetails = manufactureDetails.length > 0 ? editingOrderDetails : orderDetails
@@ -164,6 +169,7 @@ export const mapManufactureOrder = (record, manufactureStatuses = MANUFACTURE_SY
       {
         target: detail?.target ?? 0,
         deadline: editDeadline,
+        providerId: detail?.providerId ?? detail?.provider?.id ?? null,
       },
     ])),
     manufactureStatus: manufactureStatusValue,

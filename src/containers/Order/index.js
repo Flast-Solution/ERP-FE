@@ -20,7 +20,7 @@
 /**************************************************************************/
 
 import React, { useCallback, useState } from 'react';
-import { Table, Button, InputNumber, Select, Space, Typography, message } from 'antd';
+import { Table, Button, DatePicker, Input, InputNumber, Select, Space, Typography, message } from 'antd';
 import { ShowSkuDetail } from '@/containers/Product/SkuView';
 import { arrayEmpty, arrayNotEmpty, formatMoney } from '@flast-erp/core/utils';
 import { formatterInputNumber, parserInputNumber } from '@flast-erp/core/utils';
@@ -40,6 +40,11 @@ import { HASH_MODAL, SUCCESS_CODE } from '@/configs';
 import OrderService, { getWarehouseByProduct } from '@/services/OrderService';
 import { useEffectAsync } from '@flast-erp/core/hooks';
 import { mergeSavedOrderLines, parseOrderLine } from './orderLine';
+import styled from 'styled-components';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+
+dayjs.extend(customParseFormat);
 
 const { Text } = Typography;
 const CURRENCY_VND = 'VND';
@@ -48,6 +53,24 @@ const currencyOptions = [
   { label: 'VND', value: CURRENCY_VND },
   { label: 'USD', value: CURRENCY_USD }
 ];
+const vatOptions = [0, 8, 10].map(value => ({ label: `${value}%`, value }));
+
+const OpportunityTable = styled(Table)`
+  .ant-table-cell {
+    padding: 12px 10px !important;
+    vertical-align: middle;
+  }
+
+  .ant-input-number-input {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ant-table-summary {
+    background: ${({ theme }) => theme?.background?.content || '#fafafa'};
+    font-variant-numeric: tabular-nums;
+  }
+`;
 
 const formatCurrencyAmount = (value, currency = CURRENCY_VND) => Number(value ?? 0).toLocaleString(
   currency === CURRENCY_USD ? 'en-US' : 'vi-VN',
@@ -57,6 +80,17 @@ const formatCurrencyAmount = (value, currency = CURRENCY_VND) => Number(value ??
 const getExchangeRate = (currency, exchangeRate) => (
   currency === CURRENCY_USD ? Number(exchangeRate ?? 0) : 1
 );
+const parseDayQuote = value => {
+  if (!value) return null;
+  if (typeof value === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+    return dayjs(value, 'DD/MM/YYYY', true);
+  }
+  return dayjs(value);
+};
+const formatDayQuoteForPayload = value => {
+  const dateValue = parseDayQuote(value);
+  return dateValue?.isValid() ? dateValue.format('DD/MM/YYYY') : null;
+};
 const warrantyOptions = [
   { name: '(Chưa có)', id: 1 },
   { name: '6 Tháng', id: 6 },
@@ -68,7 +102,8 @@ const ORDER_TEMPLATE = {
   key: "1",
   note: "",
   detailId: null,
-  orderName: "",
+  code: "",
+  dayQuote: null,
   productId: null,
   productCode: "",
   productName: "",
@@ -308,6 +343,7 @@ const BanHangPage = ({
   const [shippingCost, setShippingCost] = useState(0);
   const [currency, setCurrency] = useState(CURRENCY_VND);
   const [exchangeRate, setExchangeRate] = useState(1);
+  const [vatRate, setVatRate] = useState(0);
   const [calculationFormula, setCalculationFormula] = useState('');
 
   useEffectAsync(async () => {
@@ -347,6 +383,7 @@ const BanHangPage = ({
       setShippingCost(Number(order.shippingCost ?? 0));
       setCurrency(order.currency === CURRENCY_USD ? CURRENCY_USD : CURRENCY_VND);
       setExchangeRate(order.currency === CURRENCY_USD ? Number(order.exchangeRate ?? 1) : 1);
+      setVatRate(Number(order.vat ?? 0));
     }
     if (arrayNotEmpty(data)) {
       setData(mergeSavedOrderLines(data, localOrder.savedDetails));
@@ -373,7 +410,7 @@ const BanHangPage = ({
       /* Tạo Item trong list sản phẩm */
       order.key = randomString();
       order.note = values?.note ?? "";
-      order.orderName = values?.orderName ?? "";
+      order.code = values?.code ?? "";
       order.productId = productId;
       order.productCode = productCode ?? mProduct.code ?? null;
       order.productName = mProduct.name;
@@ -438,7 +475,40 @@ const BanHangPage = ({
     });
   }, []);
 
+  const getLineAmount = useCallback((item) => Math.max(
+    Number(item?.totalPrice ?? 0)
+      - (Number(item?.discountAmount ?? 0) * getExchangeRate(currency, exchangeRate)),
+    0,
+  ), [currency, exchangeRate]);
+  const getSalePrice = useCallback((item) => {
+    const quantity = Number(item?.quantity ?? 0);
+    return quantity > 0 ? getLineAmount(item) / quantity : 0;
+  }, [getLineAmount]);
+  const getLineVat = useCallback(
+    (item) => getLineAmount(item) * (vatRate / 100),
+    [getLineAmount, vatRate],
+  );
+  const renderVndAmount = value => (
+    <Text style={{ display: 'block', textAlign: 'right', whiteSpace: 'nowrap' }}>
+      {formatMoney(value)}
+    </Text>
+  );
+
   const columns = [
+    {
+      title: 'Số đơn',
+      dataIndex: 'code',
+      key: 'code',
+      width: 150,
+      render: (value, record) => (
+        <Input
+          value={value}
+          maxLength={100}
+          placeholder="Nhập số đơn"
+          onChange={event => handleChange(record.key, 'code', event.target.value)}
+        />
+      )
+    },
     {
       title: 'Tên sản phẩm',
       dataIndex: 'productName',
@@ -453,62 +523,19 @@ const BanHangPage = ({
       width: 260
     },
     {
-      title: 'Bảo hành',
-      dataIndex: 'warrantyPeriod',
-      key: 'warrantyPeriod',
-      width: 110,
-      editable: true
-    },
-    {
-      title: 'Số lượng',
-      dataIndex: 'quantity',
-      key: 'quantity',
-      editable: true,
-      width: 100
-    },
-    {
-      title: `Đơn giá (${currency})`,
+      title: `Đơn giá mua (${currency})`,
       dataIndex: 'price',
       key: 'price',
-      width: 120,
+      width: 140,
+      align: 'right',
       editable: true
     },
     {
-      title: 'CK (%)',
-      dataIndex: 'discountRate',
-      key: 'discountRate',
-      width: 90,
-      editable: true
-    },
-    {
-      title: `Tiền CK (${currency})`,
-      dataIndex: 'discountAmount',
-      key: 'discountAmount',
-      width: 120,
-      editable: true
-    },
-    {
-      title: 'Lợi nhuận (%)',
-      dataIndex: 'profit',
-      key: 'profit',
-      width: 130,
-      render: (_, record) => (
-        <InputNumber
-          min={0}
-          max={99.99}
-          value={Number(record?.profit ?? 0)}
-          onChange={value => handleChange(record.key, 'profit', value)}
-          formatter={value => `${value ?? 0}%`}
-          parser={value => value?.replace('%', '')}
-          style={{ width: '100%' }}
-        />
-      )
-    },
-    {
-      title: `Phí ship (${currency})`,
+      title: `Chi phí vận chuyển (${currency})`,
       dataIndex: 'shippingCost',
       key: 'shippingCost',
       width: 140,
+      align: 'right',
       onCell: (_, index) => ({
         rowSpan: index === 0 ? Math.max(data.length, 1) : 0
       }),
@@ -516,7 +543,6 @@ const BanHangPage = ({
         <InputNumber
           min={0}
           value={shippingCost}
-          addonAfter={currency}
           onChange={value => {
             const nextShippingCost = Number(value ?? 0);
             setShippingCost(nextShippingCost);
@@ -535,16 +561,132 @@ const BanHangPage = ({
           }}
           formatter={formatterInputNumber}
           parser={parserInputNumber}
-          style={{ width: '100%' }}
+          controls={false}
+          style={{ width: '100%', textAlign: 'right' }}
         />
       ) : null
     },
     {
+      title: 'Lợi nhuận (%)',
+      dataIndex: 'profit',
+      key: 'profit',
+      width: 130,
+      align: 'right',
+      render: (_, record) => (
+        <InputNumber
+          min={0}
+          max={99.99}
+          value={Number(record?.profit ?? 0)}
+          onChange={value => handleChange(record.key, 'profit', value)}
+          formatter={value => `${value ?? 0}%`}
+          parser={value => value?.replace('%', '')}
+          controls={false}
+          style={{ width: '100%', textAlign: 'right' }}
+        />
+      )
+    },
+    {
+      title: 'Giá bán (VND)',
+      dataIndex: 'salePrice',
+      key: 'salePrice',
+      width: 140,
+      align: 'right',
+      render: (_, record) => renderVndAmount(getSalePrice(record))
+    },
+    {
+      title: 'Số lượng',
+      dataIndex: 'quantity',
+      key: 'quantity',
+      editable: true,
+      width: 100,
+      align: 'right'
+    },
+    {
       title: 'Thành tiền (VND)',
-      dataIndex: 'totalPrice',
-      key: 'totalPrice',
+      dataIndex: 'lineAmount',
+      key: 'lineAmount',
       width: 150,
+      align: 'right',
+      render: (_, record) => renderVndAmount(getLineAmount(record))
+    },
+    {
+      title: (
+        <Space size={6}>
+          <span>VAT</span>
+          <Select
+            size="small"
+            value={vatRate}
+            options={vatOptions}
+            onChange={value => setVatRate(Number(value ?? 0))}
+            style={{ width: 68 }}
+          />
+        </Space>
+      ),
+      dataIndex: 'vatAmount',
+      key: 'vatAmount',
+      width: 170,
+      align: 'right',
+      render: (_, record) => renderVndAmount(getLineVat(record))
+    },
+    {
+      title: 'Tổng tiền (VND)',
+      dataIndex: 'grandTotal',
+      key: 'grandTotal',
+      width: 150,
+      align: 'right',
+      render: (_, record) => renderVndAmount(getLineAmount(record) + getLineVat(record))
+    },
+    {
+      title: 'Deadline',
+      dataIndex: 'dayQuote',
+      key: 'dayQuote',
+      width: 150,
+      render: (value, record) => {
+        const dateValue = parseDayQuote(value);
+        return (
+          <DatePicker
+            allowClear
+            value={dateValue?.isValid() ? dateValue : null}
+            format="DD/MM/YYYY"
+            placeholder="dd/mm/yyyy"
+            onChange={date => handleChange(
+              record.key,
+              'dayQuote',
+              date ? date.format('DD/MM/YYYY') : null,
+            )}
+            style={{ width: '100%' }}
+          />
+        );
+      }
+    },
+    {
+      title: 'CK (%)',
+      dataIndex: 'discountRate',
+      key: 'discountRate',
+      width: 90,
+      align: 'right',
       editable: true
+    },
+    {
+      title: `Tiền CK (${currency})`,
+      dataIndex: 'discountAmount',
+      key: 'discountAmount',
+      width: 120,
+      align: 'right',
+      editable: true
+    },
+    {
+      title: 'Bảo hành',
+      dataIndex: 'warrantyPeriod',
+      key: 'warrantyPeriod',
+      width: 110,
+      editable: true
+    },
+    {
+      title: 'Đơn vị',
+      dataIndex: 'unit',
+      key: 'unit',
+      width: 90
     },
     {
       title: 'Kho',
@@ -557,13 +699,8 @@ const BanHangPage = ({
       title: 'Tồn kho',
       dataIndex: 'stock',
       key: 'stock',
-      width: 100
-    },
-    {
-      title: 'Đơn vị',
-      dataIndex: 'unit',
-      key: 'unit',
-      width: 90
+      width: 100,
+      align: 'right'
     },
     {
       title: 'Sửa',
@@ -585,10 +722,9 @@ const BanHangPage = ({
   let isOrder = (customerOrder?.id || 0) !== 0;
   const totalQuantity = data.reduce((sum, item) => sum + item.quantity, 0);
   const totalDiscount = data.reduce((sum, item) => sum + item.discountAmount, 0);
-  const totalSubOrder = data.reduce(
-    (sum, item) => sum + item.totalPrice - (item.discountAmount * getExchangeRate(currency, exchangeRate)),
-    0
-  );
+  const totalSubOrder = data.reduce((sum, item) => sum + getLineAmount(item), 0);
+  const totalVat = totalSubOrder * (vatRate / 100);
+  const totalOrder = totalSubOrder + totalVat;
 
   const recalculateTotals = useCallback((nextCurrency, nextExchangeRate) => {
     setData(current => current.map(item => ({
@@ -640,6 +776,8 @@ const BanHangPage = ({
       target[field] = target.warehouseOptions.find(option => option.id === value)?.stockName || '';
     } else if (field === 'warrantyPeriod') {
       target[field] = warrantyOptions.find(option => option.id === value)?.name || '';
+    } else {
+      target[field] = value;
     }
 
     /* Calculate dependent fields */
@@ -708,7 +846,8 @@ const BanHangPage = ({
             min={1}
             value={text}
             onChange={value => handleChange(record.key, column.dataIndex, value)}
-            style={{ width: '100%' }}
+            controls={false}
+            style={{ width: '100%', textAlign: 'right' }}
             formatter={formatterInputNumber}
             parser={parserInputNumber}
           />
@@ -720,12 +859,10 @@ const BanHangPage = ({
           max={column.dataIndex === 'profit' ? 99.99 : undefined}
           value={text}
           onChange={value => handleChange(record.key, column.dataIndex, value)}
-          style={{ width: '100%' }}
+          controls={false}
+          style={{ width: '100%', textAlign: 'right' }}
           formatter={formatterInputNumber}
           parser={parserInputNumber}
-          addonAfter={column.dataIndex === 'totalPrice' ? CURRENCY_VND : (
-            ['price', 'discountAmount'].includes(column.dataIndex) ? currency : undefined
-          )}
         />
       );
     } else {
@@ -768,14 +905,17 @@ const BanHangPage = ({
         customer: mCustomer,
         details: data.map(({ mSkuDetails, ...detail }) => ({
           ...detail,
+          dayQuote: formatDayQuoteForPayload(detail.dayQuote),
           skuDetails: detail.skuDetails ?? mSkuDetails ?? []
         })),
         shippingCost: Number(shippingCost || 0),
+        vat: vatRate,
         currency,
         exchangeRate: getExchangeRate(currency, exchangeRate)
       };
       if (customerOrder?.id) {
         params.id = customerOrder.id;
+        params.code = customerOrder.code ?? '';
       }
       if (dataId) {
         params.dataId = dataId;
@@ -812,7 +952,7 @@ const BanHangPage = ({
         details: data
       }
     });
-  }, [currency, data, dataId, customer, customerOrder, exchangeRate, shippingCost]);
+  }, [currency, data, dataId, customer, customerOrder, exchangeRate, shippingCost, vatRate]);
 
   const onOpenFormPayment = useCallback(() => {
     InAppEvent.emit(HASH_MODAL, {
@@ -836,9 +976,26 @@ const BanHangPage = ({
 
   return (
     <>
-      <Table
+      {customerOrder?.id ? (
+        <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Text strong>
+            {customerOrder.type === 'order' ? 'Mã đơn hàng' : 'Mã cơ hội'}
+          </Text>
+          <Input
+            value={customerOrder.code ?? ''}
+            maxLength={100}
+            placeholder="Nhập mã"
+            onChange={event => setCustomerOrder(current => ({
+              ...current,
+              code: event.target.value
+            }))}
+            style={{ width: 320 }}
+          />
+        </div>
+      ) : null}
+      <OpportunityTable
         bordered
-        scroll={{ x: 1760 }}
+        scroll={{ x: 2700 }}
         dataSource={data}
         columns={columns.map(col => ({
           ...col,
@@ -849,7 +1006,17 @@ const BanHangPage = ({
             ...(col.onCell?.(record, index) ?? {}),
             editable: col.editable?.toString()
           }),
-          render: ['profit', 'shippingCost', 'operation'].includes(col.dataIndex)
+          render: [
+            'code',
+            'profit',
+            'shippingCost',
+            'salePrice',
+            'lineAmount',
+            'vatAmount',
+            'grandTotal',
+            'dayQuote',
+            'operation'
+          ].includes(col.dataIndex)
             ? col.render
             : (text, record, index) => renderCell(text, record, index, col)
         }))}
@@ -879,20 +1046,23 @@ const BanHangPage = ({
                     onChange={handleExchangeRateChange}
                     formatter={formatterInputNumber}
                     parser={parserInputNumber}
-                    addonAfter="VND"
                     style={{ width: 170 }}
                   />
                 </Space>
               </Space>
             </Table.Summary.Cell>
-            <Table.Summary.Cell index={3}>{totalQuantity}</Table.Summary.Cell>
-            <Table.Summary.Cell index={4}></Table.Summary.Cell>
+            <Table.Summary.Cell index={3}></Table.Summary.Cell>
+            <Table.Summary.Cell index={4} align="right">{formatCurrencyAmount(shippingCost, currency)}</Table.Summary.Cell>
             <Table.Summary.Cell index={5}></Table.Summary.Cell>
-            <Table.Summary.Cell index={6}>{formatCurrencyAmount(totalDiscount, currency)}</Table.Summary.Cell>
-            <Table.Summary.Cell index={7}></Table.Summary.Cell>
-            <Table.Summary.Cell index={8}>{formatCurrencyAmount(shippingCost, currency)}</Table.Summary.Cell>
-            <Table.Summary.Cell index={9}>{formatMoney(totalSubOrder)}</Table.Summary.Cell>
-            <Table.Summary.Cell index={10} colSpan={4}></Table.Summary.Cell>
+            <Table.Summary.Cell index={6}></Table.Summary.Cell>
+            <Table.Summary.Cell index={7} align="right">{totalQuantity}</Table.Summary.Cell>
+            <Table.Summary.Cell index={8} align="right">{formatMoney(totalSubOrder)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={9} align="right">{formatMoney(totalVat)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={10} align="right"><Text strong>{formatMoney(totalOrder)}</Text></Table.Summary.Cell>
+            <Table.Summary.Cell index={11}></Table.Summary.Cell>
+            <Table.Summary.Cell index={12}></Table.Summary.Cell>
+            <Table.Summary.Cell index={13} align="right">{formatCurrencyAmount(totalDiscount, currency)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={14} colSpan={5}></Table.Summary.Cell>
           </Table.Summary.Row>
         )}
       />
