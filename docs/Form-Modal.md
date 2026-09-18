@@ -2,25 +2,30 @@
 
 Áp dụng skill này bất cứ khi nào:
 - Tạo hoặc chỉnh sửa form trong dự án Flast ERP
-- Mở modal / popup từ bất kỳ component nào
-- Code bên trong một modal container
+- Mở drawer / popup từ bất kỳ component nào
+- Code bên trong một overlay container
 
 ---
 
-## 1. Form wrappers — LUÔN dùng `@/form-flast`, KHÔNG dùng antd trực tiếp
+## 1. Form wrappers — LUÔN dùng `@flast-erp`, KHÔNG dùng antd trực tiếp
 
 ```js
-import FormInput        from '@/form-flast/FormInput'
-import FormSelect       from '@/form-flast/FormSelect'
-import FormSelectAPI    from '@/form-flast/FormSelectAPI'   // Select từ API endpoint
-import FormInputNumber  from '@/form-flast/FormInputNumber'
-import FormHidden       from '@/form-flast/FormHidden'
-import FormListAddition from '@/form-flast/FormListAddtion'   // chú ý typo "Addtion"
-import FormDatePicker   from '@/form-flast/FormDatePicker'
-import FormTextArea     from '@/form-flast/FormTextArea'
-import FormRadioGroup   from '@/form-flast/FormRadioGroup'
-import FormAutoComplete from '@/form-flast/FormAutoComplete'
+import { XXXX } from '@flast-erp/core/components'
 ```
+
+`XXXX` bao gồm:
+- `FormInput`
+- `FormSelect`
+- `FormSelectAPI`
+- `FormInputNumber`
+- `FormHidden`
+- `FormCheckBox`
+- `FormRadio`
+- `FormRadioGroup`
+- `FormListAddition`
+- `FormDatePicker`
+- `FormTextArea`
+- `FormAutoComplete`
 
 **Ngoại lệ được phép dùng antd trực tiếp:**
 - `Form`, `Form.Item`, `Form.useForm()` — dùng antd
@@ -29,7 +34,7 @@ import FormAutoComplete from '@/form-flast/FormAutoComplete'
 
 **Submit button:** dùng `CustomButton` từ core:
 ```js
-import CustomButton from '@flast-erp/core/components/CustomButton'
+import { CustomButton } from '@flast-erp/core/components'
 // ...
 <CustomButton htmlType="submit" />
 ```
@@ -42,8 +47,6 @@ import { FormListStyles } from '@/css/global'
   <Col md={6} xs={24}>...</Col>
 </FormListStyles>
 ```
-
----
 
 ---
 
@@ -134,9 +137,28 @@ import { FormListStyles } from '@/css/global'
 
 ---
 
-## 3. Mở modal — 3 bước bắt buộc
+## 3. Mở overlay — chọn đúng kênh TRƯỚC khi code
 
-### Bước 1: Đăng ký modal (trong `routes/ModalRoutes/`)
+Hệ thống có **hai** kênh overlay độc lập, sống ở tầng root trong `App.js`:
+
+| Loại | Component | Vỏ render | Emit | Đóng | Đăng ký tại | Import hash từ |
+|------|-----------|-----------|------|------|-------------|----------------|
+| **Drawer** | `ModalRoutes` | `DrawerCustom` | `HASH_MODAL` | `HASH_MODAL_CLOSE` | `routes/ModalRoutes/` | `@/configs` |
+| **Popup** | `MyPopup` | antd `Modal` | `HASH_POPUP` | `HASH_POPUP_CLOSE` | `routes/PopupRoute/` | `@/configs/constant` |
+
+> ⚠️ Hai mảng route hoàn toàn tách biệt. Đăng ký ở `routes/ModalRoutes/` mà emit `HASH_POPUP` (hoặc ngược lại) sẽ **không match** và render ra component rỗng — không throw, không warning, chỉ là overlay trắng.
+
+**Khác biệt cần biết khi chọn:**
+- Drawer hỗ trợ **route lồng** qua `modalRoute.routes` — gom nhiều màn con dưới một `path` cha. Popup chỉ match phẳng một cấp.
+- Drawer normalize hash: `/` được đổi thành `.` trước khi match.
+- Popup có cờ `reLoad` toggle mỗi lần đóng, inject xuống component để màn gọi tự refresh. Drawer không có.
+- Popup width mặc định `800` nếu `modalOptions.width` không khai báo.
+
+---
+
+### 3A. Drawer — `HASH_MODAL`
+
+**Bước 1: Đăng ký**
 
 ```js
 // routes/ModalRoutes/TenFeatureModalRoute.js
@@ -144,13 +166,13 @@ import React from 'react'
 
 const TenFeatureModalRoute = [
   {
-    path: 'feature.action.name',       // hash định danh duy nhất, dạng dot notation
+    path: 'feature.action.name',       /* hash định danh duy nhất, dot notation */
     Component: React.lazy(() =>
       import('@/containers/TenFeature/ModalTenContainer')
     ),
     modalOptions: {
-      title: '',     // để trống, title truyền động qua InAppEvent
-      width: 750,    // điều chỉnh theo nội dung
+      title: '',     /* để trống, title truyền động qua InAppEvent */
+      width: 750,
     },
   },
 ]
@@ -158,25 +180,24 @@ const TenFeatureModalRoute = [
 export default TenFeatureModalRoute
 ```
 
-Sau đó thêm vào `routes/ModalRoutes/index.js`:
+Thêm vào `routes/ModalRoutes/index.js`:
 ```js
 import TenFeatureModalRoute from './TenFeatureModalRoute'
-// spread vào array tổng
+/* spread vào mảng tổng */
 ...TenFeatureModalRoute,
 ```
 
-### Bước 2: Emit event để mở modal
+**Bước 2: Emit**
 
 ```js
-import { InAppEvent } from '@flast-erp/core/utils/FuseUtils'
-import { HASH_POPUP } from '@/configs/constant'
+import { InAppEvent } from '@flast-erp/core/utils'
+import { HASH_MODAL } from '@/configs'
 
-const handleOpenModal = () => {
-  InAppEvent.emit(HASH_POPUP, {
-    hash: 'feature.action.name',        // khớp với path đã đăng ký
-    title: 'Tiêu đề hiển thị trên modal',
+const handleOpenDrawer = () => {
+  InAppEvent.emit(HASH_MODAL, {
+    hash: 'feature.action.name',        /* khớp path đã đăng ký */
+    title: 'Tiêu đề hiển thị',
     data: {
-      // props inject vào component modal
       someData: currentData,
       onSave: (result) => handleResult(result),
     },
@@ -184,21 +205,67 @@ const handleOpenModal = () => {
 }
 ```
 
-### Bước 3: Code bên trong modal container
+Đóng chủ động từ nơi khác: `InAppEvent.emit(HASH_MODAL_CLOSE)`.
+
+---
+
+### 3B. Popup — `HASH_POPUP`
+
+**Bước 1: Đăng ký**
+
+```js
+// routes/PopupRoute/TenFeature.js
+import React from 'react'
+
+const TenFeature = [
+  {
+    path: 'feature.popup.name',
+    Component: React.lazy(() =>
+      import('@/containers/TenFeature/PopupTenContainer')
+    ),
+    modalOptions: { title: '', width: 600 },
+  },
+]
+
+export default TenFeature
+```
+
+Thêm vào mảng `modalRoutes` trong `routes/PopupRoute/index.js`.
+
+**Bước 2: Emit**
+
+```js
+import { InAppEvent } from '@flast-erp/core/utils'
+import { HASH_POPUP } from '@/configs/constant'
+
+InAppEvent.emit(HASH_POPUP, {
+  hash: 'feature.popup.name',
+  title: 'Tiêu đề hiển thị',
+  data: { someData: currentData },
+})
+```
+
+> Lưu ý: popup spread `params.data` trực tiếp thành props (`{...(params.data || {})}`), drawer spread cả `params` (`{...params}`) nên component drawer nhận thêm `hash`, `title`, `open`.
+
+---
+
+### Bước 3: Code bên trong container (chung cho cả hai)
 
 ```js
 import { Col, Form, message } from 'antd'
 import { useEffect } from 'react'
-import FormInput        from '@/form-flast/FormInput'
-import FormSelect       from '@/form-flast/FormSelect'
-import FormListAddition from '@/form-flast/FormListAddtion'
+import {
+  FormInput,
+  FormSelect,
+  FormListAddition,
+  CustomButton,
+} from '@flast-erp/core/components'
 import { FormListStyles } from '@/css/global'
-import CustomButton from '@flast-erp/core/components/CustomButton'
-import RequestUtils from '@flast-erp/core/utils/RequestUtils'
+import { RequestUtils } from '@flast-erp/core/utils'
 import { SUCCESS_CODE } from '@/configs'
 
-// Props được inject tự động từ modal system (khai báo trong data của InAppEvent)
-const ModalTenContainer = ({ someData, onSave }) => {
+/* Props inject tự động từ overlay system — khai báo trong data của InAppEvent */
+const ModalTenContainer = ({ someData, onSave, closeModal }) => {
   const [form] = Form.useForm()
 
   useEffect(() => {
@@ -209,7 +276,8 @@ const ModalTenContainer = ({ someData, onSave }) => {
     const { data, errorCode, message: EMS } =
       await RequestUtils.Post('/api/endpoint', values)
     if (errorCode === SUCCESS_CODE) {
-      onSave(data)   // bắn kết quả về màn hình gọi
+      onSave(data)   /* bắn kết quả về màn hình gọi */
+      closeModal()
     }
     message.info(EMS)
   }
@@ -226,7 +294,7 @@ const ModalTenContainer = ({ someData, onSave }) => {
   )
 }
 
-// Sub-component render 1 row trong FormListAddition
+/* Sub-component render 1 row trong FormListAddition */
 const RowItem = ({ field }) => {
   const { name } = field || { name: 0 }
   return (
@@ -251,16 +319,3 @@ const RowItem = ({ field }) => {
 
 export default ModalTenContainer
 ```
-
----
-
-## 3. Checklist trước khi submit code
-
-- [ ] Tất cả field input dùng `@/form-flast/*`, không dùng antd Input/Select trực tiếp
-- [ ] Select từ API dùng `FormSelectAPI` với `apiPath` không có dấu `/` đầu
-- [ ] `FormSelectAPI` dùng `fnLoadData` khi data đã có sẵn local (không cần fetch)
-- [ ] `InAppEvent` import từ `@flast-erp/core/utils/FuseUtils`
-- [ ] `HASH_POPUP` import từ `@/configs/constant`
-- [ ] Modal container nhận `onSave` và gọi đúng sau khi API thành công
-- [ ] Route modal đã được đăng ký và thêm vào `routes/ModalRoutes/index.js`
-- [ ] `FormListAddition` dùng đúng typo `FormListAddtion` (không phải `Addition`)

@@ -1,23 +1,3 @@
-/**************************************************************************/
-/*  index.js                                                              */
-/**************************************************************************/
-/*                       Tệp này là một phần của:                         */
-/*                             Open CDP                                   */
-/*                        https://flast.vn                                */
-/**************************************************************************/
-/* Bản quyền (c) 2025 - này thuộc về các cộng tác viên Flast Solution     */
-/* (xem AUTHORS.md).                                                      */
-/* Bản quyền (c) 2024-2025 Long Huu, Quang Duc, Hung Bui                  */
-/*                                                                        */
-/* Bạn được quyền sử dụng phần mềm này miễn phí cho bất kỳ mục đích nào,  */
-/* bao gồm sao chép, sửa đổi, phân phối, bán lại…                         */
-/*                                                                        */
-/* Chỉ cần giữ nguyên thông tin bản quyền và nội dung giấy phép này trong */
-/* các bản sao.                                                           */
-/*                                                                        */
-/* Đội ngũ phát triển mong rằng phần mềm được sử dụng đúng mục đích và    */
-/* có trách nghiệm                                                        */
-/**************************************************************************/
 
 import React from 'react';
 import { Navigate } from 'react-router-dom';
@@ -48,6 +28,10 @@ import { ListAcountGroupConfig } from './ListUserGroupConfig';
 import { ListUserSystemConfig } from './ListUserSysTemConfig';
 import { BusinessUnitsConfig } from './BusinessUnitsConfig';
 
+/* CSKH */
+import { Lead3DayConfig } from './Lead3DayConfig'
+import { Cohoi7DayConfig } from './Cohoi7DayConfig';
+
 /* Kế  toán */
 import { KeToanConfig } from './KeToanConfig';
 
@@ -56,16 +40,14 @@ import { NewfeedConfig } from './NewFeedConfig';
 import { DragDropConfig } from './DragDropOrderConfig';
 
 /* Web */
-import { PublicWebConfig, WebConfig } from './WebConfig';
+import { WebConfig } from './WebConfig';
 import { WorkflowDesignerConfig } from './WorkflowDesignerConfig';
 import { ProductionControlConfig } from './ProductionControlConfig';
 
 /* HR - Quản lý hành chính */
 import { HRConfig } from './HRConfig';
-import { OmniConfig } from './OmniConfig';
 
 const routeConfigs = [
-    PublicWebConfig,
     LoginConfig,
     KpiConfig,
     ProductConfig,
@@ -73,6 +55,7 @@ const routeConfigs = [
     ProductionControlConfig,
     CommonConfig,
     LeadConfig,
+    Lead3DayConfig,
     CohoiConfig,
     InstockConfig,
     WareHouseConfig,
@@ -80,6 +63,7 @@ const routeConfigs = [
     ListAcountConfig,
     ListAcountGroupConfig,
     BusinessUnitsConfig,
+    Cohoi7DayConfig,
     KeToanConfig,
     ListUserSystemConfig,
     NewfeedConfig,
@@ -88,7 +72,6 @@ const routeConfigs = [
     DragDropConfig,
     WebConfig,
     HRConfig,
-    OmniConfig,
     WorkflowDesignerConfig
 ];
 

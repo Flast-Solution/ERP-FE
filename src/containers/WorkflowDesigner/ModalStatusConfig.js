@@ -85,9 +85,9 @@ export const buildStatusConfigPayload = ({ processId, flowType, configurations =
   processId: toApiId(processId),
   flowType,
   items: configurations.map((item) => ({
-    listStepProcessId: (item.stepProcessIds ?? item.stepTypeIds ?? item.listStepProcessId ?? []).map(toApiId),
+    listStepProcessId: (item.stepProcessIds ?? []).map(toApiId),
     text: item.statusName?.trim(),
-  })),
+  }))
 })
 
 const ModalStatusConfig = ({
@@ -96,10 +96,12 @@ const ModalStatusConfig = ({
   workflowSteps = [],
   configurations = [],
   onSave,
-  closeModal,
+  closeModal
 }) => {
+
   const [form] = Form.useForm()
   const [submitting, setSubmitting] = useState(false)
+
   const stepOptions = workflowSteps
     .map((step) => ({
       value: step.id,
@@ -114,7 +116,7 @@ const ModalStatusConfig = ({
       configurations: configurations.length > 0
         ? configurations.map((item) => ({
             ...item,
-            stepProcessIds: item.stepProcessIds ?? item.stepTypeIds ?? item.listStepProcessId ?? [],
+            stepProcessIds: item.stepProcessIds ?? [],
             statusName: item.statusName ?? item.text ?? '',
           }))
         : [{ scope: 'current' }],
@@ -123,12 +125,12 @@ const ModalStatusConfig = ({
 
   const handleSubmit = async ({ configurations: values = [] }) => {
     if (processId == null || processId === '') {
-      message.warning('Vui lòng lưu workflow trước khi cấu hình trạng thái đơn hàng.')
+      message.warning('Vui lòng lưu workflow trước khi cấu hình trạng thái.')
       return
     }
 
     if (!flowType) {
-      message.warning('Vui lòng chọn loại nghiệp vụ trước khi cấu hình trạng thái đơn hàng.')
+      message.warning('Vui lòng chọn loại nghiệp vụ trước khi cấu hình trạng thái.')
       return
     }
 
@@ -137,8 +139,9 @@ const ModalStatusConfig = ({
       const payload = buildStatusConfigPayload({
         processId,
         flowType,
-        configurations: values,
+        configurations: values
       })
+
       const response = await RequestUtils.Post(UPDATE_LIST_STATUS_API, payload)
       const hasErrorCode = response?.errorCode != null
       const isFailed = response?.success === false
@@ -192,6 +195,6 @@ const ModalStatusConfig = ({
       </Form>
     </StatusConfigStyles>
   )
-}
+};
 
-export default ModalStatusConfig
+export default ModalStatusConfig;
