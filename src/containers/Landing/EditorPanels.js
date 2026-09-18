@@ -5,6 +5,7 @@ import JoditEditor from 'jodit-react'
 import { useEditorStore } from '@/store/editorStore'
 import {
   extractUploadItems,
+  normalizeUploadFileName,
   resolveUploadUrl,
 } from '@/containers/PreviewModal/uploadUtils'
 import {
@@ -90,7 +91,11 @@ const PropertyControl = ({ field, value, onChange }) => {
       setUploading(true)
       try {
         const formData = new FormData()
-        files.forEach(file => formData.append('files', file))
+        files.forEach(file => formData.append(
+          'files',
+          file,
+          normalizeUploadFileName(file?.name) || file?.name,
+        ))
         formData.append('folder', field.uploadFolder || 'landing/banner')
         const response = await axios.post('/upload/folder/multiple', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
@@ -241,7 +246,7 @@ const PropertyControl = ({ field, value, onChange }) => {
       setUploading(true)
       try {
         const formData = new FormData()
-        formData.append('files', file)
+        formData.append('files', file, normalizeUploadFileName(file?.name) || file?.name)
         formData.append('folder', field.uploadFolder || 'landing/image')
         const response = await axios.post('/upload/folder/multiple', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },

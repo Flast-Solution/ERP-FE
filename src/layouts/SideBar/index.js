@@ -56,13 +56,13 @@ import {
 } from '@ant-design/icons';
 
 import { useEffect, useState } from 'react';
-import axios from 'axios';
 import { useCollapseSidebar } from '@flast-erp/core/hooks';
 import { RequestUtils } from '@flast-erp/core/utils';
 import { useTranslation } from 'react-i18next';
 import { Link } from "react-router-dom";
 import SideBarStyles from './styles';
 import useGetMe from '@/hooks/useGetMe';
+import { resolveUploadUrl } from '@/containers/PreviewModal/uploadUtils';
 import {
   BUSINESS_UPDATED_EVENT,
   canManagePermissions,
@@ -88,15 +88,7 @@ const iconSize = { fontSize: 18 };
 
 const USER_BUSINESS_INFO_API = '/auth/user-bussiness/find-info';
 
-const isAbsoluteUrl = (value = '') =>
-  /^https?:\/\//i.test(String(value)) || String(value).startsWith('/api/');
-
-const resolveLogoUrl = (logo) => {
-  if (!logo) return '';
-  if (isAbsoluteUrl(logo)) return logo;
-  const baseUrl = String(axios.defaults.baseURL || '/api').replace(/\/$/, '');
-  return `${baseUrl}/upload/folder/view?filename=${encodeURIComponent(logo)}`;
-};
+const resolveLogoUrl = (logo) => resolveUploadUrl(logo);
 
 function SideBar() {
 

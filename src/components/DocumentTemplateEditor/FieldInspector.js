@@ -4,6 +4,7 @@ import { Button, Checkbox, Col, ColorPicker, Empty, Form, Input, InputNumber, Ro
 import { DeleteOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons'
 import {
   extractUploadItems,
+  normalizeUploadFileName,
   resolveRuntimeAssetUrl,
   resolveUploadUrl,
 } from '@/containers/PreviewModal/uploadUtils'
@@ -146,7 +147,7 @@ const DocumentImageUploader = ({ node, onChange }) => {
 
     try {
       const formData = new FormData()
-      formData.append('files', file)
+      formData.append('files', file, normalizeUploadFileName(file?.name) || file?.name)
       formData.append('folder', node.type === COMPONENT_TYPES.LOGO
         ? 'document-template/logo'
         : 'document-template/image')

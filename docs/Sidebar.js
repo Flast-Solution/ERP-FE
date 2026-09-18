@@ -62,7 +62,13 @@ const resolveLogoUrl = (logo) => {
   if (!logo) return '';
   if (isAbsoluteUrl(logo)) return logo;
   const baseUrl = String(axios.defaults.baseURL || '/api').replace(/\/$/, '');
-  return `${baseUrl}/upload/folder/view?filename=${encodeURIComponent(logo)}`;
+  const normalizedPath = String(logo)
+    .replace(/\\/g, '/')
+    .split('/')
+    .map((segment) => encodeURIComponent(segment.trim().replace(/\s+/g, '-')))
+    .filter(Boolean)
+    .join('/');
+  return `${baseUrl}/upload/folder/view/${normalizedPath}`;
 };
 
 function SideBar() {

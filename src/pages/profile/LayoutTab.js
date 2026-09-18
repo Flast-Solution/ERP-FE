@@ -44,6 +44,10 @@ import {
   LayoutBodyDescription,
   LayoutBodyAction,
 } from './styles'
+import {
+  normalizeUploadFileName,
+  resolveUploadUrl as resolveSharedUploadUrl,
+} from '@/containers/PreviewModal/uploadUtils'
 
 const LAYOUT_METHOD_OPTIONS = [
   { value: 'GET', label: 'GET' },
@@ -65,8 +69,6 @@ const extractUploadItems = (payload) => {
   return payload ? [payload] : []
 }
 
-const isAbsoluteUploadUrl = (value = '') => /^https?:\/\//i.test(String(value)) || String(value).startsWith('/api/')
-
 const resolveUploadFilename = (item) => {
   if (typeof item === 'string') return item
   return item?.filename
@@ -83,11 +85,7 @@ const resolveUploadFilename = (item) => {
 }
 
 const resolveUploadUrl = (item) => {
-  const filename = resolveUploadFilename(item)
-  if (!filename) return ''
-  if (isAbsoluteUploadUrl(filename)) return filename
-  const baseUrl = String(axios.defaults.baseURL || '/api').replace(/\/$/, '')
-  return `${baseUrl}/upload/folder/view?filename=${encodeURIComponent(filename)}`
+  return resolveSharedUploadUrl(item)
 }
 
 const toCertificateFile = (item, index, sourceFile = {}) => {
@@ -144,7 +142,7 @@ const LayoutTab = () => {
   const handleLayoutCodeUpload = async ({ file, onSuccess, onError }) => {
     try {
       const formData = new FormData()
-      formData.append('files', file)
+      formData.append('files', file, normalizeUploadFileName(file?.name) || file?.name)
       formData.append('folder', 'test')
       const response = await axios.post('/upload/folder/multiple', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },

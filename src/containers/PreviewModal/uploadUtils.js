@@ -35,8 +35,62 @@ const resolveApiAssetUrl = (apiPath) => {
     : `${baseUrl}${normalizedPath}`
 }
 
+const safeDecodeURIComponent = value => {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+
+export const normalizeUploadFileName = value => String(value || '')
+  .trim()
+  .replace(/\s+/g, '-')
+
+export const normalizeUploadPath = value => String(value ?? '')
+  .replace(/\\/g, '/')
+  .split('/')
+  .map(segment => safeDecodeURIComponent(segment).trim().replace(/\s+/g, '-'))
+  .filter(segment => segment && segment !== '.' && segment !== '..')
+  .map(segment => encodeURIComponent(segment))
+  .join('/')
+
+export const buildUploadViewUrl = (filename, apiBaseUrl = axios.defaults.baseURL || '/api') => {
+  const normalizedPath = normalizeUploadPath(filename)
+  if (!normalizedPath) return ''
+  const baseUrl = String(apiBaseUrl).replace(/\/+$/, '')
+  return `${baseUrl}/upload/folder/view/${normalizedPath}`
+}
+
+const normalizeUploadViewUrl = value => {
+  const url = String(value || '').trim()
+  if (!url || !/\/upload\/folder\/view(?:[/?#]|$)/i.test(url)) return url
+
+  const absolute = /^https?:\/\//i.test(url)
+  try {
+    const parsedUrl = new URL(url, 'http://upload.local')
+    const marker = '/upload/folder/view'
+    const markerIndex = parsedUrl.pathname.toLowerCase().indexOf(marker)
+    if (markerIndex < 0) return url
+
+    const pathFilename = parsedUrl.pathname.slice(markerIndex + marker.length).replace(/^\/+/, '')
+    const filename = parsedUrl.searchParams.get('filename') || pathFilename
+    const normalizedPath = normalizeUploadPath(filename)
+    if (!normalizedPath) return url
+
+    parsedUrl.pathname = `${parsedUrl.pathname.slice(0, markerIndex)}${marker}/${normalizedPath}`
+    parsedUrl.searchParams.delete('filename')
+
+    return absolute
+      ? parsedUrl.toString()
+      : `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`
+  } catch {
+    return url
+  }
+}
+
 export const resolveRuntimeAssetUrl = (value) => {
-  const url = toUploadText(value)
+  const url = normalizeUploadViewUrl(toUploadText(value))
   if (!url || /^(?:data:|blob:|\/\/)/i.test(url)) return url
   if (/^\/api(?:\/|$)/i.test(url)) return resolveApiAssetUrl(url)
   if (!/^https?:\/\//i.test(url)) return url
@@ -84,15 +138,13 @@ export const resolveUploadUrl = (item) => {
   if (/^https?:\/\//i.test(filename) || /^\/api(?:\/|$)/i.test(filename)) {
     return resolveRuntimeAssetUrl(filename)
   }
-  const baseUrl = String(axios.defaults.baseURL || '/api').replace(/\/$/, '')
-  return resolveRuntimeAssetUrl(`${baseUrl}/upload/folder/view?filename=${encodeURIComponent(filename)}`)
+  return resolveRuntimeAssetUrl(buildUploadViewUrl(filename))
 }
 
 export const toUploadFile = (item, index) => {
   const filename = resolveUploadFilename(item)
-  const url = toUploadText(item?.url)
-    || toUploadText(item?.thumbUrl)
-    || resolveUploadUrl(item)
+  const directUrl = toUploadText(item?.url) || toUploadText(item?.thumbUrl)
+  const url = directUrl ? resolveRuntimeAssetUrl(directUrl) : resolveUploadUrl(item)
   const name = toUploadText(item?.name) || filename.split('/').pop() || ''
   const hasUploadIdentity = Boolean(toUploadText(item?.uid) || item?.originFileObj)
 
