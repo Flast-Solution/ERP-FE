@@ -34,8 +34,8 @@ import dayjs from 'dayjs'
 import Filter from './Filter'
 import '@/pages/form-list/style.css'
 
+const FORM_TEMPLATE_DETAIL_API = '/workflow/forms/template/find-id'
 const REST_LIST_API_PATH = 'workflow/forms/template/filter'
-const REQUEST_API_PATH = '/workflow/forms/template/filter'
 const DATA_SAVE_API = '/workflow/forms/storage/submit'
 const DATA_FILTER_API = '/workflow/forms/storage/template/filter-data'
 const DATA_LIST_RELOAD_DELAY_MS = 1500
@@ -93,53 +93,21 @@ const mapTemplateRow = (item = {}) => {
   }
 }
 
-const normalizeTemplateListResponse = (res = {}) => {
-  const payload = Array.isArray(res?.embedded)
-    ? res
-    : Array.isArray(res?.data?.embedded)
-      ? res.data
-      : Array.isArray(res)
-        ? { embedded: res, totalElements: res.length }
-        : null
-
-  if (!payload) {
-    return {
-      ok: res?.errorCode === SUCCESS_CODE,
-      embedded: [],
-      total: 0,
-      message: res?.message,
-    }
-  }
-
-  const embedded = payload.embedded ?? []
-  const total = payload.totalElements
-    ?? payload.page?.totalElements
-    ?? embedded.length
-
-  const ok = payload != null
-    && (res?.errorCode == null || Number(res?.errorCode) === SUCCESS_CODE)
-
-  return { ok, embedded, total, message: res?.message }
+/**
+ * GET /workflow/forms/template/filter
+ * Full body: { data: { embedded, page } }
+ * useWorkflowFormsListQuery → onData nhận sẵn data (đã unwrap).
+ */
+const normalizeTemplateListResponse = (data = {}) => {
+  const embedded = Array.isArray(data?.embedded) ? data.embedded : []
+  const total = data?.page?.totalElements ?? embedded.length
+  return { embedded, total }
 }
 
-const replaceResponseItems = (response, embedded) => {
-  if (Array.isArray(response?.embedded)) {
-    return { ...response, embedded }
-  }
-  if (Array.isArray(response?.data?.embedded)) {
-    return {
-      ...response,
-      data: {
-        ...response.data,
-        embedded,
-      },
-    }
-  }
-  return {
-    embedded,
-    page: response?.page ?? response?.data?.page,
-  }
-}
+const replaceResponseItems = (_response, embedded, total) => ({
+  embedded,
+  page: { totalElements: total },
+})
 
 const withOffset = (queryParams = {}) => {
   const page = Number(queryParams.page ?? 1)
@@ -208,30 +176,21 @@ const useWorkflowFormsListQuery = ({ queryParams, onData }) => {
 
 const isSameId = (left, right) => String(left ?? '') === String(right ?? '')
 
-const resolveTemplateDetail = (res = {}, targetId) => {
-  const listResult = normalizeTemplateListResponse(res)
-  if (listResult.embedded.length > 0) {
-    const matchedTemplate = listResult.embedded.find(item => isSameId(item?.id, targetId))
-    return {
-      ok: listResult.ok,
-      template: matchedTemplate ?? null,
-      message: listResult.message,
-    }
+/** GET /workflow/forms/template/find-id → data = Template */
+const resolveTemplateDetail = (res = {}) => {
+  const ok = res?.success === true
+    || Number(res?.errorCode) === SUCCESS_CODE
+    || res?.errorCode == null
+  const template = res?.data
+  if (
+    !ok
+    || !template
+    || typeof template !== 'object'
+    || Array.isArray(template)
+  ) {
+    return { ok: false, template: null, message: res?.message }
   }
-
-  const template = res?.data?.id != null
-    ? res.data
-    : res?.id != null
-      ? res
-      : null
-
-  return {
-    ok: Boolean(template)
-      && isSameId(template.id, targetId)
-      && (res?.errorCode == null || Number(res.errorCode) === SUCCESS_CODE),
-    template,
-    message: res?.message,
-  }
+  return { ok: true, template, message: res?.message }
 }
 
 const normalizeFieldOptions = (options = []) => options.map(option => ({
@@ -261,15 +220,13 @@ const createSelectApiOnData = (dataLabel, dataValue) => {
   }))
 }
 
+/** FormSelectAPI / select_api: apiPath tùy cấu hình field — giữ multi-shape. */
 const getSelectApiItems = (payload) => {
   if (Array.isArray(payload)) return payload
-  if (Array.isArray(payload?.data)) return payload.data
   if (Array.isArray(payload?.embedded)) return payload.embedded
-  if (Array.isArray(payload?.data?.embedded)) return payload.data.embedded
+  if (Array.isArray(payload?.data)) return payload.data
   if (Array.isArray(payload?.items)) return payload.items
-  if (Array.isArray(payload?.data?.items)) return payload.data.items
   if (Array.isArray(payload?.content)) return payload.content
-  if (Array.isArray(payload?.data?.content)) return payload.data.content
   return []
 }
 
@@ -612,12 +569,12 @@ const FormEntryModal = ({ template, open, bizId, onCancel, onSaved }) => {
 }
 
 const getStorageValues = (item = {}) => {
-  const rawValues = item.valuesJson ?? item.values ?? item.value ?? item.data ?? item.formData ?? {}
+  const rawValues = item.valuesJson ?? {}
   if (typeof rawValues === 'string') {
     try {
       return JSON.parse(rawValues)
     } catch (_) {
-      return { value: rawValues }
+      return {}
     }
   }
   return rawValues && typeof rawValues === 'object' ? rawValues : {}
@@ -655,23 +612,13 @@ const formatEntryValue = (value, field) => {
   return String(value)
 }
 
+/** POST /workflow/forms/storage/template/filter-data → data = { embedded, page } */
 const normalizeStorageListResponse = (res = {}) => {
-  const payload = Array.isArray(res?.embedded)
-    ? res
-    : Array.isArray(res?.data?.embedded)
-      ? res.data
-      : Array.isArray(res?.data)
-        ? { embedded: res.data, totalElements: res.data.length }
-        : Array.isArray(res)
-          ? { embedded: res, totalElements: res.length }
-          : null
-
-  const ok = res?.success === true || Number(res?.errorCode) === SUCCESS_CODE || res?.errorCode == null
-  const embedded = payload?.embedded ?? []
-  const total = payload?.totalElements
-    ?? payload?.page?.totalElements
-    ?? res?.data?.totalElements
-    ?? embedded.length
+  const ok = res?.success === true
+    || Number(res?.errorCode) === SUCCESS_CODE
+    || res?.errorCode == null
+  const embedded = Array.isArray(res?.data?.embedded) ? res.data.embedded : []
+  const total = res?.data?.page?.totalElements ?? embedded.length
 
   return {
     ok,
@@ -911,14 +858,8 @@ const WorkflowFormsList = ({ onCreate }) => {
       throw new Error('Không tìm thấy id form.')
     }
 
-    const query = new URLSearchParams({
-      limit: '10',
-      offset: '0',
-      id: String(record.id),
-    })
-
-    const res = await RequestUtils.Get(`${REQUEST_API_PATH}?${query.toString()}`, {})
-    const { ok, template, message: apiMessage } = resolveTemplateDetail(res, record.id)
+    const res = await RequestUtils.Get(FORM_TEMPLATE_DETAIL_API, { id: record.id })
+    const { ok, template, message: apiMessage } = resolveTemplateDetail(res)
 
     if (!ok || !template) {
       if (record.source && isSameId(record.source.id, record.id)) {
@@ -1073,12 +1014,8 @@ const WorkflowFormsList = ({ onCreate }) => {
   }, [])
 
   const onData = useCallback(async (response) => {
-    const { ok, embedded, message: apiMessage } = normalizeTemplateListResponse(response)
-    if (!ok) {
-      message.error(apiMessage || 'Không tải được danh sách form.')
-      return replaceResponseItems(response, [])
-    }
-    return replaceResponseItems(response, embedded.map(mapTemplateRow))
+    const { embedded, total } = normalizeTemplateListResponse(response)
+    return replaceResponseItems(response, embedded.map(mapTemplateRow), total)
   }, [])
 
   useEffect(() => () => {

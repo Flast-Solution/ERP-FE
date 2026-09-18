@@ -138,14 +138,10 @@ const getNodeFormsByStep = (nodes = [], stepCode) => {
   return node?.data?.forms ?? []
 }
 
-const getResponseArray = (response) => {
-  if (Array.isArray(response)) return response
-  if (Array.isArray(response?.data)) return response.data
-  if (Array.isArray(response?.embedded)) return response.embedded
-  if (Array.isArray(response?.data?.embedded)) return response.data.embedded
-  if (Array.isArray(response?.items)) return response.items
-  if (Array.isArray(response?.data?.items)) return response.data.items
-  return []
+/** POST /workflow/forms/template/find-template-field → data = Template[] */
+const getTemplateFieldList = (response) => {
+  const items = response?.data
+  return Array.isArray(items) ? items : []
 }
 
 const normalizeFieldOption = (field = {}) => {
@@ -228,7 +224,7 @@ const fetchStepFieldOptions = async (forms = []) => {
     formIds
   )
 
-  return getResponseArray(response)
+  return getTemplateFieldList(response)
     .flatMap((item) => Array.isArray(item?.fields) ? item.fields : [item])
     .map(normalizeFieldOption)
     .filter(Boolean)

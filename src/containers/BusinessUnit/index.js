@@ -7,7 +7,7 @@ import BusinessUnitForm from './BusinessUnitForm'
 import {
   BUSINESS_UNIT_API,
   buildSavePayload,
-  getResponseItems,
+  getListUsers,
   mapRecordToFormValues,
   normalizeBusinessUnit,
   normalizeStatusValue,
@@ -33,7 +33,7 @@ const BusinessUnit = ({ data, closeModal }) => {
       if (bizId && users.length === 0) {
         try {
           const response = await RequestUtils.Get(BUSINESS_UNIT_API.listUser, { bizId })
-          users = getResponseItems(response)
+          users = getListUsers(response)
         } catch (_) {
           users = []
         }

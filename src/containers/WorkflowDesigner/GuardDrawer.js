@@ -83,18 +83,13 @@ const buildGroupedFieldOptions = (nodeForms = []) =>
     })).filter((field) => field.value != null && field.value !== ''),
   }))
 
-const getResponseArray = (response) => {
-  if (Array.isArray(response)) return response
-  if (Array.isArray(response?.data)) return response.data
-  if (Array.isArray(response?.embedded)) return response.embedded
-  if (Array.isArray(response?.data?.embedded)) return response.data.embedded
-  if (Array.isArray(response?.items)) return response.items
-  if (Array.isArray(response?.data?.items)) return response.data.items
-  return []
+/** POST /workflow/forms/template/find-template-field → data = Template[] */
+const getTemplateFieldList = (response) => {
+  const items = response?.data
+  return Array.isArray(items) ? items : []
 }
 
-const getFormTemplateId = (form = {}) =>
-  form.templateId ?? form.template_id ?? form.formId ?? form.form_id ?? form.id
+const getFormTemplateId = (form = {}) => form.id ?? form.templateId ?? null
 
 const normalizeFieldOption = (field = {}) => {
   const value = field.fieldKey ?? field.field_key ?? field.key ?? field.name ?? field.id
@@ -127,25 +122,25 @@ const fetchTemplateFieldOptions = async (forms = []) => {
     '/workflow/forms/template/find-template-field',
     templateIds
   )
-  const items = getResponseArray(response)
+  const items = getTemplateFieldList(response)
 
   if (items.some((item) => Array.isArray(item?.fields))) {
     return items.map((item) => {
-      const templateId = item.templateId ?? item.template_id ?? item.formId ?? item.form_id ?? item.id
+      const templateId = item.id ?? item.templateId
       const form = formById.get(String(templateId)) ?? item
       const fields = (item.fields ?? [])
         .map(normalizeFieldOption)
         .filter(Boolean)
 
       return {
-        label: form.name ?? form.label ?? item.name ?? item.label ?? `Form #${templateId}`,
+        label: form.name ?? form.description ?? item.name ?? item.description ?? `Form #${templateId}`,
         options: fields,
       }
     }).filter((group) => group.options.length > 0)
   }
 
   const groupedByTemplate = items.reduce((map, field) => {
-    const templateId = field.templateId ?? field.template_id ?? field.formId ?? field.form_id
+    const templateId = field.templateId ?? field.id
     const key = templateId != null && templateId !== '' ? String(templateId) : '__ungrouped__'
     const option = normalizeFieldOption(field)
     if (!option) return map
@@ -158,7 +153,7 @@ const fetchTemplateFieldOptions = async (forms = []) => {
   return Array.from(groupedByTemplate.entries()).map(([templateId, options]) => {
     const form = formById.get(templateId)
     return {
-      label: form?.name ?? form?.label ?? (templateId === '__ungrouped__' ? 'Fields' : `Form #${templateId}`),
+      label: form?.name ?? form?.description ?? (templateId === '__ungrouped__' ? 'Fields' : `Form #${templateId}`),
       options,
     }
   }).filter((group) => group.options.length > 0)

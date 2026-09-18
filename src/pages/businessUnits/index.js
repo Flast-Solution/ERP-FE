@@ -35,9 +35,10 @@ const BusinessUnitsPage = () => {
   }, [])
 
   const onData = useCallback((values) => {
+    // RestList onData: data = { embedded, page } từ /auth/user-bussiness/filter
     const items = Array.isArray(values)
       ? values
-      : values?.embedded ?? values?.items ?? values?.content ?? values?.records ?? values?.data ?? []
+      : (Array.isArray(values?.embedded) ? values.embedded : [])
 
     const normalized = items.map(normalizeBusinessUnit)
     return {
