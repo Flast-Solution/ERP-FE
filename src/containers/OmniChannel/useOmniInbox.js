@@ -16,12 +16,24 @@ import { omniApi, getOmniSocket, destroyOmniSocket, WS_EVENT } from '@/services/
 import { jwtService} from '@flast-erp/core/utils';
 import { useStore } from '@flast-erp/core/components';
 import { WS_URL } from '@/configs';
+import useGetMe from '@/hosks/useGetMe';
 
 export const useOmniInbox = () => {
 
   const { user } = useStore();
+  const { id: userId, isManager } = useGetMe();
   const store = useOmniStore
   const socketRef = useRef(null)
+
+  /* Đưa danh tính người dùng vào store một lần.
+   * receiveMessage và applyConversationUpdate cần nó mà nằm sâu
+   * trong chuỗi gọi, truyền tham số qua từng tầng sẽ rất rối. */
+  useEffect(() => {
+    if (userId == null) {
+      return
+    }
+    store.getState().setMe({ userId, isManager: Boolean(isManager) })
+  }, [store, userId, isManager])
 
   /* ---------- nạp kênh + kết nối WS, chạy 1 lần ---------- */
   useEffect(() => {
@@ -253,20 +265,39 @@ export const useOmniInbox = () => {
     return customer
   }, [store])
 
-  /* Trả về { duplicated } khi trùng SĐT để container mở popup xác nhận */
-  const createLead = useCallback(async (body) => {
+  /* Nối Data (lead) vừa tạo bởi form lead của ERP vào hội thoại.
+   * Trùng SĐT và gán sale đã do lead service của ERP xử lý xong,
+   * nên ở đây không còn nhánh 4090 nào nữa. */
+  const attachLead = useCallback(async (dataId) => {
     const conversationId = store.getState().activeId
-    try {
-      const res = await omniApi.createLead(conversationId, body)
-      store.getState().linkCustomer(conversationId, res.customer)
-      antMessage.success('Đã tạo lead')
-      return { ok: true, ...res }
-    } catch (e) {
-      if (e.errorCode === 4090) return { ok: false, duplicated: e.duplicated || e.payload }
-      antMessage.error(e.message || 'Tạo lead thất bại')
+    if (!conversationId || !dataId) {
       return { ok: false }
     }
-  }, [store] )
+    try {
+      const res = await omniApi.attachLead(conversationId, dataId)
+      store.getState().linkCustomer(conversationId, res.customer)
+      if (res.timelineItem) {
+        store.getState().addTimelineItem(conversationId, res.timelineItem)
+      }
+      /* Lead có thể rơi vào tay sale khác — nói rõ để người tạo
+         không ngồi đợi khách trả lời trong hội thoại không còn của mình. */
+      if (res.assignedUserId != null) {
+        store.getState().patchConversation(conversationId, {
+          assignedUserId: res.assignedUserId,
+          assignedUserName: res.assignedUserName,
+        })
+      }
+      antMessage.success(
+        res.assignedUserName
+          ? `Đã tạo lead · chuyển cho ${res.assignedUserName}`
+          : 'Đã tạo lead'
+      )
+      return { ok: true, ...res }
+    } catch (e) {
+      antMessage.error(e.message || 'Gắn lead thất bại')
+      return { ok: false }
+    }
+  }, [store])
 
   const assignUser = useCallback( async (conversationId, userId) => {
     store.getState().assignUser(conversationId, userId)
@@ -294,9 +325,8 @@ export const useOmniInbox = () => {
     sendMessage,
     notifyTyping,
     linkCustomer,
-    createLead,
+    attachLead,
     assignUser,
     changeStatus
   }
 };
-

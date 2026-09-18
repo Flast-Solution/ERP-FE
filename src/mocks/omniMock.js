@@ -631,51 +631,26 @@ export const omniMockApi = {
     return found
   },
 
-  /* Điểm kiểm trùng DUY NHẤT của module.
-   * mobile do sale tự nhập sau khi tư vấn lấy được. */
-  async createLead(conversationId, { fullName, mobile, note, customerId }) {
-    await delay(500)
-
-    if (!customerId) {
-      const duplicated = EXISTING_CUSTOMERS.filter((c) => c.mobile === mobile)
-      if (duplicated.length) {
-        const err = new Error('DUPLICATED_MOBILE')
-        err.errorCode = 4090
-        err.duplicated = duplicated
-        throw err
-      }
-    }
-
-    const customer = customerId
-      ? EXISTING_CUSTOMERS.find((c) => c.id === customerId)
-      : {
-          id: Math.floor(Math.random() * 9000) + 7000,
-          name: fullName,
-          mobile,
-          email: null,
-          type: 1,
-          companyName: null,
-          ownerUserId: 31,
-          ownerName: 'Trần Văn B',
-          debtAmount: 0,
-          totalOrderCount: 0,
-          totalOrderValue: 0,
-          detailUrl: '/sale/m-customer/new',
-        }
-
-    const leadId = Math.floor(Math.random() * 9000) + 9000
+  /* Nối Data (lead) vừa tạo bởi API ERP vào hội thoại.
+   * Kiểm trùng SĐT và gán sale do lead service của ERP lo, không phải ở đây. */
+  async attachLead(conversationId, dataId) {
+    await delay(400)
+    const customer = { ...CUSTOMER_LAN, id: 7001, code: 'KH-1201', name: 'Khách mới' }
+    const leadId = dataId || Math.floor(Math.random() * 9000) + 9000
     return {
       customer,
+      assignedUserId: 42,
+      assignedUserName: 'Hạnh',
       timelineItem: {
         refType: REF_TYPE.LEAD,
         refId: leadId,
         code: `LEAD-${leadId}`,
-        title: note || 'Lead từ hội thoại',
+        title: 'Lead từ hội thoại',
         statusCode: 1,
         statusName: 'Mới',
         amount: null,
         createdAt: new Date().toISOString(),
-        ownerName: 'Trần Văn B',
+        ownerName: 'Hạnh',
         detailUrl: `/lead/${leadId}`,
       },
     }

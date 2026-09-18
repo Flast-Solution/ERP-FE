@@ -129,8 +129,12 @@ const realApi = {
   linkCustomer: (identityId, customerId) =>
     RequestUtils.Post(`/erp/omni/identity/${identityId}/link`, { customerId }).then(unwrap),
 
-  createLead: (conversationId, body) =>
-    RequestUtils.Post(`/erp/omni/conversation/${conversationId}/create-lead`, body).then(unwrap),
+  /* Gọi SAU khi API tạo lead sẵn có của ERP đã trả về Data.
+   * Omni KHÔNG tự tạo lead: việc kiểm trùng SĐT, gán sale, tạo
+   * customer_personal đều nằm trong lead service của ERP rồi.
+   * Ở đây chỉ nối Data đó vào hội thoại. */
+  attachLead: (conversationId, dataId) =>
+    RequestUtils.Post(`/erp/omni/conversation/${conversationId}/attach-lead`, { dataId }).then(unwrap),
 
   assignUser: (conversationId, assignedUserId) =>
     RequestUtils.Post(`/erp/omni/conversation/${conversationId}/assign`, { assignedUserId }).then(unwrap),

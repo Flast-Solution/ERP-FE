@@ -98,7 +98,11 @@ const sortByRecent = (list) =>
 
 /* Hội thoại có lọt qua bộ lọc hiện tại không.
  * Dùng khi tin realtime tới: nếu không khớp filter thì không chèn vào list. */
-const matchFilters = (conversation, filters) => {
+/* BE đã lọc theo quyền, FE KHÔNG lọc lại theo người phụ trách —
+ * hai bộ luật lệch nhau một chút là hội thoại biến mất không rõ lý do.
+ * Hàm này chỉ trả lời một câu: tin realtime vừa tới có thuộc tab
+ * đang mở hay không. */
+const matchFilters = (conversation, filters, me) => {
   if (filters.channelAccountId && conversation.channelAccountId !== filters.channelAccountId) {
     return false
   }
@@ -108,12 +112,21 @@ const matchFilters = (conversation, filters) => {
   if (filters.scope === SCOPE.UNREPLIED && conversation.lastDirection !== DIRECTION.INBOUND) {
     return false
   }
+  /* Hàng chờ: chỉ hội thoại chưa ai nhận */
+  if (filters.scope === SCOPE.QUEUE && conversation.assignedUserId != null) {
+    return false
+  }
+  /* Của tôi: so với chính mình, không phải lọc quyền */
+  if (filters.scope === SCOPE.MINE && conversation.assignedUserId !== me?.userId) {
+    return false
+  }
   return true
 }
 
 /* Tab phạm vi ở đầu cột trái — tách khỏi bộ lọc dropdown vì
  * nó đổi cả tập dữ liệu, không chỉ lọc trên tập hiện có */
 export const SCOPE = {
+  QUEUE: 'queue',          /* chưa ai nhận — chỉ user có quyền mới thấy tab này */
   UNREPLIED: 'unreplied',
   MINE: 'mine',
   ALL: 'all',
@@ -165,7 +178,13 @@ export const useOmniStore = create((set, get) => ({
   sortMode: SORT_MODE.URGENT,
 
   /* Số đếm trên tab, BE trả về cùng trang đầu */
-  counts: { unreplied: 0, mine: 0, all: 0 },
+  counts: { queue: 0, unreplied: 0, mine: 0, all: 0 },
+
+  /* Người đang đăng nhập. Đặt trong store thay vì truyền tham số qua
+   * từng hàm — receiveMessage và applyConversationUpdate đều cần,
+   * mà chúng nằm sâu trong chuỗi gọi. */
+  me: { userId: null, isManager: false },
+  setMe: (me) => set({ me }),
 
   setSortMode: (sortMode) => set({ sortMode }),
   setCounts: (counts) => set({ counts }),
@@ -359,11 +378,38 @@ export const useOmniStore = create((set, get) => ({
       return {
         context: {
           ...s.context,
-          [conversationId]: { ...prev, customer, identityLinked: true },
+          [conversationId]: {
+            ...prev,
+            customer,
+            identity: { ...prev.identity, linked: true },
+          },
         },
         conversations: s.conversations.map((c) =>
           c.id === conversationId ? { ...c, displayName: customer.name } : c
         ),
+      }
+    }),
+
+  /* Chèn lead/cơ hội/đơn vừa tạo vào lịch sử giao dịch của cột phải,
+   * khỏi phải gọi lại cả context. Mục mới nhất lên đầu. */
+  addTimelineItem: (conversationId, item) =>
+    set((s) => {
+      const prev = s.context[conversationId]
+      if (!prev) {
+        return s
+      }
+      const timeline = prev.timeline || []
+      const existed = timeline.some(
+        (t) => t.refType === item.refType && t.refId === item.refId
+      )
+      if (existed) {
+        return s
+      }
+      return {
+        context: {
+          ...s.context,
+          [conversationId]: { ...prev, timeline: [item, ...timeline] },
+        },
       }
     }),
 
@@ -420,7 +466,7 @@ export const useOmniStore = create((set, get) => ({
     }
 
     /* Hội thoại mới hoàn toàn — chỉ chèn nếu khớp bộ lọc đang bật */
-    if (matchFilters({ ...conversation, ...patch }, filters)) {
+    if (matchFilters({ ...conversation, ...patch }, filters, get().me)) {
       set((s) => ({
         conversations: sortByRecent([{ ...conversation, ...patch }, ...s.conversations]),
       }))
@@ -469,5 +515,10 @@ export const useActiveContext = () =>
 
 export const useFilters = () => useOmniStore((s) => s.filters)
 export const useCounts = () => useOmniStore((s) => s.counts)
+export const useMe = () => useOmniStore((s) => s.me)
+
+/* Tab "Hàng chờ" chỉ hiện khi user có quyền nhận trên ít nhất một kênh */
+export const useCanSeeQueue = () =>
+  useOmniStore((s) => s.channels.some((c) => c.queueAccess))
 export const useSortMode = () => useOmniStore((s) => s.sortMode)
 export const useChannels = () => useOmniStore((s) => s.channels)
