@@ -115,7 +115,6 @@ const toNumber = value => Number(value ?? 0) || 0;
 const getConfirmedBomId = detail => (
   detail?.bomProductId
   ?? detail?.bomProduct?.bomProductId
-  ?? detail?.bomProduct?.id
   ?? null
 );
 
@@ -124,16 +123,16 @@ const hasConfirmedBom = detail => {
   return bomProductId !== null && bomProductId !== undefined && String(bomProductId).trim() !== '';
 };
 
-const getResponseItems = (response) => {
-  const payload = response?.data ?? response;
-  const candidates = [
-    payload?.embedded,
-    payload?.items,
-    payload?.content,
-    payload?.data,
-    payload,
-  ];
-  return candidates.find(Array.isArray) ?? [];
+/** GET /erp/manufacture/fetch → data.embedded = ManufactureOrder[] */
+const getManufactureOrders = (response) => {
+  const embedded = response?.data?.embedded;
+  return Array.isArray(embedded) ? embedded : [];
+};
+
+/** GET /product-material/find-by-product/{id} → data = BomVersion[] */
+const getBomVersions = (response) => {
+  const versions = response?.data;
+  return Array.isArray(versions) ? versions : [];
 };
 
 const formatDate = (value) => {
@@ -186,9 +185,7 @@ const calculateMaterialReadiness = ({
     const confirmedBomId = getConfirmedBomId(detail);
     const productBoms = bomVersionsByProductId.get(String(detail.productId)) ?? [];
     const persistedBom = hasConfirmedBom(detail)
-      ? productBoms.find(bom => (
-        String(bom?.bomProductId ?? bom?.id) === String(confirmedBomId)
-      ))
+      ? productBoms.find(bom => String(bom?.bomProductId) === String(confirmedBomId))
       : null;
     const hasLegacyConfirmation = detailedOrder?.confirmedBy != null
       || (Array.isArray(detailedOrder?.outbound) && detailedOrder.outbound.length > 0);
@@ -204,7 +201,7 @@ const calculateMaterialReadiness = ({
     confirmedDetailCount += 1;
 
     selectedBom.productMaterials.forEach((material) => {
-      const materialId = material?.materialId ?? material?.material?.id;
+      const materialId = material?.materialId;
       if (materialId == null) return;
       const requiredQuantity = toNumber(material?.quantity) * toNumber(detail?.target);
       requiredByMaterialId.set(
@@ -293,7 +290,9 @@ const ProductionOverview = ({ data = {}, closeModal }) => {
     RequestUtils.Get(MANUFACTURE_STATUS_LIST_API, { type: 'MANUFACTURE' })
       .then((response) => {
         if (!active) return;
-        setStatuses(mergeManufactureStatuses(response?.data ?? []));
+        setStatuses(mergeManufactureStatuses(
+          Array.isArray(response?.data) ? response.data : [],
+        ));
       })
       .catch(() => {
         if (active) setStatuses(mergeManufactureStatuses());
@@ -329,7 +328,7 @@ const ProductionOverview = ({ data = {}, closeModal }) => {
           `/erp/manufacture/fetch?${params.toString()}`,
           {},
         );
-        const detailedOrders = getResponseItems(manufactureResponse);
+        const detailedOrders = getManufactureOrders(manufactureResponse);
         const detailedOrdersById = new Map(
           detailedOrders.map(item => [String(item.id), item]),
         );
@@ -358,11 +357,7 @@ const ProductionOverview = ({ data = {}, closeModal }) => {
               `/product-material/find-by-product/${productId}`,
               {},
             );
-            const items = getResponseItems(response);
-            const versions = items.some(item => Array.isArray(item?.productMaterials))
-              ? items
-              : [{ bomProductId: null, productMaterials: items }];
-            return [productId, versions];
+            return [productId, getBomVersions(response)];
           } catch (error) {
             return [productId, []];
           }

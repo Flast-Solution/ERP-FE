@@ -89,31 +89,23 @@ const withOffset = (values = {}) => {
   };
 };
 
-const getResponseItems = (values) => {
-  if (Array.isArray(values)) return values;
-  if (Array.isArray(values?.data)) return values.data;
-  if (Array.isArray(values?.embedded)) return values.embedded;
-  if (Array.isArray(values?.items)) return values.items;
-  if (Array.isArray(values?.content)) return values.content;
-  if (Array.isArray(values?.records)) return values.records;
-  if (Array.isArray(values?.data?.embedded)) return values.data.embedded;
-  if (Array.isArray(values?.data?.items)) return values.data.items;
-  if (Array.isArray(values?.data?.content)) return values.data.content;
-  if (Array.isArray(values?.data?.records)) return values.data.records;
-  return [];
-};
-
-const getResponsePage = (values, total) => (
-  values?.page
-  ?? values?.data?.page
-  ?? {
-    totalElements: values?.totalElements
-      ?? values?.total
-      ?? values?.data?.totalElements
-      ?? values?.data?.total
-      ?? total,
+/**
+ * RestList onData nhận sẵn body.data từ GET /erp/config/fetch.
+ * Contract: data = ConfigItem[] hoặc { embedded, page }.
+ */
+const getConfigListPayload = (values = {}) => {
+  if (Array.isArray(values)) {
+    return {
+      items: values,
+      page: { totalElements: values.length },
+    }
   }
-);
+  const items = Array.isArray(values?.embedded) ? values.embedded : []
+  return {
+    items,
+    page: values?.page ?? { totalElements: items.length },
+  }
+};
 
 const GeneralConfigFilter = () => (
   <Row gutter={16}>
@@ -173,10 +165,10 @@ const GeneralConfigPage = () => {
   const beforeSubmitFilter = useCallback((values = {}) => withOffset(values), []);
 
   const onData = useCallback((values) => {
-    const items = getResponseItems(values).map(normalizeConfigItem);
+    const { items, page } = getConfigListPayload(values);
     return {
-      embedded: items,
-      page: getResponsePage(values, items.length),
+      embedded: items.map(normalizeConfigItem),
+      page,
     };
   }, []);
 

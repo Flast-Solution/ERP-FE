@@ -5,13 +5,9 @@ export const USER_SYSTEM_LIST_API = '/user/list'
 export const USER_ACCOUNT_UPDATE_API = '/auth/user-bussiness/save-user'
 
 const unwrapUsers = response => {
-  const value = response?.data ?? response ?? {}
-  const nested = value?.data ?? value
-  const items = Array.isArray(nested)
-    ? nested
-    : nested?.embedded ?? nested?.items ?? nested?.content ?? nested?.records ?? []
-
-  return Array.isArray(items) ? items : []
+  // GET /user/list → data.embedded = User[]
+  const embedded = response?.data?.embedded
+  return Array.isArray(embedded) ? embedded : []
 }
 
 export const findSystemUsers = async (keyword = '') => {

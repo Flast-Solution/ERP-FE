@@ -92,65 +92,21 @@ export const buildInitialLotValues = (lot, orderDetails = []) => {
   }
 }
 
+export {
+  resolveOrderLots,
+  resolveWorkflowList,
+} from '@/containers/Order/List/utils/responseResolvers'
+
+/** GET /provider/fetch → data.embedded = Provider[] */
 export const resolveProviderList = (response) => {
-  const payload = response?.data ?? response
-  const candidates = [
-    payload?.embedded,
-    payload?.data?.embedded,
-    payload?.data?.content,
-    payload?.data?.items,
-    payload?.content,
-    payload?.items,
-    payload?.data,
-    payload,
-  ]
-
-  return candidates.find(Array.isArray) ?? []
+  const embedded = response?.data?.embedded
+  return Array.isArray(embedded) ? embedded : []
 }
 
-export const resolveOrderLots = (response) => {
-  const payload = response?.data ?? response
-  const candidates = [
-    payload?.data,
-    payload?.data?.embedded,
-    payload?.data?.content,
-    payload?.data?.items,
-    payload?.embedded,
-    payload?.content,
-    payload?.items,
-    payload,
-  ]
-
-  const arrayData = candidates.find(Array.isArray)
-  if (arrayData) return arrayData
-
-  const objectData = candidates.find(item => item && typeof item === 'object')
-  if (objectData?.id || objectData?.code || objectData?.entityId) {
-    return [objectData]
-  }
-
-  return []
-}
-
-export const resolveWorkflowList = (response) => {
-  const payload = response?.data ?? response
-  const candidates = [
-    payload?.embedded,
-    payload?.data?.embedded,
-    payload?.data?.content,
-    payload?.content,
-    payload?.items,
-    payload?.data,
-    payload,
-  ]
-
-  return candidates.find(Array.isArray) ?? []
-}
-
-export const getWorkflowFlowType = (workflow = {}) => {
-  const process = workflow?.process ?? workflow
-  return process?.flowType ?? ''
-}
+/** Filter items are Process objects (flowType on the item itself). */
+export const getWorkflowFlowType = (workflow = {}) => (
+  workflow?.flowType ?? workflow?.process?.flowType ?? ''
+)
 
 export const filterWorkflowsByFlowType = (workflows = [], flowType) => {
   const expectedType = String(flowType ?? '').trim().toUpperCase()

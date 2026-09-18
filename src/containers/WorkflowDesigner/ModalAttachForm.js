@@ -344,23 +344,21 @@ const CreateBody = styled(Body)`
   max-height: min(520px, calc(90vh - 200px));
 `
 
-const normalizeTemplateResponse = (res = {}) => {
-  const payload = res?.data ?? res
-  if (Array.isArray(payload?.embedded)) return payload.embedded
-  if (Array.isArray(payload?.data?.embedded)) return payload.data.embedded
-  if (Array.isArray(payload?.data)) return payload.data
-  if (Array.isArray(payload)) return payload
-  return []
+/** GET /workflow/forms/template/filter → data.embedded = Template[] */
+const getTemplateList = (res = {}) => {
+  const embedded = res?.data?.embedded
+  return Array.isArray(embedded) ? embedded : []
 }
 
 const normalizeTemplate = (item = {}) => {
   const fields = Array.isArray(item.fields) ? item.fields : []
-  const name = (item.description ?? '').trim() || item.name || item.formKey || `Form #${item.id}`
+  const formKey = item.name ?? ''
+  const name = (item.description ?? '').trim() || formKey || `Form #${item.id}`
   return {
     ...item,
     id: item.id,
     name,
-    formKey: item.name ?? item.formKey ?? item.key ?? '',
+    formKey,
     domain: item.domain ?? '',
     fields,
     required: item.required ?? false,
@@ -419,7 +417,7 @@ const ModalAttachForm = ({
     RequestUtils.Get(TEMPLATE_FILTER_API, search ? { name: search } : {})
       .then((res) => {
         if (!mounted) return
-        const data = normalizeTemplateResponse(res).map(normalizeTemplate)
+        const data = getTemplateList(res).map(normalizeTemplate)
         setTemplates(data)
       })
       .catch((error) => {
@@ -492,9 +490,6 @@ const ModalAttachForm = ({
       }
 
       const templateId = response?.data?.id
-        ?? response?.data?.templateId
-        ?? response?.data?.meta?.id
-        ?? response?.id
       const created = normalizeTemplate({
         ...draft,
         id: templateId,

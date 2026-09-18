@@ -5,16 +5,10 @@ export const BUSINESS_UNIT_API = {
   listRole: '/auth/list-role',
 }
 
-export const getResponseItems = (response = {}) => {
-  const payload = response?.data ?? response
-  if (Array.isArray(payload)) return payload
-  if (Array.isArray(payload?.embedded)) return payload.embedded
-  if (Array.isArray(payload?.items)) return payload.items
-  if (Array.isArray(payload?.content)) return payload.content
-  if (Array.isArray(payload?.records)) return payload.records
-  if (Array.isArray(payload?.data)) return payload.data
-  if (Array.isArray(payload?.user)) return payload.user
-  return []
+/** GET /auth/user-bussiness/list-user → data = User[] */
+export const getListUsers = (response = {}) => {
+  const users = response?.data
+  return Array.isArray(users) ? users : []
 }
 
 export const normalizeBusinessUnit = (item = {}) => ({

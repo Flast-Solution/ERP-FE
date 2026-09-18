@@ -89,7 +89,6 @@ const toNumber = value => Number(value ?? 0) || 0;
 const getConfirmedBomId = detail => (
   detail?.bomProductId
   ?? detail?.bomProduct?.bomProductId
-  ?? detail?.bomProduct?.id
   ?? null
 );
 
@@ -98,10 +97,16 @@ const hasConfirmedBom = detail => {
   return bomProductId !== null && bomProductId !== undefined && String(bomProductId).trim() !== '';
 };
 
-const getResponseItems = (response) => {
-  const payload = response?.data ?? response;
-  return [payload?.embedded, payload?.items, payload?.content, payload?.data, payload]
-    .find(Array.isArray) ?? [];
+/** GET /erp/manufacture/fetch → data.embedded = ManufactureOrder[] */
+const getManufactureOrders = (response) => {
+  const embedded = response?.data?.embedded;
+  return Array.isArray(embedded) ? embedded : [];
+};
+
+/** GET /product-material/find-by-product/{id} → data = BomVersion[] */
+const getBomVersions = (response) => {
+  const versions = response?.data;
+  return Array.isArray(versions) ? versions : [];
 };
 
 const formatDate = (value) => {
@@ -131,7 +136,7 @@ const getProductName = (productId, customerOrder) => (
 );
 
 const selectBom = (versions, bomProductId) => (
-  versions.find(item => String(item?.bomProductId ?? item?.id) === String(bomProductId)) ?? null
+  versions.find(item => String(item?.bomProductId) === String(bomProductId)) ?? null
 );
 
 const ProductionOrderDetail = ({ data = {}, closeModal }) => {
@@ -163,7 +168,7 @@ const ProductionOrderDetail = ({ data = {}, closeModal }) => {
         if (!active) return;
 
         const records = recordResult.status === 'fulfilled'
-          ? getResponseItems(recordResult.value)
+          ? getManufactureOrders(recordResult.value)
           : [];
         const detailedRecord = records.find(item => String(item.id) === String(initialRecord.id))
           ?? records.find(item => String(item.code) === String(initialRecord.code))
@@ -171,7 +176,9 @@ const ProductionOrderDetail = ({ data = {}, closeModal }) => {
         setRecord(detailedRecord);
 
         const nextStatuses = statusResult.status === 'fulfilled'
-          ? mergeManufactureStatuses(statusResult.value?.data ?? [])
+          ? mergeManufactureStatuses(
+            Array.isArray(statusResult.value?.data) ? statusResult.value.data : [],
+          )
           : mergeManufactureStatuses();
         setStatuses(nextStatuses);
 
@@ -184,11 +191,7 @@ const ProductionOrderDetail = ({ data = {}, closeModal }) => {
         const bomResults = await Promise.all(productIds.map(async (productId) => {
           try {
             const response = await RequestUtils.Get(`/product-material/find-by-product/${productId}`, {});
-            const items = getResponseItems(response);
-            const versions = items.some(item => Array.isArray(item?.productMaterials))
-              ? items
-              : [{ productId, version: 'v1.0', status: 1, productMaterials: items }];
-            return [productId, versions];
+            return [productId, getBomVersions(response)];
           } catch (error) {
             return [productId, []];
           }
@@ -228,7 +231,7 @@ const ProductionOrderDetail = ({ data = {}, closeModal }) => {
     const rows = new Map();
     bomItems.forEach((item) => {
       (item.bom?.productMaterials ?? []).forEach((material) => {
-        const materialId = material.materialId ?? material.material?.id;
+        const materialId = material.materialId;
         if (materialId == null) return;
         const key = String(materialId);
         const required = toNumber(material.quantity) * toNumber(item.target);

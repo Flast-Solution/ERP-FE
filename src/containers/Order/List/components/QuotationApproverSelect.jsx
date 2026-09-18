@@ -28,7 +28,7 @@ const QuotationApproverSelect = ({ value, onChange, disabled = false }) => {
       if (Number(response?.errorCode) !== SUCCESS_CODE) {
         throw new Error(response?.message || 'Không tải được danh sách người phê duyệt')
       }
-      const nextUsers = Array.isArray(response?.data) ? response.data : response?.data?.embedded ?? []
+      const nextUsers = Array.isArray(response?.data?.embedded) ? response.data.embedded : []
       const validUsers = nextUsers.filter(user => Number.isInteger(Number(user.id)) && Number(user.id) > 0)
       setUsers(current => [...new Map([...current, ...validUsers].map(user => [Number(user.id), user])).values()])
       pageRef.current = nextPage

@@ -193,46 +193,20 @@ const BuilderPage = () => {
     })
   }
 
+  /** GET /workflow/forms/template/find-id → data = Template */
   const resolveTemplateFromResponse = (response, targetId) => {
-    const payload = response?.data ?? response
-    const detailCandidates = [
-      payload?.data,
-      payload?.template,
-      payload?.data?.template,
-      payload,
-    ]
-
-    const detail = detailCandidates.find(item => (
-      item
-      && !Array.isArray(item)
-      && String(item?.id ?? '') === String(targetId ?? '')
-    ))
-
-    if (detail) {
-      return detail
+    const template = response?.data
+    if (
+      !template
+      || typeof template !== 'object'
+      || Array.isArray(template)
+    ) {
+      return null
     }
-
-    const embedded = Array.isArray(payload?.embedded)
-      ? payload.embedded
-      : Array.isArray(payload?.data?.embedded)
-        ? payload.data.embedded
-        : Array.isArray(payload)
-          ? payload
-          : []
-
-    if (embedded.length > 0) {
-      return embedded.find(item => String(item?.id ?? '') === String(targetId ?? '')) ?? null
+    if (targetId != null && String(template.id ?? '') !== String(targetId)) {
+      return null
     }
-
-    if (String(payload?.id ?? '') === String(targetId ?? '')) {
-      return payload
-    }
-
-    if (String(payload?.data?.id ?? '') === String(targetId ?? '')) {
-      return payload.data
-    }
-
-    return null
+    return template
   }
 
   useEffect(() => {
@@ -297,11 +271,7 @@ const BuilderPage = () => {
 
     const response = await RequestUtils.Post(endpoint, payload)
 
-    const nextTemplateId =
-      response?.data?.id ??
-      response?.data?.templateId ??
-      response?.data?.meta?.id ??
-      response?.data?.meta?.templateId
+    const nextTemplateId = response?.data?.id
 
     if (!templateId && nextTemplateId) {
       setTemplateMeta({ id: nextTemplateId })
