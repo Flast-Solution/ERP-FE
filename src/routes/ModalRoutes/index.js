@@ -38,7 +38,6 @@ import CommonRoute from './CommonRoute.js';
 import WebRouter from './WebRouter.js';
 import userRoute from './userRoute.js';
 import BusinessUnitRouter from './BusinessUnitRouter.js';
-import OmniModalRoute from './OmniModalRoute';
 
 const notFoundHash = { Component: () => <div /> };
 const modalRoutes = [
@@ -54,8 +53,7 @@ const modalRoutes = [
   ...Cohoi7DayRouter,
   ...ActionChamSocDonHangRouter,
   ...userRoute,
-  ...BusinessUnitRouter,
-  ...OmniModalRoute
+  ...BusinessUnitRouter
 ]
 
 const getModalRoute = (urlHash) => {

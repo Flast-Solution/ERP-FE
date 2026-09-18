@@ -20,6 +20,18 @@ export const CHANNEL_TYPE = {
   FACEBOOK: 2,
 }
 
+/* Ánh xạ sang CHANNEL_SOURCE của ERP.
+ *
+ * CẨN THẬN: hai bảng mã NGƯỢC NHAU.
+ *   omni  : 1 = Zalo OA,  2 = Facebook
+ *   ERP   : 1 = Facebook, 2 = Zalo
+ * Truyền thẳng channelType sang lead là ghi sai nguồn mà không có
+ * lỗi nào báo. Luôn đi qua bảng này. */
+export const CHANNEL_TYPE_TO_ERP_SOURCE = {
+  [1]: 2,   /* Zalo OA  -> ERP source "Zalo" */
+  [2]: 1,   /* Facebook -> ERP source "Facebook" */
+}
+
 export const CHANNEL_LABEL = {
   [CHANNEL_TYPE.ZALO_OA]: 'Zalo OA',
   [CHANNEL_TYPE.FACEBOOK]: 'Facebook',
@@ -235,8 +247,10 @@ export const useOmniStore = create((set, get) => ({
   /* Đổi hội thoại: KHÔNG dùng router để tránh remount cả 3 cột.
    * Việc đồng bộ query param do component tự làm bằng replaceState. */
   openConversation: (conversationId) => {
-    if (get().activeId === conversationId) return
-    set({ activeId: conversationId, contextError: null })
+    if (get().activeId === conversationId) {
+      return
+    }
+    set({ activeId: conversationId, contextError: null, handoffNotice: null })
     get().clearUnread(conversationId)
   },
 
@@ -390,6 +404,54 @@ export const useOmniStore = create((set, get) => ({
       }
     }),
 
+  /* -------------------------------------------------- *
+   * Chuyển giao hội thoại                               *
+   * -------------------------------------------------- *
+   * Hội thoại đang mở bị chuyển cho người khác: KHÔNG đóng đột ngột.
+   * Sale có thể đang gõ dở một đoạn dài, đóng là mất trắng. Thay vào
+   * đó khoá ô nhập, hiện băng báo, để họ tự quyết lúc nào rời đi. */
+  handoffNotice: null,
+
+  clearHandoffNotice: () => set({ handoffNotice: null }),
+
+  /* Xử lý conversation.updated từ WS.
+   *
+   * Hai việc TÁCH RIÊNG, vì trả lời hai câu hỏi khác nhau:
+   *   1. Còn thuộc tab đang xem không   -> gỡ khỏi danh sách
+   *   2. Hội thoại đang mở còn của mình -> khoá ô nhập
+   * Gỡ khỏi danh sách mà vẫn giữ activeId là có chủ đích: người dùng
+   * vẫn đọc được hội thoại đang mở cho tới khi tự đóng. */
+  applyConversationUpdate: (update) =>
+    set((s) => {
+      const current = s.conversations.find((c) => c.id === update.id)
+      const merged = { ...(current || {}), ...update }
+      const next = {}
+
+      if (current && !matchFilters(merged, s.filters, s.me)) {
+        next.conversations = s.conversations.filter((c) => c.id !== update.id)
+      } else if (current) {
+        next.conversations = s.conversations.map((c) =>
+          c.id === update.id ? merged : c
+        )
+      }
+
+      const isActive = s.activeId === update.id
+      const hasOwner = merged.assignedUserId != null
+      const isMine = merged.assignedUserId === s.me?.userId
+      const canStillReply = s.me?.isManager || !hasOwner || isMine
+
+      if (isActive && !canStillReply) {
+        next.handoffNotice = {
+          conversationId: update.id,
+          assignedUserName: merged.assignedUserName || null,
+        }
+      } else if (isActive && canStillReply && s.handoffNotice) {
+        next.handoffNotice = null
+      }
+
+      return next
+    }),
+
   /* Chèn lead/cơ hội/đơn vừa tạo vào lịch sử giao dịch của cột phải,
    * khỏi phải gọi lại cả context. Mục mới nhất lên đầu. */
   addTimelineItem: (conversationId, item) =>
@@ -516,6 +578,14 @@ export const useActiveContext = () =>
 export const useFilters = () => useOmniStore((s) => s.filters)
 export const useCounts = () => useOmniStore((s) => s.counts)
 export const useMe = () => useOmniStore((s) => s.me)
+
+/* Băng báo chỉ hiện cho đúng hội thoại đang mở */
+export const useHandoffNotice = () =>
+  useOmniStore((s) =>
+    s.handoffNotice && s.handoffNotice.conversationId === s.activeId
+      ? s.handoffNotice
+      : null
+  )
 
 /* Tab "Hàng chờ" chỉ hiện khi user có quyền nhận trên ít nhất một kênh */
 export const useCanSeeQueue = () =>

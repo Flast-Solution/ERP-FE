@@ -120,19 +120,23 @@ const normalizeLeadRecord = (item = {}) => {
 
 const NewLead = ({ closeModal, data }) => {
 
-  const { record: item, listSale } = data;
-  const [form] = Form.useForm();
-  const [record, setRecord] = useState(() => normalizeLeadRecord(item));
-  const [submitting, setSubmitting] = useState(false);
+  const { record: item, listSale, onSubmit: fnSubmitFromCaller } = data;
+  const [ form ] = Form.useForm();
+  const [ record, setRecord ] = useState(() => normalizeLeadRecord(item));
+  const [ submitting, setSubmitting ] = useState(false);
   const { hasPermission } = useGetMe();
+
   const canSave = item?.id
     ? hasPermission('sales.lead.update')
     : hasPermission('sales.lead.create');
 
   const onSubmit = async (values) => {
-    if (!canSave) return;
+    if (!canSave) {
+      return;
+    }
     setSubmitting(true);
     try {
+
       const currentFormValues = form.getFieldsValue(true);
       const body = {
         ...record,
@@ -144,6 +148,7 @@ const NewLead = ({ closeModal, data }) => {
           ...(currentFormValues?.business ?? {}),
         },
       };
+
       delete body.fileUploads;
       delete body.productId;
       delete body.companyName;
@@ -179,8 +184,8 @@ const NewLead = ({ closeModal, data }) => {
       const selectedWorkflowIds = normalizeWorkflowProcessIds(submitBody);
       const primaryWorkflowId = selectedWorkflowIds[0] ?? null;
       submitBody.workflowProcessIds = selectedWorkflowIds;
-      // Giữ contract cũ để BE tiếp tục tự khởi tạo workflow đầu tiên.
       submitBody.workflowProcessId = primaryWorkflowId;
+      
       delete submitBody.workflowInstances;
       delete submitBody.workflowInstance;
       delete submitBody.workflowProcess;
@@ -189,6 +194,7 @@ const NewLead = ({ closeModal, data }) => {
       const response = await RequestUtils.Post("/data/create", payload);
       if (isSuccessfulResponse(response)) {
         f5List('data/lists');
+        fnSubmitFromCaller?.(response.data);
         InAppEvent.normalSuccess("Cập nhật thành công");
         InAppEvent.emit(HASH_MODAL_CLOSE);
         return;

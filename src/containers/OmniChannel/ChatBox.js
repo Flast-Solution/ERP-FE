@@ -20,6 +20,7 @@ import {
   PictureOutlined,
   SelectOutlined,
   SendOutlined,
+  SwapOutlined,
   StopOutlined,
   UserAddOutlined,
 } from '@ant-design/icons'
@@ -28,6 +29,7 @@ import {
   useActiveConversation,
   useActiveMessages,
   useActiveContext,
+  useHandoffNotice,
   useOmniStore,
   CONVERSATION_STATUS,
   DIRECTION,
@@ -44,6 +46,7 @@ import {
   SystemLine,
   Bubble,
   Composer,
+  HandoffBar,
   ACCENT,
 } from './chatStyles'
 import EmptyState from './EmptyState'
@@ -160,12 +163,14 @@ const ChatBox = ({
   onChangeStatus,
   onToggleContext,
   onAssign,
+  onCloseHandoff,
   contextOpen,
   mobileActive,
 }) => {
   const conversation = useActiveConversation()
   const context = useActiveContext()
   const messages = useActiveMessages()
+  const handoff = useHandoffNotice()
   const loading = useOmniStore((s) => (s.activeId ? s.messagesMeta[s.activeId]?.loading : false))
 
   const [draft, setDraft] = useState('')
@@ -243,6 +248,9 @@ const ChatBox = ({
   }
 
   const windowState = !windowOpen ? 'closed' : remaining < URGENT_THRESHOLD ? 'urgent' : 'ok'
+  /* Hết cửa sổ HOẶC vừa bị chuyển cho người khác đều khoá ô nhập,
+     nhưng lý do khác nhau nên thông báo cũng khác nhau. */
+  const canCompose = windowOpen && !handoff
   const limitHours = conversation.channelType === 2 ? 24 : 48
   const customerName = context?.customer?.name
   const headline = context?.customer?.companyName
@@ -339,6 +347,19 @@ const ChatBox = ({
         )}
       </WindowBar>
 
+      {handoff && (
+        <HandoffBar>
+          <SwapOutlined />
+          <span className="grow">
+            Hội thoại vừa chuyển cho {handoff.assignedUserName || 'người khác'}. Bạn vẫn đọc
+            được nội dung nhưng không gửi tin được nữa.
+          </span>
+          <Button size="small" onClick={onCloseHandoff}>
+            Đóng
+          </Button>
+        </HandoffBar>
+      )}
+
       <Thread ref={threadRef}>
         {loading && (
           <div style={{ textAlign: 'center', padding: 12 }}>
@@ -361,7 +382,7 @@ const ChatBox = ({
       </Thread>
 
       <Composer>
-        {windowOpen ? (
+        {canCompose ? (
           <>
             <div className="box">
               <Input.TextArea
@@ -417,8 +438,9 @@ const ChatBox = ({
           <div className="locked">
             <StopOutlined style={{ fontSize: 16, flexShrink: 0 }} />
             <span>
-              Đã quá {limitHours} giờ kể từ tin cuối của khách, nền tảng không cho gửi tin nữa.
-              Hội thoại sẽ mở lại ngay khi khách nhắn tiếp.
+              {handoff
+                ? `Hội thoại đã thuộc về ${handoff.assignedUserName || 'nhân viên khác'}. Liên hệ người phụ trách nếu cần trao đổi thêm.`
+                : `Đã quá ${limitHours} giờ kể từ tin cuối của khách, nền tảng không cho gửi tin nữa. Hội thoại sẽ mở lại ngay khi khách nhắn tiếp.`}
             </span>
           </div>
         )}

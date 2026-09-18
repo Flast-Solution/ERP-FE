@@ -152,6 +152,25 @@ export const WindowBar = styled.div`
 
 /* ---------------- Dòng tin ---------------- */
 
+/* Băng báo hội thoại vừa chuyển cho người khác.
+   Đặt dưới thanh cửa sổ trả lời, trên luồng tin. */
+export const HandoffBar = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  flex-shrink: 0;
+  font-size: 13px;
+  background: #f0f5ff;
+  border-bottom: 1px solid #d6e4ff;
+  color: #1d39c4;
+
+  .grow {
+    flex: 1;
+    min-width: 0;
+  }
+`
+
 export const Thread = styled.div`
   flex: 1;
   min-height: 0;
@@ -366,17 +385,4 @@ export const Composer = styled.div`
     font-size: 13px;
     line-height: 1.5;
   }
-`
-
-export const ChatEmpty = styled.div`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  color: #8c8c8c;
-  font-size: 14px;
-  padding: 24px;
-  text-align: center;
 `
