@@ -18,6 +18,11 @@ const Omni = [
     path: 'omni.customer.search',
     Component: React.lazy(() => import('@/containers/OmniChannel/CustomerSearchPopup')),
     modalOptions: { title: '', width: 560 }
+  },
+  {
+    path: 'omni.conversation.assign',
+    Component: React.lazy(() => import('@/containers/OmniChannel/AssignPopup')),
+    modalOptions: { title: '', width: 460 }
   }
 ];
 

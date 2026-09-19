@@ -59,10 +59,13 @@ const isAbsoluteUrl = (value = '') =>
   /^https?:\/\//i.test(String(value)) || String(value).startsWith('/api/');
 
 const resolveLogoUrl = (logo) => {
-  if (!logo) return '';
-  if (isAbsoluteUrl(logo)) return logo;
-  const baseUrl = String(axios.defaults.baseURL || '/api').replace(/\/$/, '');
-  return `${baseUrl}/upload/folder/view?filename=${encodeURIComponent(logo)}`;
+  if (!logo) {
+    return '';
+  }
+  if (isAbsoluteUrl(logo)) {
+    return logo;
+  }
+  return `https://biz.api.flast.vn/upload/folder/view/${encodeURIComponent(logo)}`;
 };
 
 function SideBar() {

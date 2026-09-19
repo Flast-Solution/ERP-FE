@@ -11,15 +11,39 @@
 /**************************************************************************/
 
 import { useCallback, useState } from 'react'
-import { Alert, Empty, Input, Spin, Tag } from 'antd'
-import { ShopOutlined, UserOutlined } from '@ant-design/icons'
+import { Alert, Empty, Input, Modal, Spin } from 'antd'
 import styled from 'styled-components'
 import { omniApi } from '@/services/omniService'
+import { ExclamationCircleOutlined, ShopOutlined, UserOutlined } from '@ant-design/icons'
 
 const Result = styled.div`
+
   margin-top: 14px;
   max-height: 340px;
   overflow-y: auto;
+
+  .owner {
+    flex-shrink: 0;
+    text-align: right;
+    line-height: 1.35;
+  }
+
+  .owner-label {
+    display: block;
+    font-size: 10.5px;
+    color: #bfbfbf;
+  }
+
+  .owner-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #595959;
+  }
+
+  .owner-none {
+    font-size: 12px;
+    color: #d48806;
+  }
 
   .pick {
     display: flex;
@@ -55,10 +79,11 @@ const Result = styled.div`
 `
 
 const CustomerSearchPopup = ({ identityId, displayName, onLink, closeModal }) => {
-  const [keyword, setKeyword] = useState('')
-  const [items, setItems] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [busy, setBusy] = useState(false)
+
+  const [ keyword, setKeyword ] = useState('')
+  const [ items, setItems ] = useState(null)
+  const [ loading, setLoading ] = useState(false)
+  const [ busy, setBusy ] = useState(false)
 
   const handleSearch = useCallback(async (value) => {
     if (!value?.trim()) {
@@ -73,19 +98,31 @@ const CustomerSearchPopup = ({ identityId, displayName, onLink, closeModal }) =>
     }
   }, [])
 
-  const handlePick = useCallback(
-    async (customer) => {
-      if (busy) return
-      setBusy(true)
-      try {
-        await onLink(identityId, customer.id)
-        closeModal()
-      } finally {
-        setBusy(false)
-      }
-    },
-    [busy, identityId, onLink, closeModal]
-  )
+  const handlePick = useCallback((customer) => {
+    if (busy) {
+      return
+    }
+
+    const owner = customer.ownerName
+    Modal.confirm({
+      title: 'Gắn vào khách hàng này?',
+      icon: <ExclamationCircleOutlined />,
+      content: owner
+        ? `Hội thoại sẽ chuyển cho ${owner} — người đang phụ trách ${customer.name}. Bạn sẽ không trả lời được nữa.`
+        : `${customer.name} chưa có người phụ trách. Hội thoại sẽ về Hàng chờ.`,
+      okText: 'Gắn khách',
+      cancelText: 'Huỷ',
+      onOk: async () => {
+        setBusy(true)
+        try {
+          await onLink(identityId, customer.id)
+          closeModal()
+        } finally {
+          setBusy(false)
+        }
+      },
+    })
+  }, [busy, identityId, onLink, closeModal])
 
   return (
     <div>
@@ -124,7 +161,16 @@ const CustomerSearchPopup = ({ identityId, displayName, onLink, closeModal }) =>
                   {customer.companyName || 'Khách lẻ'} · {customer.mobile}
                 </div>
               </div>
-              {customer.ownerName && <Tag bordered={false}>{customer.ownerName}</Tag>}
+              <div className="owner">
+                {customer.ownerName ? (
+                  <>
+                    <span className="owner-label">Phụ trách</span>
+                    <span className="owner-name">{customer.ownerName}</span>
+                  </>
+                ) : (
+                  <span className="owner-none">Chưa có sale</span>
+                )}
+              </div>
             </div>
           ))}
 
@@ -137,6 +183,6 @@ const CustomerSearchPopup = ({ identityId, displayName, onLink, closeModal }) =>
       </Result>
     </div>
   )
-}
+};
 
-export default CustomerSearchPopup
+export default CustomerSearchPopup;

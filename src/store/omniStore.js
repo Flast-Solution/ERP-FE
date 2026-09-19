@@ -27,9 +27,10 @@ export const CHANNEL_TYPE = {
  *   ERP   : 1 = Facebook, 2 = Zalo
  * Truyền thẳng channelType sang lead là ghi sai nguồn mà không có
  * lỗi nào báo. Luôn đi qua bảng này. */
+
 export const CHANNEL_TYPE_TO_ERP_SOURCE = {
-  [1]: 2,   /* Zalo OA  -> ERP source "Zalo" */
-  [2]: 1,   /* Facebook -> ERP source "Facebook" */
+  [CHANNEL_TYPE.ZALO_OA]: 2,   /* Zalo OA  -> ERP source "Zalo" */
+  [CHANNEL_TYPE.FACEBOOK]: 1,   /* Facebook -> ERP source "Facebook" */
 }
 
 export const CHANNEL_LABEL = {

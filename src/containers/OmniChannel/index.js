@@ -28,10 +28,11 @@ const OmniChannel = () => {
     attachLead,
     linkCustomer,
     changeStatus,
+    assignUser
   } = useOmniInbox()
 
   const activeId = useOmniStore((s) => s.activeId)
-  const [contextOpen, setContextOpen] = useState(false)
+  const [ contextOpen, setContextOpen ] = useState(true)
 
   /* Mở lại hội thoại từ link được chia sẻ (?c=1042) */
   useEffect(() => {
@@ -95,8 +96,32 @@ const OmniChannel = () => {
     /* Chuyển sang trang tạo cơ hội riêng */
   }, [activeId])
 
+  /* Giao hội thoại cho nhân viên khác — chọn một người, dùng popup */
+  const handleAssign = useCallback(() => {
+
+    const conversation = useOmniStore.getState().conversations.find(
+      (c) => c.id === activeId
+    )
+
+    if (!conversation) {
+      return
+    }
+
+    InAppEvent.emit(HASH_POPUP, {
+      hash: 'omni.conversation.assign',
+      title: 'Giao hội thoại',
+      data: {
+        conversationId: activeId,
+        channelAccountId: conversation.channelAccountId,
+        currentUserId: conversation.assignedUserId,
+        currentUserName: conversation.assignedUserName,
+        onAssign: assignUser
+      },
+    })
+  }, [ activeId, assignUser ])
+
   return (
-    <InboxWrapper>
+    <InboxWrapper $contextOpen={contextOpen}>
       <ConversationList
         mobileActive={!activeId}
         onOpen={openConversation}
@@ -113,6 +138,7 @@ const OmniChannel = () => {
         onCloseHandoff={() => useOmniStore.getState().clearHandoffNotice()}
         contextOpen={contextOpen}
         onToggleContext={() => setContextOpen((v) => !v)}
+        onAssign={handleAssign}
       />
 
       <ContextPanel

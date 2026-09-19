@@ -14,6 +14,9 @@ import {
   InboxOutlined,
   SearchOutlined,
   SwapOutlined,
+  AppstoreOutlined,
+  MessageOutlined,
+  UserOutlined
 } from '@ant-design/icons'
 import moment from 'moment'
 import {
@@ -30,6 +33,7 @@ import {
   SCOPE,
   SORT_MODE,
   getWindowRemaining,
+  useCanSeeQueue
 } from '@/store/omniStore'
 import {
   ListPane,
@@ -63,6 +67,9 @@ const AVATAR_COLORS = [
 ]
 
 const colorOf = (text = '') => {
+  if(!text) {
+    return '#ccc09d'
+  }
   let sum = 0
   for (let i = 0; i < text.length; i += 1) {
     sum += text.charCodeAt(i)
@@ -72,6 +79,9 @@ const colorOf = (text = '') => {
 
 /* Tên tiếng Việt thường 3-4 từ, lấy chữ đầu của từ đầu + từ cuối */
 const initialsOf = (name = '') => {
+  if(!name) {
+    return '(Chưa có)';
+  }
   const parts = name.trim().split(/\s+/).filter(Boolean)
   if (!parts.length) {
     return '?'
@@ -84,9 +94,6 @@ const initialsOf = (name = '') => {
 
 const channelInitial = (channelType) => (channelType === CHANNEL_TYPE.FACEBOOK ? 'f' : 'Z')
 
-/* Ba mức hiển thị theo độ gấp. Dưới 10 phút thì đếm từng giây —
-   lúc đó con số nhảy liên tục chính là tín hiệu "phải trả lời ngay",
-   mạnh hơn bất kỳ màu nào. */
 const shortRemaining = (ms) => {
   const totalSeconds = Math.floor(ms / 1000)
   if (totalSeconds < CRITICAL_THRESHOLD / 1000) {
@@ -96,12 +103,11 @@ const shortRemaining = (ms) => {
   }
   const minutes = Math.floor(totalSeconds / 60)
   const hours = Math.floor(minutes / 60)
-  return hours > 0 ? `${hours}g${String(minutes % 60).padStart(2, '0')}` : `${minutes}p`
+  return hours > 0 ? `${hours}H${String(minutes % 60).padStart(2, '0')}` : `${minutes}P`
 }
 
-const URGENT_THRESHOLD = 3 * 3600_000
-/* Dưới mốc này thì đếm từng giây */
-const CRITICAL_THRESHOLD = 10 * 60_000
+const URGENT_THRESHOLD    = 3 * 3600_000
+const CRITICAL_THRESHOLD  = 10 * 60_000
 
 /* ---------------------------------------------------------------- */
 
@@ -162,7 +168,7 @@ const ConversationRow = memo(({ item, active, onOpen }) => {
             ) : (
               <>
                 <ClockCircleOutlined />
-                {windowState === 'critical' ? '' : 'còn '}
+                {windowState === 'critical' ? '' : 'Còn '}
                 {shortRemaining(remaining)}
               </>
             )}
@@ -182,19 +188,20 @@ const ConversationList = ({
   onFilter,
   onReconnect,
   onOpenChannelSetting,
-  mobileActive,
+  mobileActive
 }) => {
-  const conversations = useConversationList()
-  const activeId = useActiveId()
-  const filters = useFilters()
-  const channels = useChannels()
-  const counts = useCounts()
-  const sortMode = useSortMode()
-  const loading = useOmniStore((s) => s.conversationsLoading)
-  const hasMore = useOmniStore((s) => s.hasMore)
-  const setSortMode = useOmniStore((s) => s.setSortMode)
 
-  const scrollRef = useRef(null)
+  const conversations = useConversationList()
+  const activeId      = useActiveId()
+  const filters       = useFilters()
+  const channels      = useChannels()
+  const counts        = useCounts()
+  const canSeeQueue   = useCanSeeQueue()
+  const sortMode      = useSortMode()
+  const loading       = useOmniStore((s) => s.conversationsLoading)
+  const hasMore       = useOmniStore((s) => s.hasMore)
+  const setSortMode   = useOmniStore((s) => s.setSortMode)
+  const scrollRef     = useRef(null)
 
   /* "Chưa có tin nào" chỉ đúng khi người dùng chưa lọc gì.
      Có lọc mà rỗng là chuyện khác hẳn. */
@@ -229,7 +236,9 @@ const ConversationList = ({
 
   /* Sắp xếp ở client — dữ liệu đã có sẵn, không cần gọi lại API */
   const sorted = useMemo(() => {
-    if (sortMode === SORT_MODE.RECENT) return conversations
+    if (sortMode === SORT_MODE.RECENT) {
+      return conversations
+    }
     return [...conversations].sort((a, b) => {
       const ra = getWindowRemaining(a)
       const rb = getWindowRemaining(b)
@@ -251,9 +260,12 @@ const ConversationList = ({
   }, [loading, hasMore, onLoadMore])
 
   const scopeTabs = [
-    { key: SCOPE.UNREPLIED, label: 'Chưa trả lời', count: counts.unreplied },
-    { key: SCOPE.MINE, label: 'Của tôi', count: counts.mine },
-    { key: SCOPE.ALL, label: 'Tất cả', count: counts.all },
+    ...(canSeeQueue
+      ? [{ key: SCOPE.QUEUE, label: 'Hàng chờ', count: counts.queue, icon: <InboxOutlined /> }]
+      : []),
+    { key: SCOPE.UNREPLIED, label: 'Chưa trả lời', count: counts.unreplied, icon: <MessageOutlined /> },
+    { key: SCOPE.MINE, label: 'Của tôi', count: counts.mine, icon: <UserOutlined /> },
+    { key: SCOPE.ALL, label: 'Tất cả', count: counts.all, icon: <AppstoreOutlined /> },
   ]
 
   const channelOptions = channels.map((c) => ({
@@ -276,10 +288,17 @@ const ConversationList = ({
     ),
   }))
 
-  /* Ba ca rỗng khác nhau, xử lý khác nhau:
-     chưa nối kênh -> dẫn sang cấu hình; đã nối mà chưa có tin -> chờ;
-     có tin nhưng bộ lọc không khớp -> gợi ý bỏ lọc. */
   const renderEmpty = () => {
+    if (filters.scope === SCOPE.QUEUE) {
+      return (
+        <EmptyState
+          icon={<InboxOutlined />}
+          title="Hàng chờ trống"
+          description="Mọi hội thoại đều đã có người phụ trách."
+        />
+      )
+    }
+
     if (channels.length === 0) {
       return (
         <EmptyState
@@ -360,6 +379,7 @@ const ConversationList = ({
             data-active={filters.scope === tab.key}
             onClick={() => onFilter({ scope: tab.key })}
           >
+            {tab.icon}
             {tab.label}
             <span className="count">{tab.count}</span>
           </button>

@@ -21,6 +21,12 @@ import {
   ShoppingOutlined,
   UserAddOutlined,
   UserOutlined,
+  CalendarOutlined,
+  FacebookFilled,
+  StarOutlined,
+  ThunderboltOutlined,
+  WechatOutlined,
+  ChromeOutlined
 } from '@ant-design/icons'
 import moment from 'moment'
 import {
@@ -41,16 +47,28 @@ import {
   FactRow,
   StatRow,
   StatCard,
-  TimelineItem,
+  DealCard,
   EmptyCard,
 } from './contextStyles'
 import EmptyState from './EmptyState'
 
 const REF_META = {
-  [REF_TYPE.LEAD]: { accent: '#1677ff', tint: '#e6f4ff', label: 'Lead' },
-  [REF_TYPE.COHOI]: { accent: '#722ed1', tint: '#f9f0ff', label: 'Cơ hội' },
-  [REF_TYPE.ORDER]: { accent: '#389e0d', tint: '#f6ffed', label: 'Đơn hàng' },
+  [REF_TYPE.LEAD]:  { accent: '#1677ff', tint: '#e6f4ff', icon: <ThunderboltOutlined />, codeLabel: null },
+  [REF_TYPE.COHOI]: { accent: '#722ed1', tint: '#f9f0ff', icon: <StarOutlined />,        codeLabel: '' },
+  [REF_TYPE.ORDER]: { accent: '#389e0d', tint: '#f6ffed', icon: <ShoppingOutlined />,    codeLabel: '' },
 }
+
+/* Icon theo CHANNEL_SOURCE của ERP */
+const SOURCE_ICON = {
+  1: <FacebookFilled style={{ color: '#1877f2' }} />,
+  2: <WechatOutlined style={{ color: '#0068ff' }} />,
+  3: <PhoneOutlined />,
+  4: <CalendarOutlined />,
+  11: <ChromeOutlined />
+}
+
+const fullMoney = (value) =>
+  typeof value === 'number' ? `${value.toLocaleString('vi-VN')} đ` : null
 
 const URGENT_THRESHOLD = 3 * 3600_000
 
@@ -207,6 +225,99 @@ const ContextPanel = ({
 
   const { identity, customer, timeline = [] } = context
   const channelLabel = identity.channelType === CHANNEL_TYPE.FACEBOOK ? 'Facebook' : 'Zalo'
+
+  const DealItem = ({ item, index }) => (
+    <div className="item">
+      <div className="body">
+        <div className="name">
+          {index + 1}. {item.name}
+        </div>
+        <div className="spec">
+          SL: {item.quantity} {item.unit} · Đơn giá: {fullMoney(item.unitPrice)}/{item.unit}
+        </div>
+      </div>
+      <div className="amount">{fullMoney(item.amount)}</div>
+    </div>
+  )
+
+  const DealCardItem = ({ item }) => {
+
+    const meta = REF_META[item.refType]
+    const metaText = item.refType === REF_TYPE.COHOI ? 'Cơ hội' : 'Đ.Hàng'
+    const isLead = item.refType === REF_TYPE.LEAD
+
+    return (
+      <DealCard $accent={meta.accent} $tint={meta.tint} $ownerColor={colorOf(item.owner?.name || '')}>
+        <div className="head">
+          { meta.codeLabel && 
+            <span className="code-label">{meta.codeLabel}</span>
+          }
+          <span className="code">{item.code}</span>
+          <span className="kind">{isLead ? 'Lead tiềm năng' : metaText}</span>
+          <span className="when">
+            {meta.icon}
+            {moment(item.createdAt).format('DD/MM · HH:mm')}
+          </span>
+        </div>
+
+        {isLead ? (
+          <>
+            <div className="lead-name">
+              Sản phẩm: {item.requirement}
+            </div>
+            {item.tags?.length > 0 && (
+              <div className="tags">
+                {item.tags.map((tag) => (
+                  <span key={tag} className="tag">
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {item.items?.length > 0 && (
+              <div className="items">
+                {item.items.map((line, i) => (
+                  <DealItem key={i} item={line} index={i} />
+                ))}
+              </div>
+            )}
+
+            {item.totalAmount != null && (
+              <div className="total">
+                <span className="label">Tổng tiền</span>
+                <span className="value">{fullMoney(item.totalAmount)}</span>
+              </div>
+            )}
+          </>
+        )}
+
+        <div className="foot">
+          {item.owner?.name && (
+            <span className="owner">
+              <span className="face">{item.owner.initials || initialsOf(item.owner.name)}</span>
+              {item.owner.name}
+            </span>
+          )}
+          {item.sourceLabel && (
+            <span className="source">
+              {SOURCE_ICON[item.sourceType]}
+              {item.sourceLabel}
+            </span>
+          )}
+          <span className="spacer" />
+          {!isLead && item.detailUrl && (
+            <Button size="small" href={item.detailUrl}>
+              {item.refType === REF_TYPE.ORDER ? 'Xem đơn' : 'Xem deal'}
+            </Button>
+          )}
+        </div>
+      </DealCard>
+    )
+  }
+
   return (
     <ContextPane $open={open}>
       <IdentityHead
@@ -286,11 +397,11 @@ const ContextPanel = ({
               </div>
               <div className="value">
                 {customer.totalOrderCount}
-                <span className="unit">đơn</span>
+                <span className="unit">Đơn</span>
               </div>
               <div className="caption">
                 {customer.totalOrderCount > 0 && customer.lastOrderAt
-                  ? `gần nhất ${moment(customer.lastOrderAt).format('DD/MM')}`
+                  ? `Ngày gần nhất ${moment(customer.lastOrderAt).format('DD/MM')}`
                   : `khách mới ${moment(customer.createdAt).format('DD/MM')}`}
               </div>
             </StatCard>
@@ -305,7 +416,7 @@ const ContextPanel = ({
                 {customer.overdueInvoiceCount > 0
                   ? `${customer.overdueInvoiceCount} hoá đơn quá hạn`
                   : customer.debtAmount > 0
-                    ? 'trong hạn thanh toán'
+                    ? 'Trong hạn thanh toán'
                     : 'không có nợ'}
               </div>
             </StatCard>
@@ -369,17 +480,17 @@ const ContextPanel = ({
         </>
       )}
 
-      {/* ---------- Lịch sử giao dịch ---------- */}
+      {/* ---------- Lịch sử tương tác ---------- */}
       {customer && (
         <>
-          <SectionTitle>Lịch sử giao dịch</SectionTitle>
+          <SectionTitle>Lịch sử tương tác</SectionTitle>
 
           {timeline.length === 0 ? (
             <EmptyCard>
               <div className="icon">
                 <InboxOutlined />
               </div>
-              <div className="title">Chưa có giao dịch</div>
+              <div className="title">Chưa có tương tác</div>
               <div className="desc">
                 Khách đã gắn vào hệ thống nhưng chưa có lead, cơ hội hay đơn hàng nào.
               </div>
@@ -393,38 +504,14 @@ const ContextPanel = ({
               </Button>
             </EmptyCard>
           ) : (
-            timeline.map((item) => {
-              const meta = REF_META[item.refType]
-              return (
-                <TimelineItem
-                  key={`${item.refType}-${item.refId}`}
-                  href={item.detailUrl}
-                  $accent={meta.accent}
-                  $tint={meta.tint}
-                >
-                  <div className="row">
-                    <span className="code">{item.code}</span>
-                    <span className="kind">{meta.label}</span>
-                    <span className="date">{moment(item.createdAt).format('DD/MM')}</span>
-                  </div>
-                  <div className="row2">
-                    <span className="title">{item.title}</span>
-                    {item.amount != null && (
-                      <span className="amount">{shortMoney(item.amount)}</span>
-                    )}
-                  </div>
-                  <div className="foot">
-                    {item.statusName}
-                    {item.subNote ? ` · ${item.subNote}` : ''}
-                  </div>
-                </TimelineItem>
-              )
-            })
+            timeline.map((item) => (
+              <DealCardItem key={`${item.refType}-${item.refId}`} item={item} />
+            ))
           )}
         </>
       )}
     </ContextPane>
   )
-}
+};
 
-export default ContextPanel
+export default ContextPanel;

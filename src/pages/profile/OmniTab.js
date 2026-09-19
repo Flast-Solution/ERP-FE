@@ -58,9 +58,10 @@ const CHANNEL_OPTIONS = [
 ]
 
 const OmniTab = () => {
-  const [channels, setChannels] = useState(null)
-  const [picking, setPicking] = useState(false)
-  const [connecting, setConnecting] = useState(null)
+
+  const [ channels, setChannels ] = useState(null)
+  const [ picking, setPicking ] = useState(false)
+  const [ connecting, setConnecting ] = useState(null)
 
   const load = useCallback(async () => {
     try {
@@ -80,8 +81,8 @@ const OmniTab = () => {
   const handleConnect = useCallback(async (channelType) => {
     setConnecting(channelType)
     try {
-      const { authUrl } = await omniApi.startConnect(channelType)
-      window.location.href = authUrl
+      const { url } = await omniApi.startConnect(channelType)
+      window.location.href = url
     } catch {
       message.error('Không mở được trang xác thực')
       setConnecting(null)
@@ -176,7 +177,7 @@ const OmniTab = () => {
             </div>
           )}
 
-          {channels.map((channel) => {
+          { channels.map((channel) => {
             const meta = STATUS_META[channel.status] || STATUS_META[CHANNEL_STATUS.DISCONNECTED]
             const isError = channel.status === CHANNEL_STATUS.TOKEN_ERROR
             const isOff = channel.status === CHANNEL_STATUS.DISCONNECTED

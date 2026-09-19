@@ -4,17 +4,20 @@ import useNotificationStream from '@/hooks/useNotificationStream'
 const NotificationContext = createContext(null)
 
 export const NotificationProvider = ({ userId, children }) => {
-  const streamNotifications = useNotificationStream(userId)
-  const [readIds, setReadIds] = useState(() => new Set())
-  const notifiedIdsRef = useRef(new Set())
 
+  const streamNotifications = useNotificationStream(userId)
+  const [ readIds, setReadIds ] = useState(() => new Set())
+
+  const notifiedIdsRef = useRef(new Set())
   const notifications = useMemo(() => streamNotifications.map(item => ({
     ...item,
     read: item.read || readIds.has(item.id),
   })), [readIds, streamNotifications])
 
   const markRead = useCallback((notification) => {
-    if (!notification?.id) return
+    if (!notification?.id) {
+      return
+    }
     setReadIds(current => new Set(current).add(notification.id))
   }, [])
 
@@ -29,13 +32,17 @@ export const NotificationProvider = ({ userId, children }) => {
   }, [streamNotifications])
 
   const requestBrowserNotificationPermission = useCallback(async () => {
-    if (!('Notification' in window) || window.Notification.permission !== 'default') return
+    if (!('Notification' in window) || window.Notification.permission !== 'default') {
+      return
+    }
     await window.Notification.requestPermission()
   }, [])
 
   useEffect(() => {
     streamNotifications.forEach(item => {
-      if (notifiedIdsRef.current.has(item.id)) return
+      if (notifiedIdsRef.current.has(item.id)) {
+        return
+      }
       notifiedIdsRef.current.add(item.id)
 
       if (
