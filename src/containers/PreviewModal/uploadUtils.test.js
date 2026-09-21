@@ -1,5 +1,40 @@
 import axios from 'axios'
-import { resolveRuntimeAssetUrl, resolveUploadUrl } from './uploadUtils'
+import {
+  extractUploadItems,
+  resolveRuntimeAssetUrl,
+  resolveUploadFilename,
+  resolveUploadUrl,
+} from './uploadUtils'
+
+describe('extractUploadItems (/erp/folder/multiple)', () => {
+  it('reads files[] from upload response', () => {
+    expect(extractUploadItems({
+      success: true,
+      count: 2,
+      files: [
+        'test/656f1e57-ca7c-4544-a45c-bdd24c0f700a.ts',
+        'test/5c4e3b15-72c1-435f-b275-a464ba004b24.ts',
+      ],
+      message: 'Files uploaded successfully',
+    })).toEqual([
+      'test/656f1e57-ca7c-4544-a45c-bdd24c0f700a.ts',
+      'test/5c4e3b15-72c1-435f-b275-a464ba004b24.ts',
+    ])
+  })
+
+  it('ignores unwrapped path shapes (only API.files)', () => {
+    expect(extractUploadItems('test/a1237bf3-0899-4868-89a1-9b60ebb08e1b.ts')).toEqual([])
+    expect(extractUploadItems(['test/a.png', 'test/b.png'])).toEqual([])
+  })
+
+  it('resolves filename from path or UploadFile.response', () => {
+    expect(resolveUploadFilename('test/logo.png')).toBe('test/logo.png')
+    expect(resolveUploadFilename({ response: 'test/logo.png' })).toBe('test/logo.png')
+    expect(resolveUploadFilename({
+      files: ['test/a.png', 'test/b.png'],
+    })).toBe('test/a.png')
+  })
+})
 
 describe('upload asset URLs', () => {
   const originalBaseUrl = axios.defaults.baseURL

@@ -9,11 +9,7 @@ import {
   UploadOutlined,
 } from '@ant-design/icons'
 import useGetMe from '@/hooks/useGetMe'
-import {
-  extractUploadItems,
-  resolveUploadUrl,
-  toCertificateFile,
-} from './businessProfileMappers'
+import { resolveUploadUrl } from './businessProfileMappers'
 import useBusinessProfile from './useBusinessProfile'
 import {
   PageTitle,
@@ -232,21 +228,19 @@ const ProfileInfoTab = () => {
                     <Upload
                       multiple
                       showUploadList={false}
-                      fileList={certificate.files ?? []}
-                      customRequest={certificates.upload}
-                      onChange={({ fileList }) => {
-                        const nextFiles = fileList.flatMap((file, index) => {
-                          if (file.status === 'done') {
-                            return extractUploadItems(file.response ?? file).map((item, itemIndex) =>
-                              toCertificateFile(item, `${index}-${itemIndex}`, file)
-                            )
-                          }
-                          return [file]
-                        })
-                        certificates.updateFiles(certificate.id, nextFiles)
+                      beforeUpload={(file, fileList) => {
+                        if (file === fileList[0]) {
+                          certificates.uploadBatch(certificate.id, fileList)
+                        }
+                        return Upload.LIST_IGNORE
                       }}
                     >
-                      <Button icon={<UploadOutlined />}>Tải tệp</Button>
+                      <Button
+                        icon={<UploadOutlined />}
+                        loading={certificates.uploadingIds.includes(certificate.id)}
+                      >
+                        Tải tệp
+                      </Button>
                     </Upload>
                   </CertificateUploadZone>
                 </CertificateItem>

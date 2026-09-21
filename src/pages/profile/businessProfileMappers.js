@@ -34,13 +34,10 @@ export const normalizeCertificatePaths = certificate => (
 
 export const resolveUploadUrl = item => resolveSharedUploadUrl(item)
 
-/** Upload /erp/folder/multiple — reuse shared extractor (response sample chưa khóa). */
+/** Upload /erp/folder/multiple → { files: string[] } */
 export const extractUploadItems = payload => extractSharedUploadItems(payload)
 
-export const resolveUploadFilename = item => {
-  if (typeof item === 'string' || typeof item === 'number') return String(item)
-  return resolveSharedUploadFilename(item)
-}
+export const resolveUploadFilename = item => resolveSharedUploadFilename(item)
 
 export const toCertificateFile = (item, index, sourceFile = {}) => {
   if (item?.uid && item?.status) return item

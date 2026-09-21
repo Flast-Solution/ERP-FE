@@ -1,15 +1,30 @@
 import axios from 'axios'
 
-export const extractUploadItems = (response) => {
-  const payload = response?.data ?? response
-  if (Array.isArray(payload)) return payload
-  if (Array.isArray(payload?.data)) return payload.data
-  if (Array.isArray(payload?.files)) return payload.files
-  if (Array.isArray(payload?.urls)) return payload.urls
-  if (Array.isArray(payload?.fileNames)) return payload.fileNames
-  if (Array.isArray(payload?.filenames)) return payload.filenames
-  if (Array.isArray(payload?.paths)) return payload.paths
-  return payload ? [payload] : []
+const toUploadText = value => {
+  if (typeof value !== 'string' && typeof value !== 'number') return ''
+  const normalized = String(value).trim()
+  if (/^\[object\s+(?:Object|Undefined|Null)\]$/i.test(normalized)) return ''
+  return normalized
+}
+
+/**
+ * POST /erp/folder/multiple
+ * Response: { success, count, files: string[], message }
+ */
+export const extractUploadItems = (response) => (
+  Array.isArray(response?.files)
+    ? response.files.map(toUploadText).filter(Boolean)
+    : []
+)
+
+/** path | path[] đã gắn vào UploadFile.response sau onSuccess */
+const pathsFromStoredResponse = (value) => {
+  if (typeof value === 'string' || typeof value === 'number') {
+    const path = toUploadText(value)
+    return path ? [path] : []
+  }
+  if (Array.isArray(value)) return value.flatMap(pathsFromStoredResponse)
+  return extractUploadItems(value)
 }
 
 const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1', '[::1]'])
@@ -111,28 +126,13 @@ export const resolveRuntimeAssetUrl = (value) => {
   return url
 }
 
-const toUploadText = value => {
-  if (typeof value !== 'string' && typeof value !== 'number') return ''
-  const normalized = String(value).trim()
-  if (/^\[object\s+(?:Object|Undefined|Null)\]$/i.test(normalized)) return ''
-  return normalized
-}
-
+/** Path string từ API, hoặc Ant UploadFile.response = path | path[]. */
 export const resolveUploadFilename = (item) => {
   if (typeof item === 'string' || typeof item === 'number') return toUploadText(item)
-  const candidates = [
-    item?.filename,
-    item?.file_name,
-    item?.fileName,
-    item?.file_name_path,
-    item?.path,
-    item?.fullPath,
-    item?.full_path,
-    item?.url,
-    item?.fileUrl,
-    item?.file_url,
-  ]
-  return candidates.map(toUploadText).find(Boolean) || ''
+  if (item == null || typeof item !== 'object') return ''
+  return pathsFromStoredResponse(item.response)[0]
+    ?? extractUploadItems(item)[0]
+    ?? ''
 }
 
 export const resolveUploadUrl = (item) => {
@@ -146,8 +146,7 @@ export const resolveUploadUrl = (item) => {
 
 export const toUploadFile = (item, index) => {
   const filename = resolveUploadFilename(item)
-  const directUrl = toUploadText(item?.url) || toUploadText(item?.thumbUrl)
-  const url = directUrl ? resolveRuntimeAssetUrl(directUrl) : resolveUploadUrl(item)
+  const url = resolveUploadUrl(item)
   const name = toUploadText(item?.name) || filename.split('/').pop() || ''
   const hasUploadIdentity = Boolean(toUploadText(item?.uid) || item?.originFileObj)
 
@@ -155,7 +154,7 @@ export const toUploadFile = (item, index) => {
 
   return {
     ...(item && typeof item === 'object' ? item : {}),
-    uid: toUploadText(item?.uid) || toUploadText(item?.id) || filename || url || `upload-${index}`,
+    uid: toUploadText(item?.uid) || filename || url || `upload-${index}`,
     name: name || `file-${index + 1}`,
     status: item?.status || 'done',
     url,
@@ -168,5 +167,5 @@ export const fileListToValues = (event) => {
   const fileList = Array.isArray(event) ? event : (event?.fileList ?? [])
   return fileList
     .filter(file => file.status === 'done')
-    .flatMap(file => extractUploadItems(file.response ?? resolveUploadUrl(file)))
+    .flatMap(file => pathsFromStoredResponse(file.response))
 }
