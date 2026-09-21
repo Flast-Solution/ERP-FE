@@ -5,6 +5,7 @@ import { workflowProgressPageStyles } from '@/pages/order/progress/styles'
 import { getWorkflowInstanceProcessId } from '../utils/workflowMappers'
 import WorkflowInstanceContent from './WorkflowInstanceContent'
 import './WorkflowProgressDrawer.less'
+import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard'
 
 const { Text, Title } = Typography
 
@@ -21,6 +22,12 @@ const WorkflowProgressDrawer = ({
   leadMode = false,
   singleBlock = false,
 }) => {
+  const { markClean, markDirty, requestClose } = useDrawerLeaveGuard({
+    open,
+    onClose,
+    confirmOnOpen: false,
+    resetKey: orderDetail?.id ?? order?.id,
+  })
   const items = workflowInstances.map((instance, index) => {
     const processId = getWorkflowInstanceProcessId(instance)
     const workflowName = instance?.process?.name ?? `Workflow #${processId ?? index + 1}`
@@ -37,6 +44,7 @@ const WorkflowProgressDrawer = ({
           entityLabel={entityLabel}
           formOnly={formOnly}
           leadMode={leadMode}
+          onSubmitSuccess={markClean}
         />
       ),
     }
@@ -46,7 +54,7 @@ const WorkflowProgressDrawer = ({
     <Drawer
       className={`workflow-detail-drawer${leadMode ? ' workflow-detail-drawer--lead' : ''}${singleBlock ? ' workflow-detail-drawer--single-block' : ''}`}
       open={open}
-      onClose={onClose}
+      onClose={requestClose}
       width="min(750px, calc(100vw - 16px))"
       destroyOnHidden
       title={formOnly ? undefined : (
@@ -65,20 +73,22 @@ const WorkflowProgressDrawer = ({
       )}
     >
       <style>{workflowProgressPageStyles}</style>
-      <Spin spinning={loading}>
-        {!loading && items.length === 0 ? (
-          <Empty description={`${entityLabel} này chưa có workflow`} />
-        ) : formOnly || (leadMode && items.length === 1) ? (
-          items[0]?.children ?? null
-        ) : (
-          <Tabs
-            items={items}
-            destroyOnHidden
-            className="workflow-detail-drawer__tabs"
-            tabBarGutter={20}
-          />
-        )}
-      </Spin>
+      <div onChangeCapture={markDirty} onInputCapture={markDirty}>
+        <Spin spinning={loading}>
+          {!loading && items.length === 0 ? (
+            <Empty description={`${entityLabel} này chưa có workflow`} />
+          ) : formOnly || (leadMode && items.length === 1) ? (
+            items[0]?.children ?? null
+          ) : (
+            <Tabs
+              items={items}
+              destroyOnHidden
+              className="workflow-detail-drawer__tabs"
+              tabBarGutter={20}
+            />
+          )}
+        </Spin>
+      </div>
     </Drawer>
   )
 }

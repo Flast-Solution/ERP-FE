@@ -16,6 +16,7 @@ import { useGetList } from '@flast-erp/core/hooks';
 import { RequestUtils, f5List } from '@flast-erp/core/utils';
 import ProviderFilter from './Filter';
 import useGetMe from '@/hooks/useGetMe';
+import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard';
 
 const STATUS_OPTIONS = [
   { id: 1, name: 'Kích hoạt' },
@@ -82,7 +83,7 @@ const buildProviderPayload = (values = {}) => ({
   status: values.status ?? 1,
 });
 
-const ProviderForm = ({ record, onCancel, onSaved, disabled = false }) => {
+const ProviderForm = ({ record, onCancel, onSaved, onValuesChange, disabled = false }) => {
   const [form] = Form.useForm();
 
   const initialValues = useMemo(() => ({
@@ -113,6 +114,7 @@ const ProviderForm = ({ record, onCancel, onSaved, disabled = false }) => {
       disabled={disabled}
       initialValues={initialValues}
       onFinish={onSubmit}
+      onValuesChange={onValuesChange}
       style={{ marginTop: 20 }}
     >
       <FormHidden name="id" />
@@ -350,10 +352,16 @@ const ProviderPage = () => {
     setEditingRecord({});
   };
 
-  const onSaved = () => {
-    closeForm();
-    f5List('provider/fetch');
-  };
+  const {
+    closeAfterSubmit,
+    markDirty,
+    requestClose,
+  } = useDrawerLeaveGuard({
+    open: drawerOpen,
+    onClose: closeForm,
+    enabled: drawerMode !== 'view',
+    resetKey: `${drawerMode}-${editingRecord?.id ?? 'create'}`,
+  });
 
   const columns = [
     {
@@ -459,7 +467,7 @@ const ProviderPage = () => {
       <DrawerCustom
         width={750}
         open={drawerOpen}
-        onClose={closeForm}
+        onClose={requestClose}
         title={drawerMode === 'view'
           ? `Chi tiết nhà cung cấp${editingRecord?.code ? ` - ${editingRecord.code}` : ''}`
           : editingRecord?.id
@@ -470,8 +478,12 @@ const ProviderPage = () => {
           key={`${drawerMode}-${editingRecord?.id || 'create'}`}
           record={editingRecord}
           disabled={drawerMode === 'view'}
-          onCancel={closeForm}
-          onSaved={onSaved}
+          onCancel={requestClose}
+          onValuesChange={markDirty}
+          onSaved={() => {
+            closeAfterSubmit();
+            f5List('provider/fetch');
+          }}
         />
       </DrawerCustom>
     </div>

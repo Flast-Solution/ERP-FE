@@ -65,7 +65,13 @@ const resolveLogoUrl = (logo) => {
   if (isAbsoluteUrl(logo)) {
     return logo;
   }
-  return `https://biz.api.flast.vn/erp/folder/view/${encodeURIComponent(logo)}`;
+  const normalizedPath = decodeURIComponent(String(logo))
+    .replace(/\\/g, '/')
+    .split('/')
+    .map((segment) => encodeURIComponent(segment.trim().replace(/\s+/g, '-')))
+    .filter(Boolean)
+    .join('/');
+  return `https://biz.api.flast.vn/erp/folder/view/${normalizedPath}`;
 };
 
 function SideBar() {

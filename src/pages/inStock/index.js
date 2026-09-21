@@ -115,8 +115,8 @@ const ListInStock = () => {
       render: (product) => product.name
     },
     {
-      title: 'Nhân viên',
-      dataIndex: 'userName',
+      title: 'Mã đơn NCC',
+      dataIndex: 'providerOrderCode',
       width: 120,
       ellipsis: true
     },

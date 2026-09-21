@@ -33,7 +33,6 @@ import {
   FormHidden
 } from "@flast-erp/core/components";
 
-import WarehouseService from '@/services/WarehouseService';
 import InStockTable from '@/containers/WareHouse/InStockTable'
 import { ShowSkuDetail } from '@/containers/Product/SkuView';
 import { isEmpty } from 'lodash';
@@ -49,6 +48,22 @@ const getFormValues = (model = {}) => ({
   providerOrderCode: model?.providerOrderCode ?? null,
   stockId: model?.stockId ?? model?.warehouseId ?? model?.stock?.id ?? null
 });
+
+const parseSkuInfo = (skuInfo) => {
+  if (Array.isArray(skuInfo)) {
+    return skuInfo;
+  }
+  if (typeof skuInfo !== 'string' || !skuInfo.trim()) {
+    return [];
+  }
+
+  try {
+    const parsedSkuInfo = JSON.parse(skuInfo);
+    return Array.isArray(parsedSkuInfo) ? parsedSkuInfo : [];
+  } catch {
+    return [];
+  }
+};
 
 const ModalNhapKho = ({
   product,
@@ -100,13 +115,34 @@ const ModalNhapKho = ({
     setSkuDetail(productSkus.find(item => String(item?.id) === String(selectedSkuId)));
   }, [model, product]);
 
-  useEffectAsync(async() => {
-    if (!mProduct?.id) {
+  useEffectAsync(async () => {
+    if (!isEdit || !model?.id) {
       return;
     }
-    const { embedded } = await WarehouseService.fetch({ productId: mProduct.id });
-    setInStocks(embedded);
-  }, [mProduct]);
+
+    const response = await RequestUtils.Get('/erp/warehouse/fetch-history', {
+      warehouseId: model.id
+    });
+
+    const historyItems = Array.isArray(response?.data?.embedded)
+      ? response.data.embedded
+      : [];
+
+    setInStocks(historyItems.map((item) => {
+      const skuDetails = parseSkuInfo(item?.skuInfo);
+      const skuName = skuDetails
+        .flatMap(detail => detail?.values ?? [])
+        .map(value => value?.text)
+        .filter(Boolean)
+        .join(' - ');
+
+      return {
+        ...item,
+        skuName,
+        skuDetails
+      };
+    }));
+  }, [isEdit, model]);
 
   const onFinish = useCallback(async (values) => {
     const mSkuDetails = sku
@@ -226,13 +262,16 @@ const ModalNhapKho = ({
               messageRequire='Kho hàng không được để trống'
             />
           </Col>
-          {/* Lịch sử nhập kho */}
-          <Col span={24}>
-            <InStockTable
-              data={inStocks}
-              onChangeSelected={(item) => item}
-            />
-          </Col>
+          {/* Chỉ giữ danh sách SKU khi xem/chỉnh sửa phiếu nhập kho. */}
+          {isEdit && (
+            <Col span={24}>
+              <InStockTable
+                data={inStocks}
+                showWhenEmpty
+                onChangeSelected={(item) => item}
+              />
+            </Col>
+          )}
           <Col span={24}>
             {readOnly ? (
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>

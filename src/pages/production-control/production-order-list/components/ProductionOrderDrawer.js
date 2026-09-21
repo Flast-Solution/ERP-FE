@@ -2,6 +2,7 @@ import React from 'react'
 import { Drawer } from 'antd'
 import CreateOrder from '../../CreateOrder'
 import BomConfirmation from '../../BomConfirmation'
+import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard'
 
 const ProductionOrderDrawer = ({
   open = false,
@@ -14,18 +15,28 @@ const ProductionOrderDrawer = ({
   onSearchWaitingOrders,
   onLoadMoreWaitingOrders,
   onClose,
-  onCancelOrder,
   onNext,
   onBack,
   onConfirm,
-}) => (
-  <Drawer
+}) => {
+  const {
+    markDirty,
+    requestClose,
+  } = useDrawerLeaveGuard({
+    open,
+    onClose,
+    enabled: drawerMode !== 'view',
+    resetKey: drawerMode,
+  })
+
+  return (
+    <Drawer
     open={open}
     title={null}
     placement="right"
     width="min(750px, calc(100vw - 16px))"
     destroyOnHidden
-    onClose={step === 2 && drawerMode !== 'view' ? onCancelOrder : onClose}
+    onClose={requestClose}
     styles={{
       header: { minHeight: 48, padding: '8px 16px' },
       body: { padding: 0, overflowY: 'auto' },
@@ -39,7 +50,8 @@ const ProductionOrderDrawer = ({
         waitingOrderLoading={waitingOrderLoading}
         onSearchWaitingOrders={onSearchWaitingOrders}
         onLoadMoreWaitingOrders={onLoadMoreWaitingOrders}
-        onCancel={onClose}
+        onCancel={drawerMode === 'view' ? onClose : requestClose}
+        onValuesChange={markDirty}
         onNext={onNext}
         submitting={savingOrder}
       />
@@ -49,11 +61,12 @@ const ProductionOrderDrawer = ({
         mode={drawerMode}
         submitting={savingOrder}
         onBack={onBack}
-        onCancel={onCancelOrder}
+        onCancel={requestClose}
         onConfirm={onConfirm}
       />
     )}
-  </Drawer>
-)
+    </Drawer>
+  )
+}
 
 export default ProductionOrderDrawer

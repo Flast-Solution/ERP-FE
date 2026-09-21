@@ -19,8 +19,8 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Form, message, Modal } from 'antd';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Form, message } from 'antd';
 import { FormContextCustom } from "@flast-erp/core/components";
 
 import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
@@ -33,6 +33,7 @@ import {
   splitProductAssets,
 } from './productImages';
 import { mergeInitialProductProperties } from './productProperties';
+import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard';
 
 /**
  * @param [ {id: 10384, attributedId: 10023, attributedValueId: 10085}, ... ] oldSku
@@ -56,47 +57,21 @@ const Product = ({ data, registerCloseGuard }) => {
 
   const [form] = Form.useForm();
   const [ record, setRecord ] = useState({});
-  const confirmCloseRef = useRef(null);
-  const hasUnsavedChangesRef = useRef(false);
-  const isCreate = !data?.id;
-
-  const guardClose = useCallback((close) => {
-    if (!isCreate || !hasUnsavedChangesRef.current) {
-      close();
-      return;
-    }
-    if (confirmCloseRef.current) return;
-
-    confirmCloseRef.current = Modal.confirm({
-      title: 'Xác nhận thoát',
-      content: 'Thông tin sản phẩm đang nhập chưa được lưu. Bạn có chắc chắn muốn thoát?',
-      okText: 'Thoát',
-      okButtonProps: { danger: true },
-      cancelText: 'Tiếp tục nhập',
-      centered: true,
-      onOk: () => {
-        confirmCloseRef.current = null;
-        close();
-      },
-      onCancel: () => {
-        confirmCloseRef.current = null;
-      },
-    });
-  }, [isCreate]);
+  const {
+    guardClose,
+    markClean,
+    markDirty,
+  } = useDrawerLeaveGuard({
+    open: true,
+    onClose: undefined,
+    resetKey: data?.id ?? 'create-product',
+  });
 
   useEffect(() => {
-    if (!isCreate || !registerCloseGuard) return undefined;
+    if (!registerCloseGuard) return undefined;
     const unregister = registerCloseGuard(guardClose);
-    return () => {
-      unregister?.();
-      confirmCloseRef.current?.destroy();
-      confirmCloseRef.current = null;
-    };
-  }, [guardClose, isCreate, registerCloseGuard]);
-
-  useEffect(() => {
-    hasUnsavedChangesRef.current = false;
-  }, [data]);
+    return () => unregister?.();
+  }, [guardClose, registerCloseGuard]);
 
   useEffect(() => {
     log({ action: 'props', data });
@@ -154,12 +129,6 @@ const Product = ({ data, registerCloseGuard }) => {
     setRecord(curvals => ({ ...curvals, ...values }));
   }, []);
 
-  const handleValuesChange = useCallback(() => {
-    if (isCreate) {
-      hasUnsavedChangesRef.current = true;
-    }
-  }, [isCreate]);
-
   const onSubmit = useCallback(async (datas) => {
     log({ action: 'onSubmit', datas });
     let values = cloneDeep(datas);
@@ -210,18 +179,18 @@ const Product = ({ data, registerCloseGuard }) => {
     const { errorCode } = await RequestUtils.Post("/product/save", body, params);
     const isSuccess = errorCode === 200;
     if (isSuccess) {
-      hasUnsavedChangesRef.current = false;
+      markClean();
       f5List('erp/product/fetch');
     }
     InAppEvent.normalInfo(isSuccess ? "Cập nhật thành công" : "Lỗi cập nhật, vui lòng thử lại sau");
-  }, [ data ]);
+  }, [ data, markClean ]);
 
   return (
     <Form
       form={form}
       layout="vertical"
       onFinish={onSubmit}
-      onValuesChange={handleValuesChange}
+      onValuesChange={markDirty}
     >
       <FormContextCustom.Provider value={{ form, record, updateRecord }}>
         <ProductForm />

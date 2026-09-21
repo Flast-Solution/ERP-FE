@@ -63,4 +63,10 @@ describe('upload asset URLs', () => {
       'http://157.10.199.138:9080/api/upload/folder/view?filename=test%2Fmy%20image.png',
     )).toBe('http://157.10.199.138:9080/api/erp/folder/view/test/my-image.png')
   })
+
+  it('restores a slash that was encoded inside an existing path', () => {
+    expect(resolveRuntimeAssetUrl(
+      '/api/erp/folder/view/test%2Fd2b7bd49-c127-4836-b4fc-70cb2ef38893.png',
+    )).toBe('/api/erp/folder/view/test/d2b7bd49-c127-4836-b4fc-70cb2ef38893.png')
+  })
 })

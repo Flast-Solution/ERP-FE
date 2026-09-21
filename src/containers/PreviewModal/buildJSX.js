@@ -476,7 +476,7 @@ function buildUploadHelper(fields) {
     `  try { return decodeURIComponent(value) } catch { return value }`,
     `}`,
     `const normalizeUploadFileName = value => String(value || '').trim().replace(/\\s+/g, '-')`,
-    `const normalizeUploadPath = value => String(value ?? '')`,
+    `const normalizeUploadPath = value => safeDecodeURIComponent(String(value ?? ''))`,
     `  .replace(/\\\\/g, '/')`,
     `  .split('/')`,
     `  .map(segment => safeDecodeURIComponent(segment).trim().replace(/\\s+/g, '-'))`,
