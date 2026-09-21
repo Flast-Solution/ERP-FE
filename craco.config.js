@@ -17,8 +17,21 @@ module.exports = {
     }
   },
 
+  // devServer: {
+  //   host: "127.0.0.1",
+  //   port: 3000
+  // }
   devServer: {
     host: "127.0.0.1",
-    port: 3000
-  }
+    port: 3000,
+    proxy: {
+      "/api": {
+        target: "http://157.10.199.138:9080",
+        changeOrigin: true,
+        secure: false,
+        cookieDomainRewrite: "127.0.0.1",
+        cookiePathRewrite: "/",
+      },
+    },
+  },
 }
