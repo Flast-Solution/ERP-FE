@@ -14,6 +14,7 @@ import {
 import { clonePageSchema, DEFAULT_PAGE_SCHEMA } from '@/containers/Landing/pageSchema'
 import WebPageService from '@/services/WebPageService'
 import useGetMe from '@/hooks/useGetMe'
+import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard'
 import { PageName, PageShell, TableCard, Toolbar } from './List.style'
 
 const formatDate = value => {
@@ -85,6 +86,19 @@ const LandingList = () => {
   const [createOpen, setCreateOpen] = useState(false)
   const [createSubmitting, setCreateSubmitting] = useState(false)
   const [form] = Form.useForm()
+  const closeCreateDrawer = useCallback(() => {
+    setCreateOpen(false)
+    form.resetFields()
+  }, [form])
+  const {
+    closeAfterSubmit,
+    markDirty,
+    requestClose,
+  } = useDrawerLeaveGuard({
+    open: createOpen,
+    onClose: closeCreateDrawer,
+    resetKey: 'create-landing-page',
+  })
 
   const loadPages = useCallback(async (page = 1, limit = 10) => {
     setLoading(true)
@@ -148,8 +162,7 @@ const LandingList = () => {
         remoteId: null,
         schema,
       })
-      setCreateOpen(false)
-      form.resetFields()
+      closeAfterSubmit()
       message.success('Đã tạo bản nháp trắng. Trang chỉ được build khi lưu hoặc xuất bản.')
       navigate(`/landing/edit?mode=create&id=${encodeURIComponent(temporaryPageId)}`)
     } catch (error) {
@@ -314,7 +327,7 @@ const LandingList = () => {
         title="Thêm Landing Page"
         width={560}
         open={createOpen}
-        onClose={() => setCreateOpen(false)}
+        onClose={requestClose}
         destroyOnClose
         extra={<Button type="primary" loading={createSubmitting} disabled={createSubmitting} onClick={() => form.submit()}>Tiếp tục</Button>}
       >
@@ -323,6 +336,7 @@ const LandingList = () => {
           layout="vertical"
           initialValues={{ authenticationRequired: false }}
           onFinish={createPage}
+          onValuesChange={markDirty}
         >
           <Form.Item name="name" label="Tên trang" rules={[{ required: true, message: 'Vui lòng nhập tên trang.' }]}>
             <Input placeholder="Ví dụ: Trang giới thiệu sản phẩm" />

@@ -18,6 +18,7 @@ import useOrderWorkflowData from './hooks/useOrderWorkflowData'
 import useQuotationViewer from './hooks/useQuotationViewer'
 import useWorkflowModal from './hooks/useWorkflowModal'
 import useWorkflowProgressDrawer from './hooks/useWorkflowProgressDrawer'
+import OrderInboundDrawer from './components/OrderInboundDrawer'
 
 const QUOTATION_COMMENT_MOCKS = [
   {
@@ -90,7 +91,9 @@ const ListOrder = ({
   const canViewWorkflow = hasPermission(isOpportunityList
     ? 'sales.opportunity.workflow.view'
     : 'sales.order.workflow.view')
+  const canCreateReceipt = isOrderList && hasPermission('inventory.receipt.create')
   const [opportunityStatusOptions, setOpportunityStatusOptions] = useState([])
+  const [inboundOrder, setInboundOrder] = useState(null)
 
   useEffect(() => {
     let mounted = true
@@ -196,7 +199,7 @@ const ListOrder = ({
 
   const actionWidth = (
     filter.type === 'cohoi' ? 260 : 220
-  ) + ((extraActions?.length ?? 0) * 44)
+  ) + ((extraActions?.length ?? 0) * 44) + (canCreateReceipt ? 44 : 0)
 
   const columns = createOrderColumns({
     isOpportunityList,
@@ -220,6 +223,8 @@ const ListOrder = ({
     canViewQuotation,
     canAttachWorkflow,
     canViewWorkflow,
+    canCreateReceipt,
+    openOrderInboundDrawer: setInboundOrder,
   })
 
   const orderLotExpandable = enableLotTree
@@ -274,6 +279,13 @@ const ListOrder = ({
         workflowInstances={workflowProgressInstances}
         singleBlock={isOpportunityList}
         onClose={closeWorkflowProgressDrawer}
+      />
+
+      <OrderInboundDrawer
+        key={inboundOrder?.id ?? 'order-inbound-closed'}
+        open={Boolean(inboundOrder)}
+        initialOrder={inboundOrder}
+        onClose={() => setInboundOrder(null)}
       />
 
       <GeneratedDocumentViewer

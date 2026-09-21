@@ -47,7 +47,7 @@ export const normalizeUploadFileName = value => String(value || '')
   .trim()
   .replace(/\s+/g, '-')
 
-export const normalizeUploadPath = value => String(value ?? '')
+export const normalizeUploadPath = value => safeDecodeURIComponent(String(value ?? ''))
   .replace(/\\/g, '/')
   .split('/')
   .map(segment => safeDecodeURIComponent(segment).trim().replace(/\s+/g, '-'))

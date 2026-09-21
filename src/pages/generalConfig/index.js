@@ -24,6 +24,7 @@ import {
   ConfigFormItem,
   PageShell,
 } from './styles';
+import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard';
 
 const CONFIG_FETCH_API = 'erp/config/fetch';
 const CONFIG_SAVE_API = '/erp/config/save';
@@ -162,6 +163,16 @@ const GeneralConfigPage = () => {
     form.resetFields();
   }, [form]);
 
+  const {
+    closeAfterSubmit,
+    markDirty,
+    requestClose,
+  } = useDrawerLeaveGuard({
+    open: formOpen,
+    onClose: closeForm,
+    resetKey: editingRecord?.id ?? 'create-config',
+  });
+
   const beforeSubmitFilter = useCallback((values = {}) => withOffset(values), []);
 
   const onData = useCallback((values) => {
@@ -187,12 +198,12 @@ const GeneralConfigPage = () => {
     if (isSuccess) {
       message.success(response?.message || 'Đã lưu cấu hình.');
       f5List(CONFIG_FETCH_API);
-      closeForm();
+      closeAfterSubmit();
       return;
     }
 
     message.error(response?.message || 'Lưu cấu hình thất bại.');
-  }, [closeForm, form]);
+  }, [closeAfterSubmit, form]);
 
   const columns = [
     {
@@ -273,7 +284,7 @@ const GeneralConfigPage = () => {
       <DrawerCustom
         width={750}
         open={formOpen}
-        onClose={closeForm}
+        onClose={requestClose}
         title={editingRecord ? 'Cập nhật cấu hình' : 'Thêm cấu hình'}
       >
         <ConfigDrawerBody>
@@ -281,6 +292,7 @@ const GeneralConfigPage = () => {
             form={form}
             layout="vertical"
             initialValues={{ configs: [DEFAULT_CONFIG] }}
+            onValuesChange={markDirty}
           >
             <Form.List name="configs">
               {(fields, { add, remove }) => (
@@ -351,7 +363,7 @@ const GeneralConfigPage = () => {
         </ConfigDrawerBody>
 
         <ConfigDrawerFooter>
-          <Button onClick={closeForm}>Huỷ</Button>
+          <Button onClick={requestClose}>Huỷ</Button>
           <Button type="primary" onClick={handleSave}>Lưu</Button>
         </ConfigDrawerFooter>
       </DrawerCustom>

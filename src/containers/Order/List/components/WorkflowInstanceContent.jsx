@@ -142,6 +142,7 @@ const WorkflowInstanceContent = ({
   entityLabel,
   formOnly = false,
   leadMode = false,
+  onSubmitSuccess,
 }) => {
   const { user } = useGetMe()
   const scopedOrder = useMemo(() => ({
@@ -170,6 +171,7 @@ const WorkflowInstanceContent = ({
   const openedHiddenStepCode = workflowState.openedHiddenStepCode
   const backToCurrentStep = workflowState.backToCurrentStep
   const handleFormSubmitSuccess = useCallback(() => {
+    onSubmitSuccess?.()
     if (openedHiddenStepCode && displaySubmitButton.closeAfterSubmit) {
       backToCurrentStep()
     }
@@ -177,6 +179,7 @@ const WorkflowInstanceContent = ({
     backToCurrentStep,
     displaySubmitButton.closeAfterSubmit,
     openedHiddenStepCode,
+    onSubmitSuccess,
   ])
   const formState = useWorkflowRemoteForm({
     currentForm: workflowState.openedHiddenStepCode

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { Modal, message } from 'antd'
+import { message } from 'antd'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { MANUFACTURE_SAVE_API } from '../constants'
 import { buildManufacturePayload } from '../utils'
@@ -42,17 +42,6 @@ export const useProductionOrderFlow = ({
     setStep(1)
     setPendingOrder(null)
   }, [])
-
-  const cancelOrder = useCallback(() => {
-    Modal.confirm({
-      title: 'Hủy lệnh sản xuất?',
-      content: 'Thông tin lệnh và xác nhận vật tư đang nhập sẽ bị hủy.',
-      okText: 'Hủy lệnh',
-      okButtonProps: { danger: true },
-      cancelText: 'Tiếp tục xác nhận',
-      onOk: closeFlow,
-    })
-  }, [closeFlow])
 
   const backToCreate = useCallback(() => setStep(1), [])
 
@@ -115,7 +104,6 @@ export const useProductionOrderFlow = ({
     openFlow,
     openExistingOrder,
     closeFlow,
-    cancelOrder,
     goToConfirmation,
     backToCreate,
     finishFlow: saveProductionOrder,

@@ -8,6 +8,7 @@ import {
 } from '@ant-design/icons'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { GUARD_TYPES } from '@/store/workflowConstants'
+import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard'
 import { PanelBody, SectionLabel } from './styles'
 import {
   CodeChip,
@@ -711,6 +712,11 @@ const GuardDrawer = ({
     [nodes, selectedStepCode]
   )
   const formOptions = useMemo(() => buildFormOptions(selectedStepForms), [selectedStepForms])
+  const { markClean, markDirty, requestClose } = useDrawerLeaveGuard({
+    open: true,
+    onClose: onCancel,
+    resetKey: `${guardIndex}-${initialValue?.id ?? initialValue?.type ?? 'new'}`,
+  })
 
   const handleFieldStepChange = (stepCode) => {
     if (!stepCode) {
@@ -800,6 +806,7 @@ const GuardDrawer = ({
     localForm
       .validateFields()
       .then((values) => {
+        markClean()
         if (guardType === 'update_erp_core') {
           onConfirm({
             ...values,
@@ -846,7 +853,7 @@ const GuardDrawer = ({
           type="text"
           size="small"
           icon={<CloseOutlined />}
-          onClick={onCancel}
+          onClick={requestClose}
           style={{ color: '#8c8c8c' }}
         />
       </DrawerHeader>
@@ -858,6 +865,7 @@ const GuardDrawer = ({
           size="small"
           component={false}
           preserve={false}
+          onValuesChange={markDirty}
           initialValues={{
             type: normalizeGuardType(initialValue?.type),
             errorMessage: initialValue?.errorMessage ?? initialValue?.config?.message ?? '',
@@ -928,7 +936,7 @@ const GuardDrawer = ({
         <Button type="primary" size="small" block onClick={handleConfirm}>
           Xác nhận
         </Button>
-        <Button size="small" onClick={onCancel}>
+        <Button size="small" onClick={requestClose}>
           Huỷ
         </Button>
       </DrawerFooter>

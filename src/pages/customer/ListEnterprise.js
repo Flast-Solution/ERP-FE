@@ -30,6 +30,7 @@ import { useNavigate } from 'react-router-dom';
 import { EditOutlined, EyeOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import styled from 'styled-components';
 import EnterpriseForm from '@/containers/Order/EnterpriseForm';
+import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard';
 import { SUCCESS_CODE } from '@/configs';
 
 const StyledTag = styled(Tag)`
@@ -152,6 +153,15 @@ const ListEnterprise = () => {
   };
 
   const closeFormDrawer = () => setFormDrawer({ open: false, enterprise: null });
+  const {
+    closeAfterSubmit,
+    markDirty,
+    requestClose,
+  } = useDrawerLeaveGuard({
+    open: formDrawer.open,
+    onClose: closeFormDrawer,
+    resetKey: formDrawer.enterprise?.id ?? 'create-enterprise',
+  });
 
   return (
     <div>
@@ -175,15 +185,16 @@ const ListEnterprise = () => {
       <DrawerCustom
         width={850}
         open={formDrawer.open}
-        onClose={closeFormDrawer}
+        onClose={requestClose}
         title={formDrawer.enterprise ? `Cập nhật doanh nghiệp #${formDrawer.enterprise.id}` : 'Thêm mới doanh nghiệp'}
       >
         <EnterpriseForm
           key={formDrawer.enterprise?.id ?? 'create-enterprise'}
           initialValues={formDrawer.enterprise ?? undefined}
-          onCancel={closeFormDrawer}
+          onCancel={requestClose}
+          onValuesChange={markDirty}
           onSuccess={() => {
-            closeFormDrawer();
+            closeAfterSubmit();
             f5List('customer/fetch-customer-enterprise');
           }}
         />

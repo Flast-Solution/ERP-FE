@@ -24,6 +24,7 @@ import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { InAppEvent } from '@flast-erp/core/utils';
 import { DrawerCustom } from '@flast-erp/core/components';
 import useGetMe from '@/hooks/useGetMe';
+import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard';
 
 import ProductRoute from './ProductRoute.js';
 import OrderRoute from './OrderRoute';
@@ -77,20 +78,34 @@ function ModalRoutes() {
   const closeGuardRef = useRef(null);
 
   const [params, setParams] = useState({ open: false });
+  const closeDrawerImmediately = useCallback(() => {
+    closeGuardRef.current = null;
+    setParams({ open: false });
+  }, []);
+  const {
+    guardClose: guardDrawerClose,
+    markClean: markDrawerClean,
+    markDirty: markDrawerDirty,
+  } = useDrawerLeaveGuard({
+    open: params.open,
+    onClose: closeDrawerImmediately,
+    confirmOnOpen: false,
+    resetKey: params.hash,
+  });
+
   const handleEventDraw = useCallback(({ hash, data, title }) => {
     closeGuardRef.current = null;
     setParams({ open: true, hash, data, title });
   }, []);
 
   const handleCloseDraw = useCallback(() => {
-    closeGuardRef.current = null;
-    setParams({ open: false });
-  }, []);
+    markDrawerClean();
+    closeDrawerImmediately();
+  }, [closeDrawerImmediately, markDrawerClean]);
 
   const closeModal = useCallback(() => {
     const close = () => {
-      closeGuardRef.current = null;
-      setParams({ open: false });
+      closeDrawerImmediately();
     };
     const closeGuard = closeGuardRef.current;
     if (closeGuard) {
@@ -98,7 +113,16 @@ function ModalRoutes() {
       return;
     }
     close();
-  }, []);
+  }, [closeDrawerImmediately]);
+
+  const requestDrawerClose = useCallback(() => {
+    const customCloseGuard = closeGuardRef.current;
+    if (customCloseGuard) {
+      customCloseGuard(closeDrawerImmediately);
+      return;
+    }
+    guardDrawerClose(closeDrawerImmediately);
+  }, [closeDrawerImmediately, guardDrawerClose]);
 
   const registerCloseGuard = useCallback((closeGuard) => {
     closeGuardRef.current = closeGuard;
@@ -132,13 +156,17 @@ function ModalRoutes() {
       {...ModalRoute?.modalOptions}
       title={params?.title || ModalRoute?.modalOptions?.title}
       open={params.open && canOpen}
-      onClose={closeModal}
+      onClose={requestDrawerClose}
     >
-      <ModalRoute.Component
-        closeModal={closeModal}
-        registerCloseGuard={registerCloseGuard}
-        {...params}
-      />
+      <div onChangeCapture={markDrawerDirty} onInputCapture={markDrawerDirty}>
+        <ModalRoute.Component
+          closeModal={closeModal}
+          closeModalAfterSubmit={handleCloseDraw}
+          markDrawerClean={markDrawerClean}
+          registerCloseGuard={registerCloseGuard}
+          {...params}
+        />
+      </div>
     </DrawerCustom>
   );
 }

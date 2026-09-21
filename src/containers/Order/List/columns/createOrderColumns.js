@@ -128,6 +128,8 @@ const createOrderColumns = ({
   canViewQuotation,
   canAttachWorkflow,
   canViewWorkflow,
+  canCreateReceipt,
+  openOrderInboundDrawer,
 }) => ([
   {
     title: 'Kinh doanh',
@@ -293,6 +295,8 @@ const createOrderColumns = ({
         canViewQuotation={canViewQuotation}
         canAttachWorkflow={canAttachWorkflow}
         canViewWorkflow={canViewWorkflow}
+        canCreateReceipt={canCreateReceipt}
+        openOrderInboundDrawer={openOrderInboundDrawer}
       />
     ),
   },
