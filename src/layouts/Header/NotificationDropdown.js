@@ -18,7 +18,9 @@ const NOTIFICATION_ICONS = {
 };
 
 const formatNotificationTime = (value) => {
-  if (!value) return '';
+  if (!value) {
+    return '';
+  }
   const date = moment(value);
   return date.isValid() ? date.fromNow() : '';
 };
@@ -28,7 +30,6 @@ const NotificationDropdown = ({
   onMarkRead,
   onMarkAllRead,
   onSelect,
-  onViewAll,
   onRequestPermission,
 }) => {
   const [open, setOpen] = useState(false);
@@ -118,10 +119,6 @@ const NotificationDropdown = ({
           />
         )}
       </div>
-
-      <div className="notification-panel__footer">
-        <button type="button" onClick={onViewAll}>Xem tất cả thông báo</button>
-      </div>
     </NotificationPanel>
   );
 
@@ -135,12 +132,12 @@ const NotificationDropdown = ({
     >
       <button
         type="button"
-      className="notification-trigger"
-      aria-label="Thông báo"
-      aria-haspopup="true"
-      aria-expanded={open}
-      onClick={onRequestPermission}
-    >
+        className="notification-trigger"
+        aria-label="Thông báo"
+        aria-haspopup="true"
+        aria-expanded={open}
+        onClick={onRequestPermission}
+      >
         <Badge count={unreadCount} size="small" overflowCount={99}>
           <BellOutlined />
         </Badge>

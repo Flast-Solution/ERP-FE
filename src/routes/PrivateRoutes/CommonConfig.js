@@ -30,7 +30,6 @@ const GeneralConfigPage = React.lazy(() => import('@/pages/generalConfig'));
 const ProviderPage = React.lazy(() => import('@/pages/provider'));
 const DocumentTemplateListPage = React.lazy(() => import('@/pages/document-template'));
 const DocumentTemplateEditorPage = React.lazy(() => import('@/pages/document-template/Editor'));
-const NotificationsPage = React.lazy(() => import('@/pages/notifications'));
 
 export const CommonConfig = {
     auth: authRoles.user,
@@ -42,7 +41,6 @@ export const CommonConfig = {
         { path: '/system/document-templates', permission: 'system.document_template.view', element: <DocumentTemplateListPage /> },
         { path: '/system/document-templates/create', permission: 'system.document_template.create', element: <DocumentTemplateEditorPage /> },
         { path: '/system/document-templates/:templateId/edit', permission: 'system.document_template.update', element: <DocumentTemplateEditorPage /> },
-        { path: '/notifications', permission: 'notification.view', element: <NotificationsPage /> },
         { path: '/task', permission: 'project.view', element: <TaskPage /> },
         { path: '/task/calendar/:id', permission: 'project.task.view', element: <TaskCalendar /> }
     ]

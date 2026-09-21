@@ -7,12 +7,11 @@
 /**************************************************************************/
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Button, Dropdown, Input, Select, Spin, Tooltip } from 'antd'
+import { Button, Input, Select, Spin, Tooltip } from 'antd'
 import {
   CheckOutlined,
   ClockCircleOutlined,
   DropboxOutlined,
-  EllipsisOutlined,
   FileOutlined,
   InfoCircleOutlined,
   MessageOutlined,
@@ -257,13 +256,6 @@ const ChatBox = ({
     ? `${customerName} — ${context.customer.companyName}`
     : customerName || conversation.displayName
 
-  const moreItems = [
-    { key: 'mark-done', label: 'Đánh dấu đã xong' },
-    { key: 'open-customer', label: 'Mở hồ sơ khách hàng', disabled: !context?.customer },
-    { type: 'divider' },
-    { key: 'reload', label: 'Tải lại lịch sử tin' },
-  ]
-
   return (
     <ChatPane $mobileActive={mobileActive}>
       <ChatHeader $channelType={conversation.channelType} $avatarBg={ACCENT}>
@@ -286,8 +278,7 @@ const ChatBox = ({
 
         <div className="actions">
           <Select
-            size="small"
-            style={{ width: 150 }}
+            style={{ width: 250 }}
             value={conversation.status}
             onChange={(status) => onChangeStatus(conversation.id, status)}
             options={STATUS_OPTIONS.map((o) => ({
@@ -323,10 +314,6 @@ const ChatBox = ({
               onClick={onToggleContext}
             />
           </Tooltip>
-
-          <Dropdown menu={{ items: moreItems }} trigger={['click']}>
-            <Button type="text" icon={<EllipsisOutlined />} />
-          </Dropdown>
         </div>
       </ChatHeader>
 

@@ -32,10 +32,11 @@ import { PlusOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import UserInfo from './UserInfo';
 import NotificationDropdown from './NotificationDropdown';
 import { useNavigate } from "react-router-dom";
-import { useNotifications } from '@/contexts/NotificationContext';
+import { useNotifications } from '@/hooks/useNotifications';
 
 const Header = () => {
 
+  let navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const { isCollapseSidebar, toggleCollapse } = useCollapseSidebar();
   const { serviceId, setServiceId } = useServiceId();
@@ -45,10 +46,8 @@ const Header = () => {
     markAllRead,
     requestBrowserNotificationPermission,
   } = useNotifications();
-  let navigate = useNavigate();
-
+  
   const isVietnamese = String(i18n.language || 'vi').toLowerCase().startsWith('vi');
-
   const toggleLanguage = useCallback(() => {
     const next = isVietnamese ? 'en' : 'vi';
     i18n.changeLanguage(next);
@@ -82,7 +81,6 @@ const Header = () => {
           onMarkRead={markRead}
           onMarkAllRead={markAllRead}
           onRequestPermission={requestBrowserNotificationPermission}
-          onViewAll={() => navigate('/notifications')}
         />
         <Tooltip title={isVietnamese ? t('header.languageToggleToEn') : t('header.languageToggleToVi')}>
           <button
@@ -100,7 +98,7 @@ const Header = () => {
         <UserInfo />
       </div>
     </HeaderWrapper>
-  );
+  )
 };
 
 export default Header;

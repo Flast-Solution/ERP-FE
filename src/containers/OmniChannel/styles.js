@@ -12,8 +12,13 @@ import styled, { css, keyframes } from 'styled-components'
 const AVAILABLE_HEIGHT = 'calc(100vh - 168px)'
 
 export const InboxWrapper = styled.div`
+  position: relative;
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 320px;
+  grid-template-columns: ${(p) => p.$contextOpen 
+    ? '300px minmax(0, 1fr) 320px' 
+    : '300px minmax(0, 1fr)'
+  };
+  transition: grid-template-columns 0.18s ease;
   height: ${AVAILABLE_HEIGHT};
   min-height: 0;
   background: #fff;
@@ -21,12 +26,12 @@ export const InboxWrapper = styled.div`
   border-radius: 8px;
   overflow: hidden;
 
-  /* Màn hẹp: ẩn cột phải, mở bằng nút trong header khung chat */
   @media (max-width: 1400px) {
-    grid-template-columns: 280px minmax(0, 1fr);
+    grid-template-columns: 280px minmax(0, 1fr) !important;
   }
+
   @media (max-width: 992px) {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) !important;
   }
 `
 

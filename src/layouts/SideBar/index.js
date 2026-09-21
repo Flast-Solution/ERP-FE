@@ -31,7 +31,6 @@ import {
   DollarCircleFilled,
   OrderedListOutlined,
   DeploymentUnitOutlined,
-  // OpenAIOutlined,
   TeamOutlined,
   SettingOutlined,
   UserOutlined,
@@ -66,10 +65,10 @@ import { resolveUploadUrl } from '@/containers/PreviewModal/uploadUtils';
 import {
   BUSINESS_UPDATED_EVENT,
   canManagePermissions,
-  getTokenPayload,
   hasClientPermission,
   isSuperAdmin,
 } from '@/utils/authUtils';
+import { GATEWAY } from '@/configs';
 
 function getItem(label, key, icon, children, permission) {
   return { key, icon, children, label, permission };
@@ -77,32 +76,50 @@ function getItem(label, key, icon, children, permission) {
 
 const filterItemsByPermission = (items, user) => items.reduce((result, item) => {
   const children = item.children ? filterItemsByPermission(item.children, user) : undefined;
-  if (item.children && !children.length) return result;
-  if (item.permission && !hasClientPermission(user, item.permission)) return result;
+  if (item.children && !children.length) {
+    return result;
+  }
+  if (item.permission && !hasClientPermission(user, item.permission)) {
+    return result;
+  }
   const { permission: _permission, ...menuItem } = item;
   result.push({ ...menuItem, ...(children ? { children } : {}) });
   return result;
 }, []);
+
 const { Sider } = Layout;
 const iconSize = { fontSize: 18 };
 
 const USER_BUSINESS_INFO_API = '/auth/user-bussiness/find-info';
 
-const resolveLogoUrl = (logo) => resolveUploadUrl(logo);
+const isAbsoluteUrl = (value = '') =>
+  /^https?:\/\//i.test(String(value)) || String(value).startsWith('/api/');
+
+const resolveLogoUrl = (logo) => {
+  if (!logo) {
+    return '';
+  }
+  if (isAbsoluteUrl(logo)) {
+    return logo;
+  }
+  return `${GATEWAY}/erp/folder/view/${encodeURIComponent(logo)}`;
+};
 
 function SideBar() {
 
   const { t } = useTranslation();
   const { isCollapseSidebar: collapsed, toggleCollapse } = useCollapseSidebar();
   const { user } = useGetMe();
+  const [ businessLogo, setBusinessLogo ] = useState('');
+
   const canManageBusinessUnits = isSuperAdmin(user);
   const canManageUserPermissions = canManagePermissions(user);
-  const [businessLogo, setBusinessLogo] = useState('');
-
-  const bizId = user?.bizId ?? user?.biz_id ?? getTokenPayload()?.bizId ?? null;
+  const bizId = user?.bizId ?? null;
 
   useEffect(() => {
-    if (!bizId) return undefined;
+    if (!bizId) {
+      return undefined;
+    }
 
     let mounted = true;
     (async () => {
@@ -116,7 +133,6 @@ function SideBar() {
         console.warn('[SideBar] fetch business logo failed', error);
       }
     })();
-
     return () => {
       mounted = false;
     };
@@ -164,16 +180,12 @@ function SideBar() {
     getItem('Qui trình', 'business_flow', <DollarCircleFilled />, [
       getItem(<Link to="/workflow-designer">Tạo nghiệp vụ</Link>, 'business_create', <UnorderedListOutlined />, undefined, 'workflow.process.view'),
       getItem(<Link to="/workflow-forms">Danh sách form</Link>, 'workflow_form_list', <UnorderedListOutlined />, undefined, 'workflow.form.view'),
-      // Tạm ẩn: trong danh sách form đã có nút tạo mới.
-      // getItem(<Link to="/workflow-form">Tạo Form nhập</Link>, 'workflow_form', <UnorderedListOutlined />),
       getItem(<Link to="/sale/drag-drop-order">Quy trình đơn</Link>, 'business_order', <ForkOutlined />, undefined, 'workflow.order_board.view'),
     ]),
     getItem('Kế toán', 'need_solve', <DollarCircleFilled />, [
       getItem(<Link to="/ke-toan/confirm">Duyệt tiền</Link>, 'list_order_update', <UnorderedListOutlined />, undefined, 'accounting.payment_approval.view'),
       getItem(<Link to="/ke-toan/cong-no">Công nợ</Link>, 'can_giai_quyet', <BankOutlined />, undefined, 'accounting.receivable.view')
     ]),
-    // Tạm ẩn menu Trợ lý AI.
-    // getItem(<Link to="/ai-agent">Trợ lý Ai</Link>, 'ai-agent', <OpenAIOutlined />),
     getItem('Khách hàng', 'client', <WalletOutlined />, [
       getItem(<Link to="/sale/m-customer">Khách lẻ</Link>, 'customer', <GroupOutlined />, undefined, 'customer.retail.view'),
       getItem(<Link to="/customer/enterprise">Doanh nghiệp</Link>, 'enterprice', <GroupOutlined />, undefined, 'customer.enterprise.view')
@@ -192,12 +204,6 @@ function SideBar() {
       getItem(<Link to="/material/bom">Lệnh S.Xuất</Link>, 'material.bom', <FolderOpenOutlined />, undefined, 'manufacturing.order.view'),
       getItem(<Link to="/sale/order-production">ĐH đang sản xuất</Link>, 'order.production', <BuildOutlined />, undefined, 'manufacturing.progress.view'),
     ]),
-    // Tạm ẩn menu Quản lý QC.
-    // getItem('Quản lý QC', 'qc_management', <AuditOutlined />, [
-    //   getItem(<Link to="/qc/criteria">Tiêu chí</Link>, 'qc_criteria', <UnorderedListOutlined />),
-    //   getItem(<Link to="/qc/checklist">Bộ tiêu chí</Link>, 'qc_checklist', <OrderedListOutlined />),
-    //   getItem(<Link to="/qc/defect">Danh sách lỗi</Link>, 'qc_defect', <DeleteOutlined />)
-    // ]),
     getItem('Web', 'web', <FileWordOutlined />, [
       getItem(<Link to="/category/san-pham">D.Mục sản phẩm</Link>, 'cate-san-pham', <span> - </span>, undefined, 'web.product_category.view'),
       getItem(<Link to="/category/tin-tuc">D.Mục tin tức</Link>, 'cate-tin-tuc', <span> - </span>, undefined, 'web.news_category.view'),
@@ -241,9 +247,10 @@ function SideBar() {
           <img
             alt=""
             className={businessLogo ? 'business-logo' : ''}
-            src={collapsed
+            src={ collapsed
               ? (businessLogo || '/img-intro-login.png')
-              : (businessLogo || '/logo.png')}
+              : (businessLogo || '/logo.png')
+            }
           />
         </div>
         <Menu

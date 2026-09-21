@@ -53,55 +53,6 @@ export const FilterBar = styled.div`
   }
 `
 
-/* Tab phạm vi — kiểu segmented, nền xám, tab đang chọn nổi trắng */
-export const ScopeTabs = styled.div`
-  display: flex;
-  gap: 2px;
-  padding: 3px;
-  margin: 0 12px;
-  background: #f5f5f5;
-  border-radius: 8px;
-  flex-shrink: 0;
-
-  button {
-    flex: 1;
-    border: 0;
-    background: transparent;
-    padding: 6px 4px;
-    border-radius: 6px;
-    font-size: 13px;
-    color: #595959;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    transition: background 0.15s, color 0.15s;
-    white-space: nowrap;
-
-    &:hover {
-      color: #262626;
-    }
-  }
-
-  button[data-active='true'] {
-    background: #fff;
-    color: #262626;
-    font-weight: 600;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-  }
-
-  .count {
-    font-size: 12px;
-    color: #8c8c8c;
-    font-weight: 500;
-  }
-
-  button[data-active='true'] .count {
-    color: #1677ff;
-  }
-`
-
 /* Cảnh báo kênh mất kết nối — chỉ hiện với người có quyền cấu hình */
 export const ChannelAlert = styled.div`
   display: flex;
@@ -428,4 +379,69 @@ export const UnreadDot = styled.span`
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+`
+
+export const ScopeTabs = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  margin: 0 12px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  flex-shrink: 0;
+
+  button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    padding: 7px 6px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    color: #595959;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+
+    &:hover {
+      color: #262626;
+    }
+  }
+
+  /* Số tab lẻ (khi không có quyền Hàng chờ): ô cuối chiếm cả hàng
+     thay vì để trống một nửa. */
+  button:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  button[data-active='true'] {
+    background: #fff;
+    color: #262626;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+
+  .anticon {
+    font-size: 13px;
+    opacity: 0.65;
+  }
+
+  button[data-active='true'] .anticon {
+    opacity: 1;
+  }
+
+  .count {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #8c8c8c;
+    font-variant-numeric: tabular-nums;
+  }
+
+  button[data-active='true'] .count {
+    color: #0f7b6c;
+  }
 `

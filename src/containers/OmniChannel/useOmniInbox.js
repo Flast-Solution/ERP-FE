@@ -9,25 +9,19 @@
 /* Component chỉ đọc state qua selector và gọi hàm ở đây.                 */
 /**************************************************************************/
 
+import useGetMe from '@/hooks/useGetMe';
 import { useCallback, useEffect, useRef } from 'react'
 import { message as antMessage } from 'antd'
 import { useOmniStore } from '@/store/omniStore'
-import { omniApi, getOmniSocket, destroyOmniSocket, WS_EVENT } from '@/services/omniService'
-import { jwtService} from '@flast-erp/core/utils';
-import { useStore } from '@flast-erp/core/components';
-import { WS_URL } from '@/configs';
-import useGetMe from '@/hooks/useGetMe';
+import { getAppSocket, omniApi } from '@/services/omniService'
+import { WS_EVENT, WS_TOPIC } from '@/services/socketEvents'
+import { useSocketEvents, useSocketTopic } from '@/hooks/useAppSocket'
 
 export const useOmniInbox = () => {
 
-  const { user } = useStore();
   const { id: userId, isManager } = useGetMe();
   const store = useOmniStore
-  const socketRef = useRef(null)
-
-  /* Đưa danh tính người dùng vào store một lần.
-   * receiveMessage và applyConversationUpdate cần nó mà nằm sâu
-   * trong chuỗi gọi, truyền tham số qua từng tầng sẽ rất rối. */
+  
   useEffect(() => {
     if (userId == null) {
       return
@@ -35,7 +29,6 @@ export const useOmniInbox = () => {
     store.getState().setMe({ userId, isManager: Boolean(isManager) })
   }, [store, userId, isManager])
 
-  /* ---------- nạp kênh + kết nối WS, chạy 1 lần ---------- */
   useEffect(() => {
     const s = store.getState()
     s.setChannelsLoading(true)
@@ -45,59 +38,36 @@ export const useOmniInbox = () => {
       .catch(() => antMessage.error('Không tải được danh sách kênh'))
       .finally(() => s.setChannelsLoading(false))
 
-    const socket = getOmniSocket({
-      url: WS_URL,
-      token: jwtService.getAccessToken(),
-      bizId: user.bizId
-    })
-    socketRef.current = socket
-
-    const offState = socket.on('__state', ({ connected }) =>
-      store.getState().setConnected(connected)
-    )
-
-    const offMessage = socket.on(WS_EVENT.MESSAGE_NEW, (payload) =>
-      store.getState().receiveMessage(payload)
-    )
-    
-    /* KHÔNG dùng patchConversation trực tiếp: hội thoại có thể vừa
-       rời khỏi tab đang xem, hoặc vừa sang tay người khác. */
-    const offUpdated = socket.on(WS_EVENT.CONVERSATION_UPDATED, (c) =>
-      store.getState().applyConversationUpdate(c)
-    )
-
-    const offChannelError = socket.on(WS_EVENT.CHANNEL_ERROR, ({ channelAccountId, name }) => {
-      store.getState().markChannelError(channelAccountId)
-      antMessage.warning(`Kênh ${name} mất kết nối, cần kết nối lại`)
-    })
-
-    const offUnauthorized = socket.on(WS_EVENT.UNAUTHORIZED, () => {
-      antMessage.error('Phiên làm việc hết hạn, tải lại trang để nhận tin mới')
-    })
-
-    /* Tin khách đã xem — cập nhật dấu tick đôi */
-    const offRead = socket.on(WS_EVENT.READ, ({ conversationId, lastMessageId }) =>
-      store.getState().markMessagesRead(conversationId, lastMessageId)
-    )
-
-    socket.connect()
     return () => {
-      offState()
-      offMessage()
-      offUpdated()
-      offChannelError()
-      offUnauthorized()
-      offRead()
-      destroyOmniSocket()
       store.getState().reset()
     }
-  }, [store, user?.bizId])
+  }, [store])
+
+  /* Nghe sự kiện — một useEffect cho tất cả */
+  useSocketEvents({
+    [WS_EVENT.STATE]: ({ connected }) => store.getState().setConnected(connected),
+    [WS_EVENT.MESSAGE_NEW]: (payload) => store.getState().receiveMessage(payload),
+    [WS_EVENT.CONVERSATION_UPDATED]: (c) => store.getState().applyConversationUpdate(c),
+    [WS_EVENT.CHANNEL_ERROR]: ({ channelAccountId, name }) => {
+      store.getState().markChannelError(channelAccountId)
+      antMessage.warning(`Kênh ${name} mất kết nối, cần kết nối lại`)
+    },
+    [WS_EVENT.MESSAGE_READ]: ({ conversationId, lastMessageId }) => {
+      store.getState().markMessagesRead(conversationId, lastMessageId)
+    }
+  })
+
+  /* Theo dõi hội thoại đang mở — hook tự subscribe/unsubscribe */
+  const activeId = useOmniStore((s) => s.activeId)
+  useSocketTopic(WS_TOPIC.OMNI_CONVERSATION, activeId)
 
   /* ---------- cột trái ---------- */
 
   const loadConversations = useCallback(async () => {
     const s = store.getState()
-    if (s.conversationsLoading || !s.hasMore) return
+    if (s.conversationsLoading || !s.hasMore) {
+      return
+    }
     s.setConversationsLoading(true)
     try {
       const page = await omniApi.fetchConversations({ filters: s.filters, cursor: s.cursor })
@@ -121,13 +91,10 @@ export const useOmniInbox = () => {
   }, [loadConversations])
 
   /* Đổi bộ lọc: xoá danh sách rồi nạp lại ngay trong cùng một hành động */
-  const applyFilter = useCallback(
-    (patch) => {
-      store.getState().setFilter(patch)
-      loadConversations()
-    },
-    [store, loadConversations]
-  )
+  const applyFilter = useCallback((patch) => {
+    store.getState().setFilter(patch)
+    loadConversations()
+  }, [store, loadConversations])
 
   /* ---------- mở hội thoại ---------- */
 
@@ -138,13 +105,7 @@ export const useOmniInbox = () => {
       return
     }
 
-    if (previous) {
-      socketRef.current?.unsubscribe(previous)
-    }
     s.openConversation(conversationId)
-    socketRef.current?.subscribe(conversationId)
-
-    /* Đồng bộ URL để sale gửi link cho nhau, KHÔNG dùng router để tránh remount cả ba cột */
     const url = new URL(window.location.href)
     url.searchParams.set('c', conversationId)
     window.history.replaceState({}, '', url)
@@ -174,7 +135,7 @@ export const useOmniInbox = () => {
     const list = store.getState().messages[conversationId] || []
     const last = list[list.length - 1]
     if (last) {
-      socketRef.current?.markRead(conversationId, last.id)
+      getAppSocket().markRead(conversationId, last.id)
     }
 
     /* Giữ RAM gọn: chỉ giữ tin của 8 hội thoại gần nhất */
@@ -220,7 +181,7 @@ export const useOmniInbox = () => {
       senderUserId: null,
       senderName: 'Bạn',
       sentAt: new Date().toISOString(),
-      sendState: 'sending',
+      sendState: 'sending'
     })
 
     try {
@@ -254,7 +215,7 @@ export const useOmniInbox = () => {
       return
     }
     typingRef.current = now
-    socketRef.current?.sendTyping(id)
+    getAppSocket().sendTyping(id)
   }, [store])
 
   /* ---------- hành động cột phải ---------- */
@@ -262,10 +223,19 @@ export const useOmniInbox = () => {
   const linkCustomer = useCallback(async (identityId, customerId) => {
     const conversationId = store.getState().activeId
     const customer = await omniApi.linkCustomer(identityId, customerId)
+
+    /* Cập nhật ngay cho cột phải đổi trạng thái không bị khựng */
     store.getState().linkCustomer(conversationId, customer)
     antMessage.success('Đã gắn vào khách hàng')
+
+    /* Lịch sử giao dịch (lead/cơ hội/đơn) nằm ở API context. Load lại */
+    try {
+      const ctx = await omniApi.fetchContext(conversationId)
+      store.getState().setContext(conversationId, ctx)
+    } catch {}
+
     return customer
-  }, [store])
+  }, [ store ])
 
   /* Nối Data (lead) vừa tạo bởi form lead của ERP vào hội thoại.
    * Trùng SĐT và gán sale đã do lead service của ERP xử lý xong,
@@ -288,10 +258,9 @@ export const useOmniInbox = () => {
           assignedUserName: res.assignedUserName,
         })
       }
-      antMessage.success(
-        res.assignedUserName
-          ? `Đã tạo lead · chuyển cho ${res.assignedUserName}`
-          : 'Đã tạo lead'
+      antMessage.success( res.assignedUserName
+        ? `Đã tạo lead · chuyển cho ${res.assignedUserName}`
+        : 'Đã tạo lead'
       )
       return { ok: true, ...res }
     } catch (e) {

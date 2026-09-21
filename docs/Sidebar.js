@@ -59,16 +59,13 @@ const isAbsoluteUrl = (value = '') =>
   /^https?:\/\//i.test(String(value)) || String(value).startsWith('/api/');
 
 const resolveLogoUrl = (logo) => {
-  if (!logo) return '';
-  if (isAbsoluteUrl(logo)) return logo;
-  const baseUrl = String(axios.defaults.baseURL || '/api').replace(/\/$/, '');
-  const normalizedPath = String(logo)
-    .replace(/\\/g, '/')
-    .split('/')
-    .map((segment) => encodeURIComponent(segment.trim().replace(/\s+/g, '-')))
-    .filter(Boolean)
-    .join('/');
-  return `${baseUrl}/erp/folder/view/${normalizedPath}`;
+  if (!logo) {
+    return '';
+  }
+  if (isAbsoluteUrl(logo)) {
+    return logo;
+  }
+  return `https://biz.api.flast.vn/erp/folder/view/${encodeURIComponent(logo)}`;
 };
 
 function SideBar() {

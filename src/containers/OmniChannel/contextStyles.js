@@ -12,7 +12,7 @@ import styled, { css } from 'styled-components'
 import { ACCENT } from './chatStyles'
 
 export const ContextPane = styled.div`
-  display: flex;
+  display: ${(p) => (p.$open ? 'flex' : 'none')};
   flex-direction: column;
   min-height: 0;
   overflow-y: auto;
@@ -21,6 +21,7 @@ export const ContextPane = styled.div`
   border-left: 1px solid #f0f0f0;
   padding: 16px;
 
+  /* Màn hẹp: trượt đè lên cột giữa, không đẩy lưới */
   @media (max-width: 1400px) {
     position: absolute;
     right: 0;
@@ -29,7 +30,6 @@ export const ContextPane = styled.div`
     width: 330px;
     z-index: 10;
     box-shadow: -4px 0 16px rgba(0, 0, 0, 0.08);
-    display: ${(p) => (p.$open ? 'flex' : 'none')};
   }
 `
 
@@ -369,79 +369,236 @@ export const StatCard = styled.div`
   }
 `
 
-export const TimelineItem = styled.a`
-  display: block;
-  padding: 10px 12px;
+/* Thẻ giao dịch. Mỗi loại (lead / cơ hội / đơn) cùng một khung,
+   khác nhau ở màu mã, icon và khối nội dung giữa. */
+export const DealCard = styled.div`
   border: 1px solid #f0f0f0;
-  border-left: 3px solid ${(p) => p.$accent};
-  border-radius: 6px;
-  margin-bottom: 8px;
-  color: inherit;
-  transition: border-color 0.15s, background 0.15s;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+  background: #fff;
+  transition: border-color 0.15s;
 
   &:hover {
-    background: #fafafa;
-    color: inherit;
     border-color: #d9d9d9;
-    border-left-color: ${(p) => p.$accent};
   }
 
-  .row {
+  .head {
     display: flex;
     align-items: center;
     gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .code-label {
+    font-size: 11.5px;
+    color: #8c8c8c;
   }
 
   .code {
     font-size: 12.5px;
-    font-weight: 600;
+    font-weight: 700;
+    letter-spacing: 0.02em;
     color: ${(p) => p.$accent};
   }
 
   .kind {
     font-size: 10.5px;
-    font-weight: 500;
+    font-weight: 600;
     line-height: 1;
-    padding: 3px 6px;
-    border-radius: 4px;
+    padding: 4px 7px;
+    border-radius: 5px;
     color: ${(p) => p.$accent};
     background: ${(p) => p.$tint};
   }
 
-  .date {
+  .when {
     margin-left: auto;
-    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
     color: #8c8c8c;
-    flex-shrink: 0;
+    white-space: nowrap;
   }
 
-  .row2 {
-    margin-top: 5px;
+  .when .anticon {
+    color: ${(p) => p.$accent};
+    opacity: 0.7;
+  }
+
+  /* --- khối lead --- */
+  .lead-name {
+    color: #262626;
+  }
+
+  .lead-req {
+    margin-top: 4px;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: #595959;
+  }
+
+  .lead-req b {
+    font-weight: 500;
+    color: #262626;
+  }
+
+  .tags {
+    margin-top: 9px;
     display: flex;
-    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .tag {
+    font-size: 11.5px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    background: #f5f5f5;
+    color: #595959;
+  }
+
+  /* --- tiêu đề đơn/cơ hội --- */
+  .title-row {
+    display: flex;
+    align-items: center;
     gap: 8px;
+    margin-bottom: 10px;
   }
 
   .title {
     flex: 1;
     min-width: 0;
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 600;
     color: #262626;
   }
 
-  .amount {
-    font-size: 13px;
-    font-weight: 700;
+  .sub-status {
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    padding: 4px 7px;
+    border-radius: 5px;
+    color: #389e0d;
+    background: #f6ffed;
     white-space: nowrap;
+  }
+
+  /* --- danh sách hàng hoá --- */
+  .items {
+    border: 1px solid #f5f5f5;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 10px;
+
+    & + & {
+      border-top: 1px solid #f5f5f5;
+    }
+  }
+
+  .item .body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .item .name {
+    font-size: 12.5px;
+    line-height: 1.45;
     color: #262626;
   }
 
-  .foot {
-    margin-top: 4px;
+  .item .spec {
+    margin-top: 2px;
     font-size: 11.5px;
     color: #8c8c8c;
   }
+
+  .item .amount {
+    font-size: 12.5px;
+    color: #262626;
+    white-space: nowrap;
+    padding-top: 1px;
+  }
+
+  /* --- tổng tiền --- */
+  .total {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed #f0f0f0;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .total .label {
+    flex: 1;
+    min-width: 0;
+    font-size: 12.5px;
+    color: #595959;
+  }
+
+  .total .value {
+    font-size: 15px;
+    font-weight: 700;
+    color: ${(p) => p.$accent};
+    white-space: nowrap;
+  }
+
+  /* --- chân thẻ --- */
+  .foot {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #f5f5f5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .owner {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #595959;
+    min-width: 0;
+  }
+
+  .owner .face {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    color: #fff;
+    background: ${(p) => p.$ownerColor || '#8c8c8c'};
+  }
+
+  .source {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11.5px;
+    color: #8c8c8c;
+    min-width: 0;
+  }
+
+  .foot .spacer {
+    flex: 1;
+  }
 `
+
 
 /* Trạng thái rỗng của lịch sử — có nút hành động nên dùng thẻ
    viền đứt, phân biệt với vùng nội dung thật */

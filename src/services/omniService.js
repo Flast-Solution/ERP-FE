@@ -13,20 +13,21 @@
 /* Đổi USE_MOCK = false khi BE xong. Component KHÔNG cần sửa.             */
 /**************************************************************************/
 
+import { CHANNEL_TYPE } from '@/store/omniStore'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { SUCCESS_CODE } from '@/configs'
-import { omniMockApi, startMockRealtime } from '@/mocks/omniMock'
+import { omniMockApi } from '@/mocks/omniMock'
+import { WS_COMMAND, WS_EVENT } from './socketEvents'
 
 const USE_MOCK_API    = false
-const USE_MOCK_SOCKET = false
+export { WS_EVENT, WS_COMMAND, WS_TOPIC } from './socketEvents'
 
 export const buildWsUrl = () => {
   const explicit = process.env.REACT_APP_OMNI_WS_URL
   if (explicit) {
     return explicit;
   }
-  const origin = process.env.REACT_APP_WS_ORIGIN || window.location.origin
-  return `${origin.replace(/^http/, 'ws')}/api/erp/ws/omni`
+  throw Error("Chưa cấu hình REACT_APP_OMNI_WS_URL !");
 }
 
 /* ======================================================================
@@ -112,53 +113,55 @@ const unwrap = (res) => {
 
 const realApi = {
   fetchChannels: () =>
-    RequestUtils.Get('/erp/omni/channel-account').then(unwrap),
+    RequestUtils.Get('/omni/channel-account').then(unwrap),
 
   fetchConversations: ({ filters = {}, cursor = null } = {}) =>
-    RequestUtils.Get('/erp/omni/conversation', { ...filters, cursor }).then(unwrap),
+    RequestUtils.Get('/omni/conversation', { ...filters, cursor }).then(unwrap),
 
   fetchMessages: (conversationId, { cursor } = {}) =>
-    RequestUtils.Get(`/erp/omni/conversation/${conversationId}/messages`, { cursor }).then(unwrap),
+    RequestUtils.Get(`/omni/conversation/${conversationId}/messages`, { cursor }).then(unwrap),
 
   fetchContext: (conversationId) =>
-    RequestUtils.Get(`/erp/omni/conversation/${conversationId}/context`).then(unwrap),
+    RequestUtils.Get(`/omni/conversation/${conversationId}/context`).then(unwrap),
 
   sendMessage: (conversationId, body) =>
-    RequestUtils.Post(`/erp/omni/conversation/${conversationId}/send`, body).then(unwrap),
+    RequestUtils.Post(`/omni/conversation/${conversationId}/send`, body).then(unwrap),
 
   linkCustomer: (identityId, customerId) =>
-    RequestUtils.Post(`/erp/omni/identity/${identityId}/link`, { customerId }).then(unwrap),
+    RequestUtils.Post(`/omni/identity/${identityId}/link`, { customerId }).then(unwrap),
 
   /* Gọi SAU khi API tạo lead sẵn có của ERP đã trả về Data.
    * Omni KHÔNG tự tạo lead: việc kiểm trùng SĐT, gán sale, tạo
    * customer_personal đều nằm trong lead service của ERP rồi.
    * Ở đây chỉ nối Data đó vào hội thoại. */
   attachLead: (conversationId, dataId) =>
-    RequestUtils.Post(`/erp/omni/conversation/${conversationId}/attach-lead`, { dataId }).then(unwrap),
+    RequestUtils.Post(`/omni/conversation/${conversationId}/attach-lead`, { dataId }).then(unwrap),
 
   assignUser: (conversationId, assignedUserId) =>
-    RequestUtils.Post(`/erp/omni/conversation/${conversationId}/assign`, { assignedUserId }).then(unwrap),
+    RequestUtils.Post(`/omni/conversation/${conversationId}/assign`, { assignedUserId }).then(unwrap),
 
   changeStatus: (conversationId, status) =>
-    RequestUtils.Post(`/erp/omni/conversation/${conversationId}/status`, { status }).then(unwrap),
+    RequestUtils.Post(`/omni/conversation/${conversationId}/status`, { status }).then(unwrap),
 
-  startConnect: (channelType) =>
-    RequestUtils.Post('/erp/omni/channel-account/connect', { channelType }).then(unwrap),
+  startConnect: async (channelType) => {
+    const path = channelType === CHANNEL_TYPE.ZALO_OA ? 'zalo' : 'fb'
+    return RequestUtils.Get(`/omni/oauth/${path}/authorize-url`).then(unwrap)
+  },
 
   disconnectChannel: (channelAccountId) =>
-    RequestUtils.Post(`/erp/omni/channel-account/${channelAccountId}/disconnect`).then(unwrap),
+    RequestUtils.Post(`/omni/channel-account/${channelAccountId}/disconnect`).then(unwrap),
 
   deleteChannel: (channelAccountId) =>
-    RequestUtils.Delete(`/erp/omni/channel-account/${channelAccountId}`).then(unwrap),
+    RequestUtils.Delete(`/omni/channel-account/${channelAccountId}`).then(unwrap),
 
   searchCustomers: (keyword) =>
-    RequestUtils.Get('/erp/omni/customer/search', { keyword }).then(unwrap),
+    RequestUtils.Get('/omni/customer/search', { keyword }).then(unwrap),
 
   /* Upload trước, lấy về danh sách file đã lưu, rồi mới gửi tin */
   uploadAttachment: (file) => {
     const form = new FormData()
     form.append('file', file)
-    return RequestUtils.Post('/erp/omni/attachment/upload', form).then(unwrap)
+    return RequestUtils.Post('/omni/attachment/upload', form).then(unwrap)
   },
 };
 
@@ -168,29 +171,6 @@ export const omniApi = USE_MOCK_API ? omniMockApi : realApi
  * WebSocket
  * ==================================================================== */
 
-/* Sự kiện server -> client */
-export const WS_EVENT = {
-  READY: 'ready',                         /* server xác nhận xác thực xong */
-  UNAUTHORIZED: 'unauthorized',           /* token sai/hết hạn — KHÔNG nối lại */
-  MESSAGE_NEW: 'message.new',             /* tin mới (khách hoặc đồng nghiệp gửi) */
-  CONVERSATION_UPDATED: 'conversation.updated', /* đổi trạng thái / người phụ trách */
-  TYPING: 'typing',                       /* đồng nghiệp đang gõ */
-  READ: 'read',                           /* đồng nghiệp đã xem */
-  CHANNEL_ERROR: 'channel.error',         /* token kênh hỏng */
-  ACK: 'ack',                             /* phản hồi cho lệnh client gửi lên */
-}
-
-/* Lệnh client -> server */
-export const WS_COMMAND = {
-  AUTH: 'auth',                           /* khung đầu tiên sau khi mở kết nối */
-  SUBSCRIBE: 'subscribe',                 /* theo dõi 1 hội thoại đang mở */
-  UNSUBSCRIBE: 'unsubscribe',
-  TYPING: 'typing',
-  READ: 'read',
-  PING: 'ping',
-  SEND: 'send',                           /* dự phòng: gửi tin qua WS */
-}
-
 const PING_INTERVAL = 30_000
 const ACK_TIMEOUT = 10_000
 const MAX_BACKOFF = 30_000
@@ -198,6 +178,7 @@ const MAX_BACKOFF = 30_000
 /* Ping do chính client quản lý, KHÔNG đặt trong React component —
  * component unmount/remount sẽ làm hỏng chu kỳ ping. */
 export class OmniSocket {
+
   constructor({ url, token, bizId }) {
     this.url = url
     this.token = token
@@ -214,8 +195,10 @@ export class OmniSocket {
     this.authed = false
     this.seq = 0
 
-    /* Máy ngủ dậy hoặc mạng có lại: nối ngay thay vì đợi hết backoff.
-       Sale gập laptop buổi trưa, mở ra là phải thấy tin mới luôn. */
+    /** 
+     * Máy ngủ dậy hoặc mạng có lại: nối ngay thay vì đợi hết backoff. 
+     * Sale gập laptop buổi trưa, mở ra là phải thấy tin mới luôn. 
+     */
     this._onWake = () => {
       if (this.closedByUser) {
         return
@@ -226,10 +209,14 @@ export class OmniSocket {
       this.retry = 0
       this.connect()
     }
+
+    this._onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        this._onWake()
+      }
+    }
     window.addEventListener('online', this._onWake)
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') this._onWake()
-    })
+    document.addEventListener('visibilitychange', this._onVisible)
   }
 
   /* ---------------- vòng đời ---------------- */
@@ -262,7 +249,7 @@ export class OmniSocket {
     this.ws.onclose = () => {
       this.authed = false
       this._stopPing()
-      this._emit('__state', { connected: false })
+      this._emit(WS_EVENT.STATE, { connected: false })
       this._rejectAllPending(new Error('Mất kết nối'))
       if (!this.closedByUser) {
         this._scheduleReconnect()
@@ -275,6 +262,7 @@ export class OmniSocket {
   }
 
   close() {
+    document.removeEventListener('visibilitychange', this._onVisible)
     this.closedByUser = true
     this.authed = false
     window.removeEventListener('online', this._onWake)
@@ -290,8 +278,6 @@ export class OmniSocket {
   _scheduleReconnect() {
     this.retry += 1
     const base = Math.min(1000 * 2 ** (this.retry - 1), MAX_BACKOFF)
-    /* Jitter: nhiều tab cùng mất kết nối sẽ nối lại lệch nhau,
-       tránh đấm sập gateway đúng lúc nó vừa hồi. */
     const wait = base * (0.5 + Math.random() * 0.5)
     setTimeout(() => this.connect(), wait)
   }
@@ -325,18 +311,18 @@ export class OmniSocket {
   }
 
   _dispatch(payload) {
-    /* Xác thực xong mới coi là "đã kết nối" và mới đăng ký lại
-       các hội thoại đang mở. Báo connected sớm hơn sẽ hiện chấm
-       xanh trong lúc server còn chưa cho phép gì. */
+
     if (payload.event === WS_EVENT.READY) {
       this.authed = true
-      this._emit('__state', { connected: true })
-      this.subscribed.forEach((id) => this._raw(WS_COMMAND.SUBSCRIBE, { conversationId: id }))
+      this._emit(WS_EVENT.STATE, { connected: true })
+      this.subscribed.forEach((key) => {
+        const [topic, id] = key.split(':')
+        this._raw(WS_COMMAND.SUBSCRIBE, { topic, id })
+      })
       return
     }
 
-    /* Token hỏng: nối lại bao nhiêu lần cũng vô ích, chỉ tạo bão
-       kết nối. Dừng hẳn và báo lên để UI xử lý (thường là đăng nhập lại). */
+    /* Token hỏng. */
     if (payload.event === WS_EVENT.UNAUTHORIZED) {
       this.closedByUser = true
       this._emit(WS_EVENT.UNAUTHORIZED, payload.data)
@@ -405,76 +391,35 @@ export class OmniSocket {
   /* ---------------- API tiện dụng ---------------- */
 
   /* Chỉ theo dõi chi tiết hội thoại đang mở. Danh sách bên trái
-   * luôn nhận được message.new ở mức tóm tắt, không cần subscribe. */
-  subscribe(conversationId) {
-    if (this.subscribed.has(conversationId)) {
+   * luôn nhận được message.new ở mức tóm tắt, không cần subscribe.
+  */
+  subscribe(topic, id) {
+    const key = `${topic}:${id}`
+    if (this.subscribed.has(key)) {
       return
     }
-    this.subscribed.add(conversationId)
-    /* Chưa authed thì bỏ qua — onready sẽ đăng ký lại cả Set */
+    this.subscribed.add(key)
     if (this.authed) {
-      this.emit(WS_COMMAND.SUBSCRIBE, { conversationId })
+      this.emit(WS_COMMAND.SUBSCRIBE, { topic, id })
     }
   }
 
-  unsubscribe(conversationId) {
-    if (!this.subscribed.delete(conversationId)) {
+  unsubscribe(topic, id) {
+    const key = `${topic}:${id}`
+    if (!this.subscribed.delete(key)) {
       return
     }
-    this.emit(WS_COMMAND.UNSUBSCRIBE, { conversationId })
+    this.emit(WS_COMMAND.UNSUBSCRIBE, { topic, id })
   }
 
+  /* Helper riêng của omni, giữ ở đây cho gọn lời gọi */
   sendTyping(conversationId) {
-    this.emit(WS_COMMAND.TYPING, { conversationId })
+    this.emit(WS_COMMAND.OMNI_TYPING, { conversationId })
   }
 
   markRead(conversationId, lastMessageId) {
-    this.emit(WS_COMMAND.READ, { conversationId, lastMessageId })
+    this.emit(WS_COMMAND.OMNI_READ, { conversationId, lastMessageId })
   }
-}
-
-/* ======================================================================
- * Mock socket — cùng giao diện với OmniSocket
- * ==================================================================== */
-
-class MockSocket {
-  constructor() {
-    this.handlers = new Map()
-    this.stop = null
-    this.subscribed = new Set()
-  }
-
-  connect() {
-    this._emit('__state', { connected: true })
-    this.stop = startMockRealtime((payload) => {
-      this._emit(WS_EVENT.MESSAGE_NEW, payload)
-    })
-  }
-
-  close() {
-    this.stop?.()
-    this.stop = null
-    this._emit('__state', { connected: false })
-  }
-
-  on(event, fn) {
-    if (!this.handlers.has(event)) {
-      this.handlers.set(event, new Set())
-    }
-    this.handlers.get(event).add(fn)
-    return () => this.handlers.get(event)?.delete(fn)
-  }
-
-  _emit(event, payload) {
-    this.handlers.get(event)?.forEach((fn) => fn(payload))
-  }
-
-  emit() { return true }
-  request() { return Promise.resolve({}) }
-  subscribe(id) { this.subscribed.add(id) }
-  unsubscribe(id) { this.subscribed.delete(id) }
-  sendTyping() {}
-  markRead() {}
 }
 
 /* ======================================================================
@@ -482,16 +427,17 @@ class MockSocket {
  * ==================================================================== */
 
 let socketInstance = null
-export const getOmniSocket = ({ url, token, bizId } = {}) => {
+
+/* Kết nối dùng chung toàn app. KHÔNG màn hình nào được tự đóng. */
+export const getAppSocket = ({ url, token, bizId } = {}) => {
   if (!socketInstance) {
-    socketInstance = USE_MOCK_SOCKET
-      ? new MockSocket()
-      : new OmniSocket({ url: url || buildWsUrl(), token, bizId })
+    socketInstance = new OmniSocket({ url: url || buildWsUrl(), token, bizId })
   }
   return socketInstance
 }
 
-export const destroyOmniSocket = () => {
+/* Chỉ gọi khi ĐĂNG XUẤT hoặc đổi doanh nghiệp. */
+export const destroyAppSocket = () => {
   socketInstance?.close()
   socketInstance = null
 }
