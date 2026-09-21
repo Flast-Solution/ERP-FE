@@ -16,7 +16,6 @@ import {
   PlusOutlined,
   SaveOutlined,
 } from '@ant-design/icons'
-import { FormSelectAPI } from '@flast-erp/core/components'
 import { RequestUtils } from '@flast-erp/core/utils'
 import FormFileUpload from '@/containers/PreviewModal/FormFileUpload'
 import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard'
@@ -39,6 +38,7 @@ const createReceiptCode = () => {
 }
 
 const getArrayData = response => {
+  if (Array.isArray(response)) return response
   const data = response?.data?.data ?? response?.data
   if (Array.isArray(data)) return data
   if (Array.isArray(data?.embedded)) return data.embedded
@@ -51,12 +51,28 @@ const getDetailLabel = detail => {
   return [code, productName].filter(Boolean).join(' - ') || `Đơn con #${detail?.id}`
 }
 
+const isInitialCriterion = value => value === true || value === 1 || value === 'true'
+
+const getDefaultCriteria = evaluationList => evaluationList
+  .filter(item => isInitialCriterion(item?.initial))
+  .map(item => ({
+    criterionId: item.evaluationCriteriaId,
+    standard: item.standard ?? null,
+    measuredValue: null,
+    passed: false,
+    initial: true,
+  }))
+
 const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
   const [form] = Form.useForm()
   const [businessUsers, setBusinessUsers] = useState([])
   const [warehouses, setWarehouses] = useState([])
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [loadingWarehouses, setLoadingWarehouses] = useState(false)
+  const [evaluationCriteria, setEvaluationCriteria] = useState([])
+  const [loadingEvaluations, setLoadingEvaluations] = useState(false)
+  const [newEvaluationName, setNewEvaluationName] = useState('')
+  const [savingEvaluation, setSavingEvaluation] = useState(false)
   const [savingDefaultCriteria, setSavingDefaultCriteria] = useState(false)
   const { markDirty, requestClose } = useDrawerLeaveGuard({
     open,
@@ -85,6 +101,7 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
     let mounted = true
     setLoadingUsers(true)
     setLoadingWarehouses(true)
+    setLoadingEvaluations(true)
 
     RequestUtils.Get(USER_BUSINESS_API)
       .then(response => {
@@ -111,15 +128,24 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
     RequestUtils.Get(`/${EVALUATION_LIST_API}`)
       .then(response => {
         console.log('[OrderInbound][evaluation/list response]', response)
+        if (mounted) {
+          const evaluationList = getArrayData(response)
+          setEvaluationCriteria(evaluationList)
+          form.setFieldValue('criteria', getDefaultCriteria(evaluationList))
+        }
       })
       .catch(error => {
         console.log('[OrderInbound][evaluation/list error]', error)
+        if (mounted) setEvaluationCriteria([])
+      })
+      .finally(() => {
+        if (mounted) setLoadingEvaluations(false)
       })
 
     return () => {
       mounted = false
     }
-  }, [open])
+  }, [form, open])
 
   const handleValuesChange = changedValues => {
     markDirty()
@@ -152,8 +178,28 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
     console.log('[OrderInbound][submit payload]', payload)
   }
 
-  const handleSaveDefaultCriteria = async () => {
-    const evaluationList = form.getFieldValue('criteria') ?? []
+  const handleDefaultCriteriaChange = async (fieldIndex, checked) => {
+    const currentCriteria = form.getFieldValue('criteria') ?? []
+    const selectedCriterion = currentCriteria[fieldIndex]
+    if (!selectedCriterion?.criterionId) return
+
+    const nextCriteria = currentCriteria.map((item, index) => (
+      index === fieldIndex ? { ...item, initial: checked } : item
+    ))
+
+    form.setFieldValue('criteria', nextCriteria)
+    markDirty()
+
+    const evaluationList = evaluationCriteria.map(item => (
+      item.evaluationCriteriaId === selectedCriterion.criterionId
+        ? {
+            ...item,
+            standard: selectedCriterion.standard ?? item.standard ?? null,
+            initial: checked,
+          }
+        : { ...item, initial: Boolean(item.initial) }
+    ))
+    setEvaluationCriteria(evaluationList)
 
     setSavingDefaultCriteria(true)
     try {
@@ -161,6 +207,24 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
       console.log('[OrderInbound][evaluation/save-list response]', response)
     } finally {
       setSavingDefaultCriteria(false)
+    }
+  }
+
+  const handleSaveEvaluation = async () => {
+    const name = newEvaluationName.trim()
+    if (!name) return
+
+    setSavingEvaluation(true)
+    try {
+      const response = await RequestUtils.Post(`/${EVALUATION_SAVE_API}`, { name })
+      console.log('[OrderInbound][evaluation/save response]', response)
+      setNewEvaluationName('')
+
+      const listResponse = await RequestUtils.Get(`/${EVALUATION_LIST_API}`)
+      console.log('[OrderInbound][evaluation/list response]', listResponse)
+      setEvaluationCriteria(getArrayData(listResponse))
+    } finally {
+      setSavingEvaluation(false)
     }
   }
 
@@ -251,46 +315,73 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
               {(fields, { add, remove }) => (
                 <div className="order-inbound-check-table">
                   <div className="order-inbound-check-row order-inbound-check-row--head">
-                    <span>STT</span><span>Chỉ tiêu</span><span>Tiêu chuẩn</span><span>Kết quả đo</span><span>Đạt</span><span />
+                    <span>STT</span><span>Chỉ tiêu</span><span>Tiêu chuẩn</span><span>Kết quả đo</span><span>Đạt</span><span>Chỉ tiêu mặc định</span><span />
                   </div>
                   {fields.map((field, index) => (
                     <div className="order-inbound-check-row" key={field.key}>
                       <span className="order-inbound-check-index">{String(index + 1).padStart(2, '0')}</span>
-                      <FormSelectAPI
-                        showSearch
-                        allowClear
-                        name={[field.name, 'criterionId']}
-                        apiPath={EVALUATION_LIST_API}
-                        apiAddNewItem={EVALUATION_SAVE_API}
-                        isFetchOnMount={false}
-                        onData={data => {
-                          console.log('[OrderInbound][evaluation/list response data]', data)
-                          return []
-                        }}
-                        valueProp="id"
-                        titleProp="name"
-                        searchKey="name"
-                        placeholder="Chọn hoặc thêm chỉ tiêu"
-                      />
+                      <Form.Item name={[field.name, 'criterionId']}>
+                        <Select
+                          showSearch
+                          allowClear
+                          loading={loadingEvaluations}
+                          optionFilterProp="label"
+                          placeholder="Chọn hoặc thêm chỉ tiêu"
+                          options={evaluationCriteria.map(item => ({
+                            value: item.evaluationCriteriaId,
+                            label: item.name || `Chỉ tiêu #${item.evaluationCriteriaId}`,
+                          }))}
+                          onChange={value => {
+                            const criterion = evaluationCriteria.find(
+                              item => item.evaluationCriteriaId === value
+                            )
+                            form.setFieldValue(
+                              ['criteria', field.name, 'standard'],
+                              criterion?.standard ?? null
+                            )
+                            form.setFieldValue(
+                              ['criteria', field.name, 'initial'],
+                              Boolean(criterion?.initial)
+                            )
+                          }}
+                          dropdownRender={menu => (
+                            <>
+                              {menu}
+                              <div style={{ display: 'flex', gap: 8, padding: 8 }}>
+                                <Input
+                                  value={newEvaluationName}
+                                  placeholder="Tên chỉ tiêu mới"
+                                  onChange={event => setNewEvaluationName(event.target.value)}
+                                  onKeyDown={event => event.stopPropagation()}
+                                />
+                                <Button
+                                  type="primary"
+                                  icon={<PlusOutlined />}
+                                  loading={savingEvaluation}
+                                  onClick={handleSaveEvaluation}
+                                >
+                                  Thêm
+                                </Button>
+                              </div>
+                            </>
+                          )}
+                        />
+                      </Form.Item>
                       <Form.Item name={[field.name, 'standard']}><Input placeholder="Nhập tiêu chuẩn" /></Form.Item>
                       <Form.Item name={[field.name, 'measuredValue']}><Input placeholder="Nhập kết quả đo" /></Form.Item>
                       <Form.Item name={[field.name, 'passed']} valuePropName="checked"><Checkbox /></Form.Item>
+                      <Checkbox
+                        checked={Boolean(criteria[field.name]?.initial)}
+                        disabled={savingDefaultCriteria || !criteria[field.name]?.criterionId}
+                        aria-label="Chỉ tiêu mặc định"
+                        onChange={event => handleDefaultCriteriaChange(field.name, event.target.checked)}
+                      />
                       <Button type="text" danger icon={<DeleteOutlined />} aria-label="Xóa chỉ tiêu" onClick={() => remove(field.name)} />
                     </div>
                   ))}
-                  <div>
-                    <Button className="order-inbound-add-row" type="text" icon={<PlusOutlined />} onClick={() => add({ passed: false })}>
-                      Thêm chỉ tiêu
-                    </Button>
-                    <Button
-                      type="text"
-                      icon={<SaveOutlined />}
-                      loading={savingDefaultCriteria}
-                      onClick={handleSaveDefaultCriteria}
-                    >
-                      Lưu chỉ tiêu mặc định
-                    </Button>
-                  </div>
+                  <Button className="order-inbound-add-row" type="text" icon={<PlusOutlined />} onClick={() => add({ passed: false, initial: false })}>
+                    Thêm chỉ tiêu
+                  </Button>
                 </div>
               )}
             </Form.List>
