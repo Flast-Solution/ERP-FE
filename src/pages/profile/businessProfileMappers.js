@@ -17,13 +17,16 @@ export const unwrapBusinessInfo = response => {
   return info && typeof info === 'object' && !Array.isArray(info) ? info : null
 }
 
-export const mapBusinessInfoToForm = (businessInfo = {}) => ({
-  displayName: businessInfo.name ?? '',
-  email: businessInfo.email ?? '',
-  phone: businessInfo.hotline ?? '',
-  address: businessInfo.address ?? '',
-  code: businessInfo.code ?? '',
-})
+export const mapBusinessInfoToForm = (businessInfo) => {
+  const info = businessInfo ?? {}
+  return {
+    displayName: info.name ?? '',
+    email: info.email ?? '',
+    phone: info.hotline ?? '',
+    address: info.address ?? '',
+    code: info.code ?? '',
+  }
+}
 
 export const normalizeCertificatePaths = certificate => (
   Array.isArray(certificate) ? certificate.filter(Boolean) : []
