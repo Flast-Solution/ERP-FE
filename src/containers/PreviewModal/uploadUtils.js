@@ -59,21 +59,24 @@ export const buildUploadViewUrl = (filename, apiBaseUrl = axios.defaults.baseURL
   const normalizedPath = normalizeUploadPath(filename)
   if (!normalizedPath) return ''
   const baseUrl = String(apiBaseUrl).replace(/\/+$/, '')
-  return `${baseUrl}/upload/folder/view/${normalizedPath}`
+  return `${baseUrl}/erp/folder/view/${normalizedPath}`
 }
 
 const normalizeUploadViewUrl = value => {
   const url = String(value || '').trim()
-  if (!url || !/\/upload\/folder\/view(?:[/?#]|$)/i.test(url)) return url
+  if (!url || !/\/(?:upload|erp)\/folder\/view(?:[/?#]|$)/i.test(url)) return url
 
   const absolute = /^https?:\/\//i.test(url)
   try {
     const parsedUrl = new URL(url, 'http://upload.local')
-    const marker = '/upload/folder/view'
-    const markerIndex = parsedUrl.pathname.toLowerCase().indexOf(marker)
+    const matchedMarker = parsedUrl.pathname.match(/\/(?:upload|erp)\/folder\/view/i)?.[0]
+    const marker = '/erp/folder/view'
+    const markerIndex = matchedMarker
+      ? parsedUrl.pathname.toLowerCase().indexOf(matchedMarker.toLowerCase())
+      : -1
     if (markerIndex < 0) return url
 
-    const pathFilename = parsedUrl.pathname.slice(markerIndex + marker.length).replace(/^\/+/, '')
+    const pathFilename = parsedUrl.pathname.slice(markerIndex + matchedMarker.length).replace(/^\/+/, '')
     const filename = parsedUrl.searchParams.get('filename') || pathFilename
     const normalizedPath = normalizeUploadPath(filename)
     if (!normalizedPath) return url

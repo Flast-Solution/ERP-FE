@@ -231,7 +231,7 @@ const ProfileInfoTab = () => {
       const formData = new FormData()
       formData.append('files', file, normalizeUploadFileName(file?.name) || file?.name)
       formData.append('folder', 'test')
-      const response = await axios.post('/upload/folder/multiple', formData, {
+      const response = await axios.post('/erp/folder/multiple', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
       const uploaded = extractUploadItems(response.data)
@@ -273,7 +273,7 @@ const ProfileInfoTab = () => {
       const formData = new FormData()
       formData.append('files', file, normalizeUploadFileName(file?.name) || file?.name)
       formData.append('folder', 'test')
-      const response = await axios.post('/upload/folder/multiple', formData, {
+      const response = await axios.post('/erp/folder/multiple', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
       const uploaded = extractUploadItems(response.data)

@@ -30,7 +30,7 @@
                         }
                     ],
                     "buttonText": "Dùng thử",
-                    "logoUrl": "http://localhost:3000/api/upload/folder/view/landing/e83ac6f0-ab44-453b-aa93-cba2b07e6967.png",
+                    "logoUrl": "http://localhost:3000/api/erp/folder/view/landing/e83ac6f0-ab44-453b-aa93-cba2b07e6967.png",
                     "logoAlt": "",
                     "actions": [
                         {
@@ -47,13 +47,13 @@
                 "props": {
                     "images": [
                         {
-                            "url": "http://localhost:3000/api/upload/folder/view/landing/banner/d50219f9-ce73-48e4-ab20-6788ef28494f.png",
+                            "url": "http://localhost:3000/api/erp/folder/view/landing/banner/d50219f9-ce73-48e4-ab20-6788ef28494f.png",
                             "alt": "Gemini_Generated_Image_1xd36o1xd36o1xd3.png",
                             "link": "",
                             "openInNewTab": false
                         },
                         {
-                            "url": "http://localhost:3000/api/upload/folder/view/landing/banner/a3b2e71b-1dbd-42ae-86a5-d63ca706f29b.png",
+                            "url": "http://localhost:3000/api/erp/folder/view/landing/banner/a3b2e71b-1dbd-42ae-86a5-d63ca706f29b.png",
                             "alt": "Gemini_Generated_Image_8q2he38q2he38q2h.png",
                             "link": "",
                             "openInNewTab": false
@@ -69,7 +69,7 @@
                 "id": "image-bdeb906f-c386-4f14-8abc-57aedb3d54e2",
                 "type": "image",
                 "props": {
-                    "src": "http://localhost:3000/api/upload/folder/view/landing/image/803a732a-4120-49b9-a110-9ff6e0498884.png",
+                    "src": "http://localhost:3000/api/erp/folder/view/landing/image/803a732a-4120-49b9-a110-9ff6e0498884.png",
                     "alt": "Hình ảnh",
                     "caption": "",
                     "radius": "12"

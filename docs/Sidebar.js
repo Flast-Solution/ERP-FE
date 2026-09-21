@@ -68,7 +68,7 @@ const resolveLogoUrl = (logo) => {
     .map((segment) => encodeURIComponent(segment.trim().replace(/\s+/g, '-')))
     .filter(Boolean)
     .join('/');
-  return `${baseUrl}/upload/folder/view/${normalizedPath}`;
+  return `${baseUrl}/erp/folder/view/${normalizedPath}`;
 };
 
 function SideBar() {

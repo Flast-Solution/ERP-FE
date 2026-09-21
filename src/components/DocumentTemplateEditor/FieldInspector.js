@@ -151,7 +151,7 @@ const DocumentImageUploader = ({ node, onChange }) => {
       formData.append('folder', node.type === COMPONENT_TYPES.LOGO
         ? 'document-template/logo'
         : 'document-template/image')
-      const response = await axios.post('/upload/folder/multiple', formData, {
+      const response = await axios.post('/erp/folder/multiple', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
       const uploaded = extractUploadItems(response.data)[0]
