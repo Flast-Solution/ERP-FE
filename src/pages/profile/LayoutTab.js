@@ -45,8 +45,10 @@ import {
   LayoutBodyAction,
 } from './styles'
 import {
+  extractUploadItems,
   normalizeUploadFileName,
-  resolveUploadUrl as resolveSharedUploadUrl,
+  resolveUploadFilename,
+  resolveUploadUrl,
 } from '@/containers/PreviewModal/uploadUtils'
 
 const LAYOUT_METHOD_OPTIONS = [
@@ -56,45 +58,13 @@ const LAYOUT_METHOD_OPTIONS = [
   { value: 'DELETE', label: 'DELETE' },
 ]
 
-const extractUploadItems = (payload) => {
-  if (Array.isArray(payload)) return payload
-  if (Array.isArray(payload?.data)) return payload.data
-  if (Array.isArray(payload?.data?.files)) return payload.data.files
-  if (Array.isArray(payload?.data?.urls)) return payload.data.urls
-  if (Array.isArray(payload?.files)) return payload.files
-  if (Array.isArray(payload?.urls)) return payload.urls
-  if (Array.isArray(payload?.fileNames)) return payload.fileNames
-  if (Array.isArray(payload?.filenames)) return payload.filenames
-  if (Array.isArray(payload?.paths)) return payload.paths
-  return payload ? [payload] : []
-}
-
-const resolveUploadFilename = (item) => {
-  if (typeof item === 'string') return item
-  return item?.filename
-    ?? item?.file_name
-    ?? item?.fileName
-    ?? item?.file_name_path
-    ?? item?.path
-    ?? item?.fullPath
-    ?? item?.full_path
-    ?? item?.url
-    ?? item?.fileUrl
-    ?? item?.file_url
-    ?? ''
-}
-
-const resolveUploadUrl = (item) => {
-  return resolveSharedUploadUrl(item)
-}
-
 const toCertificateFile = (item, index, sourceFile = {}) => {
   if (item?.uid && item?.status) return item
   const filename = resolveUploadFilename(item)
   const url = resolveUploadUrl(item)
   return {
-    uid: sourceFile.uid ?? item?.id ?? filename ?? url ?? `certificate-file-${index}`,
-    name: sourceFile.name ?? item?.name ?? filename?.split('/').pop() ?? `file-${index + 1}`,
+    uid: sourceFile.uid ?? filename ?? url ?? `certificate-file-${index}`,
+    name: sourceFile.name ?? filename?.split('/').pop() ?? `file-${index + 1}`,
     status: 'done',
     url,
     response: item,
@@ -157,12 +127,9 @@ const LayoutTab = () => {
 
   const handleLayoutFilesChange = (fileList = []) => {
     const nextFiles = fileList.flatMap((file, index) => {
-      if (file.status === 'done') {
-        return extractUploadItems(file.response ?? file).map((item, itemIndex) =>
-          toCertificateFile(item, `${index}-${itemIndex}`, file)
-        )
-      }
-      return [file]
+      if (file.status !== 'done') return [file]
+      const path = resolveUploadFilename(file)
+      return path ? [toCertificateFile(path, index, file)] : [file]
     })
     setLayoutFiles(nextFiles)
   }

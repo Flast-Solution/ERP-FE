@@ -7,6 +7,7 @@ import {
   extractUploadItems,
   mapBusinessInfoToForm,
   mapCertificatesFromBusinessInfo,
+  resolveUploadFilename,
   resolveUploadUrl,
   toCertificateFile,
   unwrapBusinessInfo,
@@ -25,6 +26,7 @@ const useBusinessProfile = ({ form, profile }) => {
   const [businessInfo, setBusinessInfo] = useState(null)
   const [logoFile, setLogoFile] = useState(null)
   const [certificates, setCertificates] = useState([])
+  const [uploadingCertificateIds, setUploadingCertificateIds] = useState([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [loadError, setLoadError] = useState(null)
@@ -128,15 +130,41 @@ const useBusinessProfile = ({ form, profile }) => {
     await uploadFile(request, 'Upload logo thất bại')
   }, [uploadFile])
 
-  const uploadCertificate = useCallback(
-    request => uploadFile(request, 'Upload chứng chỉ thất bại'),
-    [uploadFile],
-  )
+  const uploadCertificateBatch = useCallback(async (certificateId, files = []) => {
+    const selectedFiles = Array.from(files).filter(Boolean)
+    if (!selectedFiles.length) return
+
+    setUploadingCertificateIds(ids => [...new Set([...ids, certificateId])])
+    try {
+      const payload = await uploadBusinessFiles(selectedFiles)
+      const uploaded = extractUploadItems(payload)
+      if (!uploaded.length) {
+        throw new Error('API upload không trả về tệp')
+      }
+
+      const uploadedFiles = uploaded.map((item, index) => (
+        toCertificateFile(
+          item,
+          `${certificateId}-${Date.now()}-${index}`,
+          selectedFiles[index],
+        )
+      ))
+      setCertificates(items => items.map(item => (
+        item.id === certificateId
+          ? { ...item, files: [...(item.files ?? []), ...uploadedFiles] }
+          : item
+      )))
+    } catch (error) {
+      message.error(error?.message || 'Upload chứng chỉ thất bại')
+    } finally {
+      setUploadingCertificateIds(ids => ids.filter(id => id !== certificateId))
+    }
+  }, [])
 
   const changeLogo = useCallback(({ file }) => {
     if (file.status !== 'done') return
-    const uploaded = extractUploadItems(file.response ?? file)
-    setLogoFile(toCertificateFile(uploaded[0] ?? file, 0, file))
+    const path = resolveUploadFilename(file)
+    setLogoFile(toCertificateFile(path || file, 0, file))
   }, [])
 
   const reset = useCallback(() => {
@@ -198,12 +226,13 @@ const useBusinessProfile = ({ form, profile }) => {
     },
     certificates: {
       items: certificates,
+      uploadingIds: uploadingCertificateIds,
       add: addCertificate,
       remove: removeCertificate,
       updateName: updateCertificateName,
       updateFiles: updateCertificateFiles,
       removeFile: removeCertificateFile,
-      upload: uploadCertificate,
+      uploadBatch: uploadCertificateBatch,
     },
     reset,
     save,
