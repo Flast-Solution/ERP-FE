@@ -1,6 +1,6 @@
 import React from 'react'
 import { Button, Dropdown, Space, Tooltip } from 'antd'
-import { ApartmentOutlined, EditFilled, EyeOutlined } from '@ant-design/icons'
+import { ApartmentOutlined, EditFilled, EyeOutlined, InboxOutlined } from '@ant-design/icons'
 import { clonePlainData } from '../utils/orderMappers'
 
 const OrderActions = ({
@@ -21,6 +21,8 @@ const OrderActions = ({
   canViewQuotation,
   canAttachWorkflow,
   canViewWorkflow,
+  canCreateReceipt,
+  openOrderInboundDrawer,
 }) => {
   const workflowDetails = (record?.details ?? []).filter(detail => (
     Array.isArray(detail?.workflowInstances) && detail.workflowInstances.length > 0
@@ -166,6 +168,20 @@ const OrderActions = ({
         >
           <EditFilled />
         </Button>
+      )}
+      {canCreateReceipt && record.type === 'order' && (
+        <Tooltip title="Nhập kho theo đơn">
+          <Button
+            size="small"
+            icon={<InboxOutlined />}
+            aria-label="Nhập kho theo đơn"
+            style={{ color: '#389e0d', borderColor: '#b7eb8f' }}
+            onClick={(event) => {
+              event.stopPropagation()
+              openOrderInboundDrawer(record)
+            }}
+          />
+        </Tooltip>
       )}
       {extraActions?.filter(action => action.visible?.(record) !== false).map((action, index) => {
         const { visible, ...buttonAction } = action

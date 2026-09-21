@@ -69,6 +69,7 @@ const CreateOrder = ({
   onLoadMoreWaitingOrders,
   onNext,
   onCancel,
+  onValuesChange,
   submitting = false,
 }) => {
   const readOnly = mode === 'view';
@@ -139,6 +140,7 @@ const CreateOrder = ({
     });
 
   const handleOrderChange = (value) => {
+    onValuesChange?.();
     const order = waitingOrders.find(item => String(item.id) === String(value)) ?? null;
     setSelectedOrder(order);
     setProductionRows([]);
@@ -155,11 +157,13 @@ const CreateOrder = ({
       return;
     }
     setProductionRows(current => [...current, createProductionRow()]);
+    onValuesChange?.();
   };
 
   const selectProductForRow = (rowKey, detailId) => {
     const product = (selectedOrder?.details ?? []).find(detail => String(detail.id) === String(detailId));
     if (!product) return;
+    onValuesChange?.();
 
     setProductionRows(current => current.map(row => (
       row.key === rowKey ? { ...row, product } : row
@@ -175,6 +179,7 @@ const CreateOrder = ({
   };
 
   const removeProductionRow = (rowKey) => {
+    onValuesChange?.();
     const removedRow = productionRows.find(row => row.key === rowKey);
     if (removedRow?.product?.id != null) {
       form.setFieldValue(['productDetails', String(removedRow.product.id)], undefined);
@@ -238,6 +243,7 @@ const CreateOrder = ({
             manufactureStatus: initialValues?.manufactureStatus ?? 0,
           }}
           onFinish={handleSubmit}
+          onValuesChange={onValuesChange}
         >
           <FormHidden name="productionOrderCode" />
           <div className="body production-create-body">

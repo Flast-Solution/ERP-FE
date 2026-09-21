@@ -24,7 +24,7 @@ import { Table } from 'antd';
 import { arrayNotEmpty } from '@flast-erp/core/utils';
 import { ShowSkuDetail } from '@/containers/Product/SkuView'
 
-const InStockTable = ({ data, onChangeSelected }) => {
+const InStockTable = ({ data = [], onChangeSelected, showWhenEmpty = false }) => {
 
   const [selectedRowKey, setSelectedRowKey] = useState(null);
   const onChangeSelectedRow = (key, item) => {
@@ -85,7 +85,7 @@ const InStockTable = ({ data, onChangeSelected }) => {
     }
   };
 
-  return arrayNotEmpty(data) ? (
+  return showWhenEmpty || arrayNotEmpty(data) ? (
     <Table
       bordered
       scroll={{ x: 750 }}

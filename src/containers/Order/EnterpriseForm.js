@@ -94,6 +94,7 @@ const EnterpriseForm = ({
   initialValues = EMPTY_ENTERPRISE,
   onCancel,
   onSuccess,
+  onValuesChange,
 }) => {
 
   const [ form ] = Form.useForm();
@@ -106,6 +107,7 @@ const EnterpriseForm = ({
     multiple: true,
     beforeUpload: (file) => {
       setMultiPathFile(f => [...f, file]);
+      onValuesChange?.();
       return false;
     },
     showUploadList: false,
@@ -115,6 +117,7 @@ const EnterpriseForm = ({
   const onRemoveMultiPathFile = (name) => {
     let files = multiPathFile.filter(i => i.name !== name);
     setMultiPathFile(files);
+    onValuesChange?.();
   }
 
   useEffectAsync(async () => {
@@ -201,7 +204,12 @@ const EnterpriseForm = ({
   }, [customerOrder]);
 
   return (
-    <Form form={form} layout="vertical" onFinish={onSubmitForm}>
+    <Form
+      form={form}
+      layout="vertical"
+      onFinish={onSubmitForm}
+      onValuesChange={onValuesChange}
+    >
       <Row gutter={16}>
         <Col span={24}>
           <FormHidden name={"id"} />

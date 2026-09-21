@@ -502,6 +502,7 @@ const BanHangPage = ({
       width: 150,
       render: (value, record) => (
         <Input
+          size="small"
           value={value}
           maxLength={100}
           placeholder="Nhập số đơn"
@@ -541,6 +542,7 @@ const BanHangPage = ({
       }),
       render: (_, __, index) => index === 0 ? (
         <InputNumber
+          size="small"
           min={0}
           value={shippingCost}
           onChange={value => {
@@ -574,6 +576,7 @@ const BanHangPage = ({
       align: 'right',
       render: (_, record) => (
         <InputNumber
+          size="small"
           min={0}
           max={99.99}
           value={Number(record?.profit ?? 0)}
@@ -645,6 +648,7 @@ const BanHangPage = ({
         const dateValue = parseDayQuote(value);
         return (
           <DatePicker
+            size="small"
             allowClear
             value={dateValue?.isValid() ? dateValue : null}
             format="DD/MM/YYYY"
@@ -813,6 +817,7 @@ const BanHangPage = ({
       if (column.dataIndex === 'warehouse') {
         return (
           <Select
+            size="small"
             placeholder="Chọn kho"
             disabled={arrayEmpty(record?.warehouseOptions)}
             value={text}
@@ -828,6 +833,7 @@ const BanHangPage = ({
       if (column.dataIndex === 'warrantyPeriod') {
         return (
           <Select
+            size="small"
             placeholder="Chọn bảo hành"
             disabled={!record.editable}
             value={text}
@@ -843,6 +849,7 @@ const BanHangPage = ({
       if (column.dataIndex === 'quantity') {
         return (
           <InputNumber
+            size="small"
             min={1}
             value={text}
             onChange={value => handleChange(record.key, column.dataIndex, value)}
@@ -855,6 +862,7 @@ const BanHangPage = ({
       }
       return (
         <InputNumber
+          size="small"
           min={0}
           max={column.dataIndex === 'profit' ? 99.99 : undefined}
           value={text}
@@ -976,23 +984,6 @@ const BanHangPage = ({
 
   return (
     <>
-      {customerOrder?.id ? (
-        <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Text strong>
-            {customerOrder.type === 'order' ? 'Mã đơn hàng' : 'Mã cơ hội'}
-          </Text>
-          <Input
-            value={customerOrder.code ?? ''}
-            maxLength={100}
-            placeholder="Nhập mã"
-            onChange={event => setCustomerOrder(current => ({
-              ...current,
-              code: event.target.value
-            }))}
-            style={{ width: 320 }}
-          />
-        </div>
-      ) : null}
       <OpportunityTable
         bordered
         scroll={{ x: 2700 }}
@@ -1025,7 +1016,6 @@ const BanHangPage = ({
           <Table.Summary.Row>
             <Table.Summary.Cell index={0} colSpan={3}>
               <Space wrap size={12}>
-                <Text strong>Tổng cộng</Text>
                 <Space size={6}>
                   <Text>Loại tiền</Text>
                   <Select
@@ -1108,9 +1098,27 @@ const BanHangPage = ({
         </div>
         <div>
           {isOrder &&
-            <InvoiceTable
-              order={customerOrder}
-            />
+            <div style={{ minWidth: 430 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <Text strong style={{ whiteSpace: 'nowrap' }}>
+                  {customerOrder.type === 'order' ? 'Mã đơn hàng' : 'Mã cơ hội'}
+                </Text>
+                <Input
+                  size="small"
+                  value={customerOrder.code ?? ''}
+                  maxLength={100}
+                  placeholder="Nhập mã"
+                  onChange={event => setCustomerOrder(current => ({
+                    ...current,
+                    code: event.target.value
+                  }))}
+                  style={{ flex: 1 }}
+                />
+              </div>
+              <InvoiceTable
+                order={customerOrder}
+              />
+            </div>
           }
         </div>
       </div>

@@ -9,6 +9,7 @@ import {
   RemoteFormHost,
   useRemoteForm,
 } from '@/pages/order/progress/RemoteForm'
+import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard'
 
 const FORM_TEMPLATE_DETAIL_API = '/workflow/forms/template/find-id'
 
@@ -142,11 +143,20 @@ const HashFormDrawer = () => {
     setTemplateError('')
     removeFormHash()
   }
+  const {
+    markClean,
+    markDirty,
+    requestClose,
+  } = useDrawerLeaveGuard({
+    open,
+    onClose: closeOverlay,
+    resetKey: formId,
+  })
 
   const remoteRenderKey = `${formId ?? 'form'}-${remoteVersionKey || remoteEntry}`
 
   const overlayContent = (
-    <>
+    <div onChangeCapture={markDirty} onInputCapture={markDirty}>
       {loadingTemplate && (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}>
           <Spin tip="Đang tải cấu hình form..." />
@@ -188,10 +198,12 @@ const HashFormDrawer = () => {
             defaultValues={{}}
             hideTitle
             showTitle={false}
+            onSaved={markClean}
+            onSubmitSuccess={markClean}
           />
         </RemoteFormBoundary>
       )}
-    </>
+    </div>
   )
 
   const title = template?.name || (formId ? `Form #${formId}` : 'Biểu mẫu')
@@ -204,7 +216,7 @@ const HashFormDrawer = () => {
         width="min(960px, calc(100vw - 32px))"
         footer={null}
         destroyOnHidden
-        onCancel={closeOverlay}
+        onCancel={requestClose}
       >
         {overlayContent}
       </Modal>
@@ -217,7 +229,7 @@ const HashFormDrawer = () => {
       open={open && requestedDisplayMode === 'DRAWER'}
       width="min(960px, 100vw)"
       destroyOnHidden
-      onClose={closeOverlay}
+      onClose={requestClose}
     >
       {overlayContent}
     </Drawer>

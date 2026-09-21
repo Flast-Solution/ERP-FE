@@ -48,7 +48,6 @@ const ProductionOrderList = () => {
     openFlow,
     openExistingOrder,
     closeFlow,
-    cancelOrder,
     goToConfirmation,
     backToCreate,
     finishFlow,
@@ -115,7 +114,6 @@ const ProductionOrderList = () => {
         onSearchWaitingOrders={searchWaitingOrders}
         onLoadMoreWaitingOrders={loadMoreWaitingOrders}
         onClose={closeFlow}
-        onCancelOrder={cancelOrder}
         onNext={goToConfirmation}
         onBack={backToCreate}
         onConfirm={finishFlow}

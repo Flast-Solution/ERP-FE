@@ -11,6 +11,7 @@ import {
 } from '@flast-erp/core/components';
 import dayjs from 'dayjs';
 import useUserOptions from '../hooks/useUserOptions';
+import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard';
 import { CancelButton, DeleteButton, DrawerCloseButton, DrawerEyebrow, DrawerFooter, DrawerForm, DrawerHeading, DrawerOwner, DrawerTitle, FooterActions, FormGrid, FullSegmented, GuardText, KpiDrawer, PeriodHint, SaveButton } from './IndicatorDrawer.styles';
 
 const KPI_TYPE_OPTIONS = [
@@ -32,6 +33,16 @@ const IndicatorDrawer = ({ drawer, canDelete = false, canSave = false, onClose, 
   const idUserName = userOptions.find(
     (option) => String(option.value) === String(idUser),
   )?.label || employee?.fullName || 'Chưa chọn';
+  const {
+    closeAfterSubmit,
+    markDirty,
+    requestClose,
+  } = useDrawerLeaveGuard({
+    open: drawer.open,
+    onClose,
+    enabled: canSave,
+    resetKey: `${drawer.mode}-${indicator?.id ?? 'create'}`,
+  });
 
   useEffect(() => {
     if (!drawer.open) return;
@@ -110,7 +121,7 @@ const IndicatorDrawer = ({ drawer, canDelete = false, canSave = false, onClose, 
 
       message.success(response?.message || 'Đã lưu chỉ tiêu KPI.');
       onSaved?.(response?.data);
-      onClose();
+      closeAfterSubmit();
     } catch (requestError) {
       console.error('[KPI] Không thể lưu chỉ tiêu KPI:', requestError);
       message.error(
@@ -243,10 +254,10 @@ const IndicatorDrawer = ({ drawer, canDelete = false, canSave = false, onClose, 
     <KpiDrawer
       open={drawer.open}
       width="min(620px, 100vw)"
-      onClose={onClose}
+      onClose={requestClose}
       closable={false}
       destroyOnClose
-      extra={<DrawerCloseButton type="text" icon={<CloseOutlined />} onClick={onClose} />}
+      extra={<DrawerCloseButton type="text" icon={<CloseOutlined />} onClick={requestClose} />}
       title={(
         <DrawerHeading>
           <DrawerEyebrow>{isEdit ? 'Sửa chỉ tiêu' : 'Chỉ tiêu mới'}</DrawerEyebrow>
@@ -257,12 +268,12 @@ const IndicatorDrawer = ({ drawer, canDelete = false, canSave = false, onClose, 
       footer={(
         <DrawerFooter $edit={isEdit}>
           {isEdit && canDelete && (
-            <DeleteButton danger icon={<DeleteOutlined />} onClick={onClose}>
+            <DeleteButton danger icon={<DeleteOutlined />} onClick={requestClose}>
               Xóa chỉ tiêu
             </DeleteButton>
           )}
           <FooterActions>
-            <CancelButton type="text" onClick={onClose}>Hủy</CancelButton>
+            <CancelButton type="text" onClick={requestClose}>Hủy</CancelButton>
             {canSave ? <SaveButton
               htmlType="button"
               type="primary"
@@ -277,7 +288,7 @@ const IndicatorDrawer = ({ drawer, canDelete = false, canSave = false, onClose, 
         </DrawerFooter>
       )}
     >
-      <DrawerForm form={form} layout="vertical" requiredMark>
+      <DrawerForm form={form} layout="vertical" requiredMark onValuesChange={markDirty}>
         <FormGrid>
           <FormInput
             label="Mã chỉ tiêu"

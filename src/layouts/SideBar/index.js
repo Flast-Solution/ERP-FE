@@ -54,20 +54,21 @@ import {
   SafetyCertificateOutlined
 } from '@ant-design/icons';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import axios from 'axios';
 import { useCollapseSidebar } from '@flast-erp/core/hooks';
 import { RequestUtils } from '@flast-erp/core/utils';
 import { useTranslation } from 'react-i18next';
 import { Link } from "react-router-dom";
 import SideBarStyles from './styles';
 import useGetMe from '@/hooks/useGetMe';
+import { resolveUploadUrl } from '@/containers/PreviewModal/uploadUtils';
 import {
   BUSINESS_UPDATED_EVENT,
   canManagePermissions,
   hasClientPermission,
   isSuperAdmin,
 } from '@/utils/authUtils';
-import { GATEWAY } from '@/configs';
 
 function getItem(label, key, icon, children, permission) {
   return { key, icon, children, label, permission };
@@ -91,18 +92,10 @@ const iconSize = { fontSize: 18 };
 
 const USER_BUSINESS_INFO_API = '/auth/user-bussiness/find-info';
 
-const isAbsoluteUrl = (value = '') =>
-  /^https?:\/\//i.test(String(value)) || String(value).startsWith('/api/');
-
-const resolveLogoUrl = (logo) => {
-  if (!logo) {
-    return '';
-  }
-  if (isAbsoluteUrl(logo)) {
-    return logo;
-  }
-  return `${GATEWAY}/upload/folder/view/${encodeURIComponent(logo)}`;
-};
+const resolveLogoUrl = (logo) => resolveUploadUrl(logo);
+const resolveAbsoluteUrl = (url) => (
+  /^https?:\/\//i.test(url) ? url : new URL(url, window.location.origin).toString()
+);
 
 function SideBar() {
 
@@ -110,13 +103,57 @@ function SideBar() {
   const { isCollapseSidebar: collapsed, toggleCollapse } = useCollapseSidebar();
   const { user } = useGetMe();
   const [ businessLogo, setBusinessLogo ] = useState('');
+  const businessLogoObjectUrlRef = useRef('');
+  const businessLogoRequestRef = useRef(0);
 
   const canManageBusinessUnits = isSuperAdmin(user);
   const canManageUserPermissions = canManagePermissions(user);
   const bizId = user?.bizId ?? null;
 
+  const revokeBusinessLogoObjectUrl = useCallback(() => {
+    if (!businessLogoObjectUrlRef.current) {
+      return;
+    }
+    URL.revokeObjectURL(businessLogoObjectUrlRef.current);
+    businessLogoObjectUrlRef.current = '';
+  }, []);
+
+  const loadBusinessLogo = useCallback(async (logo) => {
+    const requestId = businessLogoRequestRef.current + 1;
+    businessLogoRequestRef.current = requestId;
+
+    if (!logo) {
+      revokeBusinessLogoObjectUrl();
+      setBusinessLogo('');
+      return;
+    }
+
+    try {
+      const sourceUrl = resolveLogoUrl(logo);
+      const response = await axios.get(resolveAbsoluteUrl(sourceUrl), {
+        responseType: 'blob',
+      });
+      if (businessLogoRequestRef.current !== requestId) {
+        return;
+      }
+
+      const nextObjectUrl = URL.createObjectURL(response.data);
+      const previousObjectUrl = businessLogoObjectUrlRef.current;
+      businessLogoObjectUrlRef.current = nextObjectUrl;
+      setBusinessLogo(nextObjectUrl);
+      if (previousObjectUrl) {
+        URL.revokeObjectURL(previousObjectUrl);
+      }
+    } catch (error) {
+      if (businessLogoRequestRef.current === requestId) {
+        console.warn('[SideBar] fetch business logo blob failed', error);
+      }
+    }
+  }, [revokeBusinessLogoObjectUrl]);
+
   useEffect(() => {
     if (!bizId) {
+      loadBusinessLogo('');
       return undefined;
     }
 
@@ -125,8 +162,8 @@ function SideBar() {
       try {
         const response = await RequestUtils.Get(USER_BUSINESS_INFO_API, { bizId });
         const info = response?.data?.data ?? response?.data ?? null;
-        if (mounted && info?.logo) {
-          setBusinessLogo(resolveLogoUrl(info.logo));
+        if (mounted) {
+          loadBusinessLogo(info?.logo ?? '');
         }
       } catch (error) {
         console.warn('[SideBar] fetch business logo failed', error);
@@ -135,17 +172,22 @@ function SideBar() {
     return () => {
       mounted = false;
     };
-  }, [bizId]);
+  }, [bizId, loadBusinessLogo]);
 
   useEffect(() => {
     const handleBusinessUpdated = (event) => {
       const logo = event?.detail?.logo;
-      setBusinessLogo(logo ? resolveLogoUrl(logo) : '');
+      loadBusinessLogo(logo ?? '');
     };
 
     window.addEventListener(BUSINESS_UPDATED_EVENT, handleBusinessUpdated);
     return () => window.removeEventListener(BUSINESS_UPDATED_EVENT, handleBusinessUpdated);
-  }, []);
+  }, [loadBusinessLogo]);
+
+  useEffect(() => () => {
+    businessLogoRequestRef.current += 1;
+    revokeBusinessLogoObjectUrl();
+  }, [revokeBusinessLogoObjectUrl]);
 
   const items = filterItemsByPermission([
     getItem(<Link to="/sale/report-common">{t('sideBar.dashboard')}</Link>, 'home', <FundViewOutlined />, undefined, 'dashboard.view'),
