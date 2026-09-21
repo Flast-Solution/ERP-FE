@@ -23,11 +23,11 @@ export const SUCCESS_CODE = 200;
 export const GATE_EVN = {
   Loc: process.env.REACT_APP_API_BASE_URL,
   WS: process.env.REACT_APP_API_WS_URL,
-  Pro: 'https://biz.api.flast.vn',
+  Pro: 'https://biz.api.flast.vn/api',
   Web: 'https://flast-vn'
 };
 
-export const GATEWAY  = GATE_EVN['Loc'];
+export const GATEWAY  = GATE_EVN['Pro'];
 export const WS_URL   = GATE_EVN['WS'];
 export const BASE_URL = GATEWAY;
 export const CHANGE_STORE = 'CHANGE_STORE';

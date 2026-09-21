@@ -1,18 +1,6 @@
 /**************************************************************************/
 /*  @/containers/Profile/OmniTab.js                                       */
 /**************************************************************************/
-/*                       Tệp này là một phần của:                         */
-/*                             Open CDP                                   */
-/*                        https://flast.vn                                */
-/**************************************************************************/
-/* Cài đặt kênh tin nhắn: nối Zalo OA / Facebook fanpage.                 */
-/*                                                                        */
-/* Ba hành động, KHÁC nhau về mức độ:                                     */
-/*   Ngắt  — ngừng nhận tin, giữ lịch sử, nối lại được bất cứ lúc nào.    */
-/*   Nối lại — cấp quyền lại sau khi token hỏng hoặc đã ngắt.             */
-/*   Xoá   — gỡ hẳn kênh khỏi danh sách. Chỉ cho phép khi đã ngắt, để     */
-/*           admin buộc phải đi qua một bước có thể hoàn tác trước.       */
-/**************************************************************************/
 
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Modal, Skeleton, Tooltip, message } from 'antd'
@@ -36,6 +24,7 @@ import {
   PickChannel,
 } from './omniTabStyles'
 
+const OAUTH_MSG_KEY = 'omni-oauth-result'
 const STATUS_META = {
   [CHANNEL_STATUS.ACTIVE]: { state: 'active', text: 'Đang chạy' },
   [CHANNEL_STATUS.TOKEN_ERROR]: { state: 'error', text: 'Lỗi kết nối' },
@@ -47,15 +36,29 @@ const CHANNEL_OPTIONS = [
     type: CHANNEL_TYPE.ZALO_OA,
     initial: 'Z',
     name: 'Zalo Official Account',
-    desc: 'Cần OA đã xác thực doanh nghiệp',
+    desc: 'Cần OA đã xác thực doanh nghiệp'
   },
   {
     type: CHANNEL_TYPE.FACEBOOK,
     initial: 'f',
     name: 'Facebook Fanpage',
-    desc: 'Cần quyền quản trị trang',
-  },
+    desc: 'Cần quyền quản trị trang'
+  }
 ]
+
+/* Đọc kết quả OAuth BE redirect về, xoá param khỏi URL. */
+const consumeOAuthResult = () => {
+  const url = new URL(window.location.href)
+  const connected = url.searchParams.get('connected')
+  const error = url.searchParams.get('error')
+  if (connected === null && error === null) {
+    return null
+  }
+  url.searchParams.delete('connected')
+  url.searchParams.delete('error')
+  window.history.replaceState(window.history.state, '', url)
+  return error !== null ? 'error' : 'success'
+}
 
 const OmniTab = () => {
 
@@ -76,8 +79,18 @@ const OmniTab = () => {
     load()
   }, [load])
 
-  /* BE trả URL OAuth, chuyển hướng cả tab. Sau khi nền tảng gọi lại
-     callback, người dùng quay về đúng trang này. */
+  useEffect(() => {
+    const result = consumeOAuthResult()
+    if (result === 'success') {
+      message.success({ key: OAUTH_MSG_KEY, content: 'Nối kênh thành công' })
+    }
+    if (result === 'error') {
+      const ctx = 'Nối kênh thất bại. Vui lòng thử lại hoặc kiểm tra quyền quản trị kênh.'
+      message.error({ key: OAUTH_MSG_KEY, content: ctx })
+    }
+  }, [])
+
+  /* BE trả URL OAuth, chuyển hướng cả tab. */
   const handleConnect = useCallback(async (channelType) => {
     setConnecting(channelType)
     try {
@@ -89,47 +102,37 @@ const OmniTab = () => {
     }
   }, [])
 
-  const handleDisconnect = useCallback(
-    (channel) => {
-      Modal.confirm({
-        title: `Ngắt kết nối ${channel.name}?`,
-        icon: <ExclamationCircleOutlined />,
-        content:
-          'Tin nhắn mới từ kênh này sẽ không về hộp thư nữa. Lịch sử hội thoại cũ vẫn được giữ và xem lại được.',
-        okText: 'Ngắt kết nối',
-        okButtonProps: { danger: true },
-        cancelText: 'Huỷ',
-        onOk: async () => {
-          await omniApi.disconnectChannel(channel.id)
-          message.success('Đã ngắt kết nối')
-          load()
-        },
-      })
-    },
-    [load]
-  )
+  const handleDisconnect = useCallback((channel) => {
+    Modal.confirm({
+      title: `Ngắt kết nối ${channel.name}?`,
+      icon: <ExclamationCircleOutlined />,
+      content: 'Tin nhắn mới từ kênh này sẽ không về hộp thư nữa. Lịch sử hội thoại cũ vẫn được giữ và xem lại được.',
+      okText: 'Ngắt kết nối',
+      okButtonProps: { danger: true },
+      cancelText: 'Huỷ',
+      onOk: async () => {
+        await omniApi.disconnectChannel(channel.id)
+        message.success('Đã ngắt kết nối')
+        load()
+      },
+    })
+  }, [load])
 
-  /* Xoá không hoàn tác được — nói rõ hệ quả, và bắt admin gõ tên
-     kênh thì thừa với thao tác này, nên chỉ dùng nút đỏ + mô tả. */
-  const handleDelete = useCallback(
-    (channel) => {
-      Modal.confirm({
-        title: `Xoá ${channel.name} khỏi danh sách?`,
-        icon: <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />,
-        content:
-          'Kênh sẽ biến mất khỏi trang này. Lịch sử hội thoại cũ vẫn giữ trong hộp thư, nhưng muốn nhận tin trở lại thì phải cấp quyền từ đầu.',
-        okText: 'Xoá kênh',
-        okButtonProps: { danger: true },
-        cancelText: 'Huỷ',
-        onOk: async () => {
-          await omniApi.deleteChannel(channel.id)
-          message.success('Đã xoá kênh')
-          load()
-        },
-      })
-    },
-    [load]
-  )
+  const handleDelete = useCallback((channel) => {
+    Modal.confirm({
+      title: `Xoá ${channel.name} khỏi danh sách?`,
+      icon: <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />,
+      content: 'Kênh sẽ biến mất khỏi trang này. Lịch sử hội thoại cũ vẫn giữ trong hộp thư, nhưng muốn nhận tin trở lại thì phải cấp quyền từ đầu.',
+      okText: 'Xoá kênh',
+      okButtonProps: { danger: true },
+      cancelText: 'Huỷ',
+      onOk: async () => {
+        await omniApi.deleteChannel(channel.id)
+        message.success('Đã xoá kênh')
+        load()
+      },
+    })
+  }, [load] )
 
   if (channels === null) {
     return (
@@ -140,7 +143,6 @@ const OmniTab = () => {
   }
 
   const hasWorkingChannel = channels.some((c) => c.status !== CHANNEL_STATUS.DISCONNECTED)
-
   return (
     <TabWrapper>
       <div className="head">
@@ -240,8 +242,6 @@ const OmniTab = () => {
                     </Tooltip>
                   )}
 
-                  {/* Chỉ xoá được kênh đã ngắt — buộc đi qua một bước
-                      hoàn tác được trước khi tới bước không hoàn tác. */}
                   <Tooltip
                     title={isOff ? 'Xoá khỏi danh sách' : 'Ngắt kết nối trước khi xoá'}
                   >
@@ -295,6 +295,6 @@ const OmniTab = () => {
       </Modal>
     </TabWrapper>
   )
-}
+};
 
-export default OmniTab
+export default OmniTab;
