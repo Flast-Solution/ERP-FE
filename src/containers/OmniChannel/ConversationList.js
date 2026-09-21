@@ -32,8 +32,7 @@ import {
   CONVERSATION_STATUS,
   SCOPE,
   SORT_MODE,
-  getWindowRemaining,
-  useCanSeeQueue
+  getWindowRemaining
 } from '@/store/omniStore'
 import {
   ListPane,
@@ -196,7 +195,6 @@ const ConversationList = ({
   const filters       = useFilters()
   const channels      = useChannels()
   const counts        = useCounts()
-  const canSeeQueue   = useCanSeeQueue()
   const sortMode      = useSortMode()
   const loading       = useOmniStore((s) => s.conversationsLoading)
   const hasMore       = useOmniStore((s) => s.hasMore)
@@ -260,9 +258,7 @@ const ConversationList = ({
   }, [loading, hasMore, onLoadMore])
 
   const scopeTabs = [
-    ...(canSeeQueue
-      ? [{ key: SCOPE.QUEUE, label: 'Hàng chờ', count: counts.queue, icon: <InboxOutlined /> }]
-      : []),
+    { key: SCOPE.QUEUE, label: 'Hàng chờ', count: counts.queue, icon: <InboxOutlined /> },
     { key: SCOPE.UNREPLIED, label: 'Chưa trả lời', count: counts.unreplied, icon: <MessageOutlined /> },
     { key: SCOPE.MINE, label: 'Của tôi', count: counts.mine, icon: <UserOutlined /> },
     { key: SCOPE.ALL, label: 'Tất cả', count: counts.all, icon: <AppstoreOutlined /> },

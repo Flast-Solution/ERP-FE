@@ -4,7 +4,6 @@ import { useStore } from '@flast-erp/core/components';
 import InAppNotify from '@/layouts/InAppNotify';
 import ContainerLayouts from "@/layouts/ContainerLayout";
 import OrderService from '@/services/OrderService';
-import { NotificationProvider } from '@/contexts/NotificationContext';
 import { WorkflowDrawerProvider } from '@/contexts/WorkflowDrawerContext';
 import HashFormDrawer from '@/contexts/HashFormDrawer';
 /* import { useFlastRemote } from '@/hooks/useDynamicRemote'; */
@@ -34,14 +33,12 @@ const MainLayout = (props) => {
 
     /* const MPage = useFlastRemote("component_001", "MPage", "environment-form") */
     return (
-        <NotificationProvider userId={user?.id}>
-            <WorkflowDrawerProvider>
-                { /*MPage && <MPage /> */}
-                {memoLayout}
-                {menoInAppNotify}
-                <HashFormDrawer />
-            </WorkflowDrawerProvider>
-        </NotificationProvider>
+        <WorkflowDrawerProvider>
+            { /*MPage && <MPage /> */}
+            {memoLayout}
+            {menoInAppNotify}
+            <HashFormDrawer />
+        </WorkflowDrawerProvider>
     )
 }
 

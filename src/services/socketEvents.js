@@ -32,10 +32,9 @@ export const WS_OMNI = {
   CHANNEL_ERROR: 'omni.channel.error',
 }
 
-/* ---- Miền thông báo chung ---- */
+/* ---- Các loại thông báo từ BE khi gọi Endpoint: /omni/notify ---- */
 export const WS_NOTIFICATION = {
-  NEW: 'notification.new',
-  READ: 'notification.read',
+  ORDER_APPROVED: 'ORDER_APPROVED',
 }
 
 /* ---- Gộp lại cho tiện tra cứu. Dùng WS_EVENT.X ở mọi nơi. ---- */
@@ -61,4 +60,5 @@ export const WS_COMMAND = {
 /* Tên topic cho subscribe/unsubscribe */
 export const WS_TOPIC = {
   OMNI_CONVERSATION: 'omni.conversation',
+  OMNI_NOTIFYCATION: 'omni.notifycation'
 }

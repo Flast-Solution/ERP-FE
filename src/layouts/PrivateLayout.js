@@ -28,8 +28,13 @@ import SideBar from '@/layouts/SideBar';
 import Impersonation from '@/layouts/Impersonation';
 import OverlayCollapse from '@/layouts/OverlayCollapse';
 import MyRoutes from '@/routes';
-import { useSocketEvents, useAppSocketProvider } from '@/hooks/useAppSocket';
-import { WS_EVENT } from '@/services/socketEvents'
+import useGetMe from '@/hooks/useGetMe';
+import {
+  useSocketEvents,
+  useAppSocketProvider,
+  useSocketTopic
+} from '@/hooks/useAppSocket';
+import { WS_EVENT, WS_TOPIC } from '@/services/socketEvents'
 
 const { Content, Footer } = Layout;
 const ContentLayout = () => (
@@ -47,14 +52,17 @@ const ContentLayout = () => (
   </Layout>
 );
 
-const PrivateLayout = (props) => {
+const PrivateLayout = () => {
 
+  const user = useGetMe()
   useAppSocketProvider()
+  useSocketTopic(WS_TOPIC.OMNI_NOTIFYCATION, user.id)
   useSocketEvents({
-    [WS_EVENT.NOTIFICATION_NEW]: (payload) => {
-      logger.info('[layouts.private] NOTIFICATION:', payload)
+    [WS_EVENT.ORDER_APPROVED]: (payload) => {
+      logger.info('[layouts.private] NOTI ORDER_APPROVED:', payload)
     }
   })
+
   return (
     <PrivateLayoutWrapper>
       <Layout hasSider className="layout-window-view">

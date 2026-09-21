@@ -27,8 +27,7 @@ export const buildWsUrl = () => {
   if (explicit) {
     return explicit;
   }
-  const origin = process.env.REACT_APP_WS_ORIGIN || window.location.origin
-  return `${origin.replace(/^http/, 'ws')}/api/erp/ws/omni`
+  throw Error("Chưa cấu hình REACT_APP_OMNI_WS_URL !");
 }
 
 /* ======================================================================
@@ -114,55 +113,55 @@ const unwrap = (res) => {
 
 const realApi = {
   fetchChannels: () =>
-    RequestUtils.Get('/erp/omni/channel-account').then(unwrap),
+    RequestUtils.Get('/omni/channel-account').then(unwrap),
 
   fetchConversations: ({ filters = {}, cursor = null } = {}) =>
-    RequestUtils.Get('/erp/omni/conversation', { ...filters, cursor }).then(unwrap),
+    RequestUtils.Get('/omni/conversation', { ...filters, cursor }).then(unwrap),
 
   fetchMessages: (conversationId, { cursor } = {}) =>
-    RequestUtils.Get(`/erp/omni/conversation/${conversationId}/messages`, { cursor }).then(unwrap),
+    RequestUtils.Get(`/omni/conversation/${conversationId}/messages`, { cursor }).then(unwrap),
 
   fetchContext: (conversationId) =>
-    RequestUtils.Get(`/erp/omni/conversation/${conversationId}/context`).then(unwrap),
+    RequestUtils.Get(`/omni/conversation/${conversationId}/context`).then(unwrap),
 
   sendMessage: (conversationId, body) =>
-    RequestUtils.Post(`/erp/omni/conversation/${conversationId}/send`, body).then(unwrap),
+    RequestUtils.Post(`/omni/conversation/${conversationId}/send`, body).then(unwrap),
 
   linkCustomer: (identityId, customerId) =>
-    RequestUtils.Post(`/erp/omni/identity/${identityId}/link`, { customerId }).then(unwrap),
+    RequestUtils.Post(`/omni/identity/${identityId}/link`, { customerId }).then(unwrap),
 
   /* Gọi SAU khi API tạo lead sẵn có của ERP đã trả về Data.
    * Omni KHÔNG tự tạo lead: việc kiểm trùng SĐT, gán sale, tạo
    * customer_personal đều nằm trong lead service của ERP rồi.
    * Ở đây chỉ nối Data đó vào hội thoại. */
   attachLead: (conversationId, dataId) =>
-    RequestUtils.Post(`/erp/omni/conversation/${conversationId}/attach-lead`, { dataId }).then(unwrap),
+    RequestUtils.Post(`/omni/conversation/${conversationId}/attach-lead`, { dataId }).then(unwrap),
 
   assignUser: (conversationId, assignedUserId) =>
-    RequestUtils.Post(`/erp/omni/conversation/${conversationId}/assign`, { assignedUserId }).then(unwrap),
+    RequestUtils.Post(`/omni/conversation/${conversationId}/assign`, { assignedUserId }).then(unwrap),
 
   changeStatus: (conversationId, status) =>
-    RequestUtils.Post(`/erp/omni/conversation/${conversationId}/status`, { status }).then(unwrap),
+    RequestUtils.Post(`/omni/conversation/${conversationId}/status`, { status }).then(unwrap),
 
   startConnect: async (channelType) => {
     const path = channelType === CHANNEL_TYPE.ZALO_OA ? 'zalo' : 'fb'
-    return RequestUtils.Get(`/erp/omni/oauth/${path}/authorize-url`).then(unwrap)
+    return RequestUtils.Get(`/omni/oauth/${path}/authorize-url`).then(unwrap)
   },
 
   disconnectChannel: (channelAccountId) =>
-    RequestUtils.Post(`/erp/omni/channel-account/${channelAccountId}/disconnect`).then(unwrap),
+    RequestUtils.Post(`/omni/channel-account/${channelAccountId}/disconnect`).then(unwrap),
 
   deleteChannel: (channelAccountId) =>
-    RequestUtils.Delete(`/erp/omni/channel-account/${channelAccountId}`).then(unwrap),
+    RequestUtils.Delete(`/omni/channel-account/${channelAccountId}`).then(unwrap),
 
   searchCustomers: (keyword) =>
-    RequestUtils.Get('/erp/omni/customer/search', { keyword }).then(unwrap),
+    RequestUtils.Get('/omni/customer/search', { keyword }).then(unwrap),
 
   /* Upload trước, lấy về danh sách file đã lưu, rồi mới gửi tin */
   uploadAttachment: (file) => {
     const form = new FormData()
     form.append('file', file)
-    return RequestUtils.Post('/erp/omni/attachment/upload', form).then(unwrap)
+    return RequestUtils.Post('/omni/attachment/upload', form).then(unwrap)
   },
 };
 
