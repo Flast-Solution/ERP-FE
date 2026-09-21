@@ -20,14 +20,20 @@
 /**************************************************************************/
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { message } from 'antd';
-import { RestEditModal } from "@flast-erp/core/components";
+import { Form, message } from 'antd';
+import { FormContextCustom } from "@flast-erp/core/components";
 
 import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import { arrayEmpty, arrayNotEmpty, f5List } from '@flast-erp/core/utils';
 import ProductForm from './ProductForm';
 import ProductAttrService from '@/services/ProductAttrService';
 import { cloneDeep } from 'lodash';
+import {
+  serializeProductAssets,
+  splitProductAssets,
+} from './productImages';
+import { mergeInitialProductProperties } from './productProperties';
+import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard';
 
 /**
  * @param [ {id: 10384, attributedId: 10023, attributedValueId: 10085}, ... ] oldSku
@@ -47,20 +53,32 @@ const GenerateSkuDetailsOnSubmit = (oldSku, newSku) => {
 }
 const log = (value) => console.log('[container.product.index] ', value);
 
-const normalizeProductImages = (product) => {
-  if (Array.isArray(product?.images)) return product.images;
-  if (product?.images) return [product.images];
-  if (product?.image) return [product.image];
-  return [];
-}
+const Product = ({ data, registerCloseGuard }) => {
 
-const Product = ({ closeModal, data }) => {
-
+  const [form] = Form.useForm();
   const [ record, setRecord ] = useState({});
+  const {
+    guardClose,
+    markClean,
+    markDirty,
+  } = useDrawerLeaveGuard({
+    open: true,
+    onClose: undefined,
+    resetKey: data?.id ?? 'create-product',
+  });
+
+  useEffect(() => {
+    if (!registerCloseGuard) return undefined;
+    const unregister = registerCloseGuard(guardClose);
+    return () => unregister?.();
+  }, [guardClose, registerCloseGuard]);
+
   useEffect(() => {
     log({ action: 'props', data });
     (async () => {
       let dRe = {}, skus = []
+      const allAttributes = await ProductAttrService.loadAll({ limit: 1000, page: 1 });
+      const initialAttributes = allAttributes.filter(attribute => attribute?.initial === true);
       if (arrayNotEmpty(data?.listProperties || [])) {
         let attrIds = data.listProperties.map(i => i.attributedId) ?? [];
         let attrValueIds = [];
@@ -69,21 +87,33 @@ const Product = ({ closeModal, data }) => {
         }
         const itemAttrs = await ProductAttrService.loadByIds(attrIds);
         const itemAttrValues = await ProductAttrService.loadValueByIds(attrValueIds);
-        dRe.attrs = itemAttrs;
+        dRe.attrs = Array.from(new Map(
+          [...itemAttrs, ...initialAttributes].map(item => [String(item.id), item]),
+        ).values());
         dRe.attrValues = itemAttrValues;
+      } else {
+        dRe.attrs = initialAttributes;
       }
-      for (const iSkus of ( data?.skus || [] )) {
+      const sourceSkus = Array.isArray(data?.skus) ? data.skus : [];
+      for (const iSkus of sourceSkus) {
         let item = { id: iSkus?.id, name: iSkus?.name, note: iSkus?.note, skuPrices: iSkus?.skuPrices || [] }
         let details = [];
-        for (const detail of iSkus?.sku) {
+        const skuDetails = Array.isArray(iSkus?.sku) ? iSkus.sku : [];
+        for (const detail of skuDetails) {
           details.push([detail.attributedId, detail.attributedValueId]);
         }
         item.sku = details;
         skus.push(item);
       }
+      const isCreate = !data?.id;
+      const productAssets = isCreate
+        ? { images: [], files: [] }
+        : splitProductAssets(data);
       setRecord({
         ...data,
-        images: normalizeProductImages(data),
+        image: productAssets.images,
+        file: productAssets.files,
+        listProperties: mergeInitialProductProperties(data?.listProperties, allAttributes),
         skus,
         dRe
       });
@@ -91,26 +121,52 @@ const Product = ({ closeModal, data }) => {
     return () => ProductAttrService.empty();
   }, [ data ]);
 
+  useEffect(() => {
+    form.setFieldsValue(record);
+  }, [form, record]);
+
+  const updateRecord = useCallback((values) => {
+    setRecord(curvals => ({ ...curvals, ...values }));
+  }, []);
+
   const onSubmit = useCallback(async (datas) => {
     log({ action: 'onSubmit', datas });
     let values = cloneDeep(datas);
     let skusAdd = [];
-    for (let arrsku of values.skus) {
+    const submittedSkus = Array.isArray(values.skus) ? values.skus : [];
+    const originalSkus = Array.isArray(data?.skus) ? data.skus : [];
+    for (let arrsku of submittedSkus) {
       /* oldSku = [ {id: 10384, attributedId: 10023, attributedValueId: 10085}, ... ] */
-      const oldSku = data?.skus?.find(f => f?.id === arrsku?.id)?.sku ?? [];
-      let newSku = GenerateSkuDetailsOnSubmit(oldSku, arrsku.sku);
+      const originalSkuDetails = originalSkus.find(f => f?.id === arrsku?.id)?.sku;
+      const oldSku = Array.isArray(originalSkuDetails) ? originalSkuDetails : [];
+      const submittedSkuDetails = Array.isArray(arrsku.sku) ? arrsku.sku : [];
+      let newSku = GenerateSkuDetailsOnSubmit(oldSku, submittedSkuDetails);
       arrsku.sku = newSku;
       skusAdd.push(arrsku);
     }
 
-    const newListProperties = values?.listProperties.map(item => ({
+    const submittedProperties = Array.isArray(values.listProperties)
+      ? values.listProperties
+      : [];
+    const newListProperties = submittedProperties.map(item => ({
       attributedId: item?.attributedId,
       propertyValueId: item?.attributedValueId,
-    })) || [];
+    }));
 
+    const {
+      images: legacyImages,
+      image,
+      files: legacyFiles,
+      attachments: legacyAttachments,
+      file,
+      ...productValues
+    } = values;
     const body = {
-      ...values,
-      images: normalizeProductImages(values),
+      ...productValues,
+      image: serializeProductAssets({
+        images: image ?? legacyImages,
+        files: file ?? legacyFiles ?? legacyAttachments,
+      }),
       listProperties: newListProperties,
       skus: skusAdd
     }
@@ -123,21 +179,23 @@ const Product = ({ closeModal, data }) => {
     const { errorCode } = await RequestUtils.Post("/product/save", body, params);
     const isSuccess = errorCode === 200;
     if (isSuccess) {
-      f5List('/product/fetch');
+      markClean();
+      f5List('erp/product/fetch');
     }
     InAppEvent.normalInfo(isSuccess ? "Cập nhật thành công" : "Lỗi cập nhật, vui lòng thử lại sau");
-  }, [ data ]);
+  }, [ data, markClean ]);
 
   return (
-    <RestEditModal
-      isMergeRecordOnSubmit={false}
-      updateRecord={(values) => setRecord(curvals => ({ ...curvals, ...values }))}
-      onSubmit={onSubmit}
-      record={record}
-      closeModal={closeModal}
+    <Form
+      form={form}
+      layout="vertical"
+      onFinish={onSubmit}
+      onValuesChange={markDirty}
     >
-      <ProductForm />
-    </RestEditModal>
+      <FormContextCustom.Provider value={{ form, record, updateRecord }}>
+        <ProductForm />
+      </FormContextCustom.Provider>
+    </Form>
   )
 }
 

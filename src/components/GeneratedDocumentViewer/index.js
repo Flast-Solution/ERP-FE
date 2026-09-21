@@ -10,18 +10,24 @@ import {
   Tooltip,
 } from 'antd'
 import {
+  CheckOutlined,
+  CloseCircleOutlined,
   CloseOutlined,
   DownloadOutlined,
   MinusOutlined,
   PlusOutlined,
   PrinterOutlined,
+  SaveOutlined,
   SendOutlined,
 } from '@ant-design/icons'
-import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { useReactToPrint } from 'react-to-print'
-import DocumentNodeContent from '@/components/DocumentTemplateEditor/DocumentNodeContent'
-import { A4ContentGrid, A4Page } from '@/components/DocumentTemplateEditor/styles'
+import DocumentTemplateContent from '@/components/DocumentTemplateEditor/DocumentTemplateContent'
+import SheetImportButton from '../DocumentTemplateEditor/SheetImportButton'
+import { setSheetTableData } from '../DocumentTemplateEditor/sheetImport'
+import { getValueByPath } from '@/components/DocumentTemplateEditor/utils'
+import { hasManualDocumentFields, setDocumentValueByPath } from './manualEditing'
+import { captureDocumentPage, getPdfPageSlices, withPdfCaptureLayout } from './pdfExport'
 import {
   DiscussionComposer,
   DiscussionHeader,
@@ -76,6 +82,14 @@ const GeneratedDocumentViewer = ({
   comments = EMPTY_COMMENTS,
   onSubmitComment,
   commentSubmitting = false,
+  onSubmitDocument,
+  documentSubmitting = false,
+  toolbarContent,
+  allowDocumentSubmit = false,
+  readOnly = false,
+  onApproveDocument,
+  onRejectDocument,
+  reviewDisabled = false,
   onClose,
 }) => {
   const documentRef = useRef(null)
@@ -84,6 +98,7 @@ const GeneratedDocumentViewer = ({
   const [activePane, setActivePane] = useState('document')
   const [commentValue, setCommentValue] = useState('')
   const [discussionComments, setDiscussionComments] = useState(comments)
+  const [documentData, setDocumentData] = useState(data)
   const orientation = template?.page?.orientation === 'landscape' ? 'landscape' : 'portrait'
   const pageWidth = orientation === 'landscape' ? 297 : 210
   const pageHeight = orientation === 'landscape' ? 210 : 297
@@ -112,17 +127,27 @@ const GeneratedDocumentViewer = ({
         .generated-document-page tr,
         .generated-document-page img { break-inside: avoid; }
         .generated-document-page thead { display: table-header-group; }
+        .generated-document-page + .generated-document-page { break-before: page; }
+        [data-document-manual-input], [data-document-manual-path] {
+          border: 0 !important;
+          background: transparent !important;
+          box-shadow: none !important;
+          padding: 0 !important;
+        }
+        [data-document-manual-input]::placeholder, [data-document-manual-path]::placeholder {
+          color: transparent !important;
+        }
       }
     `,
   })
   const pdfFileName = useMemo(
-    () => getPdfFileName(template, title, data),
-    [data, template, title],
+    () => getPdfFileName(template, title, documentData),
+    [documentData, template, title],
   )
-  const customerOrder = data?.customerOrder
+  const customerOrder = documentData?.customerOrder
   const customerName = customerOrder?.enterpriseName
     ?? customerOrder?.customerReceiverName
-    ?? data?.customer?.name
+    ?? documentData?.customer?.name
 
   useEffect(() => {
     if (!open) return
@@ -131,6 +156,31 @@ const GeneratedDocumentViewer = ({
     setCommentValue('')
     setDiscussionComments(comments)
   }, [comments, open])
+
+  useEffect(() => {
+    if (open) setDocumentData(data)
+  }, [data, open])
+
+  const editableDocument = Boolean(!readOnly && !loading && !documentSubmitting
+    && (onSubmitDocument || onApproveDocument || onRejectDocument)
+    && hasManualDocumentFields(template?.nodes, template))
+
+  const updateTableCell = ({ node, rowIndex, column, value }) => {
+    if (!editableDocument || !node?.source || !column?.binding) return
+    setDocumentData(currentData => {
+      const rows = getValueByPath(currentData, node.source, [])
+      if (!Array.isArray(rows) || !rows[rowIndex]) return currentData
+      const nextRows = rows.map((row, index) => (
+        index === rowIndex ? setDocumentValueByPath(row, column.binding, value) : row
+      ))
+      return setDocumentValueByPath(currentData, node.source, nextRows)
+    })
+  }
+
+  const updateManualField = (path, value) => {
+    if (!editableDocument || !path) return
+    setDocumentData(currentData => setDocumentValueByPath(currentData, path, value))
+  }
 
   const changeZoom = (amount) => {
     setZoom(current => Math.min(1.4, Math.max(0.6, Number((current + amount).toFixed(1)))))
@@ -165,64 +215,39 @@ const GeneratedDocumentViewer = ({
     setDownloading(true)
 
     try {
-      if (document.fonts?.ready) {
-        await document.fonts.ready
-      }
-
-      const canvas = await html2canvas(documentRef.current, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: '#ffffff',
-        logging: false,
-      })
-      const pdf = new jsPDF({
-        orientation,
-        unit: 'mm',
-        format: 'a4',
-        compress: true,
-      })
-      const pagePixelHeight = Math.max(1, Math.floor(canvas.width * pageHeight / pageWidth))
+      const pages = Array.from(documentRef.current.querySelectorAll('.generated-document-page'))
+      const absolute = template?.layout?.mode === 'absolute'
+      let pdf
       let pageIndex = 0
+      await withPdfCaptureLayout(documentRef.current, async () => {
+        for (const [index, pageElement] of pages.entries()) {
+          const canvas = await captureDocumentPage(pageElement)
+          const width = absolute && template.pages?.[index]?.width ? template.pages[index].width * 25.4 / 96 : pageWidth
+          const height = absolute && template.pages?.[index]?.height ? template.pages[index].height * 25.4 / 96 : pageHeight
+          const pageOrientation = width > height ? 'landscape' : 'portrait'
+          const format = absolute ? [width, height] : 'a4'
+          if (!pdf) pdf = new jsPDF({ orientation: pageOrientation, unit: 'mm', format, compress: true })
+          const pageSlices = absolute
+            ? [{ offset: 0, height: canvas.height }]
+            : getPdfPageSlices(pageElement, canvas.height, Math.max(1, Math.floor(canvas.width * height / width)))
 
-      for (let offsetY = 0; offsetY < canvas.height; offsetY += pagePixelHeight) {
-        const sliceHeight = Math.min(pagePixelHeight, canvas.height - offsetY)
-        const pageCanvas = document.createElement('canvas')
-        const pageContext = pageCanvas.getContext('2d')
-
-        pageCanvas.width = canvas.width
-        pageCanvas.height = sliceHeight
-        pageContext.fillStyle = '#ffffff'
-        pageContext.fillRect(0, 0, pageCanvas.width, pageCanvas.height)
-        pageContext.drawImage(
-          canvas,
-          0,
-          offsetY,
-          canvas.width,
-          sliceHeight,
-          0,
-          0,
-          canvas.width,
-          sliceHeight,
-        )
-
-        if (pageIndex > 0) pdf.addPage('a4', orientation)
-
-        const imageHeight = sliceHeight * pageWidth / canvas.width
-        pdf.addImage(
-          pageCanvas.toDataURL('image/jpeg', 0.95),
-          'JPEG',
-          0,
-          0,
-          pageWidth,
-          imageHeight,
-          undefined,
-          'FAST',
-        )
-        pageIndex += 1
-      }
-
-      pdf.save(getPdfFileName(template, title, data))
+          for (const pageSlice of pageSlices) {
+            const pageCanvas = document.createElement('canvas')
+            const pageContext = pageCanvas.getContext('2d')
+            pageCanvas.width = canvas.width
+            pageCanvas.height = pageSlice.height
+            pageContext.fillStyle = '#ffffff'
+            pageContext.fillRect(0, 0, pageCanvas.width, pageCanvas.height)
+            pageContext.drawImage(canvas, 0, pageSlice.offset, canvas.width, pageSlice.height, 0, 0, canvas.width, pageSlice.height)
+            if (pageIndex > 0) pdf.addPage(format, pageOrientation)
+            pdf.addImage(pageCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, width,
+              absolute ? height : pageSlice.height * width / canvas.width, undefined, 'FAST')
+            pageIndex += 1
+          }
+        }
+      })
+      if (!pdf) throw new Error('Chứng từ không có trang để xuất')
+      pdf.save(getPdfFileName(template, title, documentData))
       message.success('Đã tải chứng từ PDF')
     } catch (error) {
       console.error('Không thể tạo PDF từ chứng từ', error)
@@ -276,12 +301,49 @@ const GeneratedDocumentViewer = ({
         {activePane === 'document' ? (
           <DocumentPane>
           <DocumentToolbar>
-            <FileInfo>
+            {toolbarContent ?? <FileInfo>
               <span className="file-dot" />
               <span className="file-name">{pdfFileName}</span>
               <span className="page-count">Trang 1</span>
-            </FileInfo>
+            </FileInfo>}
             <ToolbarActions>
+              <SheetImportButton
+                template={template}
+                disabled={readOnly || loading || documentSubmitting}
+                onImport={(id, table) => setDocumentData(current => setSheetTableData(current, id, table))}
+              />
+              {!readOnly && onSubmitDocument && (editableDocument || allowDocumentSubmit) ? (
+                <Button
+                  type="primary"
+                  icon={<SaveOutlined />}
+                  loading={documentSubmitting}
+                  disabled={loading || !template}
+                  onClick={() => onSubmitDocument(documentData)}
+                >
+                  Lưu báo giá
+                </Button>
+              ) : null}
+              {onApproveDocument ? (
+                <Button
+                  type="primary"
+                  icon={<CheckOutlined />}
+                  loading={documentSubmitting}
+                  disabled={reviewDisabled || loading || documentSubmitting || !template}
+                  onClick={() => onApproveDocument(documentData)}
+                >
+                  Duyệt
+                </Button>
+              ) : null}
+              {onRejectDocument ? (
+                <Button
+                  danger
+                  icon={<CloseCircleOutlined />}
+                  disabled={reviewDisabled || loading || documentSubmitting || !template}
+                  onClick={() => onRejectDocument(documentData)}
+                >
+                  Từ chối
+                </Button>
+              ) : null}
               <div className="zoom-control">
                 <Button
                   type="text"
@@ -309,6 +371,7 @@ const GeneratedDocumentViewer = ({
               </Tooltip>
               <Tooltip title="Tải xuống PDF">
                 <Button
+                  aria-label="Tải xuống PDF"
                   type="text"
                   icon={<DownloadOutlined />}
                   disabled={!template}
@@ -327,34 +390,17 @@ const GeneratedDocumentViewer = ({
                 </div>
               ) : null}
               {template ? (
-                <PageZoom $zoom={zoom}>
-                  <A4Page
-                    ref={documentRef}
-                    className="generated-document-page"
-                    $margin={template.page?.margin}
-                  >
-                    <A4ContentGrid
-                      $columns={template.layout?.columns}
-                      $columnGap={template.layout?.columnGap}
-                      $rowGap={template.layout?.rowGap}
-                    >
-                      {(template.nodes ?? []).map(node => (
-                        <div
-                          key={node.id}
-                          style={{
-                            gridColumn: node.layout?.startNewRow
-                              ? `1 / span ${node.layout?.columnSpan ?? 12}`
-                              : `span ${node.layout?.columnSpan ?? 12}`,
-                            gridRow: `span ${node.layout?.rowSpan ?? 1}`,
-                            minWidth: 0,
-                            minHeight: node.layout?.minHeight || undefined,
-                          }}
-                        >
-                          <DocumentNodeContent node={node} data={data} preview />
-                        </div>
-                      ))}
-                    </A4ContentGrid>
-                  </A4Page>
+                <PageZoom $zoom={zoom} $orientation={orientation}>
+                  <div ref={documentRef}>
+                    <DocumentTemplateContent
+                      template={template}
+                      data={documentData}
+                      pageClassName="generated-document-page"
+                      editable={editableDocument}
+                      onTableCellChange={updateTableCell}
+                      onManualFieldChange={updateManualField}
+                    />
+                  </div>
                 </PageZoom>
               ) : null}
             </DocumentCanvas>

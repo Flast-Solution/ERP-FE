@@ -1,5 +1,6 @@
 import React from 'react'
-import { Breadcrumb, Col, Empty, Row, Spin } from 'antd'
+import { Col, Empty, Row, Spin } from 'antd'
+import { BreadcrumbCustom } from '@flast-erp/core/components'
 import { Helmet } from 'react-helmet'
 
 import { workflowFixedPanelStyle } from '../constants'
@@ -44,6 +45,9 @@ const OrderProgressLayout = ({
     setSelectedToStepCode,
     viewingStepCode,
     isReviewingSubmission,
+    openedHiddenStepCode,
+    currentStepButtons,
+    openHiddenStep,
     reviewStep,
     reviewInspectionResult,
     backToCurrentStep,
@@ -70,11 +74,10 @@ const OrderProgressLayout = ({
         <title>Tiến trình workflow đơn hàng</title>
       </Helmet>
       <style>{workflowProgressPageStyles}</style>
-      <Breadcrumb
-        style={{ marginBottom: 10 }}
-        items={[
-          { title: 'Trang chủ' },
-          { title: 'Đơn hàng' },
+      <BreadcrumbCustom
+        data={[
+          { title: 'Trang chủ', path: '/' },
+          { title: 'Đơn hàng đang sản xuất', path: '/sale/order-production' },
           { title: 'Tiến trình workflow' },
         ]}
       />
@@ -127,6 +130,7 @@ const OrderProgressLayout = ({
                       inspectionResults={inspectionResults}
                       viewingStepCode={viewingStepCode}
                       isReviewingSubmission={isReviewingSubmission}
+                      isAuxiliaryStep={Boolean(openedHiddenStepCode)}
                       onBack={backToCurrentStep}
                       formState={formState}
                     />
@@ -166,6 +170,19 @@ const OrderProgressLayout = ({
                       currentSubmission,
                       currentForm,
                     })}
+                    stepButtons={currentStepButtons}
+                    onStepButtonClick={(button) => {
+                      if (button?.type === 'OPEN_HIDDEN_STEP') {
+                        openHiddenStep(button.targetStepCode)
+                        return
+                      }
+                      advanceWorkflow({
+                        currentSubmission,
+                        currentForm,
+                        toStepCode: button?.targetStepCode,
+                        requireSubmission: Boolean(button?.requireSubmission),
+                      })
+                    }}
                     transitionOptions={stepTransitionOptions}
                     selectedToStepCode={selectedToStepCode}
                     onToStepCodeChange={setSelectedToStepCode}

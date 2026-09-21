@@ -201,5 +201,7 @@ export const DEFAULT_STEP = {
   type: '',
   description: '',
   config: {},
+  hidden: false,
+  buttons: [],
   actions: [],
 }

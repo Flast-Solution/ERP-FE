@@ -29,13 +29,19 @@ const title = 'Tạo cơ hội bán hàng';
 const BanHangPage = (props) => {
 	const { orderId } = useParams();
 	const { get } = useQueryParams();
+	const isOrder = get('type') === 'order';
+	const pageTitle = isOrder
+		? 'Chỉnh sửa đơn hàng'
+		: orderId
+			? 'Chỉnh sửa cơ hội bán hàng'
+			: title;
 
 	return <>
 		<Helmet>
-			<title>{title}</title>
+			<title>{pageTitle}</title>
 		</Helmet>
 		<BreadcrumbCustom
-			data={[{ title: 'Trang chủ' }, { title: title }]}
+			data={[{ title: 'Trang chủ' }, { title: pageTitle }]}
 		/>
 		<Order
 			orderId={orderId}

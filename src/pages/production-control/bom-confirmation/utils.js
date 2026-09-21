@@ -2,16 +2,10 @@ export const getProductId = (product = {}) => (
   product.productId ?? product.product?.id ?? product.id
 );
 
-export const getResponseItems = (response) => {
-  const payload = response?.data ?? response;
-  const candidates = [
-    payload?.data,
-    payload?.items,
-    payload?.content,
-    payload?.embedded,
-    payload,
-  ];
-  return candidates.find(Array.isArray) ?? [];
+/** GET /product-material/find-by-product/{id} → data = BomVersion[] */
+export const getBomVersions = (response) => {
+  const versions = response?.data;
+  return Array.isArray(versions) ? versions : [];
 };
 
 export const getInventoryQuantity = (material = {}) => (
@@ -79,6 +73,10 @@ export const buildBomItems = (productionOrder = {}) => (
     const productId = getProductId(product);
     if (productId == null || productId === '') return null;
     const orderDetailId = product.id ?? index;
+    const providerId = productionOrder.productDetails?.[String(orderDetailId)]?.providerId
+      ?? product.providerId
+      ?? product.provider?.id;
+    if (providerId !== undefined && providerId !== null && providerId !== '') return null;
     const orderLabel = [
       product.key ?? product.code ?? `#${product.id ?? index + 1}`,
       product.productName ?? product.product?.name ?? product.name,

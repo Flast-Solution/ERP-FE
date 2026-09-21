@@ -153,9 +153,9 @@ function ensureInit() {
   })
 }
 
-function ensureRemoteRegistered(componentId, entry, entryGlobalName = componentId) {
+function ensureRemoteRegistered(componentId, entry, entryGlobalName = componentId, force = false) {
   ensureInit()
-  if (registeredRemotes.has(componentId)) {
+  if (registeredRemotes.has(componentId) && !force) {
     return
   }
 
@@ -165,10 +165,12 @@ function ensureRemoteRegistered(componentId, entry, entryGlobalName = componentI
       entry,
       type: "global",
       entryGlobalName
-    }]
+    }],
+    force ? { force: true } : undefined
   )
 
   registeredRemotes.add(componentId)
+  if (force) loadedRemoteContainers.delete(componentId)
 }
 
 /**
@@ -194,7 +196,12 @@ export async function loadRemote(
   const load = async () => {
     const entryVersion = String(remoteEntryVersion || '').trim()
     const entry = `${remoteBaseUrl}/${remoteEntryComponentId}/remoteEntry.js${entryVersion ? `?v=${encodeURIComponent(entryVersion)}` : ''}`
-    ensureRemoteRegistered(componentId, entry, remoteEntryGlobalName)
+    ensureRemoteRegistered(
+      componentId,
+      entry,
+      remoteEntryGlobalName,
+      Boolean(entryVersion)
+    )
 
     if (!loadedRemoteContainers.has(componentId)) {
       resetLegacyRemoteChunkScope()

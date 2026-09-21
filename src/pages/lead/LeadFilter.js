@@ -25,9 +25,9 @@ import {
   FormDatePicker,
   FormSelect
 } from '@flast-erp/core/components';
-import { CHANNEL_SOURCE, CHANNEL_STATUS } from '@/configs/localData';
+import { CHANNEL_SOURCE } from '@/configs/localData';
 
-const LeadFilter = () => {
+const LeadFilter = ({ statusOptions = [] }) => {
   return (
     <>
       <Row gutter={16}>
@@ -39,8 +39,14 @@ const LeadFilter = () => {
         </Col>
         <Col xl={6} lg={6} md={6} xs={24}>
           <FormInput
-            name={'customerEmail'}
-            placeholder="Email"
+            name={'customerName'}
+            placeholder="Khách hàng"
+          />
+        </Col>
+        <Col xl={6} lg={6} md={6} xs={24}>
+          <FormInput
+            name={'productNames'}
+            placeholder="Sản phẩm"
           />
         </Col>
         <Col xl={6} lg={6} md={6} xs={24}>
@@ -59,7 +65,7 @@ const LeadFilter = () => {
             label="Trạng thái"
             valueProp="id"
             titleProp='name'
-            resourceData={CHANNEL_STATUS}
+            resourceData={statusOptions}
             placeholder='Lọc theo trạng thái'
           />
         </Col>

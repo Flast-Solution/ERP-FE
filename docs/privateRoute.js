@@ -1,0 +1,83 @@
+
+import React from 'react';
+import { Navigate } from 'react-router-dom';
+import { FuseUtils } from '@flast-erp/core/utils';
+
+import { LoginConfig } from './AuthConfig';
+import { CommonConfig } from './CommonConfig';
+import { KpiConfig } from './KpiConfig';
+
+/* Sản phẩm - Dịch vụ - BOM */
+import { ProductConfig } from './ProductConfig';
+import { MaterialConfig } from './MaterialConfig';
+
+/* Lead - Cơ hội - Đơn hàng */
+import { LeadConfig } from './LeadConfig';
+import { CustomerConfig } from './CustomerRetailConfig';
+import { CohoiConfig } from './CohoiConfig';
+import { OrderConfig } from './OrderConfig';
+
+/* Kho */
+import { InstockConfig } from './TrongkhoConfig';
+import { WareHouseConfig } from './ListKhoConfig';
+import { ShipConfig } from './ShipConfig';
+
+/* Tài khoản */
+import { ListAcountConfig } from './ListAcountConnfig';
+import { ListAcountGroupConfig } from './ListUserGroupConfig';
+import { ListUserSystemConfig } from './ListUserSysTemConfig';
+import { BusinessUnitsConfig } from './BusinessUnitsConfig';
+
+/* CSKH */
+import { Lead3DayConfig } from './Lead3DayConfig'
+import { Cohoi7DayConfig } from './Cohoi7DayConfig';
+
+/* Kế  toán */
+import { KeToanConfig } from './KeToanConfig';
+
+/* NewFeed - Quy trình */
+import { NewfeedConfig } from './NewFeedConfig';
+import { DragDropConfig } from './DragDropOrderConfig';
+
+/* Web */
+import { WebConfig } from './WebConfig';
+import { WorkflowDesignerConfig } from './WorkflowDesignerConfig';
+import { ProductionControlConfig } from './ProductionControlConfig';
+
+/* HR - Quản lý hành chính */
+import { HRConfig } from './HRConfig';
+
+const routeConfigs = [
+    LoginConfig,
+    KpiConfig,
+    ProductConfig,
+    MaterialConfig,
+    ProductionControlConfig,
+    CommonConfig,
+    LeadConfig,
+    Lead3DayConfig,
+    CohoiConfig,
+    InstockConfig,
+    WareHouseConfig,
+    CustomerConfig,
+    ListAcountConfig,
+    ListAcountGroupConfig,
+    BusinessUnitsConfig,
+    Cohoi7DayConfig,
+    KeToanConfig,
+    ListUserSystemConfig,
+    NewfeedConfig,
+    ShipConfig,
+    OrderConfig,
+    DragDropConfig,
+    WebConfig,
+    HRConfig,
+    WorkflowDesignerConfig
+];
+
+const routes = [
+    ...FuseUtils.generateRoutesFromConfigs(routeConfigs, null),
+    { element: () => <Navigate to="/error-404" /> }
+];
+
+export default routes;

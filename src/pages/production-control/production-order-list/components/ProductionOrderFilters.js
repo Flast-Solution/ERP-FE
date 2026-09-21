@@ -6,6 +6,7 @@ import { MANUFACTURE_STATUS_OPTIONS } from '../constants'
 
 const ProductionOrderFilters = ({
   filters,
+  statusOptions = MANUFACTURE_STATUS_OPTIONS,
   loading = false,
   onUpdateFilter,
   onApply,
@@ -41,7 +42,7 @@ const ProductionOrderFilters = ({
               onChange={value => onUpdateFilter('status', value)}
               placeholder="Trạng thái"
               allowClear
-              options={MANUFACTURE_STATUS_OPTIONS}
+              options={statusOptions}
             />
           </Col>
           <Col xl={6} md={12} xs={24}>

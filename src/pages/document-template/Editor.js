@@ -7,6 +7,9 @@ import { SUCCESS_CODE } from '@/configs'
 import DocumentTemplateService, {
   buildDocumentSchemaFromEntityFields,
   normalizeDocumentSchema,
+  normalizeDocumentType,
+  parseDocumentTemplateData,
+  resolveDocumentTemplateType,
 } from '@/services/DocumentTemplateService'
 
 const DocumentTemplateEditorPage = () => {
@@ -32,19 +35,30 @@ const DocumentTemplateEditorPage = () => {
       setLoadError('')
       try {
         const requestedTemplateId = templateId || sourceTemplateId
-        if (!requestedTemplateId) {
-          throw new Error('Chưa chọn hạng mục chứng từ')
+        const entityFields = await DocumentTemplateService.fetchAllEntities()
+        if (!Array.isArray(entityFields)) {
+          throw new Error('API /erp/template/all-entities không trả về mảng dữ liệu')
         }
 
-        const [templateResponse, entityResponse] = await Promise.all([
-          DocumentTemplateService.fetchTemplates(),
-          DocumentTemplateService.fetchAllEntities(),
-        ])
+        // Tạo mới: mở designer trống, không cần chọn hạng mục
+        if (!requestedTemplateId) {
+          if (!mounted) return
+          const schemaData = buildDocumentSchemaFromEntityFields(
+            entityFields,
+            { code: null, name: 'Mẫu chứng từ' },
+          )
+          setRecord(null)
+          setSourceTemplate(null)
+          setSchema(schemaData)
+          setDataSchema(normalizeDocumentSchema(schemaData))
+          setPreviewData({})
+          setInitialTemplate(createEmptyTemplate({ name: 'Mẫu chứng từ', documentType: 'quotation' }))
+          return
+        }
+
+        const templateResponse = await DocumentTemplateService.fetchTemplates()
         if (Number(templateResponse?.errorCode) !== SUCCESS_CODE || !Array.isArray(templateResponse?.data)) {
           throw new Error(templateResponse?.message || 'Không tải được danh sách template')
-        }
-        if (!Array.isArray(entityResponse)) {
-          throw new Error('Không tải được danh sách nguồn dữ liệu')
         }
         const templateSource = templateResponse.data.find(item => String(item.templateId) === String(requestedTemplateId))
         if (!templateSource) throw new Error('Không tìm thấy template đã chọn')
@@ -52,35 +66,21 @@ const DocumentTemplateEditorPage = () => {
 
         const schemaData = {
           ...buildDocumentSchemaFromEntityFields(
-            entityResponse,
+            entityFields,
             { code: templateSource.code, name: templateSource.name },
           ),
           schemaVersion: templateSource.version,
         }
-        let storedTemplate = null
-        if (templateSource.data && typeof templateSource.data === 'object' && Array.isArray(templateSource.data.nodes)) {
-          storedTemplate = templateSource.data
-        } else if (typeof templateSource.data === 'string') {
-          try {
-            const parsedData = JSON.parse(templateSource.data)
-            storedTemplate = parsedData && typeof parsedData === 'object' && Array.isArray(parsedData.nodes)
-              ? parsedData
-              : null
-          } catch (error) {
-            storedTemplate = null
-          }
-        }
+        const storedTemplate = templateSource.data == null || templateSource.data === ''
+          ? null
+          : parseDocumentTemplateData(templateSource.data, 'Dữ liệu template không hợp lệ. Không thể mở mẫu trống để ghi đè dữ liệu đã lưu.')
 
         setRecord(templateId ? templateSource : null)
         setSourceTemplate(templateSource)
         setSchema(schemaData)
         setDataSchema(normalizeDocumentSchema(schemaData))
         setPreviewData({})
-        const resolvedDocumentType = templateSource.documentType === 'QUOTATION'
-          ? 'invoice'
-          : ['invoice', 'GOODS_ISSUE'].includes(templateSource.documentType)
-            ? templateSource.documentType
-            : 'invoice'
+        const resolvedDocumentType = normalizeDocumentType(resolveDocumentTemplateType(templateSource))
         const normalizedStoredTemplate = storedTemplate
           ? {
             ...storedTemplate,
@@ -116,10 +116,9 @@ const DocumentTemplateEditorPage = () => {
       fields: Array.isArray(sourceTemplate?.fields) ? sourceTemplate.fields : [],
       status: record?.status ?? 1,
       bizId: sourceTemplate?.bizId ?? null,
-      documentType: documentType || 'invoice',
+      documentType: normalizeDocumentType(documentType),
       data: JSON.stringify(templateData),
     }
-    console.log('[DocumentTemplateEditor] Lưu chứng từ payload:', payload)
     setSaving(true)
     try {
       const response = await DocumentTemplateService.saveTemplate(payload)

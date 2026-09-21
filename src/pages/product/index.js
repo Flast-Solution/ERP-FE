@@ -27,7 +27,7 @@ import Filter from './Filter';
 import { Button, Dropdown, Space, Tooltip } from 'antd';
 import { ApartmentOutlined, EyeOutlined } from '@ant-design/icons';
 import { f5List, InAppEvent } from "@flast-erp/core/utils";
-import { GATEWAY, HASH_MODAL } from 'configs';
+import { HASH_MODAL } from 'configs';
 import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils';
 import ProductAttrService from '@/services/ProductAttrService';
 import { cloneDeep } from 'lodash';
@@ -39,10 +39,18 @@ import useWorkflowModal from '@/containers/Order/List/hooks/useWorkflowModal';
 import useWorkflowProgressDrawer from '@/containers/Order/List/hooks/useWorkflowProgressDrawer';
 import { PRODUCT_WORKFLOW_ENTITY_TYPE } from '@/containers/Order/List/constants';
 import { enrichEntitiesWithWorkflowData } from '@/containers/Order/List/services/workflowApi';
+import { getProductImagePreviewUrl } from '@/containers/Product/productImages';
+import useGetMe from '@/hooks/useGetMe';
 
 const PRODUCT_API_PATH = 'erp/product/fetch';
 
 const Index = () => {
+  const { hasPermission } = useGetMe();
+  const canCreate = hasPermission('catalog.product.create');
+  const canUpdate = hasPermission('catalog.product.update');
+  const canManageBom = hasPermission('catalog.product.bom.manage');
+  const canAttachWorkflow = hasPermission('catalog.product.workflow.attach');
+  const canViewWorkflow = hasPermission('catalog.product.workflow.view');
 
   const {
     workflowModalOpen,
@@ -104,7 +112,10 @@ const Index = () => {
   const onCreateProduct = () => InAppEvent.emit(HASH_MODAL, {
     hash: '#draw/product.edit',
     title: 'Tạo mới sản phẩm',
-    data: {}
+    data: {
+      image: [],
+      file: [],
+    }
   });
 
   const onAddBom = (item) => InAppEvent.emit(HASH_MODAL, {
@@ -126,11 +137,11 @@ const Index = () => {
       dataIndex: 'image',
       width: 150,
       ellipsis: true,
-      render: (image) => image ? (
+      render: (image) => getProductImagePreviewUrl(image) ? (
         <CustomImage
           preview={false}
           width={50}
-          src={String(GATEWAY).concat(image)}
+          src={getProductImagePreviewUrl(image)}
           alt='image'
         />
       ) : ('Chưa có')
@@ -140,7 +151,9 @@ const Index = () => {
       key: 'name',
       width: 200,
       ellipsis: true,
-      render: (record) => <Link to={`/product/edit/${record.id}`}>{record.name}</Link>
+      render: (record) => canUpdate
+        ? <Link to={`/product/edit/${record.id}`}>{record.name}</Link>
+        : record.name
     },
     {
       title: "SKus",
@@ -176,18 +189,18 @@ const Index = () => {
       fixed: 'right',
       render: (record) => (
         <Space gap={8}>
-          <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size='small'>Detail</Button>
-          <Button onClick={() => onAddBom(record)} size='small'>Bom</Button>
-          <Dropdown
+          {canUpdate ? <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size='small'>Detail</Button> : null}
+          {canManageBom ? <Button onClick={() => onAddBom(record)} size='small'>Bom</Button> : null}
+          {(canAttachWorkflow || (canViewWorkflow && record?.workflowInstances?.length)) ? <Dropdown
             trigger={['click']}
             menu={{
               items: [
-                {
+                canAttachWorkflow && {
                   key: 'attach',
                   icon: <ApartmentOutlined />,
                   label: record?.workflowInstances?.length ? 'Gắn thêm workflow' : 'Gắn workflow',
                 },
-                record?.workflowInstances?.length && {
+                canViewWorkflow && record?.workflowInstances?.length && {
                   key: 'progress',
                   icon: <EyeOutlined />,
                   label: 'Xem tiến trình',
@@ -214,7 +227,7 @@ const Index = () => {
                 onClick={event => event.stopPropagation()}
               />
             </Tooltip>
-          </Dropdown>
+          </Dropdown> : null}
           {/* <Button onClick={() => onAddChecklist(record)} size='small'>Checklist</Button> */}
         </Space>
       )
@@ -256,6 +269,7 @@ const Index = () => {
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
         apiPath={PRODUCT_API_PATH}
+        hasCreate={canCreate}
         customClickCreate={onCreateProduct}
         columns={CUSTOM_ACTION}
       />

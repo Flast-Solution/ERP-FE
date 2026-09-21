@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import axios from 'axios'
-import { Form, Upload, message } from 'antd'
+import { Button, Form, Image, Modal, Spin, Upload, message } from 'antd'
+import { EyeOutlined } from '@ant-design/icons'
 
 import {
   extractUploadItems,
   fileListToValues,
+  normalizeUploadFileName,
   resolveUploadUrl,
   toUploadFile,
 } from './uploadUtils'
@@ -21,13 +23,74 @@ const FormFileUpload = ({
   const form = Form.useFormInstance()
   const formValue = Form.useWatch(name, form)
   const [fileList, setFileList] = useState([])
+  const [preview, setPreview] = useState({
+    open: false,
+    url: '',
+    name: '',
+    image: false,
+    loading: false,
+    error: '',
+  })
 
   useEffect(() => {
     setFileList(current => {
       if (current.some(file => file.status === 'uploading')) return current
-      return (Array.isArray(formValue) ? formValue : (formValue ? [formValue] : [])).map(toUploadFile)
+      return (Array.isArray(formValue) ? formValue : (formValue ? [formValue] : []))
+        .map(toUploadFile)
+        .filter(Boolean)
     })
   }, [formValue])
+
+  useEffect(() => () => {
+    if (preview.url?.startsWith('blob:')) URL.revokeObjectURL(preview.url)
+  }, [preview.url])
+
+  const closePreview = () => {
+    setPreview(current => ({ ...current, open: false }))
+  }
+
+  const openPreview = async (file) => {
+    const sourceUrl = file.url ?? file.thumbUrl ?? resolveUploadUrl(file.response)
+    if (!sourceUrl) {
+      message.warning('Không tìm thấy đường dẫn xem trước của file.')
+      return
+    }
+    const filename = String(file.name ?? sourceUrl).split(/[?#]/)[0]
+    const isImage = /\.(avif|bmp|gif|heic|heif|ico|jpe?g|png|svg|webp)$/i.test(filename)
+    setPreview({
+      open: true,
+      url: '',
+      name: file.name || 'Xem trước file',
+      image: isImage,
+      loading: true,
+      error: '',
+    })
+
+    try {
+      // Dùng Blob URL để bỏ qua Content-Disposition: attachment của API.
+      const response = await axios.get(sourceUrl, { responseType: 'blob' })
+      let blob = response.data
+      const extension = filename.split('.').pop()?.toLowerCase()
+      const mimeByExtension = {
+        pdf: 'application/pdf',
+        txt: 'text/plain;charset=utf-8',
+        csv: 'text/csv;charset=utf-8',
+        json: 'application/json;charset=utf-8',
+        xml: 'application/xml;charset=utf-8',
+      }
+      if ((!blob.type || blob.type === 'application/octet-stream') && mimeByExtension[extension]) {
+        blob = new Blob([blob], { type: mimeByExtension[extension] })
+      }
+      const blobUrl = URL.createObjectURL(blob)
+      setPreview(current => ({ ...current, url: blobUrl, loading: false }))
+    } catch (error) {
+      setPreview(current => ({
+        ...current,
+        loading: false,
+        error: 'Không thể tải nội dung để xem trước.',
+      }))
+    }
+  }
 
   return (
     <>
@@ -48,16 +111,39 @@ const FormFileUpload = ({
             setFileList(nextFileList)
             form.setFieldValue(name, fileListToValues(nextFileList))
           }}
-          onPreview={(file) => {
-            const url = file.url ?? file.thumbUrl ?? resolveUploadUrl(file.response)
-            if (url) window.open(url, '_blank', 'noopener,noreferrer')
-          }}
+          onPreview={openPreview}
+          itemRender={(originNode, file) => (
+            <div style={{ position: 'relative' }}>
+              {originNode}
+              {file.status === 'done' && (
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<EyeOutlined />}
+                  title="Xem nhanh"
+                  aria-label={`Xem nhanh ${file.name || 'file'}`}
+                  onClick={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    openPreview(file)
+                  }}
+                  style={{
+                    position: 'absolute',
+                    right: 38,
+                    top: '50%',
+                    zIndex: 2,
+                    transform: 'translateY(-50%)',
+                  }}
+                />
+              )}
+            </div>
+          )}
           customRequest={async ({ file, onSuccess, onError }) => {
             try {
               const formData = new FormData()
-              formData.append('files', file)
+              formData.append('files', file, normalizeUploadFileName(file?.name) || file?.name)
               formData.append('folder', folder)
-              const response = await axios.post('/upload/folder/multiple', formData, {
+              const response = await axios.post('/erp/folder/multiple', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
               })
               const uploaded = extractUploadItems(response.data)
@@ -87,6 +173,32 @@ const FormFileUpload = ({
       >
         <input type="hidden" />
       </Form.Item>
+      <Modal
+        title={preview.name}
+        open={preview.open}
+        width="min(960px, calc(100vw - 32px))"
+        footer={null}
+        destroyOnHidden
+        onCancel={closePreview}
+      >
+        {preview.loading ? (
+          <div style={{ display: 'flex', minHeight: 240, alignItems: 'center', justifyContent: 'center' }}>
+            <Spin tip="Đang tải nội dung..." />
+          </div>
+        ) : preview.error ? (
+          <div style={{ padding: 32, textAlign: 'center', color: '#ff4d4f' }}>{preview.error}</div>
+        ) : preview.image ? (
+          <div style={{ display: 'flex', justifyContent: 'center', maxHeight: '75vh', overflow: 'auto' }}>
+            <Image src={preview.url} alt={preview.name} style={{ maxHeight: '72vh', objectFit: 'contain' }} />
+          </div>
+        ) : (
+          <iframe
+            src={preview.url}
+            title={preview.name}
+            style={{ width: '100%', height: '72vh', border: 0 }}
+          />
+        )}
+      </Modal>
     </>
   )
 }

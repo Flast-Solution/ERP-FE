@@ -8,149 +8,200 @@
 /* Bản quyền (c) 2025 - này thuộc về các cộng tác viên Flast Solution     */
 /* (xem AUTHORS.md).                                                      */
 /* Bản quyền (c) 2024-2025 Long Huu, Quang Duc, Hung Bui                  */
-/*                                                                        */
-/* Bạn được quyền sử dụng phần mềm này miễn phí cho bất kỳ mục đích nào,  */
-/* bao gồm sao chép, sửa đổi, phân phối, bán lại…                         */
-/*                                                                        */
-/* Chỉ cần giữ nguyên thông tin bản quyền và nội dung giấy phép này trong */
-/* các bản sao.                                                           */
-/*                                                                        */
-/* Đội ngũ phát triển mong rằng phần mềm được sử dụng đúng mục đích và    */
-/* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useState, useCallback } from 'react'
-import { Button, Pagination, Row, Col, Tooltip, Tag } from 'antd';
-import { ClockCircleOutlined } from '@ant-design/icons';
-import { Helmet } from 'react-helmet';
-import { InAppEvent } from '@flast-erp/core/utils';
-import { HASH_POPUP } from '@/configs/constant';
-import { BreadcrumbCustom } from '@flast-erp/core/components';
-import ListLayoutStyles from '@/components/ListLayoutStyles'
-import { useEffectAsync } from '@flast-erp/core/hooks';
-import { RequestUtils, arrayEmpty, formatMoney } from '@flast-erp/core/utils';
-import {
-  KanbanCardWrapper,
-  TitleWrapper,
-  Title,
-  NoteIcon,
-  MetaInfo,
-  TagsContainer,
-  DateText,
-  AssigneeAvatar,
-  getInitials
-} from '@/css/cardStyle';
-import UserService from '@/services/UserService';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { message } from 'antd';
+import { RequestUtils } from '@flast-erp/core/utils';
+import EmployeeKpiDetail from './components/EmployeeKpiDetail';
+import IndicatorDrawer from './components/IndicatorDrawer';
+import KpiDashboard from './components/KpiDashboard';
+import { createKpiPeriods } from './constants';
+import useGetMe from '@/hooks/useGetMe';
 
-const TITLE = "Thiết lập KPI";
-const CURRENT_DATE = new Date();
+const getInitials = (name = '') => name
+  .trim()
+  .split(/\s+/)
+  .slice(-2)
+  .map((part) => part.charAt(0).toLocaleUpperCase('vi'))
+  .join('');
+
+const getAverageProgress = (kpis = []) => {
+  if (!kpis.length) return 0;
+
+  const totalProgress = kpis.reduce((total, kpi) => {
+    const target = Number(kpi.target) || 0;
+    const achieve = Number(kpi.achieve) || 0;
+    return total + (target > 0 ? (achieve / target) * 100 : 0);
+  }, 0);
+
+  return Math.round(totalProgress / kpis.length);
+};
 
 const KpiPage = () => {
-
-  const [ data, setKPI ] = useState({});
-  const [ filter ] = useState({ 
-    month: CURRENT_DATE.getMonth() + 1, 
-    year: CURRENT_DATE.getFullYear()
+  const { hasPermission } = useGetMe();
+  const canViewEmployee = hasPermission('kpi.employee.view');
+  const canCreate = hasPermission('kpi.indicator.create');
+  const canUpdate = hasPermission('kpi.indicator.update');
+  const canDelete = hasPermission('kpi.indicator.delete');
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const periods = useMemo(() => createKpiPeriods(currentYear), [currentYear]);
+  const [period, setPeriod] = useState(`q${Math.floor(now.getMonth() / 3) + 1}`);
+  const [search, setSearch] = useState('');
+  const [attentionOnly, setAttentionOnly] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [kpiLoading, setKpiLoading] = useState(false);
+  const kpiRequestIdRef = useRef(0);
+  const [drawer, setDrawer] = useState({
+    open: false,
+    mode: 'create',
+    employee: null,
+    indicator: null,
   });
 
-  const fetchKPI = useCallback(async (params = {}) => {
-    const { data } = await RequestUtils.Get("/kpi/fetch", {...filter, ...params});
-    if(arrayEmpty(data.embedded)) {
-      return;
+  const kpiQueryParams = useMemo(() => {
+    if (period === 'year') {
+      return {
+        year: currentYear,
+        frequency: 'year',
+      };
     }
-    const { embedded } = data;
-    const userIds = embedded.map(i => i.userId);
-    const mUser = await UserService.mapId2Name(userIds);
-    for(let item of embedded) {
-      item.ssoId = mUser[item.userId];
-      item.inTime = new Date(String(item.year).concat("-").concat(item.month).concat("-01"));
-    }
-    setKPI(data);
-  }, [ filter ]);
-  
-  const onClickAddKPI = useCallback((kpi = {}) => {
-    const onAfterSubmit = (values) => {
-      fetchKPI();
+
+    const currentQuarter = Math.floor(new Date().getMonth() / 3) + 1;
+    const selectedQuarter = Number(period.replace('q', '')) || currentQuarter;
+
+    return {
+      year: currentYear,
+      quarter: selectedQuarter,
+      frequency: 'quarter',
     };
-    InAppEvent.emit(HASH_POPUP, {
-      hash: "kpi.add",
-      title: "Thiết lập KPI mới",
-      data: { onSave: onAfterSubmit, kpi }
+  }, [currentYear, period]);
+
+  const loadKpis = useCallback(async () => {
+    const requestId = kpiRequestIdRef.current + 1;
+    kpiRequestIdRef.current = requestId;
+    setKpiLoading(true);
+
+    try {
+      const response = await RequestUtils.Get('/user/kpi', kpiQueryParams);
+      if (requestId !== kpiRequestIdRef.current) return;
+
+      const isSuccess = response?.success === true || Number(response?.errorCode) === 200;
+
+      if (!isSuccess) {
+        setUsers([]);
+        message.error(response?.message || 'Không tải được danh sách KPI.');
+        return;
+      }
+
+      setUsers(Array.isArray(response?.data) ? response.data : []);
+    } catch (error) {
+      if (requestId !== kpiRequestIdRef.current) return;
+
+      console.error('[KPI] Không tải được danh sách KPI:', error);
+      setUsers([]);
+      message.error('Không tải được danh sách KPI.');
+    } finally {
+      if (requestId === kpiRequestIdRef.current) setKpiLoading(false);
+    }
+  }, [kpiQueryParams]);
+
+  useEffect(() => {
+    loadKpis();
+  }, [loadKpis]);
+
+  const selectedPeriod = periods.find((item) => item.key === period) || periods[0];
+
+  const employeeRows = useMemo(() => users.map((user) => {
+      const employeeKpis = Array.isArray(user.kpi) ? user.kpi : [];
+
+      return {
+        ...user,
+        initials: getInitials(user.fullName),
+        indicatorCount: employeeKpis.length,
+        kpiNames: employeeKpis.map((kpi) => kpi.name).filter(Boolean).join(', '),
+        kpiTypes: [...new Set(employeeKpis.map((kpi) => kpi.type).filter(Boolean))].join(', '),
+        averageProgress: getAverageProgress(employeeKpis),
+      };
+    }), [users]);
+
+  const employees = useMemo(() => {
+    const normalizedSearch = search.trim().toLocaleLowerCase('vi');
+
+    return employeeRows.filter((employee) => {
+      const matchesSearch = !normalizedSearch || [employee.fullName, employee.ssoId, employee.email]
+        .filter(Boolean)
+        .some((value) => value.toLocaleLowerCase('vi').includes(normalizedSearch));
+      const matchesStatus = !attentionOnly || employee.indicatorCount === 0;
+      return matchesSearch && matchesStatus;
     });
-  }, [fetchKPI]);
+  }, [attentionOnly, employeeRows, search]);
 
-  useEffectAsync( async() => {
-    fetchKPI();
-  }, []);
+  const selectedEmployeeView = selectedEmployee
+    ? employeeRows.find((employee) => employee.id === selectedEmployee.id) || selectedEmployee
+    : null;
 
-  const onChangePagination = useCallback(async (page) => {
-    fetchKPI();
-    /* eslint-disable-next-line */
-  }, []);
+  const selectedEmployeeKpis = useMemo(() => {
+    if (!selectedEmployeeView) return [];
 
-  const mPageProps = {
-    current: filter?.page ?? 1,
-    pageSize: 10,
-    total: data?.page?.totalElements ?? 0,
-    showQuickJumper: false,
-    showTotal: (total, range) => `${range[0]}-${range[1]}/${total}`
+    const selectedUser = users.find(
+      (user) => String(user.id) === String(selectedEmployeeView.id),
+    );
+    return Array.isArray(selectedUser?.kpi) ? selectedUser.kpi : [];
+  }, [selectedEmployeeView, users]);
+
+  const openIndicatorDrawer = (employee, indicator = null) => {
+    setDrawer({
+      open: true,
+      mode: indicator ? 'edit' : 'create',
+      employee: employee || null,
+      indicator,
+    });
+  };
+
+  const closeIndicatorDrawer = () => {
+    setDrawer((current) => ({ ...current, open: false }));
   };
 
   return (
-    <div>
-      <Helmet>
-        <title>{TITLE}</title>
-      </Helmet>
-      <BreadcrumbCustom
-        data={[{ title: 'Trang chủ' }, { title: TITLE }]}
+    <>
+      {selectedEmployeeView ? (
+        <EmployeeKpiDetail
+          employee={selectedEmployeeView}
+          indicators={selectedEmployeeKpis}
+          loading={kpiLoading}
+          period={selectedPeriod}
+          onBack={() => setSelectedEmployee(null)}
+          onAdd={canCreate ? () => openIndicatorDrawer(selectedEmployeeView) : null}
+          onEdit={canUpdate ? (indicator) => openIndicatorDrawer(selectedEmployeeView, indicator) : null}
+        />
+      ) : (
+        <KpiDashboard
+          attentionOnly={attentionOnly}
+          employees={employees}
+          loading={kpiLoading}
+          periods={periods}
+          onAdd={canCreate ? () => openIndicatorDrawer(null) : null}
+          onFilterChange={() => setAttentionOnly((current) => !current)}
+          onPeriodChange={setPeriod}
+          onSearchChange={setSearch}
+          onSelectEmployee={canViewEmployee ? setSelectedEmployee : null}
+          period={period}
+          search={search}
+          selectedPeriod={selectedPeriod}
+        />
+      )}
+      <IndicatorDrawer
+        drawer={{ ...drawer, open: drawer.open && (drawer.mode === 'edit' ? canUpdate : canCreate) }}
+        canDelete={canDelete}
+        canSave={drawer.mode === 'edit' ? canUpdate : canCreate}
+        onClose={closeIndicatorDrawer}
+        onSaved={loadKpis}
       />
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-        <h3>Bảng KPI trong tháng {filter.month}</h3>
-        <Button type="primary" onClick={onClickAddKPI}>Thêm mới KPI</Button>
-      </div>
-      <ListLayoutStyles>
-        <Row gutter={16} >
-          {(data?.embedded || []).map(item => 
-            <Col key={item.id}>
-              <KPICard onAdd={onClickAddKPI} item={item} />
-            </Col>
-          )}
-        </Row>
-        <div className="list-layout__pagination-bottom">
-          <Pagination {...mPageProps} onChange={onChangePagination} />
-        </div>
-      </ListLayoutStyles>
-    </div>
-  )
-}
+    </>
+  );
+};
 
-const KPICard = ({ item, onAdd }) => {
-  const { listKpi } = item;
-  return (
-    <KanbanCardWrapper>
-      <TitleWrapper>
-        <Title ellipsis={{ tooltip: 'Sửa KPI' }}>
-          {item.ssoId}
-        </Title>
-        <Tooltip title="KPI tháng">
-          <NoteIcon onClick={() => onAdd(item)} />
-        </Tooltip>
-      </TitleWrapper>
-      { listKpi?.map( (kpi, key) => (
-        <MetaInfo key={key} style={{marginBottom: 10}}>
-          <TagsContainer>
-            <DateText>📅 {item.month} - {item.year}</DateText>
-            <Tag icon={<ClockCircleOutlined />} color="default" style={{ fontSize: '12px', padding: '0 8px' }}>
-              {formatMoney(kpi.target)}
-            </Tag>
-          </TagsContainer>
-          <AssigneeAvatar>
-            {getInitials(kpi.name)}
-          </AssigneeAvatar>
-        </MetaInfo>
-      ))}
-    </KanbanCardWrapper>
-  )
-}
-
-export default KpiPage
+export default KpiPage;

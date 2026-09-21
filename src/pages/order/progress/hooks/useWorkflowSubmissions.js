@@ -9,6 +9,7 @@ import {
 export const useWorkflowSubmissions = ({
   workflowPreview,
   steps,
+  allSteps = steps,
   currentStep,
   displayStep,
   stepTransitionList,
@@ -25,28 +26,21 @@ export const useWorkflowSubmissions = ({
   ), [currentStep?.formTemplate])
 
   const formTemplates = useMemo(
-    () => [...previewFormTemplates, ...Object.values(submissionTemplates)],
+    () => [...Object.values(submissionTemplates), ...previewFormTemplates],
     [previewFormTemplates, submissionTemplates],
   )
 
   useEffect(() => {
-    const availableTemplateIds = new Set(
-      previewFormTemplates
-        .map((template) => template?.id)
-        .filter(Boolean)
-        .map(String),
-    )
-
     const missingIds = Array.from(new Set([
       ...submissions
         .map((submission) => submission?.templateId)
         .filter(Boolean)
         .map(String),
-      ...steps
+      ...allSteps
         .map((step) => step?.formTemplate?.id)
         .filter(Boolean)
         .map(String),
-    ])).filter((id) => !availableTemplateIds.has(id) && !submissionTemplates[id])
+    ])).filter((id) => !submissionTemplates[id])
 
     if (!missingIds.length) return undefined
 
@@ -76,9 +70,13 @@ export const useWorkflowSubmissions = ({
     return () => {
       mounted = false
     }
-  }, [submissions, steps, previewFormTemplates, submissionTemplates])
+  }, [submissions, allSteps, previewFormTemplates, submissionTemplates])
 
-  const currentForm = currentStep?.formTemplate ?? null
+  const currentFormTemplateId = currentStep?.formTemplate?.id
+  const currentForm = formTemplates.find(template => (
+    Number(template?.id) === Number(currentFormTemplateId)
+    && (template?.sourceComponent?.microFrontendUrl || template?.microFrontendUrl)
+  )) ?? currentStep?.formTemplate ?? null
 
   const displayForm = useMemo(() => {
     if (displayStep?.stepCode === currentStep?.stepCode) {

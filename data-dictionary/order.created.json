@@ -4,7 +4,7 @@
 		"productId": 776,
 		"detailId": 1,
 		"productName": "",
-		"orderName": "",
+		"code": "",
 		"skuDetailCode": "10208",
 		"unit": "Hộp",
 		"warrantyPeriod": "(Chưa có)",
@@ -32,7 +32,7 @@
 	},
 	{
 		"key": "dIlDKxCn",
-		"orderName": "",
+		"code": "",
 		"detailId": 2,
 		"productId": 776,
 		"productName": "",

@@ -114,7 +114,7 @@ const useWorkflowModal = ({ setLotsByOrderId, onAttached } = {}) => {
 
     try {
       const [workflowList, attachedInstances] = await Promise.all([
-        fetchWorkflowList(),
+        fetchWorkflowList(options.flowType),
         targetIds.length > 0
           ? fetchWorkflowInstancesByEntity({
             entityName: entityType,

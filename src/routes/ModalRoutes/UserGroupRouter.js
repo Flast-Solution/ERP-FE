@@ -24,6 +24,7 @@ import React from 'react';
 const UserGroupRouter = [
   {
     path: 'userGroup.edit',
+    permission: ({ data }) => data?.record?.id ? 'system.team.update' : 'system.team.create',
     Component: React.lazy(() => import('@/containers/UserGroup')),
     modalOptions: { title: '', width: 750 }
   }

@@ -1,6 +1,6 @@
 import React from 'react'
 import { Button, Dropdown, Space, Tooltip } from 'antd'
-import { ApartmentOutlined, EditFilled, EyeOutlined } from '@ant-design/icons'
+import { ApartmentOutlined, EditFilled, EyeOutlined, InboxOutlined } from '@ant-design/icons'
 import { clonePlainData } from '../utils/orderMappers'
 
 const OrderActions = ({
@@ -8,12 +8,21 @@ const OrderActions = ({
   isOpportunityList,
   hideQuoteButton,
   disableWorkflowAttach,
+  showWorkflowProgressAction,
   extraActions,
   onClickViewDetail,
   openQuotationViewer,
   openWorkflowModal,
   openWorkflowProgressDrawer,
   navigate,
+  canViewDetail,
+  canUpdateOpportunity,
+  canUpdateOrder,
+  canViewQuotation,
+  canAttachWorkflow,
+  canViewWorkflow,
+  canCreateReceipt,
+  openOrderInboundDrawer,
 }) => {
   const workflowDetails = (record?.details ?? []).filter(detail => (
     Array.isArray(detail?.workflowInstances) && detail.workflowInstances.length > 0
@@ -27,7 +36,7 @@ const OrderActions = ({
     : hasParentWorkflowInstance
   const workflowMenuItems = isOpportunityList
     ? [
-      ...workflowDetails.map(detail => ({
+      ...(canViewWorkflow ? workflowDetails.map(detail => ({
         key: `progress:${detail.id}`,
         icon: <EyeOutlined />,
         label: (
@@ -35,41 +44,71 @@ const OrderActions = ({
             <strong>Mã&nbsp;</strong> {detail.code}
           </span>
         ),
-      })),
-      hasParentWorkflowInstance && workflowDetails.length === 0 && {
+      })) : []),
+      canViewWorkflow && hasParentWorkflowInstance && workflowDetails.length === 0 && {
         key: 'progress',
         icon: <EyeOutlined />,
         label: 'Xem tiến trình',
       },
-      !disableWorkflowAttach && {
+      canAttachWorkflow && !disableWorkflowAttach && {
         key: 'attach',
         icon: <ApartmentOutlined />,
         label: hasWorkflowInstance ? 'Gắn thêm workflow' : 'Gắn workflow',
       },
     ].filter(Boolean)
     : [
-      !disableWorkflowAttach && {
+      canAttachWorkflow && !disableWorkflowAttach && {
         key: 'attach',
         icon: <ApartmentOutlined />,
         label: hasParentWorkflowInstance ? 'Gắn thêm workflow' : 'Gắn workflow',
       },
-      hasParentWorkflowInstance && {
+      canViewWorkflow && (hasParentWorkflowInstance || showWorkflowProgressAction) && {
         key: 'progress',
         icon: <EyeOutlined />,
         label: 'Xem tiến trình',
+        disabled: !hasParentWorkflowInstance,
       },
     ].filter(Boolean)
 
+  const handleWorkflowAction = (key, event) => {
+    event?.stopPropagation?.()
+    if (key === 'attach') {
+      openWorkflowModal(record)
+      return
+    }
+    if (key.startsWith('progress:')) {
+      const detailId = key.slice('progress:'.length)
+      const detail = workflowDetails.find(item => String(item?.id) === detailId)
+      if (detail) {
+        openWorkflowProgressDrawer(record, detail)
+      }
+      return
+    }
+    if (key === 'progress') {
+      navigate(`/sale/order/progress/${record.id}`, {
+        state: {
+          order: clonePlainData(record),
+        },
+      })
+    }
+  }
+
+  const singleWorkflowAction = workflowMenuItems.length === 1
+    ? workflowMenuItems[0]
+    : null
+  const isDirectProgressAction = singleWorkflowAction?.key === 'progress'
+    || singleWorkflowAction?.key?.startsWith('progress:')
+
   return (
     <Space gap={8}>
-      <Button
+      {canViewDetail ? <Button
         type="primary"
         size="small"
         onClick={() => onClickViewDetail(record)}
       >
         Chi tiết
-      </Button>
-      {!hideQuoteButton && (
+      </Button> : null}
+      {canViewQuotation && !hideQuoteButton && (
         <Button
           size="small"
           style={{ color: '#fa8c16' }}
@@ -81,45 +120,38 @@ const OrderActions = ({
           Báo giá
         </Button>
       )}
-      {workflowMenuItems.length > 0 ? (
+      {isDirectProgressAction ? (
+        <Tooltip title={singleWorkflowAction.disabled ? 'Chưa có workflow' : 'Xem tiến trình'}>
+          <span>
+            <Button
+              size="small"
+              icon={<EyeOutlined />}
+              disabled={singleWorkflowAction.disabled}
+              onClick={(event) => handleWorkflowAction(singleWorkflowAction.key, event)}
+            />
+          </span>
+        </Tooltip>
+      ) : workflowMenuItems.length > 0 ? (
         <Dropdown
           trigger={['click']}
           menu={{
             items: workflowMenuItems,
-            onClick: ({ key, domEvent }) => {
-              domEvent?.stopPropagation()
-              if (key === 'attach') {
-                openWorkflowModal(record)
-                return
-              }
-              if (key.startsWith('progress:')) {
-                const detailId = key.slice('progress:'.length)
-                const detail = workflowDetails.find(item => String(item?.id) === detailId)
-                if (detail) {
-                  openWorkflowProgressDrawer(record, detail)
-                }
-                return
-              }
-              if (key === 'progress') {
-                navigate(`/sale/order/progress/${record.id}`, {
-                  state: {
-                    order: clonePlainData(record),
-                  },
-                })
-              }
-            },
+            onClick: ({ key, domEvent }) => handleWorkflowAction(key, domEvent),
           }}
         >
-          <Tooltip title={hasWorkflowInstance ? 'Xem tiến trình' : 'Workflow'}>
+          <Tooltip title={hasWorkflowInstance ? 'Xem tiến trình' : 'Chưa có workflow'}>
             <Button
               size="small"
-              icon={hasWorkflowInstance ? <EyeOutlined /> : <ApartmentOutlined />}
+              icon={(hasWorkflowInstance || showWorkflowProgressAction)
+                ? <EyeOutlined />
+                : <ApartmentOutlined />}
+              disabled={showWorkflowProgressAction && !hasWorkflowInstance}
               onClick={(event) => event.stopPropagation()}
             />
           </Tooltip>
         </Dropdown>
       ) : null}
-      {record.type === 'cohoi' && (
+      {canUpdateOpportunity && record.type === 'cohoi' && (
         <Button
           size="small"
           style={{ color: '#16c5faff' }}
@@ -128,16 +160,42 @@ const OrderActions = ({
           <EditFilled />
         </Button>
       )}
-      {extraActions?.map((action, index) => (
+      {canUpdateOrder && record.type === 'order' && (
         <Button
-          key={index}
           size="small"
-          {...action}
+          style={{ color: '#16c5faff' }}
+          onClick={() => navigate(`/sale/ban-hang/${record.id}?type=order`)}
+        >
+          <EditFilled />
+        </Button>
+      )}
+      {canCreateReceipt && record.type === 'order' && (
+        <Tooltip title="Nhập kho theo đơn">
+          <Button
+            size="small"
+            icon={<InboxOutlined />}
+            aria-label="Nhập kho theo đơn"
+            style={{ color: '#389e0d', borderColor: '#b7eb8f' }}
+            onClick={(event) => {
+              event.stopPropagation()
+              openOrderInboundDrawer(record)
+            }}
+          />
+        </Tooltip>
+      )}
+      {extraActions?.filter(action => action.visible?.(record) !== false).map((action, index) => {
+        const { visible, ...buttonAction } = action
+        return (
+        <Button
+          key={action.key ?? action.children ?? index}
+          size="small"
+          {...buttonAction}
           onClick={() => action.onClick(record)}
         >
           {action.children}
         </Button>
-      ))}
+        )
+      })}
     </Space>
   )
 }

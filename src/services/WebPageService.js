@@ -22,6 +22,11 @@ const resolveSavedPage = (response, fallbackId) => {
   return { ...page, id }
 }
 
+const resolvePage = response => {
+  const data = response?.data ?? response
+  return data?.data && typeof data.data === 'object' ? data.data : data
+}
+
 const assertSuccess = (response, fallbackMessage) => {
   if (response?.success === false || (response?.errorCode && Number(response.errorCode) !== 200)) {
     throw new Error(response?.message || fallbackMessage)
@@ -87,6 +92,21 @@ export const buildWebPagePayload = ({
 }
 
 const WebPageService = {
+  async find(id) {
+    if (id === undefined || id === null || id === '') {
+      throw new Error('Thiếu ID trang cần tải.')
+    }
+    const response = await RequestUtils.Get(
+      `${WEB_PAGE_VIEW_PATH}/find/${encodeURIComponent(id)}`,
+    )
+    assertSuccess(response, 'Không tải được thông tin trang.')
+    const page = resolvePage(response)
+    if (!page || page.id === undefined || page.id === null) {
+      throw new Error(response?.message || 'API không trả về thông tin trang.')
+    }
+    return page
+  },
+
   async fetch(params = {}) {
     const response = await RequestUtils.Get(`${WEB_PAGE_VIEW_PATH}/fetch`, params)
     assertSuccess(response, 'Không tải được danh sách trang.')

@@ -22,6 +22,7 @@ export const useWorkflowRemoteForm = ({
   workflowPreview,
   refreshWorkflow,
   syncWorkflowInstance,
+  onSubmitSuccess,
 }) => {
   const remoteFormRef = useRef(null)
   const remoteFormContainerRef = useRef(null)
@@ -113,6 +114,7 @@ export const useWorkflowRemoteForm = ({
       if (preview?.processInstance) {
         syncWorkflowInstance?.(preview.processInstance)
       }
+      onSubmitSuccess?.(response)
     } catch (error) {
       message.error(error?.message || 'Không lưu được dữ liệu form.')
     } finally {
@@ -124,6 +126,7 @@ export const useWorkflowRemoteForm = ({
     workflowPreview,
     refreshWorkflow,
     syncWorkflowInstance,
+    onSubmitSuccess,
   ])
 
   const handleRemoteFormSubmitError = useCallback((error) => {

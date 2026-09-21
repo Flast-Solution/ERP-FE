@@ -30,20 +30,18 @@ const GeneralConfigPage = React.lazy(() => import('@/pages/generalConfig'));
 const ProviderPage = React.lazy(() => import('@/pages/provider'));
 const DocumentTemplateListPage = React.lazy(() => import('@/pages/document-template'));
 const DocumentTemplateEditorPage = React.lazy(() => import('@/pages/document-template/Editor'));
-const NotificationsPage = React.lazy(() => import('@/pages/notifications'));
 
 export const CommonConfig = {
     auth: authRoles.user,
     routes: [
-        { path: '/', element: <HomePage /> },
+        { path: '/', permission: 'dashboard.view', element: <HomePage /> },
         { path: '/profile', element: <ProfilePage /> },
-        { path: '/system/general-config', element: <GeneralConfigPage /> },
-        { path: '/provider', element: <ProviderPage /> },
-        { path: '/system/document-templates', element: <DocumentTemplateListPage /> },
-        { path: '/system/document-templates/create', element: <DocumentTemplateEditorPage /> },
-        { path: '/system/document-templates/:templateId/edit', element: <DocumentTemplateEditorPage /> },
-        { path: '/notifications', element: <NotificationsPage /> },
-        { path: '/task', element: <TaskPage /> },
-        { path: '/task/calendar/:id', element: <TaskCalendar /> }
+        { path: '/system/general-config', permission: 'system.config.view', element: <GeneralConfigPage /> },
+        { path: '/provider', permission: 'supplier.view', element: <ProviderPage /> },
+        { path: '/system/document-templates', permission: 'system.document_template.view', element: <DocumentTemplateListPage /> },
+        { path: '/system/document-templates/create', permission: 'system.document_template.create', element: <DocumentTemplateEditorPage /> },
+        { path: '/system/document-templates/:templateId/edit', permission: 'system.document_template.update', element: <DocumentTemplateEditorPage /> },
+        { path: '/task', permission: 'project.view', element: <TaskPage /> },
+        { path: '/task/calendar/:id', permission: 'project.task.view', element: <TaskCalendar /> }
     ]
 };

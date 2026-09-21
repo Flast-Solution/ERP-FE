@@ -20,9 +20,11 @@
 /**************************************************************************/
 
 import { HASH_MODAL, HASH_MODAL_CLOSE } from '@/configs';
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { InAppEvent } from '@flast-erp/core/utils';
 import { DrawerCustom } from '@flast-erp/core/components';
+import useGetMe from '@/hooks/useGetMe';
+import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard';
 
 import ProductRoute from './ProductRoute.js';
 import OrderRoute from './OrderRoute';
@@ -52,7 +54,7 @@ const modalRoutes = [
   ...Cohoi7DayRouter,
   ...ActionChamSocDonHangRouter,
   ...userRoute,
-  ...BusinessUnitRouter,
+  ...BusinessUnitRouter
 ]
 
 const getModalRoute = (urlHash) => {
@@ -72,14 +74,63 @@ const getModalRoute = (urlHash) => {
 };
 
 function ModalRoutes() {
+  const { hasPermission } = useGetMe();
+  const closeGuardRef = useRef(null);
 
   const [params, setParams] = useState({ open: false });
+  const closeDrawerImmediately = useCallback(() => {
+    closeGuardRef.current = null;
+    setParams({ open: false });
+  }, []);
+  const {
+    guardClose: guardDrawerClose,
+    markClean: markDrawerClean,
+    markDirty: markDrawerDirty,
+  } = useDrawerLeaveGuard({
+    open: params.open,
+    onClose: closeDrawerImmediately,
+    confirmOnOpen: false,
+    resetKey: params.hash,
+  });
+
   const handleEventDraw = useCallback(({ hash, data, title }) => {
+    closeGuardRef.current = null;
     setParams({ open: true, hash, data, title });
   }, []);
 
   const handleCloseDraw = useCallback(() => {
-    setParams({ open: false });
+    markDrawerClean();
+    closeDrawerImmediately();
+  }, [closeDrawerImmediately, markDrawerClean]);
+
+  const closeModal = useCallback(() => {
+    const close = () => {
+      closeDrawerImmediately();
+    };
+    const closeGuard = closeGuardRef.current;
+    if (closeGuard) {
+      closeGuard(close);
+      return;
+    }
+    close();
+  }, [closeDrawerImmediately]);
+
+  const requestDrawerClose = useCallback(() => {
+    const customCloseGuard = closeGuardRef.current;
+    if (customCloseGuard) {
+      customCloseGuard(closeDrawerImmediately);
+      return;
+    }
+    guardDrawerClose(closeDrawerImmediately);
+  }, [closeDrawerImmediately, guardDrawerClose]);
+
+  const registerCloseGuard = useCallback((closeGuard) => {
+    closeGuardRef.current = closeGuard;
+    return () => {
+      if (closeGuardRef.current === closeGuard) {
+        closeGuardRef.current = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -91,23 +142,31 @@ function ModalRoutes() {
     };
   }, [handleEventDraw, handleCloseDraw]);
 
-  const closeModal = useCallback(() => {
-    setParams({ open: false })
-  }, []);
-
   const ModalRoute = useMemo(
     () => getModalRoute(params.hash),
     [params.hash],
   );
+  const requiredPermission = typeof ModalRoute?.permission === 'function'
+    ? ModalRoute.permission(params)
+    : ModalRoute?.permission;
+  const canOpen = hasPermission(requiredPermission);
 
   return (
     <DrawerCustom
       {...ModalRoute?.modalOptions}
       title={params?.title || ModalRoute?.modalOptions?.title}
-      open={params.open}
-      onClose={closeModal}
+      open={params.open && canOpen}
+      onClose={requestDrawerClose}
     >
-      <ModalRoute.Component closeModal={closeModal} {...params} />
+      <div onChangeCapture={markDrawerDirty} onInputCapture={markDrawerDirty}>
+        <ModalRoute.Component
+          closeModal={closeModal}
+          closeModalAfterSubmit={handleCloseDraw}
+          markDrawerClean={markDrawerClean}
+          registerCloseGuard={registerCloseGuard}
+          {...params}
+        />
+      </div>
     </DrawerCustom>
   );
 }

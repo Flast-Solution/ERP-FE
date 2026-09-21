@@ -101,7 +101,6 @@ const LotConfigurationForm = ({
                   <Form.Item
                     name={[field.name, 'workflowProcessId']}
                     label="Workflow"
-                    rules={[{ required: true, message: 'Vui lòng chọn workflow' }]}
                   >
                     <Select
                       allowClear
@@ -117,7 +116,6 @@ const LotConfigurationForm = ({
                   <Form.Item
                     name={[field.name, 'quanlityProcessId']}
                     label="Quy trình xử lý lỗi"
-                    rules={[{ required: true, message: 'Vui lòng chọn quy trình xử lý lỗi' }]}
                   >
                     <Select
                       allowClear

@@ -4,6 +4,23 @@ import { useNavigate } from 'react-router-dom';
 import { BreadcrumbCustom } from '@flast-erp/core/components';
 import ListOrder from '@/containers/Order/List';
 
+const getManufactureDetails = (record = {}) => {
+    const nestedManufactureDetails = Array.isArray(record.manufactureProduct)
+        ? record.manufactureProduct.flatMap(item => item?.details ?? [])
+        : [];
+    const candidates = [
+        nestedManufactureDetails,
+        record.manufactureProduct?.details,
+        record.manufactureDetails,
+        record.details,
+    ];
+    return candidates.find(items => Array.isArray(items) && items.length > 0) ?? [];
+};
+
+const isProviderOrder = (record) => getManufactureDetails(record).some(detail => (
+    detail?.providerId !== undefined && detail?.providerId !== null && detail?.providerId !== ''
+));
+
 const OrderProduction = () => {
 
     const navigate = useNavigate();
@@ -21,6 +38,7 @@ const OrderProduction = () => {
             children: 'Tạo lô hàng',
             type: 'default',
             style: { color: '#52c41a', borderColor: '#52c41a' },
+            visible: record => !isProviderOrder(record),
             onClick: (record) => {
                 const details = record?.details || [];
                 navigate('/sale/production/lots/create', {
@@ -58,6 +76,9 @@ const OrderProduction = () => {
                 orderMode
                 hideQuoteButton={true}
                 disableWorkflowAttach={true}
+                showWorkflowProgressAction
+                detailDrawerHash="#order.production.overview"
+                detailDrawerTitle=""
                 extraActions={extraActions}
             />
         </>

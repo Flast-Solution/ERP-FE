@@ -24,6 +24,7 @@ import {
   ConfigFormItem,
   PageShell,
 } from './styles';
+import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard';
 
 const CONFIG_FETCH_API = 'erp/config/fetch';
 const CONFIG_SAVE_API = '/erp/config/save';
@@ -89,31 +90,23 @@ const withOffset = (values = {}) => {
   };
 };
 
-const getResponseItems = (values) => {
-  if (Array.isArray(values)) return values;
-  if (Array.isArray(values?.data)) return values.data;
-  if (Array.isArray(values?.embedded)) return values.embedded;
-  if (Array.isArray(values?.items)) return values.items;
-  if (Array.isArray(values?.content)) return values.content;
-  if (Array.isArray(values?.records)) return values.records;
-  if (Array.isArray(values?.data?.embedded)) return values.data.embedded;
-  if (Array.isArray(values?.data?.items)) return values.data.items;
-  if (Array.isArray(values?.data?.content)) return values.data.content;
-  if (Array.isArray(values?.data?.records)) return values.data.records;
-  return [];
-};
-
-const getResponsePage = (values, total) => (
-  values?.page
-  ?? values?.data?.page
-  ?? {
-    totalElements: values?.totalElements
-      ?? values?.total
-      ?? values?.data?.totalElements
-      ?? values?.data?.total
-      ?? total,
+/**
+ * RestList onData nhận sẵn body.data từ GET /erp/config/fetch.
+ * Contract: data = ConfigItem[] hoặc { embedded, page }.
+ */
+const getConfigListPayload = (values = {}) => {
+  if (Array.isArray(values)) {
+    return {
+      items: values,
+      page: { totalElements: values.length },
+    }
   }
-);
+  const items = Array.isArray(values?.embedded) ? values.embedded : []
+  return {
+    items,
+    page: values?.page ?? { totalElements: items.length },
+  }
+};
 
 const GeneralConfigFilter = () => (
   <Row gutter={16}>
@@ -170,13 +163,23 @@ const GeneralConfigPage = () => {
     form.resetFields();
   }, [form]);
 
+  const {
+    closeAfterSubmit,
+    markDirty,
+    requestClose,
+  } = useDrawerLeaveGuard({
+    open: formOpen,
+    onClose: closeForm,
+    resetKey: editingRecord?.id ?? 'create-config',
+  });
+
   const beforeSubmitFilter = useCallback((values = {}) => withOffset(values), []);
 
   const onData = useCallback((values) => {
-    const items = getResponseItems(values).map(normalizeConfigItem);
+    const { items, page } = getConfigListPayload(values);
     return {
-      embedded: items,
-      page: getResponsePage(values, items.length),
+      embedded: items.map(normalizeConfigItem),
+      page,
     };
   }, []);
 
@@ -195,12 +198,12 @@ const GeneralConfigPage = () => {
     if (isSuccess) {
       message.success(response?.message || 'Đã lưu cấu hình.');
       f5List(CONFIG_FETCH_API);
-      closeForm();
+      closeAfterSubmit();
       return;
     }
 
     message.error(response?.message || 'Lưu cấu hình thất bại.');
-  }, [closeForm, form]);
+  }, [closeAfterSubmit, form]);
 
   const columns = [
     {
@@ -281,7 +284,7 @@ const GeneralConfigPage = () => {
       <DrawerCustom
         width={750}
         open={formOpen}
-        onClose={closeForm}
+        onClose={requestClose}
         title={editingRecord ? 'Cập nhật cấu hình' : 'Thêm cấu hình'}
       >
         <ConfigDrawerBody>
@@ -289,6 +292,7 @@ const GeneralConfigPage = () => {
             form={form}
             layout="vertical"
             initialValues={{ configs: [DEFAULT_CONFIG] }}
+            onValuesChange={markDirty}
           >
             <Form.List name="configs">
               {(fields, { add, remove }) => (
@@ -359,7 +363,7 @@ const GeneralConfigPage = () => {
         </ConfigDrawerBody>
 
         <ConfigDrawerFooter>
-          <Button onClick={closeForm}>Huỷ</Button>
+          <Button onClick={requestClose}>Huỷ</Button>
           <Button type="primary" onClick={handleSave}>Lưu</Button>
         </ConfigDrawerFooter>
       </DrawerCustom>

@@ -30,9 +30,9 @@ const EnterpriseProfile = React.lazy(() => import('@/pages/customer/EnterprisePr
 export const CustomerConfig = {
     auth: authRoles.user,
     routes: [
-        { path: '/sale/m-customer', element: <CustomerRetail /> },
-        { path: '/customer/:id', element: <CustomerProfile /> },
-        { path: '/customer/enterprise', element: <EnterpriseList /> },
-        { path: '/customer/enterprise/:id', element: <EnterpriseProfile /> },
+        { path: '/sale/m-customer', permission: 'customer.retail.view', element: <CustomerRetail /> },
+        { path: '/customer/:id', permission: 'customer.retail.detail.view', element: <CustomerProfile /> },
+        { path: '/customer/enterprise', permission: 'customer.enterprise.view', element: <EnterpriseList /> },
+        { path: '/customer/enterprise/:id', permission: 'customer.enterprise.detail.view', element: <EnterpriseProfile /> },
     ]
 };

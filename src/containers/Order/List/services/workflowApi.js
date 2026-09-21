@@ -1,7 +1,6 @@
 import { RequestUtils } from '@flast-erp/core/utils'
 import {
   WORKFLOW_FILTER_API,
-  ORDER_WORKFLOW_ATTACH_API,
   WORKFLOW_INSTANCE_BY_ENTITY_API,
   WORKFLOW_PROCESS_FIND_API,
   WORKFLOW_PREVIEW_API,
@@ -19,17 +18,25 @@ import {
   normalizeWorkflowInstance,
 } from '../utils/workflowMappers'
 
-export const fetchWorkflowList = async () => {
-  const response = await RequestUtils.Get(WORKFLOW_FILTER_API, {})
+export const fetchWorkflowList = async (flowType) => {
+  const api = flowType
+    ? `${WORKFLOW_FILTER_API}&flowType=${encodeURIComponent(flowType)}`
+    : WORKFLOW_FILTER_API
+  const response = await RequestUtils.Get(api, {})
   return resolveWorkflowList(response)
 }
 
-export const attachWorkflow = async ({ processId, entityType, entityId }) => {
-  return RequestUtils.Post(ORDER_WORKFLOW_ATTACH_API, {
-    processId,
-    entityType,
-    entityId,
-  })
+export const attachWorkflow = async () => {
+  // Tạm thời không khởi tạo workflow từ FE.
+  // return RequestUtils.Post('/workflow/process/start', {
+  //   processId,
+  //   entityType,
+  //   entityId,
+  // })
+  return {
+    success: false,
+    message: 'Chức năng khởi tạo workflow đang tạm tắt.',
+  }
 }
 
 export const fetchWorkflowInstancesByEntity = async ({ entityName, entityIds }) => {
@@ -38,6 +45,8 @@ export const fetchWorkflowInstancesByEntity = async ({ entityName, entityIds }) 
     entityIds,
   })
   return resolveWorkflowInstances(response)
+    .map(normalizeWorkflowInstance)
+    .filter(Boolean)
 }
 
 export const fetchWorkflowProcessDetail = async (processId) => {
@@ -68,7 +77,7 @@ export const enrichEntitiesWithWorkflowData = async (tableData, entityType) => {
       const entityId = getWorkflowInstanceEntityId(instance)
       if (entityId === undefined || entityId === null || entityId === '') return result
       const key = String(entityId)
-      result.set(key, [...(result.get(key) ?? []), normalizeWorkflowInstance(instance)])
+      result.set(key, [...(result.get(key) ?? []), instance])
       return result
     }, new Map())
     const processIds = Array.from(new Set(
@@ -88,13 +97,13 @@ export const enrichEntitiesWithWorkflowData = async (tableData, entityType) => {
       embedded: entities.map(entity => {
         const workflowInstances = (instancesByEntityId.get(String(entity.id)) ?? []).map(instance => ({
           ...instance,
-          workflowProcess: processMap.get(Number(getWorkflowInstanceProcessId(instance))) ?? null,
+          process: processMap.get(Number(instance.processId)) ?? instance.process,
         }))
         return {
           ...entity,
           workflowInstances,
           workflowInstance: workflowInstances[0] ?? null,
-          workflowProcess: workflowInstances[0]?.workflowProcess ?? null,
+          workflowProcess: workflowInstances[0]?.process ?? null,
         }
       }),
     }
@@ -143,7 +152,7 @@ export const enrichOrdersWithWorkflowData = async (tableData) => {
         const entityKey = String(entityId)
         result.set(entityKey, [
           ...(result.get(entityKey) ?? []),
-          normalizeWorkflowInstance(item),
+          item,
         ])
       }
       return result
@@ -211,7 +220,7 @@ export const enrichOrdersWithWorkflowData = async (tableData) => {
       const enrichedParentInstances = parentInstances.map(instance => ({
         ...instance,
         preview: workflowPreviewsByInstanceId.get(Number(instance?.id)) ?? null,
-        workflowProcess: workflowProcessesById.get(Number(getWorkflowInstanceProcessId(instance))) ?? null,
+        process: workflowProcessesById.get(Number(instance.processId)) ?? instance.process,
       }))
       const firstParentInstance = enrichedParentInstances[0] ?? null
 
@@ -224,16 +233,14 @@ export const enrichOrdersWithWorkflowData = async (tableData) => {
               ...detail,
               workflowInstances: detailInstances.map(instance => ({
                 ...instance,
-                workflowProcess: workflowProcessesById.get(
-                  Number(getWorkflowInstanceProcessId(instance))
-                ) ?? null,
+                process: workflowProcessesById.get(Number(instance.processId)) ?? instance.process,
               })),
             }
           })
           : item?.details,
         workflowInstances: enrichedParentInstances,
         workflowInstance: firstParentInstance,
-        workflowProcess: firstParentInstance?.workflowProcess ?? null,
+        workflowProcess: firstParentInstance?.process ?? null,
       }
     })
   } catch (error) {

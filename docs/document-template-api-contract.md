@@ -113,15 +113,22 @@ FE gọi `POST /api/erp/template/save-data` với payload:
   ],
   "status": 1,
   "bizId": 1645,
-  "documentType": "QUOTATION",
+  "documentType": "quotation",
   "data": "{\"schemaVersion\":1,\"name\":\"Template mẫu cho đơn hàng\",\"nodes\":[]}"
 }
 ```
 
-`documentType` nhận một trong hai giá trị:
+`documentType` dùng theo mapping nghiệp vụ:
 
-- `QUOTATION`: Chứng từ báo giá.
-- `GOODS_ISSUE`: Chứng từ xuất hàng.
+- `quotation`: Chứng từ báo giá, dùng khi nhấn **Báo giá**.
+- `invoice`: Chứng từ hoá đơn, dùng trong tab **Hoá đơn** của **Thông tin đơn hàng**.
+- `goods_issue`: Chứng từ xuất hàng.
+
+Hai màn hình chỉ chọn mẫu đang sử dụng đúng loại, không lấy mẫu loại kia làm dự phòng. FE đọc danh sách từ `/api/erp/template/fetch`; luồng báo giá vẫn dùng `/api/erp/template/invoice?id=...` để lấy `data.customerOrder`. Trường response `data.templateData` không được FE sử dụng và BE có thể bỏ. Phê duyệt báo giá giữ `type: "quote"`, không đổi theo `documentType` của mẫu.
+
+Payload lưu mẫu dùng `quotation`, `invoice`, `goods_issue` viết thường. FE vẫn đọc loại viết hoa từ BE.
+
+Tương thích dữ liệu cũ: bản ghi `invoice` mang đúng tên **Mẫu Báo giá** được nhận diện là `quotation`; bản ghi `QUOTATION` mang tên **Mẫu hoá đơn** được nhận diện là `invoice`. Các mẫu `invoice` khác vẫn là hoá đơn. Quy tắc này áp dụng khi chọn mẫu và mở editor; lần lưu tiếp theo trong editor sẽ dùng loại chuẩn viết thường. Không tự gửi yêu cầu sửa dữ liệu BE khi chỉ xem chứng từ.
 
 `documentType` chỉ nằm ở cấp ngoài, cùng cấp với `templateId`. JSON string trong `data` không chứa `documentType`.
 
@@ -171,3 +178,7 @@ Khi chỉnh sửa, `templateId` là ID hiện tại và `sourceTemplateId = null
 ```
 
 `viewUrl` trả `Content-Type: application/pdf` và `Content-Disposition: inline`. `downloadUrl` trả `Content-Disposition: attachment`. Nếu chưa có PDF, BE trả `data: []`.
+
+### Mẫu HTML + JSON
+
+FE hỗ trợ `data.layout.mode = "html"`, `data.nodes = []` và `data.htmlTemplate` chứa HTML/CSS đã kiểm tra, cấu hình fields/repeats và dữ liệu minh họa tùy chọn. BE lưu nguyên object này như các mẫu hiện có; không cần endpoint mới. Chi tiết định dạng gói import, mapping SKU/nhập tay và giới hạn CSS tại [html-document-templates.md](./html-document-templates.md).

@@ -26,9 +26,7 @@ import ListOrder from '@/containers/Order/List';
 import { useEffectAsync } from '@flast-erp/core/hooks';
 import { RequestUtils } from '@flast-erp/core/utils';
 
-const OrderCancel = () => {
-
-  const [title] = useState("Danh sách đơn hủy");
+export const OrderCancelContent = () => {
   const [filter, setFilter] = useState({ type: "order", status: -1 });
 
   useEffectAsync(async () => {
@@ -37,6 +35,12 @@ const OrderCancel = () => {
     setFilter(pre => ({ ...pre, status: statusCancel }))
   }, []);
 
+  return <ListOrder filter={filter} />;
+};
+
+const OrderCancel = () => {
+  const title = "Danh sách đơn hủy";
+
   return <>
     <Helmet>
       <title>{title}</title>
@@ -44,7 +48,7 @@ const OrderCancel = () => {
     <BreadcrumbCustom
       data={[{ title: 'Trang chủ' }, { title: title }]}
     />
-    <ListOrder filter={filter} />
+    <OrderCancelContent />
   </>
 };
 

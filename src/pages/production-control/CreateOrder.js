@@ -9,10 +9,29 @@ import {
   FormHidden,
   FormInputNumber,
   FormSelect,
+  FormSelectAPI,
 } from '@flast-erp/core/components';
-import { formatMoney } from '@flast-erp/core/utils';
+import { formatMoney, RequestUtils } from '@flast-erp/core/utils';
 import ProductionPage from './styles';
 import { createSnowflakeId } from '@/utils/snowflake';
+import {
+  MANUFACTURE_STATUS_LIST_API,
+  MANUFACTURE_STATUS_SAVE_API,
+} from './production-order-list/constants';
+import { mergeManufactureStatuses } from './production-order-list/utils';
+
+const MANUFACTURE_STATUS_FILTER = { type: 'MANUFACTURE' };
+const MANUFACTURE_STATUS_CREATE_DEFAULTS = {
+  color: '#64748b',
+  entityType: 'MANUFACTURE',
+};
+const PROVIDER_FETCH_API = '/provider/fetch';
+
+/** GET /provider/fetch → data.embedded = Provider[] */
+const getProviderItems = (response) => {
+  const embedded = response?.data?.embedded;
+  return Array.isArray(embedded) ? embedded : [];
+};
 
 const formatOrderDate = (value) => {
   if (!value) return '-';
@@ -50,6 +69,8 @@ const CreateOrder = ({
   onLoadMoreWaitingOrders,
   onNext,
   onCancel,
+  onValuesChange,
+  submitting = false,
 }) => {
   const readOnly = mode === 'view';
   const [form] = Form.useForm();
@@ -57,10 +78,28 @@ const CreateOrder = ({
   const initializedEditRef = useRef(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [productionRows, setProductionRows] = useState([]);
+  const [providers, setProviders] = useState([]);
+  const [providerLoading, setProviderLoading] = useState(false);
   const [productionOrderCode] = useState(() => (
     initialValues?.productionOrderCode || `LSX-${createSnowflakeId()}`
   ));
   const watchedProductDetails = Form.useWatch('productDetails', form) ?? {};
+
+  useEffect(() => {
+    let mounted = true;
+    setProviderLoading(true);
+    RequestUtils.Get(PROVIDER_FETCH_API, {})
+      .then((response) => {
+        if (mounted) setProviders(getProviderItems(response));
+      })
+      .catch(() => {
+        if (mounted) setProviders([]);
+      })
+      .finally(() => {
+        if (mounted) setProviderLoading(false);
+      });
+    return () => { mounted = false; };
+  }, []);
 
   const createProductionRow = useCallback((product = null) => {
     rowSequenceRef.current += 1;
@@ -79,7 +118,10 @@ const CreateOrder = ({
     initializedEditRef.current = true;
     setSelectedOrder(order);
     setProductionRows((initialValues?.orderDetails ?? []).map(createProductionRow));
-  }, [createProductionRow, initialValues?.salesOrderId, initialValues?.orderDetails, initialValues?.order, waitingOrders]);
+    form.setFieldsValue({
+      productDetails: initialValues?.productDetails ?? {},
+    });
+  }, [createProductionRow, form, initialValues?.salesOrderId, initialValues?.orderDetails, initialValues?.order, initialValues?.productDetails, waitingOrders]);
 
   const selectedDetailIds = useMemo(() => new Set(
     productionRows.map(row => row.product?.id).filter(id => id != null).map(String),
@@ -90,7 +132,15 @@ const CreateOrder = ({
     return total + Number(watchedProductDetails?.[String(row.product.id)]?.target ?? 0);
   }, 0);
 
+  const selectedProductsHaveProvider = productionRows.length > 0
+    && productionRows.every((row) => {
+      if (row.product?.id == null) return false;
+      const providerId = watchedProductDetails?.[String(row.product.id)]?.providerId;
+      return providerId !== undefined && providerId !== null && providerId !== '';
+    });
+
   const handleOrderChange = (value) => {
+    onValuesChange?.();
     const order = waitingOrders.find(item => String(item.id) === String(value)) ?? null;
     setSelectedOrder(order);
     setProductionRows([]);
@@ -107,11 +157,13 @@ const CreateOrder = ({
       return;
     }
     setProductionRows(current => [...current, createProductionRow()]);
+    onValuesChange?.();
   };
 
   const selectProductForRow = (rowKey, detailId) => {
     const product = (selectedOrder?.details ?? []).find(detail => String(detail.id) === String(detailId));
     if (!product) return;
+    onValuesChange?.();
 
     setProductionRows(current => current.map(row => (
       row.key === rowKey ? { ...row, product } : row
@@ -121,11 +173,13 @@ const CreateOrder = ({
       form.setFieldValue(['productDetails', String(product.id)], {
         target: product.target,
         deadline: undefined,
+        providerId: product.providerId ?? product.provider?.id,
       });
     }
   };
 
   const removeProductionRow = (rowKey) => {
+    onValuesChange?.();
     const removedRow = productionRows.find(row => row.key === rowKey);
     if (removedRow?.product?.id != null) {
       form.setFieldValue(['productDetails', String(removedRow.product.id)], undefined);
@@ -183,8 +237,13 @@ const CreateOrder = ({
           form={form}
           disabled={readOnly}
           layout="vertical"
-          initialValues={{ ...initialValues, productionOrderCode }}
+          initialValues={{
+            ...initialValues,
+            productionOrderCode,
+            manufactureStatus: initialValues?.manufactureStatus ?? 0,
+          }}
           onFinish={handleSubmit}
+          onValuesChange={onValuesChange}
         >
           <FormHidden name="productionOrderCode" />
           <div className="body production-create-body">
@@ -195,6 +254,23 @@ const CreateOrder = ({
               </div>
               <div className="production-info-grid">
                 <ReadonlyField label="Mã lệnh SX" value={productionOrderCode} mono />
+                <div className="production-info-field">
+                  <FormSelectAPI
+                    required
+                    name="manufactureStatus"
+                    label="Trạng thái"
+                    placeholder="Chọn hoặc thêm trạng thái"
+                    apiPath={MANUFACTURE_STATUS_LIST_API.replace(/^\//, '')}
+                    apiAddNewItem={MANUFACTURE_STATUS_SAVE_API.replace(/^\//, '')}
+                    filter={MANUFACTURE_STATUS_FILTER}
+                    createDefaultValues={MANUFACTURE_STATUS_CREATE_DEFAULTS}
+                    onData={mergeManufactureStatuses}
+                    valueProp="id"
+                    titleProp="name"
+                    searchKey="name"
+                    popupMatchSelectWidth={false}
+                  />
+                </div>
                 <div className="production-info-field">
                   <FormSelect
                     required
@@ -287,6 +363,20 @@ const CreateOrder = ({
                             )}
                             style={{ width: '100%' }}
                           />
+                          <FormSelect
+                            name={['productDetails', String(product.id), 'providerId']}
+                            label="Nhà cung cấp"
+                            placeholder="Chọn nhà cung cấp (nếu thuê ngoài)"
+                            resourceData={providers}
+                            valueProp="id"
+                            titleProp="name"
+                            loading={providerLoading}
+                            allowClear
+                            showSearch
+                            optionFilterProp="label"
+                            initialValue={product.providerId ?? product.provider?.id}
+                            style={{ width: '100%' }}
+                          />
                           {(product.skuDetails ?? []).map((attribute, attributeIndex) => (
                             <div className="production-child-attribute" key={`${product.id}-${attributeIndex}`}>
                               <span>{attribute.text}</span>
@@ -330,17 +420,21 @@ const CreateOrder = ({
 
           <footer className="foot production-create-foot">
             <span className="foot-note">
-              Chỉ các mã đơn con được chọn mới được gộp vào lệnh sản xuất này. BOM của sản phẩm phải ở trạng thái đang sử dụng.
+              {selectedProductsHaveProvider
+                ? 'Lệnh có nhà cung cấp sẽ được lưu ngay, không cần xác nhận vật tư.'
+                : 'Chỉ các mã đơn con được chọn mới được gộp vào lệnh sản xuất này. BOM của sản phẩm phải ở trạng thái đang sử dụng.'}
             </span>
             <div className="actions">
               <CustomButton title={readOnly ? 'Đóng' : 'Hủy'} variant="outlined" color="default" inRigth={false} onClick={onCancel} />
               {!readOnly && (
                 <CustomButton
-                  title="Tiếp tục xác nhận vật tư"
+                  title={selectedProductsHaveProvider ? 'Lưu lệnh sản xuất' : 'Tiếp tục xác nhận vật tư'}
                   type="primary"
                   htmlType="submit"
                   icon={<SaveOutlined />}
                   inRigth={false}
+                  loading={submitting}
+                  disabled={submitting}
                 />
               )}
             </div>

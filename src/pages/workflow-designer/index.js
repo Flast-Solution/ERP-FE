@@ -58,18 +58,16 @@ const hexToAlpha = (hex, alpha) => {
   return `rgba(${r},${g},${b},${alpha})`
 }
 
-const getResponseDataArray = (response) => {
-  const data = response?.data ?? response
-  const candidates = [
-    data?.items,
-    data?.rows,
-    data?.content,
-    data?.records,
-    data?.data,
-    data?.embedded,
-    data,
-  ]
-  return candidates.find(Array.isArray) ?? []
+/** GET /workflow/process/process-type-find → data = ProcessType[] */
+const getProcessTypes = (response) => {
+  const items = response?.data
+  return Array.isArray(items) ? items : []
+}
+
+/** GET /erp/config/fetch → data = ConfigItem[] */
+const getConfigItems = (response) => {
+  const items = response?.data
+  return Array.isArray(items) ? items : []
 }
 
 const parseConfigValueArray = (value) => {
@@ -88,14 +86,14 @@ const parseConfigValueArray = (value) => {
 }
 
 const normalizeBusinessTypeOptions = (response) => {
-  const configItem = getResponseDataArray(response)
-    .find((item) => item?.key === WORKFLOW_TYPE_CONFIG_KEY) ?? getResponseDataArray(response)[0]
+  const items = getConfigItems(response)
+  const configItem = items.find((item) => item?.key === WORKFLOW_TYPE_CONFIG_KEY) ?? items[0]
 
   return parseConfigValueArray(configItem?.value)
     .map((item) => {
       if (item && typeof item === 'object') {
-        const value = item.key ?? item.code ?? item.id ?? item.value ?? item.name ?? item.label
-        const label = item.value ?? item.label ?? item.name ?? item.title ?? value
+        const value = item.key ?? item.code ?? item.value ?? item.name
+        const label = item.label ?? item.name ?? item.value ?? value
         if (value === undefined || value === null || value === '') return null
         return { value: String(value), label: String(label) }
       }
@@ -107,17 +105,11 @@ const normalizeBusinessTypeOptions = (response) => {
 }
 
 const normalizeProcessType = (item, index) => {
-  const color = item?.colorCode ?? item?.color_code ?? item?.color ?? '#1677ff'
-  const id = item?.id ?? item?.key ?? `process_type_${index + 1}`
+  const color = item?.colorCode ?? '#1677ff'
+  const id = item?.id ?? `process_type_${index + 1}`
   // `item.type` từ API là loại nghiệp vụ workflow (ORDER, QMS, ...) — dùng chung cho mọi nhóm bước.
-  const rawKey = item?.code
-    ?? item?.processTypeCode
-    ?? item?.process_type_code
-    ?? item?.typeCode
-    ?? item?.type_code
-    ?? item?.key
-    ?? String(id)
-  const label = item?.name ?? item?.label ?? `Loại bước ${index + 1}`
+  const rawKey = item?.code ?? String(id)
+  const label = item?.name ?? `Loại bước ${index + 1}`
   const semanticType = normalizeWorkflowStepType(rawKey, [], {
     data: {
       label,
@@ -132,12 +124,12 @@ const normalizeProcessType = (item, index) => {
     key: uniqueKey,
     semanticType: canonicalTypes.includes(semanticType) ? semanticType : 'process',
     rawKey: uniqueKey,
-    workflowType: item?.type ?? item?.workflowType ?? item?.flowType ?? '',
+    workflowType: item?.type ?? '',
     label,
     color,
     bgColor: hexToAlpha(color, 0.12),
     borderColor: hexToAlpha(color, 0.4),
-    order: item?.orderProcessType ?? item?.order_process_type ?? item?.order ?? index + 1,
+    order: item?.orderProcessType ?? index + 1,
     status: item?.status ?? 1,
   }
 }
@@ -198,7 +190,25 @@ const WorkflowDesignerEditor = ({ businessTypeOptions = [], businessTypeLoading,
     const { valid, errors, warnings } = validateFlow(nodes, edges, stepTypes)
 
     if (!valid) {
-      errors.forEach((error) => message.warning(error))
+      const uniqueErrors = [...new Set(errors)]
+      message.warning({
+        key: 'workflow-validation',
+        content: uniqueErrors.length === 1
+          ? uniqueErrors[0]
+          : `Workflow còn ${uniqueErrors.length} cấu hình chưa hợp lệ.`,
+        duration: 4,
+      })
+      Modal.warning({
+        title: 'Cần kiểm tra lại workflow',
+        content: (
+          <div style={{ maxHeight: 320, overflow: 'auto' }}>
+            {uniqueErrors.map((error) => (
+              <div key={error} style={{ marginBottom: 8 }}>• {error}</div>
+            ))}
+          </div>
+        ),
+        okText: 'Đã hiểu',
+      })
       return
     }
 
@@ -320,7 +330,7 @@ const WorkflowDesignerPage = () => {
     try {
       const response = await RequestUtils.Get(PROCESS_TYPE_FIND_API, {})
       const seen = new Set()
-      const processTypes = getResponseDataArray(response)
+      const processTypes = getProcessTypes(response)
         .map(normalizeProcessType)
         .filter((item) => {
           const dedupeKey = String(item.id ?? item.key)

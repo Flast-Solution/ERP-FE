@@ -69,8 +69,11 @@ const enrichLotsWithNcrWorkflow = async (lots = []) => {
       ? {
         id: instanceId,
         entityId: lot?.id,
+        entityType: LOT_WORKFLOW_ENTITY_TYPE,
         processId,
-        workflowProcess: process,
+        currentStepCode: null,
+        state: null,
+        process,
       }
       : null)
 

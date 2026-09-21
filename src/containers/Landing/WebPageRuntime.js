@@ -3,10 +3,31 @@ import { Alert, Button, Empty, Skeleton } from 'antd'
 import { useParams } from 'react-router-dom'
 import { getTokenPayload } from '@/utils/authUtils'
 import { loadRemoteFromUrl } from '@/utils/loadRemote'
+import WebPageService from '@/services/WebPageService'
 import { LandingPageRenderer } from './LandingPageRenderer'
-import { getLandingPage } from './landingRepository'
+import { getLandingPage, saveWebPage, WEB_CONTENT_TYPES } from './landingRepository'
 
 const LandingPage = ({ page }) => <LandingPageRenderer schema={page.schema} mode="runtime" page={page} />
+
+const normalizeApiPage = item => {
+  const landingConfig = (item?.configs ?? []).find(config => config.tag === 'landing-page')
+  const buildUrl = item?.microFrontendUrl
+    || landingConfig?.urlBuild
+    || (item?.configs ?? []).find(config => config.urlBuild)?.urlBuild
+    || item?.build?.url
+    || null
+
+  return {
+    ...item,
+    contentType: WEB_CONTENT_TYPES.LANDING,
+    remoteId: item.id,
+    schema: item.schema ?? (buildUrl ? null : undefined),
+    build: buildUrl
+      ? { ...item.build, url: buildUrl, component_id: item.component_id }
+      : item.build,
+    status: item.status || (buildUrl ? 'PUBLISHED' : 'DRAFT'),
+  }
+}
 
 const getRemoteScope = entry => {
   try {
@@ -57,8 +78,47 @@ const RemoteLandingPage = ({ page }) => {
 
 const WebPageRuntime = () => {
   const { pageId } = useParams()
-  const page = getLandingPage(pageId)
-  if (!page) return <Empty style={{ marginTop: 80 }} description="Không tìm thấy trang"><Button href="/landing">Quay lại quản lý trang</Button></Empty>
+  const [page, setPage] = useState(() => getLandingPage(pageId))
+  const [loading, setLoading] = useState(() => !getLandingPage(pageId))
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let active = true
+    const cachedPage = getLandingPage(pageId)
+    setPage(cachedPage)
+    setLoading(!cachedPage)
+    setError('')
+
+    WebPageService.find(pageId)
+      .then(apiPage => {
+        if (!active) return
+        const normalizedPage = normalizeApiPage(apiPage)
+        const savedPage = saveWebPage(normalizedPage)
+        setPage(savedPage || normalizedPage)
+      })
+      .catch(loadError => {
+        if (active && !cachedPage) {
+          setError(loadError?.message || 'Không tải được thông tin trang.')
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+
+    return () => { active = false }
+  }, [pageId])
+
+  if (loading && !page) return <Skeleton active style={{ padding: 32 }} paragraph={{ rows: 8 }} />
+  if (!page) {
+    return (
+      <Empty
+        style={{ marginTop: 80 }}
+        description={error || 'Không tìm thấy trang'}
+      >
+        <Button href="/landing">Quay lại quản lý trang</Button>
+      </Empty>
+    )
+  }
   if (page.authenticationRequired && !getTokenPayload()) {
     const redirectUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`
     return (

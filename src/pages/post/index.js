@@ -27,8 +27,13 @@ import { Helmet } from "react-helmet";
 import Filter from '@/pages/post/Filter';
 import { GATEWAY } from '@/configs';
 import { RequestUtils, dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils';
+import useGetMe from '@/hooks/useGetMe';
 
 const Post = () => {
+  const { hasPermission } = useGetMe();
+  const canCreate = hasPermission('web.post.create');
+  const canUpdate = hasPermission('web.post.update');
+  const canDelete = hasPermission('web.post.delete');
 
   const navigate = useNavigateSearch();
   const onEdit = (item) => {
@@ -94,18 +99,18 @@ const Post = () => {
       width: 120,
       render: (status) => (status || 0) === 0 ? 'Ngưng' : 'Kích hoạt'
     },
-    {
+    (canUpdate || canDelete) && {
       title: "",
       width: 140,
       fixed: 'right',
       render: (record) => (
         <Space gap={8}>
-          <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size='small'>Detail</Button>
-          <Button onClick={() => onDeleteCate(record)} size='small'>Xóa</Button>
+          {canUpdate ? <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size='small'>Detail</Button> : null}
+          {canDelete ? <Button onClick={() => onDeleteCate(record)} size='small'>Xóa</Button> : null}
         </Space>
       )
     }
-  ];
+  ].filter(Boolean);
 
   const beforeSubmitFilter = useCallback((values) => {
     dateFormatOnSubmit(values, ['from', 'to']);
@@ -127,6 +132,7 @@ const Post = () => {
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
         apiPath={'page-content/fetch'}
+        hasCreate={canCreate}
         customClickCreate={() => navigate("/post/edit")}
         columns={CUSTOM_ACTION}
       />

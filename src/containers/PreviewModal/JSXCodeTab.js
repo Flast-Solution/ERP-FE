@@ -50,6 +50,7 @@ const JSXCodeTab = ({
   generatedCode,
   fieldKeys,
   syncError,
+  onBuildStateChange,
 }) => {
   const [copied, setCopied] = useState(false)
   const [buildStatus, setBuildStatus] = useState('idle')
@@ -100,10 +101,16 @@ const JSXCodeTab = ({
         clearBuildTimeout()
         setBuildStatus('done')
         setBuildMsg(log || 'Build thành công')
+        onBuildStateChange?.({
+          status: 'done',
+          url: nextPreviewUrl || undefined,
+          message: log || 'Build thành công',
+        })
       } else if (isFailure) {
         clearBuildTimeout()
         setBuildStatus('error')
         setBuildMsg(log || 'Build thất bại')
+        onBuildStateChange?.({ status: 'error', url: '', message: log || 'Build thất bại' })
       } else {
         setBuildStatus('building')
         setBuildMsg(log || 'Đang build preview...')
@@ -115,7 +122,7 @@ const JSXCodeTab = ({
       clearBuildTimeout()
       window.removeEventListener('flast-ai-build', handleBuildEvent)
     }
-  }, [])
+  }, [onBuildStateChange])
 
   const handleBuild = useCallback(async () => {
     const previewComponentId = toComponentSlug(schema?.meta?.name)
@@ -126,6 +133,7 @@ const JSXCodeTab = ({
     if (!sessionId) {
       setBuildStatus('error')
       setBuildMsg('Thiếu session_id để build preview.')
+      onBuildStateChange?.({ status: 'error', url: '', message: 'Thiếu session_id để build preview.' })
       return
     }
 
@@ -133,11 +141,17 @@ const JSXCodeTab = ({
     setBuildLogs([])
     setPreviewUrl('')
     setBuildMsg('Đang gửi yêu cầu build...')
+    onBuildStateChange?.({ status: 'building', url: '', message: 'Đang gửi yêu cầu build...' })
     clearTimeout(buildTimeoutRef.current)
     buildTimeoutRef.current = setTimeout(() => {
       if (buildingComponentIdRef.current !== previewComponentId) return
       setBuildStatus('error')
       setBuildMsg('Build quá lâu chưa có kết quả. Vui lòng thử lại hoặc kiểm tra log server.')
+      onBuildStateChange?.({
+        status: 'error',
+        url: '',
+        message: 'Build quá lâu chưa có kết quả. Vui lòng thử lại hoặc kiểm tra log server.',
+      })
       buildingComponentIdRef.current = null
     }, BUILD_WAIT_TIMEOUT_MS)
 
@@ -156,6 +170,7 @@ const JSXCodeTab = ({
         buildTimeoutRef.current = null
         setBuildStatus('done')
         setBuildMsg('Build thành công')
+        onBuildStateChange?.({ status: 'done', url, message: 'Build thành công' })
       } else {
         setBuildStatus('building')
         setBuildMsg(response.message ?? 'Đã gửi yêu cầu build. Đang chờ server trả preview...')
@@ -165,8 +180,9 @@ const JSXCodeTab = ({
       buildTimeoutRef.current = null
       setBuildStatus('error')
       setBuildMsg(error.message)
+      onBuildStateChange?.({ status: 'error', url: '', message: error.message })
     }
-  }, [sessionId, jsxCode, schema])
+  }, [sessionId, jsxCode, schema, onBuildStateChange])
 
   return (
     <CodePane>

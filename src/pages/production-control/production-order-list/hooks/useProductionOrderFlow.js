@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { Modal, message } from 'antd'
+import { message } from 'antd'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { MANUFACTURE_SAVE_API } from '../constants'
 import { buildManufacturePayload } from '../utils'
@@ -43,25 +43,9 @@ export const useProductionOrderFlow = ({
     setPendingOrder(null)
   }, [])
 
-  const cancelOrder = useCallback(() => {
-    Modal.confirm({
-      title: 'Hủy lệnh sản xuất?',
-      content: 'Thông tin lệnh và xác nhận vật tư đang nhập sẽ bị hủy.',
-      okText: 'Hủy lệnh',
-      okButtonProps: { danger: true },
-      cancelText: 'Tiếp tục xác nhận',
-      onOk: closeFlow,
-    })
-  }, [closeFlow])
-
-  const goToConfirmation = useCallback((values) => {
-    setPendingOrder(values)
-    setStep(2)
-  }, [])
-
   const backToCreate = useCallback(() => setStep(1), [])
 
-  const finishFlow = useCallback(async ({ productionOrder, materialConfirmation }) => {
+  const saveProductionOrder = useCallback(async ({ productionOrder, materialConfirmation = {} }) => {
     const isEdit = drawerMode === 'edit'
     const payload = buildManufacturePayload({ productionOrder, materialConfirmation, isEdit })
 
@@ -90,6 +74,27 @@ export const useProductionOrderFlow = ({
     }
   }, [closeFlow, drawerMode, onSaved])
 
+  const goToConfirmation = useCallback(async (values) => {
+    setPendingOrder(values)
+
+    const orderDetails = values?.orderDetails ?? []
+    const productDetails = values?.productDetails ?? {}
+    const allDetailsHaveProvider = orderDetails.length > 0 && orderDetails.every((detail, index) => {
+      const detailKey = String(detail?.id ?? index)
+      const providerId = productDetails?.[detailKey]?.providerId
+        ?? detail?.providerId
+        ?? detail?.provider?.id
+      return providerId !== undefined && providerId !== null && providerId !== ''
+    })
+
+    if (allDetailsHaveProvider) {
+      await saveProductionOrder({ productionOrder: values })
+      return
+    }
+
+    setStep(2)
+  }, [saveProductionOrder])
+
   return {
     open,
     drawerMode,
@@ -99,9 +104,8 @@ export const useProductionOrderFlow = ({
     openFlow,
     openExistingOrder,
     closeFlow,
-    cancelOrder,
     goToConfirmation,
     backToCreate,
-    finishFlow,
+    finishFlow: saveProductionOrder,
   }
 }

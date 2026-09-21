@@ -34,8 +34,13 @@ import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import { Button, Col, Form, Row } from 'antd';
 import ModaleStyles from '@/pages/lead/style';
 import { useForm } from 'antd/es/form/Form';
+import useGetMe from '@/hooks/useGetMe';
 
 const ListWareHouse = () => {
+  
+  const { hasPermission } = useGetMe();
+  const canCreate = hasPermission('inventory.warehouse.create');
+  const canUpdate = hasPermission('inventory.warehouse.update');
 
   const [ title ] = useState("Danh sách kho");
   const [ isOpen, setIsOpen ] = useState(false);
@@ -75,7 +80,7 @@ const ListWareHouse = () => {
       width: 200,
       ellipsis: true
     },
-    {
+    canUpdate && {
       title: "Thao tác",
       width: 120,
       fixed: 'right',
@@ -88,20 +93,17 @@ const ListWareHouse = () => {
         </Button>
       )
     }
-  ];
+  ].filter(Boolean);
 
-    const onData = useCallback((values) => {
-        // Kiểm tra nếu có embedded và không rỗng
-        if (values?.embedded && values.embedded.length > 0) {
-            return values; // Trả về nguyên values vì đã đúng format
-        }
-
-        // Fallback
-        return {
-            embedded: [],
-            page: { pageSize: 10, total: 0 }
-        };
-    }, []);
+  const onData = useCallback((values) => {
+    if (values?.embedded && values.embedded.length > 0) {
+      return values;
+    }
+    return {
+      embedded: [],
+      page: { pageSize: 10, total: 0 }
+    };
+  }, []);
 
   const beforeSubmitFilter = useCallback((values) => {
     dateFormatOnSubmit(values, ['from', 'to']);
@@ -141,13 +143,14 @@ const ListWareHouse = () => {
         filter={<LeadFilter />}
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
-        apiPath={'erp/warehouse/fetch-stock-filter'}
+        apiPath={'warehouse/fetch-stock'}
+        hasCreate={canCreate}
         customClickCreate={onCreateLead}
         columns={CUSTOM_ACTION}
       />
       <ModaleStyles 
         title={<div style={{ color: '#fff' }}>{isEditing ? 'Cập nhật kho' : 'Tạo kho'}</div>}
-        open={isOpen} 
+        open={isOpen && (isEditing ? canUpdate : canCreate)}
         footer={false} 
         onCancel={() => {
           setIsOpen(false);

@@ -5,6 +5,7 @@ import { RestList } from '@flast-erp/core/components'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { SUCCESS_CODE } from '@/configs'
 import Filter from './Filter'
+import useGetMe from '@/hooks/useGetMe'
 
 const API_PATH = 'workflow/process/filter'
 const USER_LIST_API = '/auth/user-bussiness/list-user'
@@ -27,69 +28,21 @@ const formatDate = (value) => {
   })
 }
 
-const getCreatorName = (item = {}, process = {}) => {
-  const creator = process.createdByUser
-    ?? process.created_by_user
-    ?? process.creator
-    ?? item.createdByUser
-    ?? item.created_by_user
-    ?? item.creator
-
-  if (creator && typeof creator === 'object') {
-    return creator.fullName
-      ?? creator.full_name
-      ?? creator.name
-      ?? creator.username
-      ?? creator.email
-      ?? ''
-  }
-
-  return process.createdName
-    ?? process.created_name
-    ?? process.createdByName
-    ?? process.created_by_name
-    ?? process.createdBy
-    ?? process.created_by
-    ?? item.createdName
-    ?? item.created_name
-    ?? item.createdByName
-    ?? item.created_by_name
-    ?? item.createdBy
-    ?? item.created_by
-    ?? ''
-}
-
-const getCreatorId = (item = {}, process = {}) => (
-  process.createdById
-  ?? process.created_by_id
-  ?? process.createdBy
-  ?? process.created_by
-  ?? item.createdById
-  ?? item.created_by_id
-  ?? item.createdBy
-  ?? item.created_by
-  ?? ''
-)
+const getCreatorId = (item = {}) => item.createdBy ?? ''
 
 const getUserDisplayName = (user = {}) => (
   user.fullName
-  ?? user.full_name
   ?? user.name
-  ?? user.username
+  ?? user.ssoId
   ?? user.email
-  ?? user.phone
   ?? ''
 )
 
-const getUserIds = (user = {}) => [
-  user.id,
-  user.userId,
-  user.user_id,
-  user.accountId,
-  user.account_id,
-  user.employeeId,
-  user.employee_id,
-].filter(value => value != null && value !== '').map(value => String(value))
+/** GET /auth/user-bussiness/list-user → data = User[] */
+const getListUsers = (response = {}) => {
+  const users = response?.data
+  return Array.isArray(users) ? users : []
+}
 
 let cachedUserMap = null
 const fetchUserMap = async () => {
@@ -99,14 +52,12 @@ const fetchUserMap = async () => {
 
   try {
     const response = await RequestUtils.Get(USER_LIST_API, {})
-    const users = getResponseItems(response)
+    const users = getListUsers(response)
     cachedUserMap = users.reduce((map, user) => {
       const displayName = getUserDisplayName(user)
-      getUserIds(user).forEach((id) => {
-        if (displayName) {
-          map.set(id, displayName)
-        }
-      })
+      if (user?.id != null && displayName) {
+        map.set(String(user.id), displayName)
+      }
       return map
     }, new Map())
   } catch (_) {
@@ -116,39 +67,20 @@ const fetchUserMap = async () => {
   return cachedUserMap
 }
 
-const getResponseItems = (response) => {
-  const data = response?.data ?? response
-  const candidates = [
-    data?.items,
-    data?.rows,
-    data?.content,
-    data?.records,
-    data?.data,
-    data?.embedded,
-    data,
-  ]
-
-  return candidates.find(Array.isArray) ?? []
+/**
+ * GET /workflow/process/filter
+ * onData nhận sẵn data = { embedded: Process[], totalElements } (hoặc page.totalElements)
+ */
+const normalizeProcessListResponse = (data = {}) => {
+  const embedded = Array.isArray(data?.embedded) ? data.embedded : []
+  const total = data?.page?.totalElements ?? data?.totalElements ?? embedded.length
+  return { embedded, total }
 }
 
-const replaceResponseItems = (response, embedded) => {
-  if (Array.isArray(response?.embedded)) {
-    return { ...response, embedded }
-  }
-  if (Array.isArray(response?.data?.embedded)) {
-    return {
-      ...response,
-      data: {
-        ...response.data,
-        embedded,
-      },
-    }
-  }
-  return {
-    embedded,
-    page: response?.page ?? response?.data?.page,
-  }
-}
+const replaceResponseItems = (_response, embedded, total) => ({
+  embedded,
+  page: { totalElements: total },
+})
 
 const withOffset = (queryParams = {}) => {
   const page = Number(queryParams.page ?? 1)
@@ -212,52 +144,50 @@ const useWorkflowProcessListQuery = ({ queryParams, onData }) => {
   return { data, loading }
 }
 
-export const normalizeWorkflowRow = (item, index, userMap = new Map()) => {
-  const process = item?.process ?? item
-  const creatorId = getCreatorId(item, process)
-  const mappedCreatorName = creatorId != null && creatorId !== ''
+export const normalizeWorkflowRow = (item = {}, index, userMap = new Map()) => {
+  const creatorId = getCreatorId(item)
+  const mappedCreatorName = creatorId !== '' && creatorId != null
     ? userMap.get(String(creatorId))
     : ''
 
   return {
-    id: process?.id ?? item?.id ?? item?.processId ?? item?.process_id ?? item?.processKey ?? item?.process_key ?? index,
-    processKey: process?.processKey ?? process?.process_key ?? item?.processKey ?? item?.process_key ?? '',
-    name: process?.name ?? item?.name ?? item?.processName ?? 'Chưa đặt tên',
-    code: process?.code ?? item?.code ?? '',
-    description: process?.description ?? item?.description ?? '',
-    stepCount: process?.stepSize ?? item?.stepSize ?? item?.step_size ?? item?.stepCount ?? item?.steps_count ?? item?.steps?.length ?? 0,
-    transitionCount: item?.transitionCount ?? item?.transitions_count ?? item?.transitions?.length ?? 0,
-    createdBy: mappedCreatorName || getCreatorName(item, process),
-    createdAt: formatDate(process?.createdDate ?? process?.created_date ?? item?.createdDate ?? item?.created_date ?? ''),
-    status: Number(process?.status ?? item?.status ?? 1) === 1 ? 1 : 0,
-    flowType: process?.flowType ?? item?.flowType ?? '',
-    updatedAt: item?.updatedAt ?? item?.updated_at ?? item?.modifiedAt ?? item?.modified_at ?? '',
+    id: item.id ?? index,
+    processKey: item.processKey ?? '',
+    name: item.name ?? 'Chưa đặt tên',
+    code: item.code ?? '',
+    description: item.description ?? '',
+    stepCount: item.stepSize ?? 0,
+    transitionCount: 0,
+    createdBy: mappedCreatorName || (creatorId !== '' ? String(creatorId) : ''),
+    createdAt: formatDate(item.createdDate ?? ''),
+    status: item.enabled === false || Number(item.status) === 0 ? 0 : 1,
+    flowType: item.flowType ?? '',
+    updatedAt: item.updatedDate ?? '',
     source: item,
   }
 }
 
+/** GET /workflow/process/find-id/{id} → data = { process, steps, transitions } */
 export const ensureWorkflowPayload = (raw) => {
-  const payload = raw?.data ?? raw
-  if (payload?.process || payload?.steps || payload?.transitions) {
-    return payload
+  if (!raw || typeof raw !== 'object') return null
+  if (raw.process || Array.isArray(raw.steps) || Array.isArray(raw.transitions)) {
+    return raw
   }
-  if (payload?.item) {
-    return payload.item
+  const data = raw.data
+  if (data && (data.process || Array.isArray(data.steps) || Array.isArray(data.transitions))) {
+    return data
   }
-  if (payload?.record) {
-    return payload.record
-  }
-  return raw
+  return null
 }
 
 export const fetchWorkflowDetail = async (record) => {
-  if (record?.source?.process || record?.source?.steps || record?.source?.transitions) {
+  if (record?.source?.process && Array.isArray(record?.source?.steps)) {
     return record.source
   }
 
   const response = await RequestUtils.Get(`/workflow/process/find-id/${record.id}`, {})
   const payload = ensureWorkflowPayload(response)
-  if (payload?.process || payload?.steps || payload?.transitions) {
+  if (payload?.process) {
     return payload
   }
 
@@ -265,6 +195,9 @@ export const fetchWorkflowDetail = async (record) => {
 }
 
 const WorkflowDesignerList = ({ onCreate, onEdit }) => {
+  const { hasPermission } = useGetMe()
+  const canCreate = hasPermission('workflow.process.create')
+  const canUpdate = hasPermission('workflow.process.update')
   const [editingId, setEditingId] = useState(null)
 
   const handleEdit = useCallback(async (record) => {
@@ -332,7 +265,7 @@ const WorkflowDesignerList = ({ onCreate, onEdit }) => {
       width: 150,
       render: value => value ? (FLOW_TYPE_LABELS[value] ?? value) : '',
     },
-    {
+    canUpdate && {
       title: 'Action',
       key: 'actions',
       fixed: 'right',
@@ -349,12 +282,13 @@ const WorkflowDesignerList = ({ onCreate, onEdit }) => {
         </Button>
       ),
     },
-  ], [editingId, handleEdit])
+  ].filter(Boolean), [canUpdate, editingId, handleEdit])
 
   const onData = useCallback(async (response) => {
     const userMap = await fetchUserMap()
-    const embedded = getResponseItems(response).map((item, index) => normalizeWorkflowRow(item, index, userMap))
-    return replaceResponseItems(response, embedded)
+    const { embedded, total } = normalizeProcessListResponse(response)
+    const rows = embedded.map((item, index) => normalizeWorkflowRow(item, index, userMap))
+    return replaceResponseItems(response, rows, total)
   }, [])
 
   const beforeSubmitFilter = useCallback((values = {}) => {
@@ -374,7 +308,7 @@ const WorkflowDesignerList = ({ onCreate, onEdit }) => {
       xScroll={1320}
       initialFilter={{ limit: 10, offset: '0', page: 1 }}
       filter={<Filter />}
-      hasCreate
+      hasCreate={canCreate}
       customClickCreate={onCreate}
       beforeSubmitFilter={beforeSubmitFilter}
       onData={onData}

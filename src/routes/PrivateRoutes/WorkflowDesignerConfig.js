@@ -8,10 +8,10 @@ const FormListPage = React.lazy(() => import('@/pages/form-list'));
 export const WorkflowDesignerConfig = {
   auth    : authRoles.user,
   routes  : [
-    { path     : '/workflow-designer', element: <ContentPage /> },
-    { path     : '/workflow-forms', element: <FormListPage /> },
-    { path     : '/workflow-form/:id', element: <FormBuilderPage /> },
-    { path     : '/workflow-form/*', element: <FormBuilderPage /> },
-    { path     : '/workflow-form', element: <FormBuilderPage /> }
+    { path     : '/workflow-designer', permission: 'workflow.process.view', element: <ContentPage /> },
+    { path     : '/workflow-forms', permission: 'workflow.form.view', element: <FormListPage /> },
+    { path     : '/workflow-form/:id', permission: 'workflow.form.update', element: <FormBuilderPage /> },
+    { path     : '/workflow-form/*', permission: ['workflow.form.create', 'workflow.form.update'], element: <FormBuilderPage /> },
+    { path     : '/workflow-form', permission: 'workflow.form.create', element: <FormBuilderPage /> }
   ]
 };

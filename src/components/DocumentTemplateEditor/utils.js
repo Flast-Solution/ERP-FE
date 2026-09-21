@@ -14,6 +14,8 @@ const createDefaultColumns = (schema = []) => {
     id: createNodeId(),
     title: field.label,
     binding: field.relativePath ?? String(field.path || '').replace(`${firstCollection}.`, ''),
+    inputMode: 'binding',
+    placeholder: '',
     format: field.dataType === 'number' ? 'number' : 'text',
     align: field.dataType === 'number' ? 'right' : 'left',
   }))
@@ -33,6 +35,20 @@ export const createDocumentNode = (type, dataSchema = []) => {
   switch (type) {
     case COMPONENT_TYPES.TEXT:
       return { ...common, content: 'Nhập nội dung văn bản', style: { ...common.style, fontSize: 16 } }
+    case COMPONENT_TYPES.RICH_TEXT:
+      return {
+        ...common,
+        content: '<strong>Tiêu đề</strong><br />Nội dung: {{ field.path }}',
+        style: { ...common.style, whiteSpace: 'pre-wrap' },
+      }
+    case COMPONENT_TYPES.CONTAINER:
+      return {
+        ...common,
+        layout: { ...common.layout, minHeight: 180 },
+        children: [],
+        grid: { columns: 12, rows: null, rowHeight: 80, columnGap: 0, rowGap: 0 },
+        style: { ...common.style, padding: 8, marginBottom: 0, borderWidth: 1, borderColor: '#94a3b8' },
+      }
     case COMPONENT_TYPES.DATA_FIELD:
       return {
         ...common,
@@ -50,6 +66,9 @@ export const createDocumentNode = (type, dataSchema = []) => {
         source: firstCollection,
         columns: createDefaultColumns(dataSchema),
         repeatHeader: true,
+        headerRows: [],
+        summaryRows: [],
+        tableStyle: { borderWidth: 1, borderColor: '#111827', headerBackgroundColor: '#f3f4f6', cellPadding: 8 },
         style: { ...common.style, padding: 0 },
       }
     case COMPONENT_TYPES.IMAGE:
@@ -80,7 +99,7 @@ export const createDocumentNode = (type, dataSchema = []) => {
   }
 }
 
-export const createEmptyTemplate = ({ name = 'Mẫu chứng từ', documentType = 'invoice' } = {}) => ({
+export const createEmptyTemplate = ({ name = 'Mẫu chứng từ', documentType = 'quotation' } = {}) => ({
   schemaVersion: DOCUMENT_SCHEMA_VERSION,
   name,
   documentType,
@@ -99,15 +118,46 @@ export const createEmptyTemplate = ({ name = 'Mẫu chứng từ', documentType 
 
 export const getValueByPath = (source, path, fallback = '') => {
   if (!path) return fallback
-  const value = String(path).split('.').reduce((current, key) => current?.[key], source)
+
+  const resolvePath = (current, keys) => {
+    if (!keys.length) return current
+    if (current === undefined || current === null) return undefined
+    if (Array.isArray(current)) {
+      if (/^\d+$/.test(keys[0])) return resolvePath(current[Number(keys[0])], keys.slice(1))
+      return current.flatMap(item => {
+        const itemValue = resolvePath(item, keys)
+        if (itemValue === undefined || itemValue === null) return []
+        return Array.isArray(itemValue) ? itemValue : [itemValue]
+      })
+    }
+
+    const [key, ...remainingKeys] = keys
+    return resolvePath(current?.[key], remainingKeys)
+  }
+
+  const value = resolvePath(source, String(path).split('.').filter(Boolean))
   return value === undefined || value === null || value === '' ? fallback : value
 }
 
 export const formatBindingValue = (value, format = 'text') => {
   if (value === undefined || value === null || value === '') return ''
+  if (Array.isArray(value)) {
+    return value
+      .flat(Infinity)
+      .filter(item => item !== undefined && item !== null && item !== '')
+      .map(item => formatBindingValue(item, format))
+      .join('\n')
+  }
   if (format === 'number') {
     const numericValue = Number(value)
     return Number.isFinite(numericValue) ? numericValue.toLocaleString('vi-VN') : value
+  }
+  if (format === 'number_en' || format === 'decimal_en') {
+    const numericValue = Number(value)
+    const decimals = format === 'decimal_en' ? 2 : undefined
+    return Number.isFinite(numericValue)
+      ? numericValue.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+      : value
   }
   if (format === 'currency') {
     const numericValue = Number(value)
@@ -122,10 +172,33 @@ export const formatBindingValue = (value, format = 'text') => {
   return String(value)
 }
 
+const normalizeSkuAttributeLabel = value => String(value ?? '')
+  .trim()
+  .replace(/\s+/g, ' ')
+  .toLocaleUpperCase('vi-VN')
+
+// Supports both table-relative paths and absolute paths for PDF text blocks.
+export const resolveBindingValue = (source, binding, skuAttributeLabel, fallback = '') => {
+  const keys = String(binding || '').split('.')
+  const skuIndex = keys.indexOf('skuDetails')
+  const label = normalizeSkuAttributeLabel(skuAttributeLabel)
+  if (skuIndex < 0 || !label) return getValueByPath(source, binding, fallback)
+
+  const owners = skuIndex === 0 ? source : getValueByPath(source, keys.slice(0, skuIndex).join('.'), null)
+  const resolveOwner = owner => {
+    const attribute = (Array.isArray(owner?.skuDetails) ? owner.skuDetails : []).find(
+      item => normalizeSkuAttributeLabel(item?.text) === label,
+    )
+    return getValueByPath(attribute, keys.slice(skuIndex + 1).join('.'), fallback)
+  }
+  return Array.isArray(owners) ? owners.map(resolveOwner) : resolveOwner(owners)
+}
+
 export const resolveNodeValue = (node, data) => formatBindingValue(
-  getValueByPath(
+  resolveBindingValue(
     data,
     node?.binding,
+    node?.pdfContentMode === 'binding' ? '' : node?.skuAttributeLabel,
     node?.mockValue !== undefined && node?.mockValue !== '' ? node.mockValue : (node?.fallback ?? ''),
   ),
   node?.format,

@@ -26,6 +26,6 @@ const ListAcountGroupPage = React.lazy(() => import('@/pages/ListGroup'));
 export const ListAcountGroupConfig = {
     auth: authRoles.user,
     routes: [
-        { path: '/user/group', element: <ListAcountGroupPage /> }
+        { path: '/user/group', permission: 'system.team.view', element: <ListAcountGroupPage /> }
     ]
 };

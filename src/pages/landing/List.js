@@ -13,7 +13,9 @@ import {
 } from '@/containers/Landing/landingRepository'
 import { clonePageSchema, DEFAULT_PAGE_SCHEMA } from '@/containers/Landing/pageSchema'
 import WebPageService from '@/services/WebPageService'
-import { Header, PageName, PageShell, TableCard, Toolbar } from './List.style'
+import useGetMe from '@/hooks/useGetMe'
+import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard'
+import { PageName, PageShell, TableCard, Toolbar } from './List.style'
 
 const formatDate = value => {
   if (!value) return '—'
@@ -72,6 +74,11 @@ const openEditor = (record, navigate) => {
 
 const LandingList = () => {
   const navigate = useNavigate()
+  const { hasPermission } = useGetMe()
+  const canCreate = hasPermission('web.landing.create')
+  const canUpdate = hasPermission('web.landing.update')
+  const canDuplicate = hasPermission('web.landing.duplicate')
+  const canDelete = hasPermission('web.landing.delete')
   const [keyword, setKeyword] = useState('')
   const [pages, setPages] = useState([])
   const [loading, setLoading] = useState(false)
@@ -79,6 +86,19 @@ const LandingList = () => {
   const [createOpen, setCreateOpen] = useState(false)
   const [createSubmitting, setCreateSubmitting] = useState(false)
   const [form] = Form.useForm()
+  const closeCreateDrawer = useCallback(() => {
+    setCreateOpen(false)
+    form.resetFields()
+  }, [form])
+  const {
+    closeAfterSubmit,
+    markDirty,
+    requestClose,
+  } = useDrawerLeaveGuard({
+    open: createOpen,
+    onClose: closeCreateDrawer,
+    resetKey: 'create-landing-page',
+  })
 
   const loadPages = useCallback(async (page = 1, limit = 10) => {
     setLoading(true)
@@ -142,8 +162,7 @@ const LandingList = () => {
         remoteId: null,
         schema,
       })
-      setCreateOpen(false)
-      form.resetFields()
+      closeAfterSubmit()
       message.success('Đã tạo bản nháp trắng. Trang chỉ được build khi lưu hoặc xuất bản.')
       navigate(`/landing/edit?mode=create&id=${encodeURIComponent(temporaryPageId)}`)
     } catch (error) {
@@ -235,31 +254,37 @@ const LandingList = () => {
             icon={<EyeOutlined />}
             onClick={() => window.open(getPreviewPath(record), '_blank')}
           />
-          <Button
-            type="text"
-            title="Chỉnh sửa"
-            icon={<EditOutlined />}
-            onClick={() => openEditor(record, navigate)}
-          />
-          <Button
-            type="text"
-            title="Sao chép"
-            icon={<CopyOutlined />}
-            onClick={() => duplicatePage(record)}
-          />
-          <Popconfirm
-            title="Xóa trang này?"
-            disabled={record.__source === 'api'}
-            onConfirm={() => removePage(record.id)}
-          >
+          {canUpdate && (
             <Button
-              danger
               type="text"
-              disabled={record.__source === 'api'}
-              title={record.__source === 'api' ? 'Chưa có API xóa trang' : 'Xóa'}
-              icon={<DeleteOutlined />}
+              title="Chỉnh sửa"
+              icon={<EditOutlined />}
+              onClick={() => openEditor(record, navigate)}
             />
-          </Popconfirm>
+          )}
+          {canDuplicate && (
+            <Button
+              type="text"
+              title="Sao chép"
+              icon={<CopyOutlined />}
+              onClick={() => duplicatePage(record)}
+            />
+          )}
+          {canDelete && (
+            <Popconfirm
+              title="Xóa trang này?"
+              disabled={record.__source === 'api'}
+              onConfirm={() => removePage(record.id)}
+            >
+              <Button
+                danger
+                type="text"
+                disabled={record.__source === 'api'}
+                title={record.__source === 'api' ? 'Chưa có API xóa trang' : 'Xóa'}
+                icon={<DeleteOutlined />}
+              />
+            </Popconfirm>
+          )}
         </Space>
       ),
     },
@@ -269,15 +294,7 @@ const LandingList = () => {
     <PageShell>
       <Helmet><title>Quản lý trang</title></Helmet>
       <BreadcrumbCustom data={[{ title: 'Trang chủ' }, { title: 'Quản lý trang' }]} />
-      <Header>
-        <div>
-          <h1>Quản lý trang</h1>
-          <p>Tạo và chỉnh sửa Landing Page bằng các block nội dung.</p>
-        </div>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
-          Thêm trang mới
-        </Button>
-      </Header>
+   
       <Toolbar>
         <Input
           allowClear
@@ -287,7 +304,11 @@ const LandingList = () => {
           onChange={event => setKeyword(event.target.value)}
           style={{ width: 340 }}
         />
-        <Space />
+        {canCreate && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+            Thêm trang
+          </Button>
+        )}
       </Toolbar>
       <TableCard>
         <Table
@@ -302,11 +323,11 @@ const LandingList = () => {
           }}
         />
       </TableCard>
-      <Drawer
+      {canCreate && <Drawer
         title="Thêm Landing Page"
         width={560}
         open={createOpen}
-        onClose={() => setCreateOpen(false)}
+        onClose={requestClose}
         destroyOnClose
         extra={<Button type="primary" loading={createSubmitting} disabled={createSubmitting} onClick={() => form.submit()}>Tiếp tục</Button>}
       >
@@ -315,6 +336,7 @@ const LandingList = () => {
           layout="vertical"
           initialValues={{ authenticationRequired: false }}
           onFinish={createPage}
+          onValuesChange={markDirty}
         >
           <Form.Item name="name" label="Tên trang" rules={[{ required: true, message: 'Vui lòng nhập tên trang.' }]}>
             <Input placeholder="Ví dụ: Trang giới thiệu sản phẩm" />
@@ -323,7 +345,7 @@ const LandingList = () => {
             <Checkbox>Yêu cầu người dùng đăng nhập</Checkbox>
           </Form.Item>
         </Form>
-      </Drawer>
+      </Drawer>}
     </PageShell>
   )
 }

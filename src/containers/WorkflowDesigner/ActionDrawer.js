@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Checkbox, Form, Input, InputNumber, Select, Switch } from 'antd'
 import { CloseOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { RequestUtils } from '@flast-erp/core/utils'
+import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard'
 import { PanelBody, SectionLabel } from './styles'
 import {
   CodeChip,
@@ -118,6 +119,7 @@ const ERP_CORE_TABLE_OPTIONS = [
   { value: 'order_detail', label: 'Đơn hàng con' },
   { value: 'product', label: 'Sản phẩm' },
   { value: 'user', label: 'Nhân viên' },
+  { value: 'lead', label: 'Lead'}
 ]
 
 const normalizeActionType = (type) =>
@@ -137,14 +139,10 @@ const getNodeFormsByStep = (nodes = [], stepCode) => {
   return node?.data?.forms ?? []
 }
 
-const getResponseArray = (response) => {
-  if (Array.isArray(response)) return response
-  if (Array.isArray(response?.data)) return response.data
-  if (Array.isArray(response?.embedded)) return response.embedded
-  if (Array.isArray(response?.data?.embedded)) return response.data.embedded
-  if (Array.isArray(response?.items)) return response.items
-  if (Array.isArray(response?.data?.items)) return response.data.items
-  return []
+/** POST /workflow/forms/template/find-template-field → data = Template[] */
+const getTemplateFieldList = (response) => {
+  const items = response?.data
+  return Array.isArray(items) ? items : []
 }
 
 const normalizeFieldOption = (field = {}) => {
@@ -227,7 +225,7 @@ const fetchStepFieldOptions = async (forms = []) => {
     formIds
   )
 
-  return getResponseArray(response)
+  return getTemplateFieldList(response)
     .flatMap((item) => Array.isArray(item?.fields) ? item.fields : [item])
     .map(normalizeFieldOption)
     .filter(Boolean)
@@ -762,6 +760,11 @@ const ActionDrawer = ({
     () => fieldOptions.find((field) => String(field.value) === String(selectedFieldName)) ?? null,
     [fieldOptions, selectedFieldName],
   )
+  const { markClean, markDirty, requestClose } = useDrawerLeaveGuard({
+    open: true,
+    onClose: onCancel,
+    resetKey: `${actionIndex}-${initialValue?.id ?? initialValue?.type ?? 'new'}`,
+  })
 
   const handleTargetStepChange = useCallback(async (stepCode, options = {}) => {
     if (!options.keepFieldValue) {
@@ -854,6 +857,7 @@ const ActionDrawer = ({
     localForm
       .validateFields()
       .then((values) => {
+        markClean()
         if (values.type === 'update_erp_core') {
           onConfirm({
             type: values.type,
@@ -939,7 +943,7 @@ const ActionDrawer = ({
           type="text"
           size="small"
           icon={<CloseOutlined />}
-          onClick={onCancel}
+          onClick={requestClose}
           style={{ color: '#8c8c8c' }}
         />
       </DrawerHeader>
@@ -951,6 +955,7 @@ const ActionDrawer = ({
           size="small"
           component={false}
           preserve={false}
+          onValuesChange={markDirty}
           initialValues={{
             type: normalizeActionType(initialValue?.type),
             trigger,
@@ -984,7 +989,7 @@ const ActionDrawer = ({
         <Button type="primary" size="small" block onClick={handleConfirm}>
           Xác nhận
         </Button>
-        <Button size="small" onClick={onCancel}>
+        <Button size="small" onClick={requestClose}>
           Huỷ
         </Button>
       </DrawerFooter>

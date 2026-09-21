@@ -1,9 +1,12 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Space, Tag } from 'antd'
+import useGetMe from '@/hooks/useGetMe'
 import { RestList } from '@flast-erp/core/components'
 import { useGetList } from '@flast-erp/core/hooks'
-import { dateFormatOnSubmit, f5List, InAppEvent } from '@flast-erp/core/utils'
+import { dateFormatOnSubmit, f5List, InAppEvent, RequestUtils } from '@flast-erp/core/utils'
 import GeneratedDocumentViewer from '@/components/GeneratedDocumentViewer'
+import QuotationApproverSelect from './components/QuotationApproverSelect'
 import { HASH_MODAL } from '@/configs'
 import Filter from '../Filter'
 import createOrderColumns from './columns/createOrderColumns'
@@ -15,6 +18,7 @@ import useOrderWorkflowData from './hooks/useOrderWorkflowData'
 import useQuotationViewer from './hooks/useQuotationViewer'
 import useWorkflowModal from './hooks/useWorkflowModal'
 import useWorkflowProgressDrawer from './hooks/useWorkflowProgressDrawer'
+import OrderInboundDrawer from './components/OrderInboundDrawer'
 
 const QUOTATION_COMMENT_MOCKS = [
   {
@@ -40,19 +44,79 @@ const QUOTATION_COMMENT_MOCKS = [
   },
 ]
 
+const QUOTATION_STATUS_META = {
+  0: { label: 'Chưa duyệt', color: 'default' },
+  1: { label: 'Chờ duyệt', color: 'processing' },
+  2: { label: 'Đã duyệt', color: 'success' },
+}
+
+const useOpportunityOrderList = ({ queryParams, ...options }) => {
+  const opportunityQueryParams = useMemo(() => ({
+    ...queryParams,
+    type: 'cohoi',
+  }), [queryParams])
+
+  return useGetList({
+    ...options,
+    queryParams: opportunityQueryParams,
+  })
+}
+
 const ListOrder = ({
   filter = {},
   hideQuoteButton,
   extraActions,
   enableLotTree = false,
   disableWorkflowAttach = false,
+  showWorkflowProgressAction = false,
   apiPath = 'erp/order/fetch',
   orderMode = false,
+  detailDrawerHash = '#order.tabs',
+  detailDrawerTitle,
 }) => {
   const navigate = useNavigate()
+  const { user, hasPermission } = useGetMe()
   const [copiedIndex, setCopiedIndex] = useState(null)
   const isOrderList = orderMode || filter.type === 'order'
   const isOpportunityList = filter.type === 'cohoi'
+  const canViewDetail = hasPermission(isOpportunityList
+    ? 'sales.opportunity.detail.view'
+    : 'sales.order.detail.view')
+  const canUpdateOpportunity = isOpportunityList && hasPermission('sales.opportunity.update')
+  const canUpdateOrder = isOrderList && hasPermission('sales.order.update')
+  const canViewQuotation = isOpportunityList && hasPermission('sales.quotation.view')
+  const canAttachWorkflow = hasPermission(isOpportunityList
+    ? 'sales.opportunity.workflow.attach'
+    : 'sales.order.workflow.attach')
+  const canViewWorkflow = hasPermission(isOpportunityList
+    ? 'sales.opportunity.workflow.view'
+    : 'sales.order.workflow.view')
+  const canCreateReceipt = isOrderList && hasPermission('inventory.receipt.create')
+  const [opportunityStatusOptions, setOpportunityStatusOptions] = useState([])
+  const [inboundOrder, setInboundOrder] = useState(null)
+
+  useEffect(() => {
+    let mounted = true
+
+    if (!isOpportunityList) {
+      setOpportunityStatusOptions([])
+      return () => {
+        mounted = false
+      }
+    }
+
+    RequestUtils.GetAsList('/erp/order-status/fetch')
+      .then((statuses) => {
+        if (mounted) setOpportunityStatusOptions(Array.isArray(statuses) ? statuses : [])
+      })
+      .catch(() => {
+        if (mounted) setOpportunityStatusOptions([])
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [isOpportunityList])
 
   const {
     expandedRowKeys,
@@ -98,9 +162,19 @@ const ListOrder = ({
     quoteTemplate,
     quoteData,
     quoteOrder,
+    quoteSaving,
+    quoteApproverId,
+    quoteApprovalStatus,
+    quoteReadOnly,
+    quoteReviewDisabled,
+    isQuoteApprover,
+    setQuoteApproverId,
     openQuotationViewer,
+    saveQuotation,
+    approveQuotation,
+    rejectQuotation,
     closeQuotationViewer,
-  } = useQuotationViewer()
+  } = useQuotationViewer({ approvalEnabled: isOpportunityList && !isOrderList, currentUserId: user?.id })
 
   const { onData } = useOrderWorkflowData(
     isOrderList || isOpportunityList
@@ -113,34 +187,44 @@ const ListOrder = ({
   }, [isOpportunityList, openWorkflowModal])
 
   const onClickViewDetail = useCallback((customerOrder) => InAppEvent.emit(HASH_MODAL, {
-    hash: '#order.tabs',
-    title: 'Thông tin đơn hàng ' + customerOrder.code,
-    data: { customerOrder },
-  }), [])
+    hash: detailDrawerHash,
+    title: detailDrawerTitle ?? ('Thông tin đơn hàng ' + customerOrder.code),
+    data: { customerOrder, hideInvoiceTab: isOpportunityList },
+  }), [detailDrawerHash, detailDrawerTitle, isOpportunityList])
 
   const beforeSubmitFilter = useCallback((values) => {
     dateFormatOnSubmit(values, ['from', 'to'])
-    return values
-  }, [])
+    return { ...values, ...filter }
+  }, [filter])
 
   const actionWidth = (
     filter.type === 'cohoi' ? 260 : 220
-  ) + ((extraActions?.length ?? 0) * 44)
+  ) + ((extraActions?.length ?? 0) * 44) + (canCreateReceipt ? 44 : 0)
 
   const columns = createOrderColumns({
-    isOrderList,
     isOpportunityList,
+    showOrderDetailTooltip: isOpportunityList || isOrderList,
+    opportunityStatusOptions,
     copiedIndex,
     setCopiedIndex,
     actionWidth,
     hideQuoteButton,
     disableWorkflowAttach,
+    showWorkflowProgressAction,
     extraActions,
     onClickViewDetail,
     openQuotationViewer,
     openWorkflowModal: handleOpenWorkflowModal,
     openWorkflowProgressDrawer,
     navigate,
+    canViewDetail,
+    canUpdateOpportunity,
+    canUpdateOrder,
+    canViewQuotation,
+    canAttachWorkflow,
+    canViewWorkflow,
+    canCreateReceipt,
+    openOrderInboundDrawer: setInboundOrder,
   })
 
   const orderLotExpandable = enableLotTree
@@ -159,14 +243,14 @@ const ListOrder = ({
       <RestList
         rowKey="id"
         bordered
-        xScroll={1800}
+        xScroll={isOpportunityList ? 1200 : 1800}
         expandable={orderLotExpandable}
         onData={onData}
         initialFilter={{ limit: 10, page: 1, ...filter }}
         filter={<Filter />}
         hasCreate={false}
         beforeSubmitFilter={beforeSubmitFilter}
-        useGetAllQuery={useGetList}
+        useGetAllQuery={isOpportunityList ? useOpportunityOrderList : useGetList}
         apiPath={apiPath}
         columns={columns}
       />
@@ -193,7 +277,15 @@ const ListOrder = ({
         order={workflowProgressOrder}
         orderDetail={workflowProgressOrderDetail}
         workflowInstances={workflowProgressInstances}
+        singleBlock={isOpportunityList}
         onClose={closeWorkflowProgressDrawer}
+      />
+
+      <OrderInboundDrawer
+        key={inboundOrder?.id ?? 'order-inbound-closed'}
+        open={Boolean(inboundOrder)}
+        initialOrder={inboundOrder}
+        onClose={() => setInboundOrder(null)}
       />
 
       <GeneratedDocumentViewer
@@ -203,6 +295,28 @@ const ListOrder = ({
         data={quoteData}
         comments={QUOTATION_COMMENT_MOCKS}
         title={`Báo giá${quoteOrder?.code ? ` - ${quoteOrder.code}` : ''}`}
+        documentSubmitting={quoteSaving}
+        readOnly={isOrderList || quoteReadOnly}
+        onSubmitDocument={isOrderList || isQuoteApprover || quoteReadOnly || quoteLoading || !quoteTemplate ? undefined : saveQuotation}
+        onApproveDocument={isQuoteApprover ? approveQuotation : undefined}
+        onRejectDocument={isQuoteApprover ? rejectQuotation : undefined}
+        reviewDisabled={quoteReviewDisabled}
+        allowDocumentSubmit={isOpportunityList && !isOrderList}
+        toolbarContent={isOpportunityList && !isOrderList ? (
+          <Space wrap>
+            <Tag color={QUOTATION_STATUS_META[quoteApprovalStatus]?.color}>
+              {quoteLoading ? 'Đang kiểm tra...' : QUOTATION_STATUS_META[quoteApprovalStatus]?.label ?? 'Không xác định trạng thái'}
+            </Tag>
+            {!isQuoteApprover && !quoteLoading && quoteTemplate ? (
+              <QuotationApproverSelect
+                key={quoteOrder?.id}
+                value={quoteApproverId}
+                onChange={setQuoteApproverId}
+                disabled={quoteLoading || quoteSaving || !quoteTemplate || quoteReadOnly}
+              />
+            ) : null}
+          </Space>
+        ) : undefined}
         onClose={closeQuotationViewer}
       />
     </>

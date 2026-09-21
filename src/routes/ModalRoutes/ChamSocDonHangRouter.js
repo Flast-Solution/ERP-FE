@@ -24,6 +24,7 @@ import React from 'react';
 const ActionChamSocDonHangRouter = [
   {
     path: 'chamsocdonhang.edit',
+    permission: 'sales.order.after_sale.update',
     Component: React.lazy(() => import('@/containers/ChamSocDonHang')),
     modalOptions: { title: '', widh: 750 }
   }

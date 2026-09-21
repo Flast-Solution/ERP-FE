@@ -9,8 +9,8 @@
  * - buildService: build request and JSX normalization
  */
 
-import { useEffect, useMemo, useState } from 'react'
-import { Button } from 'antd'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Alert, Button, Spin } from 'antd'
 import {
   CloseOutlined,
   DesktopOutlined,
@@ -23,6 +23,7 @@ import {
 
 import useChatStore from '@/containers/AIChatbot/useChatStore'
 import FormUITab from './FormUITab'
+import RemoteFormPreview from './RemoteFormPreview'
 import JSXCodeTab from './JSXCodeTab'
 import usePreviewCode from './usePreviewCode'
 import useSaveForm from './useSaveForm'
@@ -56,6 +57,12 @@ const PreviewModal = ({
 }) => {
   const [activeTab, setActiveTab] = useState(mode)
   const [viewport, setViewport] = useState('desktop')
+  const [realPreview, setRealPreview] = useState({
+    status: 'idle',
+    url: '',
+    message: '',
+    version: '',
+  })
   const getSessionId = useChatStore(state => state.getSessionId)
   const formBuilderSessionId = useMemo(() => getSessionId('form_builder'), [getSessionId])
   const {
@@ -85,10 +92,39 @@ const PreviewModal = ({
     isDirty,
     onSave,
   })
+  const handleJsxCodeChange = useCallback((nextCode) => {
+    setJsxCode(nextCode)
+    setRealPreview({ status: 'idle', url: '', message: '', version: '' })
+  }, [setJsxCode])
+  const handleBuildStateChange = useCallback((nextState) => {
+    setRealPreview(current => ({
+      ...current,
+      ...nextState,
+      url: nextState.url === undefined ? current.url : nextState.url,
+      version: nextState.status === 'done'
+        ? String(Date.now())
+        : current.version,
+    }))
+    if (nextState.status === 'done' && nextState.url) {
+      setActiveTab('ui')
+    }
+  }, [])
 
   useEffect(() => {
     setActiveTab(mode)
   }, [mode])
+
+  useEffect(() => {
+    if (!open) return
+    const existingUrl = schema?.meta?.microFrontendUrl
+      ?? ''
+    setRealPreview({
+      status: existingUrl ? 'done' : 'idle',
+      url: existingUrl,
+      message: existingUrl ? 'Đang dùng bản build đã lưu.' : '',
+      version: '',
+    })
+  }, [open, schema?.meta?.microFrontendUrl])
 
   if (!open) return null
 
@@ -146,14 +182,53 @@ const PreviewModal = ({
         <PaneWrapper>
           {activeTab === 'ui' ? (
             <FormUIPane>
-              <FormUITab schema={effectiveSchema} viewport={viewport} />
+              {realPreview.url ? (
+                <RemoteFormPreview
+                  remoteEntry={realPreview.url}
+                  previewVersion={realPreview.version}
+                  viewport={viewport}
+                />
+              ) : realPreview.status === 'building' ? (
+                <div style={{ minHeight: 320, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Spin tip={realPreview.message || 'Đang build form thực...'} />
+                </div>
+              ) : (
+                <>
+                  {realPreview.status === 'error' && (
+                    <Alert
+                      type="warning"
+                      showIcon
+                      message="Chưa thể hiển thị form thực"
+                      description={realPreview.message}
+                      style={{ width: '100%', maxWidth: viewport === 'mobile' ? 360 : 720 }}
+                    />
+                  )}
+                  {isDirty && (
+                    <div
+                      style={{
+                        width: '100%',
+                        maxWidth: viewport === 'mobile' ? 360 : 720,
+                        padding: '10px 14px',
+                        border: '1px solid #fde68a',
+                        borderRadius: 8,
+                        background: '#fffbeb',
+                        color: '#92400e',
+                        fontSize: 12,
+                      }}
+                    >
+                      JSX có CSS/layout tùy chỉnh. Hãy mở tab JSX code và bấm Build preview để Form thực hiển thị đúng giao diện.
+                    </div>
+                  )}
+                  <FormUITab schema={effectiveSchema} viewport={viewport} />
+                </>
+              )}
             </FormUIPane>
           ) : (
             <JSXCodeTab
               schema={effectiveSchema}
               sessionId={formBuilderSessionId}
               jsxCode={jsxCode}
-              setJsxCode={setJsxCode}
+              setJsxCode={handleJsxCodeChange}
               isEditable={isEditable}
               setIsEditable={setIsEditable}
               isDirty={isDirty}
@@ -161,6 +236,7 @@ const PreviewModal = ({
               generatedCode={generatedCode}
               fieldKeys={fieldKeys}
               syncError={syncError}
+              onBuildStateChange={handleBuildStateChange}
             />
           )}
         </PaneWrapper>

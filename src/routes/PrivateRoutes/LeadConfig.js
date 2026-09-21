@@ -28,7 +28,10 @@ const BotPage = React.lazy(() => import('@/pages/lead/Bot'));
 export const LeadConfig = {
     auth: authRoles.user,
     routes: [
-        { path: '/lead', element: <LeadPage /> },
-        { path: '/bot', element: <BotPage /> }
+        { path: '/lead/three-day', permission: 'sales.lead.overdue.view', element: <LeadPage /> },
+        { path: '/lead/report', permission: 'sales.lead.report.view', element: <LeadPage /> },
+        { path: '/lead', permission: 'sales.lead.view', element: <LeadPage /> },
+        { path: '/lead/*', permission: 'sales.lead.view', element: <LeadPage /> },
+        { path: '/bot', permission: 'sales.lead.cold.view', element: <BotPage /> }
     ]
 };

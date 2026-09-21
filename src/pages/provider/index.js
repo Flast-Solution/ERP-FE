@@ -15,6 +15,8 @@ import {
 import { useGetList } from '@flast-erp/core/hooks';
 import { RequestUtils, f5List } from '@flast-erp/core/utils';
 import ProviderFilter from './Filter';
+import useGetMe from '@/hooks/useGetMe';
+import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard';
 
 const STATUS_OPTIONS = [
   { id: 1, name: 'Kích hoạt' },
@@ -81,7 +83,7 @@ const buildProviderPayload = (values = {}) => ({
   status: values.status ?? 1,
 });
 
-const ProviderForm = ({ record, onCancel, onSaved, disabled = false }) => {
+const ProviderForm = ({ record, onCancel, onSaved, onValuesChange, disabled = false }) => {
   const [form] = Form.useForm();
 
   const initialValues = useMemo(() => ({
@@ -112,6 +114,7 @@ const ProviderForm = ({ record, onCancel, onSaved, disabled = false }) => {
       disabled={disabled}
       initialValues={initialValues}
       onFinish={onSubmit}
+      onValuesChange={onValuesChange}
       style={{ marginTop: 20 }}
     >
       <FormHidden name="id" />
@@ -322,6 +325,10 @@ const ProviderForm = ({ record, onCancel, onSaved, disabled = false }) => {
 };
 
 const ProviderPage = () => {
+  const { hasPermission } = useGetMe();
+  const canCreate = hasPermission('supplier.create');
+  const canViewDetail = hasPermission('supplier.detail.view');
+  const canUpdate = hasPermission('supplier.update');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState('create');
   const [editingRecord, setEditingRecord] = useState({});
@@ -345,10 +352,16 @@ const ProviderPage = () => {
     setEditingRecord({});
   };
 
-  const onSaved = () => {
-    closeForm();
-    f5List('provider/fetch');
-  };
+  const {
+    closeAfterSubmit,
+    markDirty,
+    requestClose,
+  } = useDrawerLeaveGuard({
+    open: drawerOpen,
+    onClose: closeForm,
+    enabled: drawerMode !== 'view',
+    resetKey: `${drawerMode}-${editingRecord?.id ?? 'create'}`,
+  });
 
   const columns = [
     {
@@ -409,7 +422,7 @@ const ProviderPage = () => {
       align: 'center',
       render: (_, record) => (
         <Space size={4}>
-          <Tooltip title="Xem chi tiết">
+          {canViewDetail ? <Tooltip title="Xem chi tiết">
             <Button
               type="text"
               size="small"
@@ -417,8 +430,8 @@ const ProviderPage = () => {
               aria-label="Xem chi tiết"
               onClick={() => openDetail(record)}
             />
-          </Tooltip>
-          <Tooltip title="Chỉnh sửa">
+          </Tooltip> : null}
+          {canUpdate ? <Tooltip title="Chỉnh sửa">
             <Button
               type="text"
               size="small"
@@ -426,7 +439,7 @@ const ProviderPage = () => {
               aria-label="Chỉnh sửa"
               onClick={() => openForm(record)}
             />
-          </Tooltip>
+          </Tooltip> : null}
         </Space>
       ),
     },
@@ -445,7 +458,7 @@ const ProviderPage = () => {
         initialFilter={{ limit: 10, page: 1 }}
         filter={<ProviderFilter />}
         useGetAllQuery={useGetList}
-        hasCreate
+        hasCreate={canCreate}
         customClickCreate={() => openForm({})}
         apiPath="provider/fetch"
         columns={columns}
@@ -454,7 +467,7 @@ const ProviderPage = () => {
       <DrawerCustom
         width={750}
         open={drawerOpen}
-        onClose={closeForm}
+        onClose={requestClose}
         title={drawerMode === 'view'
           ? `Chi tiết nhà cung cấp${editingRecord?.code ? ` - ${editingRecord.code}` : ''}`
           : editingRecord?.id
@@ -465,8 +478,12 @@ const ProviderPage = () => {
           key={`${drawerMode}-${editingRecord?.id || 'create'}`}
           record={editingRecord}
           disabled={drawerMode === 'view'}
-          onCancel={closeForm}
-          onSaved={onSaved}
+          onCancel={requestClose}
+          onValuesChange={markDirty}
+          onSaved={() => {
+            closeAfterSubmit();
+            f5List('provider/fetch');
+          }}
         />
       </DrawerCustom>
     </div>

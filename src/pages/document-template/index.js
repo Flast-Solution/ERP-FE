@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, Input, Modal, Popconfirm, Select, Space, Table, Tag, Tooltip, message } from 'antd'
-import { DeleteOutlined, EditOutlined, ReloadOutlined } from '@ant-design/icons'
+import { Button, Input, Popconfirm, Space, Table, Tag, Tooltip, message } from 'antd'
+import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import { Helmet } from 'react-helmet'
 import { useNavigate } from 'react-router-dom'
 import { BreadcrumbCustom } from '@flast-erp/core/components'
 import { formatTime } from '@flast-erp/core/utils'
 import { SUCCESS_CODE } from '@/configs'
 import DocumentTemplateService from '@/services/DocumentTemplateService'
+import useGetMe from '@/hooks/useGetMe'
 
 const STATUS_META = {
   DRAFT: { color: 'gold', label: 'Bản nháp' },
@@ -15,14 +16,16 @@ const STATUS_META = {
 }
 
 const DocumentTemplateListPage = () => {
+  const { hasPermission } = useGetMe()
+  const canCreate = hasPermission('system.document_template.create')
+  const canUpdate = hasPermission('system.document_template.update')
+  const canDelete = hasPermission('system.document_template.delete')
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [templates, setTemplates] = useState([])
   const [page, setPage] = useState(1)
   const [keyword, setKeyword] = useState('')
   const [appliedKeyword, setAppliedKeyword] = useState('')
-  const [createOpen, setCreateOpen] = useState(false)
-  const [selectedTemplateId, setSelectedTemplateId] = useState(null)
 
   const filteredTemplates = useMemo(() => {
     const normalizedKeyword = appliedKeyword.trim().toLowerCase()
@@ -75,7 +78,7 @@ const DocumentTemplateListPage = () => {
       },
     },
     { title: 'Cập nhật', dataIndex: 'updatedDate', key: 'updatedDate', width: 150, render: value => formatTime(value) },
-    {
+    (canUpdate || canDelete) && {
       title: 'Thao tác',
       key: 'action',
       width: 90,
@@ -83,10 +86,10 @@ const DocumentTemplateListPage = () => {
       align: 'center',
       render: (_, record) => (
         <Space size={4}>
-          <Tooltip title="Chỉnh sửa chứng từ">
+          {canUpdate ? <Tooltip title="Chỉnh sửa chứng từ">
             <Button type="text" icon={<EditOutlined />} onClick={() => navigate(`/system/document-templates/${record.templateId}/edit`)} />
-          </Tooltip>
-          <Popconfirm
+          </Tooltip> : null}
+          {canDelete ? <Popconfirm
             title="Xóa template"
             description={`Bạn có chắc muốn xóa “${record.name || 'template này'}”?`}
             okText="Xóa"
@@ -97,20 +100,11 @@ const DocumentTemplateListPage = () => {
             <Tooltip title="Xóa template">
               <Button danger type="text" icon={<DeleteOutlined />} />
             </Tooltip>
-          </Popconfirm>
+          </Popconfirm> : null}
         </Space>
       ),
     },
-  ]
-
-  const createDocument = () => {
-    if (!selectedTemplateId) {
-      message.warning('Vui lòng chọn hạng mục chứng từ')
-      return
-    }
-    setCreateOpen(false)
-    navigate(`/system/document-templates/create?sourceTemplateId=${encodeURIComponent(selectedTemplateId)}`)
-  }
+  ].filter(Boolean)
 
   const deleteTemplate = async (record) => {
     try {
@@ -146,6 +140,13 @@ const DocumentTemplateListPage = () => {
           <Button onClick={() => { setPage(1); setAppliedKeyword(keyword.trim()) }}>Tìm kiếm</Button>
           <Button icon={<ReloadOutlined />} onClick={() => { setKeyword(''); setAppliedKeyword(''); setPage(1) }} />
         </Space.Compact>
+        {canCreate ? <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => navigate('/system/document-templates/create')}
+        >
+          Tạo mới chứng từ
+        </Button> : null}
       </Space>
 
       <Table
@@ -162,28 +163,6 @@ const DocumentTemplateListPage = () => {
           onChange: setPage,
         }}
       />
-
-      <Modal
-        open={createOpen}
-        title="Chọn hạng mục chứng từ"
-        okText="Mở trình thiết kế"
-        cancelText="Hủy"
-        onOk={createDocument}
-        onCancel={() => setCreateOpen(false)}
-      >
-        <Select
-          showSearch
-          optionFilterProp="label"
-          value={selectedTemplateId}
-          placeholder="Chọn hạng mục"
-          options={templates.map(template => ({
-            value: template.templateId,
-            label: `${template.code ? `${template.code} - ` : ''}${template.name}${template.version ? ` (${template.version})` : ''}`,
-          }))}
-          onChange={setSelectedTemplateId}
-          style={{ width: '100%' }}
-        />
-      </Modal>
     </div>
   )
 }

@@ -1,12 +1,15 @@
-import React, { useRef } from 'react'
-import { Button, Drawer, Empty, Segmented, Space } from 'antd'
+import React, { useEffect, useRef, useState } from 'react'
+import { Button, Drawer, Segmented, Space } from 'antd'
 import { FilePdfOutlined } from '@ant-design/icons'
 import { useReactToPrint } from 'react-to-print'
-import DocumentNodeContent from './DocumentNodeContent'
-import { A4ContentGrid, A4Page, CanvasViewport, CodePreview } from './styles'
+import DocumentTemplateContent from './DocumentTemplateContent'
+import SheetImportButton from './SheetImportButton'
+import { setSheetTableData } from './sheetImport'
+import { CanvasViewport, CodePreview } from './styles'
 
 const PreviewDrawer = ({ open, template, data, onClose }) => {
   const [mode, setMode] = React.useState('preview')
+  const [previewData, setPreviewData] = useState(data)
   const documentRef = useRef(null)
   const orientation = template.page?.orientation === 'landscape' ? 'landscape' : 'portrait'
   const pageWidth = orientation === 'landscape' ? 297 : 210
@@ -50,6 +53,7 @@ const PreviewDrawer = ({ open, template, data, onClose }) => {
       }
     `,
   })
+  useEffect(() => { if (open) setPreviewData(data) }, [data, open])
 
   return (
     <Drawer
@@ -59,6 +63,7 @@ const PreviewDrawer = ({ open, template, data, onClose }) => {
       onClose={onClose}
       extra={(
         <Space>
+          <SheetImportButton template={template} onImport={(id, table) => setPreviewData(current => setSheetTableData(current, id, table))} />
           <Segmented value={mode} onChange={setMode} options={[{ value: 'preview', label: 'Chứng từ' }, { value: 'json', label: 'Template JSON' }]} />
           <Button
             type="primary"
@@ -76,31 +81,9 @@ const PreviewDrawer = ({ open, template, data, onClose }) => {
         <div style={{ padding: 20 }}><CodePreview>{JSON.stringify(template, null, 2)}</CodePreview></div>
       ) : (
         <CanvasViewport>
-          <A4Page ref={documentRef} className="document-pdf-page" $margin={template.page?.margin}>
-            <A4ContentGrid
-              $columns={template.layout?.columns}
-              $columnGap={template.layout?.columnGap}
-              $rowGap={template.layout?.rowGap}
-            >
-              {(template.nodes ?? []).length
-                ? template.nodes.map(node => (
-                  <div
-                    key={node.id}
-                    style={{
-                      gridColumn: node.layout?.startNewRow
-                        ? `1 / span ${node.layout?.columnSpan ?? 12}`
-                        : `span ${node.layout?.columnSpan ?? 12}`,
-                      gridRow: `span ${node.layout?.rowSpan ?? 1}`,
-                      minWidth: 0,
-                      minHeight: node.layout?.minHeight || undefined,
-                    }}
-                  >
-                    <DocumentNodeContent node={node} data={data} preview />
-                  </div>
-                ))
-                : <div style={{ gridColumn: '1 / -1' }}><Empty description="Template chưa có thành phần" /></div>}
-            </A4ContentGrid>
-          </A4Page>
+          <div ref={documentRef}>
+            <DocumentTemplateContent template={template} data={previewData} />
+          </div>
         </CanvasViewport>
       )}
     </Drawer>

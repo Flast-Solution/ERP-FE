@@ -2,7 +2,7 @@ import FormFileUpload from '@/containers/PreviewModal/FormFileUpload'
 
 const ProductImagesUpload = () => (
   <FormFileUpload
-    name="images"
+    name="image"
     label="Hình ảnh sản phẩm"
     accept="image/*"
     folder="product"

@@ -8,15 +8,8 @@ import {
 
 const { Text } = Typography
 
-const getInstanceId = instance => (
-  instance?.id ?? instance?.processInstance?.id
-)
-
 const getWorkflowName = (instance, index) => (
-  instance?.workflowProcess?.name
-  ?? instance?.process?.name
-  ?? instance?.processName
-  ?? `Workflow ${index + 1}`
+  instance?.process?.name ?? `Workflow ${index + 1}`
 )
 
 const WorkflowContextSection = ({
@@ -30,7 +23,7 @@ const WorkflowContextSection = ({
 }) => {
   const tabItems = useMemo(() => (
     workflowInstances.map((instance, index) => {
-      const instanceId = getInstanceId(instance)
+      const instanceId = instance.id
       return {
         key: String(instanceId),
         label: getWorkflowName(instance, index),

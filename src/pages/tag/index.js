@@ -29,8 +29,13 @@ import Filter from '@/pages/tag/Filter';
 import { GATEWAY } from '@/configs';
 import { RequestUtils } from '@flast-erp/core/utils';
 import { useNavigateSearch } from '@flast-erp/core/hooks';
+import useGetMe from '@/hooks/useGetMe';
 
 const Tag = () => {
+    const { hasPermission } = useGetMe();
+    const canCreate = hasPermission('web.tag.create');
+    const canUpdate = hasPermission('web.tag.update');
+    const canDelete = hasPermission('web.tag.delete');
 
     const navigate = useNavigateSearch();
     const onEdit = (item) => {
@@ -76,8 +81,9 @@ const Tag = () => {
             useGetAllQuery={useGetList}
             columns={CUSTOM_ACTION}
             filter={<Filter />}
-            onEdit={onEdit}
-            onDelete={onDeleteCate}
+            onEdit={canUpdate ? onEdit : undefined}
+            onDelete={canDelete ? onDeleteCate : undefined}
+            hasCreate={canCreate}
             customClickCreate={() => navigate("/tag/edit")}
             initialFilter={{ page: 1, limit: 10 }}
         />

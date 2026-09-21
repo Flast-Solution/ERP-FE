@@ -19,7 +19,11 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
+import { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Col, Divider, Progress, Row, Select, Space, Typography } from 'antd';
+import dayjs from 'dayjs';
+import { useStore } from '@flast-erp/core/components';
+import { RequestUtils } from '@flast-erp/core/utils';
 import ChartActivityRevenue from './ChartActivityRevenue'
 import ChartSale from './ChartSale';
 import Title from 'antd/es/typography/Title';
@@ -40,50 +44,138 @@ import {
 } from '@ant-design/icons';
 
 const { Text } = Typography;
+
+const NEWFEED_REPORT_API = '/erp/report/newfeed-data';
+
+const parseReportNumber = (value) => {
+  if (value === null || value === undefined || value === '') return 0;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const parseGrowthRate = (value) => {
+  const parsed = Number.parseFloat(String(value ?? '').replace('%', ''));
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const getReportMetric = (reportRows, reportType) => {
+  const rows = reportRows.filter(row => row?.reportType === reportType);
+  const currentMonth = rows.find(row => (
+    row?.timePeriod === 'monthly' && row?.periodType === 'current_month'
+  ));
+  const weekly = rows
+    .filter(row => row?.timePeriod === 'weekly')
+    .sort((first, second) => Number(first?.periodType) - Number(second?.periodType));
+
+  return {
+    total: parseReportNumber(currentMonth?.totalCount),
+    change: parseGrowthRate(currentMonth?.growthRate),
+    chart: weekly.length
+      ? weekly.map(row => parseReportNumber(row?.totalCount))
+      : [0, 0, 0, 0, 0],
+  };
+};
+
 const NewFeed = () => {
+
+  const { user } = useStore();
+  const [reportRows, setReportRows] = useState([]);
+
+  useEffect(() => {
+    if (!user?.id) return undefined;
+
+    let mounted = true;
+    const loadNewFeedReport = async () => {
+      try {
+        const response = await RequestUtils.Post(NEWFEED_REPORT_API, {
+          formDate: dayjs().startOf('month').format('YYYY-MM-DD HH:mm:ss'),
+          toDate: dayjs().endOf('month').startOf('day').format('YYYY-MM-DD HH:mm:ss'),
+          userId: user.id,
+        });
+        const rows = Array.isArray(response?.data)
+          ? response.data
+          : Array.isArray(response?.data?.data)
+            ? response.data.data
+            : [];
+        if (mounted) setReportRows(rows);
+      } catch (error) {
+        if (mounted) setReportRows([]);
+      }
+    };
+
+    loadNewFeedReport();
+    return () => {
+      mounted = false;
+    };
+  }, [user?.id]);
+
+  const customerNew = useMemo(
+    () => getReportMetric(reportRows, 'customer_new'),
+    [reportRows],
+  );
+  const contactCount = useMemo(
+    () => getReportMetric(reportRows, 'data_table'),
+    [reportRows],
+  );
+  const opportunityCount = useMemo(
+    () => getReportMetric(reportRows, 'cohoi'),
+    [reportRows],
+  );
+  const orderCount = useMemo(
+    () => getReportMetric(reportRows, 'order'),
+    [reportRows],
+  );
+  const orderTotal = useMemo(
+    () => getReportMetric(reportRows, 'order_total'),
+    [reportRows],
+  );
+  const opportunityTotal = useMemo(
+    () => getReportMetric(reportRows, 'cohoi_total'),
+    [reportRows],
+  );
 
   const data = [
     {
       title: 'Khách hàng đã thêm',
       icon: <UserOutlined style={{ fontSize: 20 }} />,
-      value: '2.906 Người',
-      change: -5.4,
-      chart: [10, 80, 120, 140, 130, 125, 110]
+      value: `${customerNew.total.toLocaleString('vi-VN')} Người`,
+      change: customerNew.change,
+      chart: customerNew.chart,
     },
     {
       title: 'SL người liên hệ',
       icon: <ContactsOutlined style={{ fontSize: 20 }} />,
-      value: '0 Người',
-      change: 0,
-      chart: [0, 0, 80, 300, 600, 300, 80, 0, 0]
+      value: `${contactCount.total.toLocaleString('vi-VN')} Người`,
+      change: contactCount.change,
+      chart: contactCount.chart,
     },
     {
       title: 'Cơ hội đã thêm',
       icon: <PlusOutlined style={{ fontSize: 20 }} />,
-      value: '5 Cái',
-      change: 80,
-      chart: [1, 2, 3, 3, 4, 5, 5]
+      value: `${opportunityCount.total.toLocaleString('vi-VN')} Cái`,
+      change: opportunityCount.change,
+      chart: opportunityCount.chart,
     },
     {
       title: 'Hợp đồng đã tạo',
       icon: <FileTextOutlined style={{ fontSize: 20 }} />,
-      value: '0 cái',
-      change: 0,
-      chart: [0, 0, 0, 0, 0, 0, 0],
+      value: `${orderCount.total.toLocaleString('vi-VN')} Cái`,
+      change: orderCount.change,
+      chart: orderCount.chart,
     },
     {
       title: 'Số tiền hợp đồng',
       icon: <FileDoneOutlined style={{ fontSize: 20 }} />,
-      value: '0 đ',
-      change: 0,
-      chart: [0, 0, 0, 0, 0, 0, 0],
+      value: `${orderTotal.total.toLocaleString('vi-VN')} đ`,
+      change: orderTotal.change,
+      chart: orderTotal.chart,
     },
     {
       title: 'Số tiền cơ hội',
       icon: <DollarCircleOutlined style={{ fontSize: 20 }} />,
-      value: '0 đ',
-      change: 0,
-      chart: [0, 0, 0, 0, 0, 0, 0],
+      value: `${opportunityTotal.total.toLocaleString('vi-VN')} đ`,
+      change: opportunityTotal.change,
+      chart: opportunityTotal.chart,
     },
     {
       title: 'Số tiền công nợ',
@@ -116,7 +208,7 @@ const NewFeed = () => {
                 <Text strong>{item.title}</Text>
               </div>
               <Title level={4} style={{ margin: 0 }}>{item.value}</Title>
-              <Text type="secondary">So với tháng trước nữa</Text><br />
+              <Text type="secondary">So với tháng trước</Text><br />
               {!isZero && (
                 <span style={{ color: changeColor, display: 'flex', alignItems: 'center', gap: 4 }}>
                   <ArrowIcon />

@@ -243,6 +243,122 @@
   }
 }
 
+.workflow-detail-drawer--lead {
+  .ant-drawer-body {
+    background: #fff;
+  }
+
+  .lead-workflow-detail {
+    background: #fff;
+
+    .pl-detail-page {
+      min-height: 100%;
+      background: #fff;
+    }
+
+    .pl-detail {
+      background: #fff;
+    }
+
+    .pl-tracker__step {
+      appearance: none;
+      border: 0;
+      font: inherit;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .pl-tracker__step.is-selected .pl-tracker__label {
+      text-decoration: underline;
+      text-underline-offset: 4px;
+    }
+
+    .pl-actions .ant-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pl-lockrow {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      flex-wrap: nowrap;
+      gap: 10px;
+
+      > img {
+        flex: 0 0 auto;
+      }
+
+      > span:not(.lockval) {
+        min-width: 0;
+        overflow: hidden;
+        flex: 1 1 auto;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .lockval {
+        margin-left: auto;
+        flex: 0 0 auto;
+        white-space: nowrap;
+      }
+    }
+
+    .lead-workflow-form {
+      min-height: 80px;
+
+      // FormSelect nhận className ở root .ant-select, trong khi UI Kit cũng
+      // khai báo border cho .pl-select. Xóa khung ngoài và giữ border chuẩn
+      // của .ant-select-selector để không xuất hiện hai border lồng nhau.
+      .ant-select.pl-select {
+        padding: 0 !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+      }
+
+      .ant-select.pl-select:hover,
+      .ant-select.pl-select:focus,
+      .ant-select.pl-select:focus-within {
+        border: 0 !important;
+        box-shadow: none !important;
+      }
+    }
+  }
+}
+
+.workflow-detail-drawer--single-block {
+  .ant-drawer-body {
+    background: #fff;
+  }
+
+  .workflow-detail-drawer__tab-content {
+    gap: 0;
+    margin: 16px;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
+  }
+
+  .workflow-detail-drawer__tab-content > .workflow-detail-drawer__block,
+  .workflow-detail-drawer__tab-content > .workflow-detail-drawer__form-block {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .workflow-detail-drawer__form-block .workflow-progress-section {
+    padding: 0;
+    border: 0;
+  }
+}
+
 @media (max-width: 768px) {
   .workflow-detail-drawer {
     &__tab-content {

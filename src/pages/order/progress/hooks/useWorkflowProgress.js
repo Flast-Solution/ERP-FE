@@ -16,13 +16,13 @@ import {
   buildWorkflowHistoryItems,
   buildWorkflowTransitionPayload,
   findWorkflowStep,
+  getWorkflowStepButtons,
   isSameStepRef,
+  isWorkflowStepHidden,
 } from '../workflowHelpers'
 
 export const useWorkflowProgress = ({
   workflowInstance,
-  order,
-  orderId,
   user,
   loadingWorkflowInstance = false,
   syncWorkflowInstance,
@@ -36,6 +36,7 @@ export const useWorkflowProgress = ({
   const [transitioning, setTransitioning] = useState(false)
   const [selectedToStepCode, setSelectedToStepCode] = useState()
   const [viewingStepCode, setViewingStepCode] = useState(null)
+  const [openedHiddenStepCode, setOpenedHiddenStepCode] = useState(null)
 
   const instanceId = workflowInstance?.id
 
@@ -109,7 +110,7 @@ export const useWorkflowProgress = ({
   }, [fetchWorkflowPreview])
 
   const previewStepProcess = workflowPreview?.stepProcesses
-  const workflowProcessId = workflowPreview?.processInstance?.processId
+  const workflowProcessId = workflowInstance?.processId
 
   useEffect(() => {
     if (!workflowProcessId) {
@@ -158,24 +159,71 @@ export const useWorkflowProgress = ({
     [processTypes],
   )
 
-  const steps = useMemo(() => {
+  const allSteps = useMemo(() => {
     const previewSteps = Array.isArray(workflowPreview?.stepProcessList)
       ? workflowPreview.stepProcessList
       : []
     const definitionStepMap = new Map(
       workflowProcessSteps.map((step) => [String(step?.stepCode), step]),
     )
+    const auxiliaryTargetCodes = new Set(
+      workflowProcessSteps.flatMap(step => (
+        getWorkflowStepButtons(step)
+          .filter(button => button?.type === 'OPEN_HIDDEN_STEP')
+          .map(button => String(button?.targetStepCode ?? ''))
+      )),
+    )
 
-    return previewSteps.map((step) => {
+    const mergedPreviewSteps = previewSteps.map((step) => {
       const definitionStep = definitionStepMap.get(String(step?.stepCode))
       return {
         ...definitionStep,
         ...step,
+        hidden: step?.hidden
+          ?? definitionStep?.hidden
+          ?? auxiliaryTargetCodes.has(String(step?.stepCode)),
+        buttons: getWorkflowStepButtons({
+          buttons: step?.buttons ?? definitionStep?.buttons,
+        }),
+        formTemplate: step?.formTemplate
+          ?? definitionStep?.formTemplate
+          ?? (typeof definitionStep?.form === 'object'
+            ? definitionStep.form
+            : (definitionStep?.form ? { id: definitionStep.form } : null)),
         formUrl: step?.formUrl ?? definitionStep?.formUrl ?? null,
-        formTemplate: step?.formTemplate ?? definitionStep?.formTemplate ?? null,
       }
     })
+
+    const previewCodes = new Set(mergedPreviewSteps.map(step => String(step?.stepCode)))
+    const missingDefinitionSteps = workflowProcessSteps
+      .filter(step => !previewCodes.has(String(step?.stepCode)))
+      .map(step => ({
+        ...step,
+        hidden: isWorkflowStepHidden(step) || auxiliaryTargetCodes.has(String(step?.stepCode)),
+        buttons: getWorkflowStepButtons(step),
+        formTemplate: step?.formTemplate
+          ?? (typeof step?.form === 'object' ? step.form : (step?.form ? { id: step.form } : null)),
+      }))
+
+    return [...mergedPreviewSteps, ...missingDefinitionSteps]
+      .map((step, index) => ({ ...step, __workflowOrder: index }))
+      .sort((left, right) => {
+        const leftOrder = Number(left?.sortOrder)
+        const rightOrder = Number(right?.sortOrder)
+        const leftValid = Number.isFinite(leftOrder)
+        const rightValid = Number.isFinite(rightOrder)
+
+        if (leftValid && rightValid && leftOrder !== rightOrder) return leftOrder - rightOrder
+        if (leftValid !== rightValid) return leftValid ? -1 : 1
+        return left.__workflowOrder - right.__workflowOrder
+      })
+      .map(({ __workflowOrder, ...step }) => step)
   }, [workflowPreview?.stepProcessList, workflowProcessSteps])
+
+  const steps = useMemo(
+    () => allSteps.filter(step => !isWorkflowStepHidden(step)),
+    [allSteps],
+  )
 
   const stepTransitions = useMemo(() => (
     Array.isArray(workflowPreview?.stepTransitions)
@@ -195,21 +243,29 @@ export const useWorkflowProgress = ({
   ), [workflowPreview?.stepTransitionList])
 
   const currentStepCode = workflowPreview?.processInstance?.currentStepCode
+    || workflowInstance?.currentStepCode
+    || steps[0]?.stepCode
 
-  const currentStep = previewStepProcess ?? null
+  const currentStep = useMemo(() => {
+    if (!previewStepProcess) return findWorkflowStep(allSteps, currentStepCode)
+    const definition = findWorkflowStep(allSteps, previewStepProcess?.stepCode)
+    return definition ? { ...definition, ...previewStepProcess } : previewStepProcess
+  }, [allSteps, currentStepCode, previewStepProcess])
 
   const displayStep = useMemo(() => {
     if (!viewingStepCode) return currentStep
-    return findWorkflowStep(steps, viewingStepCode) ?? currentStep
-  }, [viewingStepCode, currentStep, steps])
+    return findWorkflowStep(allSteps, viewingStepCode) ?? currentStep
+  }, [viewingStepCode, currentStep, allSteps])
 
   const isReviewingSubmission = Boolean(
     viewingStepCode
+    && !openedHiddenStepCode
     && !isSameStepRef(viewingStepCode, currentStep?.stepCode),
   )
 
   useEffect(() => {
     setViewingStepCode(null)
+    setOpenedHiddenStepCode(null)
   }, [currentStepCode, instanceId])
 
   useEffect(() => {
@@ -244,24 +300,46 @@ export const useWorkflowProgress = ({
 
   const backToCurrentStep = useCallback(() => {
     setViewingStepCode(null)
+    setOpenedHiddenStepCode(null)
   }, [])
 
-  const advanceWorkflow = useCallback(async ({ currentSubmission, currentForm } = {}) => {
-    if (stepTransitionOptions.length > 0 && !selectedToStepCode) {
+  const openHiddenStep = useCallback((stepCode) => {
+    const targetStep = findWorkflowStep(allSteps, stepCode)
+    if (!targetStep || !isWorkflowStepHidden(targetStep)) {
+      message.error('Không tìm thấy bước ẩn được cấu hình.')
+      return false
+    }
+    if (!targetStep?.formTemplate && !targetStep?.formUrl) {
+      message.error('Bước ẩn chưa được gắn form.')
+      return false
+    }
+
+    setOpenedHiddenStepCode(String(targetStep.stepCode))
+    setViewingStepCode(String(targetStep.stepCode))
+    return true
+  }, [allSteps])
+
+  const advanceWorkflow = useCallback(async ({
+    currentSubmission,
+    currentForm,
+    toStepCode,
+    requireSubmission = Boolean(currentForm),
+  } = {}) => {
+    const targetStepCode = toStepCode ?? selectedToStepCode
+    if (stepTransitionOptions.length > 0 && !targetStepCode) {
       message.warning('Vui lòng chọn bước tiếp theo.')
+      return
+    }
+    if (targetStepCode && !stepTransitionOptions.some(option => option.value === targetStepCode)) {
+      message.error('Button chưa trỏ tới transition hợp lệ của bước hiện tại.')
       return
     }
 
     const payload = buildWorkflowTransitionPayload({
-      workflow,
-      workflowPreview,
       workflowInstance,
-      order,
-      orderId,
-      instanceId,
       currentSubmission,
       user,
-      toStepCode: selectedToStepCode,
+      toStepCode: targetStepCode,
     })
 
     if (!payload.processId) {
@@ -280,7 +358,7 @@ export const useWorkflowProgress = ({
       message.error('Không tìm thấy byUserId của người thao tác.')
       return
     }
-    if (currentForm && !payload.fromStepSubmissionId) {
+    if (requireSubmission && currentForm && !payload.fromStepSubmissionId) {
       message.error('Bước hiện tại chưa có submission để chuyển bước.')
       return
     }
@@ -307,12 +385,7 @@ export const useWorkflowProgress = ({
   }, [
     stepTransitionOptions,
     selectedToStepCode,
-    workflow,
-    workflowPreview,
     workflowInstance,
-    order,
-    orderId,
-    instanceId,
     user,
     fetchWorkflowPreview,
     syncWorkflowInstance,
@@ -322,6 +395,7 @@ export const useWorkflowProgress = ({
     workflowPreview,
     workflow,
     steps,
+    allSteps,
     currentStep,
     currentStepCode,
     displayStep,
@@ -335,6 +409,9 @@ export const useWorkflowProgress = ({
     setSelectedToStepCode,
     viewingStepCode,
     isReviewingSubmission,
+    openedHiddenStepCode,
+    currentStepButtons: getWorkflowStepButtons(currentStep),
+    openHiddenStep,
     reviewStep,
     reviewInspectionResult,
     backToCurrentStep,

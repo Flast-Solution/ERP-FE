@@ -2,6 +2,7 @@ import { RequestUtils } from '@flast-erp/core/utils'
 import { DEFAULT_STEP, DEFAULT_TRANSITION } from '@/store/workflowConstants'
 import {
   getNodeTopologyType,
+  isWorkflowStepHidden,
   normalizeWorkflowStepType,
   resolveNodeProcessTypeKey,
 } from './workflowValidators'
@@ -23,8 +24,6 @@ const normalizeRolesToArray = (roles) => {
   return []
 }
 
-const firstArray = (...values) => values.find(Array.isArray) ?? []
-
 const normalizeStepConfig = (config) => {
   if (config && typeof config === 'object' && !Array.isArray(config)) {
     return config
@@ -39,34 +38,48 @@ const normalizeStepConfig = (config) => {
   }
 }
 
-const removeSubmitLogFromConfig = (config) => Object.fromEntries(
+const sanitizeStepConfig = (config) => Object.fromEntries(
   Object.entries(normalizeStepConfig(config)).filter(([key]) => (
-    key !== 'saveSubmitLog' 
+    key !== 'saveSubmitLog' && key !== 'assigneeId'
   )),
 )
 
-const getStepActions = (step = {}) => firstArray(
-  step.actions,
-  step.stepActions,
-  step.step_actions,
-  step.onEnterActions,
-  step.on_enter_actions,
-  step.onExitActions,
-  step.on_exit_actions,
+const normalizeStepButtons = (value) => {
+  let buttons = value
+  if (typeof buttons === 'string' && buttons.trim()) {
+    try {
+      buttons = JSON.parse(buttons)
+    } catch (_) {
+      buttons = []
+    }
+  }
+  if (!Array.isArray(buttons)) return []
+
+  // GET find-id buttons: id, label, type, targetStepCode, style, requireSubmission, order
+  return buttons.map((button, index) => ({
+    id: button?.id ?? `button_${index + 1}`,
+    label: button?.label ?? `Button ${index + 1}`,
+    type: button?.type ?? 'TRANSITION',
+    targetStepCode: button?.targetStepCode ?? null,
+    style: button?.style ?? 'DEFAULT',
+    requireSubmission: button?.requireSubmission ?? false,
+    order: button?.order ?? index,
+  }))
+}
+
+/** find-id steps[].actions */
+const getStepActions = (step = {}) => (
+  Array.isArray(step.actions) ? step.actions : []
 )
 
-const getTransitionGuards = (transition = {}) => firstArray(
-  transition.guards,
-  transition.transitionGuards,
-  transition.transition_guards,
-  transition.guardList,
-  transition.guard_list,
+/** find-id transitions[].guards */
+const getTransitionGuards = (transition = {}) => (
+  Array.isArray(transition.guards) ? transition.guards : []
 )
 
-const getTransitionActions = (transition = {}) => firstArray(
-  transition.actions,
-  transition.transitionActions,
-  transition.transition_actions,
+/** Transition actions not present on find-id; keep empty unless FE edge has them. */
+const getTransitionActions = (transition = {}) => (
+  Array.isArray(transition.actions) ? transition.actions : []
 )
 
 const serializeAllowedRoles = (roles) => {
@@ -85,6 +98,19 @@ const serializeAllowedRoles = (roles) => {
  * }
  */
 export const flowToJson = ({ nodes, edges, process, stepTypes = [] }) => {
+  const hiddenTargetCodes = new Set(
+    nodes.flatMap(node => (node?.data?.buttons ?? []))
+      .filter(button => button?.type === 'OPEN_HIDDEN_STEP')
+      .map(button => String(button?.targetStepCode ?? '').trim())
+      .filter(Boolean),
+  )
+  const normalizedNodes = nodes.map(node => {
+    const referencedAsHidden = hiddenTargetCodes.has(String(node?.data?.code ?? ''))
+      || hiddenTargetCodes.has(String(node?.id ?? ''))
+    return referencedAsHidden && !isWorkflowStepHidden(node)
+      ? { ...node, data: { ...node.data, hidden: true } }
+      : node
+  })
   const stepCodeByNodeId = nodes.reduce((map, node) => {
     map.set(node.id, node.data?.code ?? node.id)
     return map
@@ -92,7 +118,7 @@ export const flowToJson = ({ nodes, edges, process, stepTypes = [] }) => {
 
   return {
     process: serializeProcess(process),
-    steps: nodes.map((node, index) => serializeStep(node, index, stepTypes, edges)),
+    steps: normalizedNodes.map((node, index) => serializeStep(node, index, stepTypes, edges)),
     transitions: edges.map((edge, index) =>
       serializeTransition(edge, index, stepCodeByNodeId)
     ),
@@ -103,20 +129,12 @@ export const flowToJson = ({ nodes, edges, process, stepTypes = [] }) => {
  * jsonToFlow(raw)
  * → { nodes, edges, process } để loadFlow() của store nhận
  *
- * Nhận payload từ API hoặc file JSON đã export bằng flowToJson.
- * Tự fallback nếu thiếu field.
+ * raw = data từ GET /workflow/process/find-id/{id}: { process, steps, transitions }
  */
 const getStepProcessTypeRef = (step = {}) => (
-  step.processTypeCode
-  ?? step.process_type_code
-  ?? step.groupCode
-  ?? step.group_code
-  ?? step.processType
-  ?? step.process_type
-  ?? step.processTypeId
-  ?? step.process_type_id
-  ?? step.label
-  ?? null
+  step.label != null && String(step.label).trim() !== ''
+    ? String(step.label)
+    : null
 )
 
 export const enrichFlowStepTypes = (flow, stepTypes = []) => {
@@ -141,14 +159,11 @@ export const jsonToFlow = (raw, stepTypes = []) => {
     throw new Error('Dữ liệu không hợp lệ')
   }
 
-  const process = normalizeProcess({
-    ...(raw.process ?? {}),
-    id: raw.process?.id ?? raw.id ?? raw.processId ?? raw.process_id ?? null,
-  })
+  const process = normalizeProcess(raw.process ?? {})
 
-  const nodes = (raw.steps ?? []).map((step) => {
-    const stepCode = step.code ?? step.stepCode ?? step.step_code ?? ''
-    const name = step.name ?? step.displayName ?? step.display_name ?? step.stepName ?? step.step_name ?? stepCode
+  const rawNodes = (raw.steps ?? []).map((step) => {
+    const stepCode = step.stepCode ?? ''
+    const name = step.name ?? stepCode
     const typeValue = getStepProcessTypeRef(step)
     const nodeId = getStepNodeId(step)
     const rawConfig = normalizeStepConfig(step.config)
@@ -156,16 +171,18 @@ export const jsonToFlow = (raw, stepTypes = []) => {
         ...DEFAULT_STEP,
         id: step.id ?? null,
         persistedId: step.id ?? null,
-        processId: step.processId ?? step.process_id ?? null,
+        processId: step.processId ?? null,
         code: stepCode,
         name,
         label: name,
-        type: typeValue != null && typeValue !== '' ? String(typeValue) : normalizeStepType(step.type ?? 'process'),
-        typeLabel: step.typeLabel ?? step.type_label ?? step.groupName ?? step.group_name ?? step.processTypeName ?? step.process_type_name ?? '',
+        type: typeValue != null ? typeValue : normalizeStepType(step.type ?? 'process'),
+        typeLabel: '',
         description: step.description ?? '',
-        sortOrder: step.sortOrder ?? step.sort_order ?? null,
+        sortOrder: step.sortOrder ?? null,
         enabled: step.enabled ?? true,
-        config: removeSubmitLogFromConfig(rawConfig),
+        hidden: isWorkflowStepHidden(step.hidden ?? false),
+        buttons: normalizeStepButtons(step.buttons),
+        config: sanitizeStepConfig(rawConfig),
         saveSubmitLog: step.saveSubmitLog ?? false,
         forms: normalizeStepForms(step),
         actions: getStepActions(step).map(deserializeAction),
@@ -182,6 +199,20 @@ export const jsonToFlow = (raw, stepTypes = []) => {
     }
   })
 
+  const hiddenTargetCodes = new Set(
+    rawNodes.flatMap(node => (node?.data?.buttons ?? []))
+      .filter(button => button?.type === 'OPEN_HIDDEN_STEP')
+      .map(button => String(button?.targetStepCode ?? '').trim())
+      .filter(Boolean),
+  )
+  const nodes = rawNodes.map(node => {
+    const referencedAsHidden = hiddenTargetCodes.has(String(node?.data?.code ?? ''))
+      || hiddenTargetCodes.has(String(node?.id ?? ''))
+    return referencedAsHidden
+      ? { ...node, data: { ...node.data, hidden: true } }
+      : node
+  })
+
   const edges = (raw.transitions ?? []).map((t) => {
     const source = getTransitionStepRef(t, 'from')
     const target = getTransitionStepRef(t, 'to')
@@ -194,11 +225,12 @@ export const jsonToFlow = (raw, stepTypes = []) => {
       data: {
         ...DEFAULT_TRANSITION,
         id: t.id ?? null,
-        label: t.label ?? t.name ?? '',
-        require_note: t.require_note ?? t.requireNote ?? false,
-        allowed_roles: normalizeRolesToArray(t.allowed_roles ?? t.allowedRoles ?? []),
-        conditions: t.conditions ?? [],
-        autoEvaluate: t.autoEvaluate ?? t.auto_evaluate ?? false,
+        label: '',
+        // FE store key; API field is requireNote
+        require_note: t.requireNote ?? false,
+        allowed_roles: normalizeRolesToArray(t.allowedRoles ?? ''),
+        conditions: Array.isArray(t.conditions) ? t.conditions : [],
+        autoEvaluate: t.autoEvaluate ?? false,
         priority: t.priority ?? 0,
         enabled: t.enabled ?? true,
         guards: getTransitionGuards(t).map(deserializeGuard),
@@ -214,8 +246,7 @@ const getStepNodeId = (step = {}) => {
   if (typeof step.id === 'string' && step.id && !/^\d+$/.test(step.id)) {
     return step.id
   }
-  const code = step.code ?? step.stepCode ?? step.step_code
-  if (code) return String(code)
+  if (step.stepCode) return String(step.stepCode)
   if (step.id != null) return `step_${step.id}`
   return `step_${Math.random().toString(36).slice(2, 8)}`
 }
@@ -223,14 +254,7 @@ const getStepNodeId = (step = {}) => {
 export const getAttachedFormId = (form) => {
   if (form == null || form === '') return null
   if (typeof form === 'number' || typeof form === 'string') return form
-  return form.id
-    ?? form.templateId
-    ?? form.template_id
-    ?? form.formTemplateId
-    ?? form.form_template_id
-    ?? form.formId
-    ?? form.form_id
-    ?? null
+  return form.id ?? form.templateId ?? null
 }
 
 export const normalizeAttachedForm = (form) => {
@@ -250,17 +274,16 @@ export const normalizeAttachedForm = (form) => {
 
   const id = getAttachedFormId(form)
   const fields = Array.isArray(form.fields) ? form.fields : []
+  const formKey = form.name ?? form.formKey ?? ''
   const name = (form.description ?? '').trim()
-    || (form.name ?? '').trim()
-    || form.label
-    || form.formKey
+    || formKey
     || (id != null ? `Form #${id}` : 'Form')
 
   return {
     ...form,
     id,
     name,
-    formKey: form.name ?? form.formKey ?? form.key ?? '',
+    formKey,
     domain: form.domain ?? '',
     fields,
     required: form.required ?? false,
@@ -269,19 +292,31 @@ export const normalizeAttachedForm = (form) => {
 
 export const getFormDisplayName = (form) => normalizeAttachedForm(form)?.name ?? 'Form'
 
+/** find-id: form = template id, formTemplate = template object */
 const normalizeStepForms = (step = {}) => {
-  const forms = step.forms
-    ?? step.formTemplates
-    ?? step.form_templates
-    ?? (step.form != null && step.form !== '' ? [step.form] : [])
-  if (!Array.isArray(forms)) return []
-  return forms.map(normalizeAttachedForm).filter(Boolean)
+  if (step.formTemplate && typeof step.formTemplate === 'object' && !Array.isArray(step.formTemplate)) {
+    return [normalizeAttachedForm({
+      ...step.formTemplate,
+      id: step.form ?? step.formTemplate.id,
+    })].filter(Boolean)
+  }
+  if (step.form != null && step.form !== '') {
+    return [normalizeAttachedForm(step.form)].filter(Boolean)
+  }
+  return []
 }
 
-const getResponseArray = (response) => {
-  const data = response?.data ?? response
-  const candidates = [data?.items, data?.rows, data?.embedded, data?.data, data]
-  return candidates.find(Array.isArray) ?? []
+/** POST /workflow/forms/template/find-template-field → data = Template[] */
+const getTemplateFieldList = (response) => {
+  const items = response?.data
+  return Array.isArray(items) ? items : []
+}
+
+/** GET /workflow/forms/template/find-id → data = Template */
+const getTemplateDetail = (response) => {
+  const item = response?.data
+  if (!item || typeof item !== 'object' || Array.isArray(item)) return null
+  return item
 }
 
 const buildTemplateMetaMap = (items = []) => {
@@ -292,16 +327,14 @@ const buildTemplateMetaMap = (items = []) => {
     if (templateId == null || templateId === '') return
 
     const fields = Array.isArray(item.fields) ? item.fields : []
-    const name = (item.description ?? '').trim()
-      || (item.name ?? '').trim()
-      || item.label
-      || `Form #${templateId}`
+    const formKey = item.name ?? ''
+    const name = (item.description ?? '').trim() || formKey || `Form #${templateId}`
 
     map.set(String(templateId), {
       id: templateId,
       name,
       description: item.description ?? '',
-      formKey: item.name ?? item.formKey ?? '',
+      formKey,
       domain: item.domain ?? '',
       fields,
     })
@@ -313,20 +346,18 @@ const buildTemplateMetaMap = (items = []) => {
 const fetchTemplateMeta = async (templateId) => {
   try {
     const response = await RequestUtils.Get('/workflow/forms/template/find-id', { id: templateId })
-    const item = response?.data ?? response
-    if (!item || typeof item !== 'object') return null
+    const item = getTemplateDetail(response)
+    if (!item) return null
 
     const fields = Array.isArray(item.fields) ? item.fields : []
-    const name = (item.description ?? '').trim()
-      || (item.name ?? '').trim()
-      || item.label
-      || `Form #${templateId}`
+    const formKey = item.name ?? ''
+    const name = (item.description ?? '').trim() || formKey || `Form #${templateId}`
 
     return {
       id: templateId,
       name,
       description: item.description ?? '',
-      formKey: item.name ?? item.formKey ?? '',
+      formKey,
       domain: item.domain ?? '',
       fields,
     }
@@ -362,7 +393,7 @@ export const enrichWorkflowForms = async (flow) => {
       '/workflow/forms/template/find-template-field',
       Array.from(formIds),
     )
-    const metaMap = buildTemplateMetaMap(getResponseArray(response))
+    const metaMap = buildTemplateMetaMap(getTemplateFieldList(response))
 
     const missingIds = Array.from(formIds).filter((id) => !metaMap.has(String(id)))
     if (missingIds.length > 0) {
@@ -402,39 +433,20 @@ export const enrichWorkflowForms = async (flow) => {
   }
 }
 
+/** find-id transitions: fromStepCode / toStepCode */
 const getTransitionStepRef = (transition = {}, direction) => {
-  const candidates = direction === 'from'
-    ? [
-      transition.from_step,
-      transition.fromStep,
-      transition.fromStepCode,
-      transition.from_step_code,
-      transition.source,
-      transition.sourceStepCode,
-      transition.source_step_code,
-    ]
-    : [
-      transition.to_step,
-      transition.toStep,
-      transition.toStepCode,
-      transition.to_step_code,
-      transition.target,
-      transition.targetStepCode,
-      transition.target_step_code,
-    ]
-
-  const value = candidates.find(item => item != null && item !== '')
-  return value != null ? String(value) : ''
+  const value = direction === 'from'
+    ? transition.fromStepCode
+    : transition.toStepCode
+  return value != null && value !== '' ? String(value) : ''
 }
 
+/** ProcessUpdateItem fields inside listStatus string: listStepProcessId, text, color */
 const normalizeStatusConfiguration = (item = {}) => ({
-  stepProcessIds: firstArray(
-    item.stepProcessIds,
-    item.stepTypeIds,
-    item.listStepProcessId,
-    item.list_step_process_id,
-  ),
-  statusName: item.statusName ?? item.text ?? '',
+  stepProcessIds: Array.isArray(item.listStepProcessId)
+    ? item.listStepProcessId
+    : (Array.isArray(item.stepProcessIds) ? item.stepProcessIds : []),
+  statusName: item.text ?? item.statusName ?? '',
   scope: item.scope ?? 'current',
   color: item.color ?? null,
 })
@@ -445,7 +457,7 @@ export const normalizeProcessStatusConfigurations = (value) => {
   }
 
   if (value && typeof value === 'object') {
-    const items = firstArray(value.items, value.configurations, value.listStatus)
+    const items = Array.isArray(value.items) ? value.items : []
     return items.map(normalizeStatusConfiguration)
   }
 
@@ -485,23 +497,22 @@ export const normalizeProcessStatusConfigurations = (value) => {
   }
 }
 
-const normalizeProcess = (process = {}) => {
-  const configuredStatuses = Array.isArray(process?.statusConfigurations)
-    && process.statusConfigurations.length > 0
-    ? process.statusConfigurations
-    : (process?.listStatus ?? process?.list_status)
-
-  return {
-    ...process,
-    id: process?.id ?? null,
-    processKey: process?.processKey ?? process?.process_key ?? process?.key ?? process?.code ?? '',
-    name: process?.name ?? 'Untitled',
-    code: process?.code ?? process?.processKey ?? process?.process_key ?? 'untitled',
-    description: process?.description ?? '',
-    flowType: process?.flowType ?? process?.flow_type ?? '',
-    statusConfigurations: normalizeProcessStatusConfigurations(configuredStatuses),
-  }
-}
+/** find-id data.process — status mapping lives in listStatus (string or structured) */
+const normalizeProcess = (process = {}) => ({
+  ...process,
+  id: process?.id ?? null,
+  processKey: process?.processKey ?? '',
+  name: process?.name ?? 'Untitled',
+  code: process?.code ?? '',
+  description: process?.description ?? '',
+  flowType: process?.flowType ?? '',
+  enabled: process?.enabled ?? true,
+  statusConfigurations: normalizeProcessStatusConfigurations(
+    Array.isArray(process?.statusConfigurations) && process.statusConfigurations.length > 0
+      ? process.statusConfigurations
+      : process?.listStatus,
+  ),
+})
 
 /*
   Keep legacy shape in comments for quick mental mapping:
@@ -557,10 +568,10 @@ const serializeProcess = (process = {}) => {
   }
 
   const optionalFields = {
-    flowType: process.flowType ?? process.flow_type,
-    bizId: process.bizId ?? process.biz_id,
-    createdBy: process.createdBy ?? process.created_by,
-    updatedBy: process.updatedBy ?? process.updated_by,
+    flowType: process.flowType,
+    bizId: process.bizId,
+    createdBy: process.createdBy,
+    updatedBy: process.updatedBy,
   }
 
   Object.entries(optionalFields).forEach(([field, value]) => {
@@ -587,7 +598,12 @@ const serializeStep = (node, index, stepTypes = [], edges = []) => {
     position: node.position,
     sortOrder: node.data?.sortOrder ?? index,
     enabled: node.data?.enabled ?? true,
-    config: removeSubmitLogFromConfig(node.data?.config),
+    hidden: isWorkflowStepHidden(node),
+    buttons: normalizeStepButtons(node.data?.buttons).map((button, buttonIndex) => ({
+      ...button,
+      order: button.order ?? buttonIndex,
+    })),
+    config: sanitizeStepConfig(node.data?.config),
     saveSubmitLog: node.data?.saveSubmitLog ?? false,
     form: serializeFormId(node.data?.forms ?? []),
     actions: (node.data?.actions ?? []).map(serializeAction),
@@ -603,10 +619,11 @@ const serializeTransition = (edge, index, stepCodeByNodeId = new Map()) => {
   const transition = {
     fromStepCode,
     toStepCode,
+    // FE store: allowed_roles / require_note → API: allowedRoles / requireNote
     allowedRoles: serializeAllowedRoles(edge.data?.allowed_roles ?? edge.data?.allowedRoles ?? []),
     requireNote: edge.data?.require_note ?? edge.data?.requireNote ?? false,
     conditions: edge.data?.conditions ?? [],
-    autoEvaluate: edge.data?.autoEvaluate ?? edge.data?.auto_evaluate ?? false,
+    autoEvaluate: edge.data?.autoEvaluate ?? false,
     priority: edge.data?.priority ?? index,
     enabled: edge.data?.enabled ?? true,
     guards: (edge.data?.guards ?? []).map(serializeGuard),
@@ -621,8 +638,9 @@ const serializeTransition = (edge, index, stepCodeByNodeId = new Map()) => {
 }
 
 const serializeGuard = (guard, index) => {
-  const guardType = guard.type ?? guard.guardType ?? 'field_value'
-  const errorMessage = guard.errorMessage ?? guard.error_message ?? guard.config?.message ?? ''
+  // FE store uses type; API uses guardType
+  const guardType = guard.guardType ?? guard.type ?? 'field_value'
+  const errorMessage = guard.errorMessage ?? guard.config?.message ?? ''
   const baseConfig = guard.config ?? {}
   const config = guardType === 'field_value'
     ? { ...baseConfig, message: errorMessage }
@@ -633,17 +651,17 @@ const serializeGuard = (guard, index) => {
     guardType,
     config,
     errorMessage,
-    sortOrder: guard.sortOrder ?? guard.sort_order ?? index + 1,
+    sortOrder: guard.sortOrder ?? index + 1,
     enabled: guard.enabled ?? true,
   }
 }
 
 const deserializeGuard = (guard) => ({
   id: guard.id ?? null,
-  type: guard.type ?? guard.guardType ?? guard.guard_type ?? 'field_value',
+  type: guard.guardType ?? 'field_value',
   config: guard.config ?? {},
-  errorMessage: guard.errorMessage ?? guard.error_message ?? guard.config?.message ?? '',
-  sortOrder: guard.sortOrder ?? guard.sort_order ?? null,
+  errorMessage: guard.errorMessage ?? guard.config?.message ?? '',
+  sortOrder: guard.sortOrder ?? null,
   enabled: guard.enabled ?? true,
 })
 
@@ -673,10 +691,11 @@ const sanitizeActionConfig = (config = {}) => {
 
 const serializeAction = (action, index) => {
   const trigger = normalizeTrigger(action.trigger)
-  const actionType = toApiActionType(action.type ?? action.actionType ?? action.action_type ?? 'send_notification')
+  // FE store: type; API: actionType
+  const actionType = toApiActionType(action.actionType ?? action.type ?? 'send_notification')
   const config = sanitizeActionConfig(action.config ?? {})
-  const isAsync = action.isAsync ?? action.is_async ?? action.config?.async ?? true
-  const sortOrder = action.sortOrder ?? action.sort_order ?? index + 1
+  const isAsync = action.isAsync ?? action.config?.async ?? true
+  const sortOrder = action.sortOrder ?? index + 1
   const enabled = action.enabled ?? true
 
   return {
@@ -692,10 +711,10 @@ const serializeAction = (action, index) => {
 
 const deserializeAction = (action) => ({
   id: action.id ?? null,
-  type: fromApiActionType(action.type ?? action.actionType ?? action.action_type ?? 'notification'),
+  type: fromApiActionType(action.actionType ?? 'notification'),
   trigger: normalizeTrigger(action.trigger),
   config: action.config ?? {},
-  isAsync: action.isAsync ?? action.is_async ?? true,
-  sortOrder: action.sortOrder ?? action.sort_order ?? null,
+  isAsync: action.isAsync ?? true,
+  sortOrder: action.sortOrder ?? null,
   enabled: action.enabled ?? true,
 })

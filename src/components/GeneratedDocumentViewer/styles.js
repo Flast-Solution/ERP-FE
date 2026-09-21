@@ -46,6 +46,7 @@ export const DocumentToolbar = styled.div`
   min-height: 58px;
   padding: 10px 18px;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -84,6 +85,7 @@ export const FileInfo = styled.div`
 
 export const ToolbarActions = styled.div`
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 
@@ -112,8 +114,8 @@ export const DocumentCanvas = styled.div`
 `
 
 export const PageZoom = styled.div`
-  width: ${props => 794 * props.$zoom}px;
-  min-height: ${props => 1123 * props.$zoom}px;
+  width: ${props => (props.$orientation === 'landscape' ? 1123 : 794) * props.$zoom}px;
+  min-height: ${props => (props.$orientation === 'landscape' ? 794 : 1123) * props.$zoom}px;
   margin: 0 auto;
 
   .generated-document-page {

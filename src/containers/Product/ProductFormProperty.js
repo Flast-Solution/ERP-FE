@@ -37,7 +37,7 @@ const ProductFormProperty = ({ field }) => {
           required
           showSearch
           fnLoadData={(filter) => ProductAttrService.loadAll(filter)}
-          onData={(values) => _.merge(values, record?.dRe?.attrs ?? [])}
+          onData={(values) => _.uniqBy([...(values || []), ...(record?.dRe?.attrs ?? [])], 'id')}
           apiPath={"/erp/attributed/fetch"}
           apiAddNewItem='attributed/save'
           name={[name, 'attributedId']}
@@ -47,12 +47,21 @@ const ProductFormProperty = ({ field }) => {
       <Col md={12} xs={24}>
         <Form.Item
           noStyle
-          shouldUpdate={(prevValues, curValues) =>
-            prevValues.listProperties[name]?.attributedId !== curValues.listProperties[name]?.attributedId
-          }
+          shouldUpdate={(prevValues, curValues) => {
+            const previousProperties = Array.isArray(prevValues.listProperties)
+              ? prevValues.listProperties
+              : [];
+            const currentProperties = Array.isArray(curValues.listProperties)
+              ? curValues.listProperties
+              : [];
+
+            return previousProperties[name]?.attributedId
+              !== currentProperties[name]?.attributedId;
+          }}
         >
           {({ getFieldValue }) => {
-            let listProperties = getFieldValue('listProperties');
+            const fieldValue = getFieldValue('listProperties');
+            const listProperties = Array.isArray(fieldValue) ? fieldValue : [];
             const attributedId = listProperties[name]?.attributedId ?? '';
             const filter = { attributedId, forceUpdate: attributedId !== '' };
             return (
@@ -74,7 +83,6 @@ const FormPropertiesValue = ({ name, filter }) => {
       <FormSelectAPI
         mode='multiple'
         searchKey='value'
-        required
         showSearch
         apiPath='/erp/attributed/fetch-value-by-id'
         apiAddNewItem='attributed/save-value-by-id'

@@ -20,7 +20,7 @@
 /**************************************************************************/
 
 import React, { useCallback, useState } from 'react';
-import { Table, Button, InputNumber, Select, Typography, message } from 'antd';
+import { Table, Button, DatePicker, Input, InputNumber, Select, Space, Typography, message } from 'antd';
 import { ShowSkuDetail } from '@/containers/Product/SkuView';
 import { arrayEmpty, arrayNotEmpty, formatMoney } from '@flast-erp/core/utils';
 import { formatterInputNumber, parserInputNumber } from '@flast-erp/core/utils';
@@ -39,8 +39,58 @@ import _ from 'lodash';
 import { HASH_MODAL, SUCCESS_CODE } from '@/configs';
 import OrderService, { getWarehouseByProduct } from '@/services/OrderService';
 import { useEffectAsync } from '@flast-erp/core/hooks';
+import { mergeSavedOrderLines, parseOrderLine } from './orderLine';
+import styled from 'styled-components';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+
+dayjs.extend(customParseFormat);
 
 const { Text } = Typography;
+const CURRENCY_VND = 'VND';
+const CURRENCY_USD = 'USD';
+const currencyOptions = [
+  { label: 'VND', value: CURRENCY_VND },
+  { label: 'USD', value: CURRENCY_USD }
+];
+const vatOptions = [0, 8, 10].map(value => ({ label: `${value}%`, value }));
+
+const OpportunityTable = styled(Table)`
+  .ant-table-cell {
+    padding: 12px 10px !important;
+    vertical-align: middle;
+  }
+
+  .ant-input-number-input {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ant-table-summary {
+    background: ${({ theme }) => theme?.background?.content || '#fafafa'};
+    font-variant-numeric: tabular-nums;
+  }
+`;
+
+const formatCurrencyAmount = (value, currency = CURRENCY_VND) => Number(value ?? 0).toLocaleString(
+  currency === CURRENCY_USD ? 'en-US' : 'vi-VN',
+  { style: 'currency', currency, maximumFractionDigits: currency === CURRENCY_USD ? 2 : 0 }
+);
+
+const getExchangeRate = (currency, exchangeRate) => (
+  currency === CURRENCY_USD ? Number(exchangeRate ?? 0) : 1
+);
+const parseDayQuote = value => {
+  if (!value) return null;
+  if (typeof value === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+    return dayjs(value, 'DD/MM/YYYY', true);
+  }
+  return dayjs(value);
+};
+const formatDayQuoteForPayload = value => {
+  const dateValue = parseDayQuote(value);
+  return dateValue?.isValid() ? dateValue.format('DD/MM/YYYY') : null;
+};
 const warrantyOptions = [
   { name: '(Chưa có)', id: 1 },
   { name: '6 Tháng', id: 6 },
@@ -52,10 +102,12 @@ const ORDER_TEMPLATE = {
   key: "1",
   note: "",
   detailId: null,
-  orderName: "",
+  code: "",
+  dayQuote: null,
   productId: null,
+  productCode: "",
   productName: "",
-  skuDetailCode: "",
+  skuId: "",
   unit: "(Chưa có)",
   warrantyPeriod: "(Chưa có)",
   quantity: 1,
@@ -65,8 +117,27 @@ const ORDER_TEMPLATE = {
   stock: 0,
   discountRate: 0,
   discountAmount: 0,
+  profit: 0,
+  status: 0,
   editable: false,
-  mSkuDetails: []
+  mSkuDetails: [],
+  orderLine: {}
+}
+
+function getLeadProducts(lead = {}) {
+  const productIds = Array.isArray(lead?.productIds)
+    ? lead.productIds
+    : (lead?.productId != null ? [lead.productId] : []);
+  const productNames = Array.isArray(lead?.productNames)
+    ? lead.productNames
+    : (lead?.productName ? [lead.productName] : []);
+
+  return productIds
+    .filter(productId => productId != null)
+    .map((productId, index) => ({
+      id: productId,
+      name: productNames[index] || `Sản phẩm #${productId}`,
+    }));
 }
 
 function randomString(length = 8) {
@@ -102,6 +173,142 @@ function resolveUnitPrice({ skuPrices = [], quantity, product = {} }) {
   );
 }
 
+const tokenizeFormula = (formula = '') => {
+  const tokens = [];
+  let index = 0;
+
+  while (index < formula.length) {
+    const char = formula[index];
+    if (/\s/.test(char)) {
+      index += 1;
+      continue;
+    }
+    if (/[0-9.]/.test(char)) {
+      const match = formula.slice(index).match(/^(?:\d+(?:\.\d*)?|\.\d+)/);
+      if (!match) throw new Error('Số trong công thức không hợp lệ');
+      tokens.push({ type: 'number', value: Number(match[0]) });
+      index += match[0].length;
+      continue;
+    }
+    if (/[A-Za-z_]/.test(char)) {
+      const match = formula.slice(index).match(/^[A-Za-z_][A-Za-z0-9_]*/);
+      tokens.push({ type: 'identifier', value: match[0] });
+      index += match[0].length;
+      continue;
+    }
+    if ('+-*/()%'.includes(char)) {
+      tokens.push({ type: char, value: char });
+      index += 1;
+      continue;
+    }
+    throw new Error(`Ký tự không được hỗ trợ trong công thức: ${char}`);
+  }
+
+  return tokens;
+};
+
+const evaluateCalculationFormula = (formula, variables) => {
+  if (!formula?.trim()) return null;
+
+  try {
+    const tokens = tokenizeFormula(formula);
+    let cursor = 0;
+    const peek = () => tokens[cursor];
+    const consume = type => {
+      const token = tokens[cursor];
+      if (!token || token.type !== type) {
+        throw new Error(`Thiếu token ${type}`);
+      }
+      cursor += 1;
+      return token;
+    };
+
+    const parsePrimary = () => {
+      const token = peek();
+      let value;
+      if (token?.type === 'number') {
+        value = consume('number').value;
+      } else if (token?.type === 'identifier') {
+        const variableName = consume('identifier').value;
+        if (!Object.prototype.hasOwnProperty.call(variables, variableName)) {
+          throw new Error(`Biến ${variableName} không tồn tại`);
+        }
+        value = Number(variables[variableName] ?? 0);
+      } else if (token?.type === '(') {
+        consume('(');
+        value = parseExpression();
+        consume(')');
+      } else {
+        throw new Error('Công thức không hợp lệ');
+      }
+
+      while (peek()?.type === '%') {
+        consume('%');
+        value /= 100;
+      }
+      return value;
+    };
+
+    const parseUnary = () => {
+      if (peek()?.type === '+') {
+        consume('+');
+        return parseUnary();
+      }
+      if (peek()?.type === '-') {
+        consume('-');
+        return -parseUnary();
+      }
+      return parsePrimary();
+    };
+
+    const parseTerm = () => {
+      let value = parseUnary();
+      while (peek()?.type === '*' || peek()?.type === '/') {
+        const operator = tokens[cursor].type;
+        cursor += 1;
+        const right = parseUnary();
+        value = operator === '*' ? value * right : value / right;
+      }
+      return value;
+    };
+
+    function parseExpression() {
+      let value = parseTerm();
+      while (peek()?.type === '+' || peek()?.type === '-') {
+        const operator = tokens[cursor].type;
+        cursor += 1;
+        const right = parseTerm();
+        value = operator === '+' ? value + right : value - right;
+      }
+      return value;
+    }
+
+    const result = parseExpression();
+    if (cursor !== tokens.length || !Number.isFinite(result)) return null;
+    return Math.round((result + Number.EPSILON) * 100) / 100;
+  } catch (_) {
+    return null;
+  }
+};
+
+const calculateLineTotal = ({ item, shippingCost, formula }) => {
+  if (!formula) {
+    return Number(item?.price ?? 0) * Number(item?.quantity ?? 0);
+  }
+  return evaluateCalculationFormula(formula, {
+    price: Number(item?.price ?? 0),
+    quantity: Number(item?.quantity ?? 0),
+    shippingCost: Number(shippingCost ?? 0),
+    profit: Number(item?.profit ?? 0),
+  });
+};
+
+const calculateConvertedLineTotal = ({ item, shippingCost, formula, currency, exchangeRate }) => {
+  const amount = calculateLineTotal({ item, shippingCost, formula })
+    ?? (Number(item?.price ?? 0) * Number(item?.quantity ?? 0));
+  return Math.round(amount * getExchangeRate(currency, exchangeRate));
+};
+
 const EditButton = ({
   editable,
   onEdit,
@@ -129,20 +336,57 @@ const BanHangPage = ({
 
   const [data, setData] = useState([]);
   const [customer, setCustomer] = useState();
+  const [leadProducts, setLeadProducts] = useState([]);
 
   const [localOrder, setLocalOrder] = useState({ orderId, reload: false });
   const [customerOrder, setCustomerOrder] = useState();
+  const [shippingCost, setShippingCost] = useState(0);
+  const [currency, setCurrency] = useState(CURRENCY_VND);
+  const [exchangeRate, setExchangeRate] = useState(1);
+  const [vatRate, setVatRate] = useState(0);
+  const [calculationFormula, setCalculationFormula] = useState('');
+
+  useEffectAsync(async () => {
+    const { data: configs, errorCode } = await RequestUtils.Get('/erp/config/fetch', {
+      limit: 10,
+      page: 1,
+      key: 'CACULATOR_TOTAL'
+    });
+    if (errorCode !== SUCCESS_CODE || !Array.isArray(configs)) {
+      return;
+    }
+    const config = configs.find(item => item?.key === 'CACULATOR_TOTAL');
+    setCalculationFormula(typeof config?.value === 'string' ? config.value.trim() : '');
+  }, []);
 
   useEffectAsync(async (isMounted) => {
     const { customer, order, data } = await OrderService.getOrderOnEdit(localOrder.orderId);
+    console.log('[OpportunityEdit][3. Component data]', {
+      requestedOrderId: localOrder.orderId,
+      currency: order?.currency,
+      exchangeRate: order?.exchangeRate,
+      orderTotal: order?.total,
+      details: (data ?? []).map(detail => ({
+        id: detail?.id,
+        price: detail?.price,
+        quantity: detail?.quantity,
+        discountAmount: detail?.discountAmount,
+        total: detail?.total,
+        totalPrice: detail?.totalPrice
+      }))
+    });
     if (customer) {
       setCustomer(customer);
     }
     if (order) {
       setCustomerOrder(order);
+      setShippingCost(Number(order.shippingCost ?? 0));
+      setCurrency(order.currency === CURRENCY_USD ? CURRENCY_USD : CURRENCY_VND);
+      setExchangeRate(order.currency === CURRENCY_USD ? Number(order.exchangeRate ?? 1) : 1);
+      setVatRate(Number(order.vat ?? 0));
     }
     if (arrayNotEmpty(data)) {
-      setData(data);
+      setData(mergeSavedOrderLines(data, localOrder.savedDetails));
     }
   }, [localOrder]);
 
@@ -153,24 +397,30 @@ const BanHangPage = ({
     const { data: response, errorCode } = await RequestUtils.Get("/data/get-customer", { dataId });
     if (errorCode === SUCCESS_CODE) {
       setCustomer(response.customer);
+      setLeadProducts(getLeadProducts(response.lead));
       onAddProduct(response.lead);
     }
   }, [dataId]);
 
   const onAddProduct = useCallback((lead = null) => {
+    const suggestedProducts = lead ? getLeadProducts(lead) : leadProducts;
     const onAfterChoiseProduct = (values) => {
       let order = _.cloneDeep(ORDER_TEMPLATE);
-      const { mSkuDetails, mProduct, quantity, productId, skuId } = values;
+      const { mSkuDetails, mProduct, quantity, productId, productCode, skuId, orderLine } = values;
       /* Tạo Item trong list sản phẩm */
       order.key = randomString();
       order.note = values?.note ?? "";
-      order.orderName = values?.orderName ?? "";
+      order.code = values?.code ?? "";
       order.productId = productId;
+      order.productCode = productCode ?? mProduct.code ?? null;
       order.productName = mProduct.name;
       order.unit = mProduct.unit ?? "N/A";
       order.mSkuDetails = mSkuDetails;
-      order.skuDetailCode = String(skuId);
+      order.orderLine = orderLine ?? {};
+      order.skuId = String(skuId);
       order.quantity = quantity;
+      order.profit = Number(values?.profit ?? 0);
+      order.status = values?.status ?? 0;
       order.warehouseOptions = getWarehouseByProduct(skuId, mProduct);
 
       const skus = mProduct?.skus ?? [];
@@ -179,7 +429,8 @@ const BanHangPage = ({
 
       order.skuPrices = skuPrices;
       order.productPrice = Number(mProduct?.price ?? mProduct?.priceRef ?? 0);
-      order.currency = mProduct?.currency ?? 'VND';
+      order.currency = currency;
+      order.exchangeRate = getExchangeRate(currency, exchangeRate);
 
       if (arrayNotEmpty(order.warehouseOptions)) {
         let warehouse = _.first(order.warehouseOptions);
@@ -192,19 +443,26 @@ const BanHangPage = ({
         quantity: order.quantity,
         product: mProduct
       });
-      order.totalPrice = order.price * order.quantity;
+      order.totalPrice = calculateConvertedLineTotal({
+        item: order,
+        shippingCost,
+        formula: calculationFormula,
+        currency,
+        exchangeRate
+      });
       setData(datas => ([...datas, order]));
     };
 
-    InAppEvent.emit(HASH_POPUP, {
-      hash: "sku.add",
+    InAppEvent.emit(HASH_MODAL, {
+      hash: "#sku.add",
       title: "Thêm sản phẩm",
       data: {
         onSave: onAfterChoiseProduct,
-        ...(lead ? { productId: lead.productId } : {})
+        productId: suggestedProducts[0]?.id,
+        leadProducts: suggestedProducts,
       }
     });
-  }, []);
+  }, [calculationFormula, currency, exchangeRate, leadProducts, shippingCost]);
 
   const onAddStock = useCallback(() => {
     const onAfterSubmit = (values) => {
@@ -217,19 +475,209 @@ const BanHangPage = ({
     });
   }, []);
 
+  const getLineAmount = useCallback((item) => Math.max(
+    Number(item?.totalPrice ?? 0)
+      - (Number(item?.discountAmount ?? 0) * getExchangeRate(currency, exchangeRate)),
+    0,
+  ), [currency, exchangeRate]);
+  const getSalePrice = useCallback((item) => {
+    const quantity = Number(item?.quantity ?? 0);
+    return quantity > 0 ? getLineAmount(item) / quantity : 0;
+  }, [getLineAmount]);
+  const getLineVat = useCallback(
+    (item) => getLineAmount(item) * (vatRate / 100),
+    [getLineAmount, vatRate],
+  );
+  const renderVndAmount = value => (
+    <Text style={{ display: 'block', textAlign: 'right', whiteSpace: 'nowrap' }}>
+      {formatMoney(value)}
+    </Text>
+  );
+
   const columns = [
     {
-      title: 'Mã',
-      dataIndex: 'skuDetailCode',
-      key: 'skuDetailCode',
-      width: 80
+      title: 'Số đơn',
+      dataIndex: 'code',
+      key: 'code',
+      width: 150,
+      render: (value, record) => (
+        <Input
+          size="small"
+          value={value}
+          maxLength={100}
+          placeholder="Nhập số đơn"
+          onChange={event => handleChange(record.key, 'code', event.target.value)}
+        />
+      )
     },
     {
-      title: 'Diễn giải',
-      dataIndex: 'mSkuDetails',
-      render: (mSkuDetails) => (<span />),
-      width: 260,
+      title: 'Tên sản phẩm',
+      dataIndex: 'productName',
+      key: 'productName',
+      width: 180,
       ellipsis: true
+    },
+    {
+      title: 'SKU',
+      dataIndex: 'mSkuDetails',
+      key: 'mSkuDetails',
+      width: 260
+    },
+    {
+      title: `Đơn giá mua (${currency})`,
+      dataIndex: 'price',
+      key: 'price',
+      width: 140,
+      align: 'right',
+      editable: true
+    },
+    {
+      title: `Chi phí vận chuyển (${currency})`,
+      dataIndex: 'shippingCost',
+      key: 'shippingCost',
+      width: 140,
+      align: 'right',
+      onCell: (_, index) => ({
+        rowSpan: index === 0 ? Math.max(data.length, 1) : 0
+      }),
+      render: (_, __, index) => index === 0 ? (
+        <InputNumber
+          size="small"
+          min={0}
+          value={shippingCost}
+          onChange={value => {
+            const nextShippingCost = Number(value ?? 0);
+            setShippingCost(nextShippingCost);
+            if (calculationFormula) {
+              setData(current => current.map(item => ({
+                ...item,
+                totalPrice: calculateConvertedLineTotal({
+                  item,
+                  shippingCost: nextShippingCost,
+                  formula: calculationFormula,
+                  currency,
+                  exchangeRate
+                })
+              })));
+            }
+          }}
+          formatter={formatterInputNumber}
+          parser={parserInputNumber}
+          controls={false}
+          style={{ width: '100%', textAlign: 'right' }}
+        />
+      ) : null
+    },
+    {
+      title: 'Lợi nhuận (%)',
+      dataIndex: 'profit',
+      key: 'profit',
+      width: 130,
+      align: 'right',
+      render: (_, record) => (
+        <InputNumber
+          size="small"
+          min={0}
+          max={99.99}
+          value={Number(record?.profit ?? 0)}
+          onChange={value => handleChange(record.key, 'profit', value)}
+          formatter={value => `${value ?? 0}%`}
+          parser={value => value?.replace('%', '')}
+          controls={false}
+          style={{ width: '100%', textAlign: 'right' }}
+        />
+      )
+    },
+    {
+      title: 'Giá bán (VND)',
+      dataIndex: 'salePrice',
+      key: 'salePrice',
+      width: 140,
+      align: 'right',
+      render: (_, record) => renderVndAmount(getSalePrice(record))
+    },
+    {
+      title: 'Số lượng',
+      dataIndex: 'quantity',
+      key: 'quantity',
+      editable: true,
+      width: 100,
+      align: 'right'
+    },
+    {
+      title: 'Thành tiền (VND)',
+      dataIndex: 'lineAmount',
+      key: 'lineAmount',
+      width: 150,
+      align: 'right',
+      render: (_, record) => renderVndAmount(getLineAmount(record))
+    },
+    {
+      title: (
+        <Space size={6}>
+          <span>VAT</span>
+          <Select
+            size="small"
+            value={vatRate}
+            options={vatOptions}
+            onChange={value => setVatRate(Number(value ?? 0))}
+            style={{ width: 68 }}
+          />
+        </Space>
+      ),
+      dataIndex: 'vatAmount',
+      key: 'vatAmount',
+      width: 170,
+      align: 'right',
+      render: (_, record) => renderVndAmount(getLineVat(record))
+    },
+    {
+      title: 'Tổng tiền (VND)',
+      dataIndex: 'grandTotal',
+      key: 'grandTotal',
+      width: 150,
+      align: 'right',
+      render: (_, record) => renderVndAmount(getLineAmount(record) + getLineVat(record))
+    },
+    {
+      title: 'Deadline',
+      dataIndex: 'dayQuote',
+      key: 'dayQuote',
+      width: 150,
+      render: (value, record) => {
+        const dateValue = parseDayQuote(value);
+        return (
+          <DatePicker
+            size="small"
+            allowClear
+            value={dateValue?.isValid() ? dateValue : null}
+            format="DD/MM/YYYY"
+            placeholder="dd/mm/yyyy"
+            onChange={date => handleChange(
+              record.key,
+              'dayQuote',
+              date ? date.format('DD/MM/YYYY') : null,
+            )}
+            style={{ width: '100%' }}
+          />
+        );
+      }
+    },
+    {
+      title: 'CK (%)',
+      dataIndex: 'discountRate',
+      key: 'discountRate',
+      width: 90,
+      align: 'right',
+      editable: true
+    },
+    {
+      title: `Tiền CK (${currency})`,
+      dataIndex: 'discountAmount',
+      key: 'discountAmount',
+      width: 120,
+      align: 'right',
+      editable: true
     },
     {
       title: 'Bảo hành',
@@ -239,38 +687,10 @@ const BanHangPage = ({
       editable: true
     },
     {
-      title: 'Số lượng',
-      dataIndex: 'quantity',
-      key: 'quantity',
-      editable: true,
+      title: 'Đơn vị',
+      dataIndex: 'unit',
+      key: 'unit',
       width: 90
-    },
-    {
-      title: 'Đơn giá',
-      dataIndex: 'price',
-      key: 'price',
-      width: 120,
-      editable: true
-    },
-    {
-      title: 'CK (%)',
-      dataIndex: 'discountRate',
-      key: 'discountRate',
-      width: 90,
-      editable: true
-    },
-    {
-      title: 'Tiền CK',
-      dataIndex: 'discountAmount',
-      key: 'discountAmount',
-      width: 120,
-      editable: true
-    },
-    {
-      title: 'Thành tiền',
-      dataIndex: 'totalPrice',
-      key: 'totalPrice',
-      width: 150
     },
     {
       title: 'Kho',
@@ -283,13 +703,8 @@ const BanHangPage = ({
       title: 'Tồn kho',
       dataIndex: 'stock',
       key: 'stock',
-      width: 100
-    },
-    {
-      title: 'Đơn vị',
-      dataIndex: 'unit',
-      key: 'unit',
-      width: 90
+      width: 100,
+      align: 'right'
     },
     {
       title: 'Sửa',
@@ -311,7 +726,37 @@ const BanHangPage = ({
   let isOrder = (customerOrder?.id || 0) !== 0;
   const totalQuantity = data.reduce((sum, item) => sum + item.quantity, 0);
   const totalDiscount = data.reduce((sum, item) => sum + item.discountAmount, 0);
-  const totalSubOrder = data.reduce((sum, item) => sum + item.totalPrice - item.discountAmount, 0);
+  const totalSubOrder = data.reduce((sum, item) => sum + getLineAmount(item), 0);
+  const totalVat = totalSubOrder * (vatRate / 100);
+  const totalOrder = totalSubOrder + totalVat;
+
+  const recalculateTotals = useCallback((nextCurrency, nextExchangeRate) => {
+    setData(current => current.map(item => ({
+      ...item,
+      currency: nextCurrency,
+      exchangeRate: getExchangeRate(nextCurrency, nextExchangeRate),
+      totalPrice: calculateConvertedLineTotal({
+        item,
+        shippingCost,
+        formula: calculationFormula,
+        currency: nextCurrency,
+        exchangeRate: nextExchangeRate
+      })
+    })));
+  }, [calculationFormula, shippingCost]);
+
+  const handleCurrencyChange = (nextCurrency) => {
+    const nextExchangeRate = nextCurrency === CURRENCY_USD ? exchangeRate : 1;
+    setCurrency(nextCurrency);
+    if (nextCurrency === CURRENCY_VND) setExchangeRate(1);
+    recalculateTotals(nextCurrency, nextExchangeRate);
+  };
+
+  const handleExchangeRateChange = (value) => {
+    const nextExchangeRate = Number(value ?? 0);
+    setExchangeRate(nextExchangeRate);
+    recalculateTotals(currency, nextExchangeRate);
+  };
 
   const editRow = (key) => {
     const newData = data.map(item => ({ ...item, editable: item.key === key }));
@@ -329,12 +774,14 @@ const BanHangPage = ({
       return;
     }
 
-    if (['quantity', 'price', 'discountRate', 'discountAmount'].includes(field)) {
+    if (['quantity', 'price', 'discountRate', 'discountAmount', 'profit', 'totalPrice'].includes(field)) {
       target[field] = parseFloat(value || 0);
     } else if (field === 'warehouse') {
       target[field] = target.warehouseOptions.find(option => option.id === value)?.stockName || '';
     } else if (field === 'warrantyPeriod') {
       target[field] = warrantyOptions.find(option => option.id === value)?.name || '';
+    } else {
+      target[field] = value;
     }
 
     /* Calculate dependent fields */
@@ -347,8 +794,14 @@ const BanHangPage = ({
         }
       });
     }
-    if (field === 'quantity' || field === 'price') {
-      target.totalPrice = target.quantity * target.price;
+    if (['quantity', 'price', 'profit'].includes(field)) {
+      target.totalPrice = calculateConvertedLineTotal({
+        item: target,
+        shippingCost,
+        formula: calculationFormula,
+        currency,
+        exchangeRate
+      });
     }
     if (field === 'discountRate') {
       target.discountAmount = (target.price * target.quantity * target.discountRate) / 100;
@@ -364,6 +817,7 @@ const BanHangPage = ({
       if (column.dataIndex === 'warehouse') {
         return (
           <Select
+            size="small"
             placeholder="Chọn kho"
             disabled={arrayEmpty(record?.warehouseOptions)}
             value={text}
@@ -379,6 +833,7 @@ const BanHangPage = ({
       if (column.dataIndex === 'warrantyPeriod') {
         return (
           <Select
+            size="small"
             placeholder="Chọn bảo hành"
             disabled={!record.editable}
             value={text}
@@ -394,10 +849,12 @@ const BanHangPage = ({
       if (column.dataIndex === 'quantity') {
         return (
           <InputNumber
+            size="small"
             min={1}
             value={text}
             onChange={value => handleChange(record.key, column.dataIndex, value)}
-            style={{ width: '100%' }}
+            controls={false}
+            style={{ width: '100%', textAlign: 'right' }}
             formatter={formatterInputNumber}
             parser={parserInputNumber}
           />
@@ -405,10 +862,13 @@ const BanHangPage = ({
       }
       return (
         <InputNumber
+          size="small"
           min={0}
+          max={column.dataIndex === 'profit' ? 99.99 : undefined}
           value={text}
           onChange={value => handleChange(record.key, column.dataIndex, value)}
-          style={{ width: '100%' }}
+          controls={false}
+          style={{ width: '100%', textAlign: 'right' }}
           formatter={formatterInputNumber}
           parser={parserInputNumber}
         />
@@ -418,10 +878,27 @@ const BanHangPage = ({
         return <Text style={{ width: 120 }} ellipsis> {text || '(Chưa nhập)'} </Text>;
       }
       if (column.dataIndex === 'mSkuDetails') {
-        return <ShowSkuDetail skuDetails={record.mSkuDetails} width={260} />
+        const orderLineEntries = Object.entries(parseOrderLine(record.orderLine));
+
+        return (
+          <div>
+            <ShowSkuDetail skuDetails={record.mSkuDetails ?? record.skuDetails} width={260} />
+            {orderLineEntries.map(([key, value]) => (
+              <Text key={key} ellipsis style={{ display: 'block', width: 260 }} title={`${key}: ${value ?? ''}`}>
+                <strong>{key}: </strong>
+                <span>{String(value ?? '')}</span>
+              </Text>
+            ))}
+          </div>
+        );
       }
       const isFormatted = ['price', 'discountAmount', 'totalPrice'].includes(column.dataIndex);
-      return isFormatted ? formatMoney(text) : text;
+      if (column.dataIndex === 'profit') {
+        return `${Number(text ?? 0)}%`;
+      }
+      return isFormatted
+        ? formatCurrencyAmount(text, column.dataIndex === 'totalPrice' ? CURRENCY_VND : currency)
+        : text;
     }
   };
 
@@ -432,9 +909,21 @@ const BanHangPage = ({
   const onSubmitOrder = useCallback(async () => {
 
     const submit = async (mCustomer) => {
-      let params = { customer: mCustomer, details: data };
+      let params = {
+        customer: mCustomer,
+        details: data.map(({ mSkuDetails, ...detail }) => ({
+          ...detail,
+          dayQuote: formatDayQuoteForPayload(detail.dayQuote),
+          skuDetails: detail.skuDetails ?? mSkuDetails ?? []
+        })),
+        shippingCost: Number(shippingCost || 0),
+        vat: vatRate,
+        currency,
+        exchangeRate: getExchangeRate(currency, exchangeRate)
+      };
       if (customerOrder?.id) {
         params.id = customerOrder.id;
+        params.code = customerOrder.code ?? '';
       }
       if (dataId) {
         params.dataId = dataId;
@@ -442,7 +931,11 @@ const BanHangPage = ({
       const { message: eMsg, data: order, errorCode } = await RequestUtils.Post("/order/save", params);
       message.info(eMsg);
       if (errorCode === SUCCESS_CODE) {
-        setLocalOrder(pre => ({ orderId: order.id, reload: !pre.reload }));
+        setLocalOrder(pre => ({
+          orderId: order.id,
+          reload: !pre.reload,
+          savedDetails: order.details ?? []
+        }));
       }
     }
 
@@ -467,7 +960,7 @@ const BanHangPage = ({
         details: data
       }
     });
-  }, [data, dataId, customer, customerOrder]);
+  }, [currency, data, dataId, customer, customerOrder, exchangeRate, shippingCost, vatRate]);
 
   const onOpenFormPayment = useCallback(() => {
     InAppEvent.emit(HASH_MODAL, {
@@ -491,27 +984,75 @@ const BanHangPage = ({
 
   return (
     <>
-      <Table
+      <OpportunityTable
         bordered
-        scroll={{ x: 1500 }}
+        scroll={{ x: 2700 }}
         dataSource={data}
         columns={columns.map(col => ({
           ...col,
-          onCell: () => ({ editable: col.editable?.toString() }),
-          render: col.dataIndex !== 'operation'
-            ? (text, record, index) => renderCell(text, record, index, col)
-            : col.render
+          onHeaderCell: () => ({
+            style: { whiteSpace: 'nowrap' }
+          }),
+          onCell: (record, index) => ({
+            ...(col.onCell?.(record, index) ?? {}),
+            editable: col.editable?.toString()
+          }),
+          render: [
+            'code',
+            'profit',
+            'shippingCost',
+            'salePrice',
+            'lineAmount',
+            'vatAmount',
+            'grandTotal',
+            'dayQuote',
+            'operation'
+          ].includes(col.dataIndex)
+            ? col.render
+            : (text, record, index) => renderCell(text, record, index, col)
         }))}
         pagination={false}
         summary={() => (
           <Table.Summary.Row>
-            <Table.Summary.Cell index={0} colSpan={3}>Tổng cộng</Table.Summary.Cell>
-            <Table.Summary.Cell index={3}>{totalQuantity}</Table.Summary.Cell>
-            <Table.Summary.Cell index={4}></Table.Summary.Cell>
+            <Table.Summary.Cell index={0} colSpan={3}>
+              <Space wrap size={12}>
+                <Space size={6}>
+                  <Text>Loại tiền</Text>
+                  <Select
+                    size="small"
+                    value={currency}
+                    options={currencyOptions}
+                    onChange={handleCurrencyChange}
+                    style={{ width: 90 }}
+                  />
+                </Space>
+                <Space size={6}>
+                  <Text>Tỷ giá</Text>
+                  <InputNumber
+                    size="small"
+                    min={currency === CURRENCY_USD ? 0.01 : 1}
+                    value={exchangeRate}
+                    disabled={currency === CURRENCY_VND}
+                    onChange={handleExchangeRateChange}
+                    formatter={formatterInputNumber}
+                    parser={parserInputNumber}
+                    style={{ width: 170 }}
+                  />
+                </Space>
+              </Space>
+            </Table.Summary.Cell>
+            <Table.Summary.Cell index={3}></Table.Summary.Cell>
+            <Table.Summary.Cell index={4} align="right">{formatCurrencyAmount(shippingCost, currency)}</Table.Summary.Cell>
             <Table.Summary.Cell index={5}></Table.Summary.Cell>
-            <Table.Summary.Cell index={7}>{formatMoney(totalDiscount)}</Table.Summary.Cell>
-            <Table.Summary.Cell index={8}>{formatMoney(totalSubOrder)}</Table.Summary.Cell>
-            <Table.Summary.Cell index={9}></Table.Summary.Cell>
+            <Table.Summary.Cell index={6}></Table.Summary.Cell>
+            <Table.Summary.Cell index={7} align="right">{totalQuantity}</Table.Summary.Cell>
+            <Table.Summary.Cell index={8} align="right">{formatMoney(totalSubOrder)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={9} align="right">{formatMoney(totalVat)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={10} align="right"><Text strong>{formatMoney(totalOrder)}</Text></Table.Summary.Cell>
+            <Table.Summary.Cell index={11}></Table.Summary.Cell>
+            <Table.Summary.Cell index={12}></Table.Summary.Cell>
+            <Table.Summary.Cell index={13} align="right">{formatCurrencyAmount(totalDiscount, currency)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={14} colSpan={5}></Table.Summary.Cell>
           </Table.Summary.Row>
         )}
       />
@@ -557,9 +1098,27 @@ const BanHangPage = ({
         </div>
         <div>
           {isOrder &&
-            <InvoiceTable
-              order={customerOrder}
-            />
+            <div style={{ minWidth: 430 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <Text strong style={{ whiteSpace: 'nowrap' }}>
+                  {customerOrder.type === 'order' ? 'Mã đơn hàng' : 'Mã cơ hội'}
+                </Text>
+                <Input
+                  size="small"
+                  value={customerOrder.code ?? ''}
+                  maxLength={100}
+                  placeholder="Nhập mã"
+                  onChange={event => setCustomerOrder(current => ({
+                    ...current,
+                    code: event.target.value
+                  }))}
+                  style={{ flex: 1 }}
+                />
+              </div>
+              <InvoiceTable
+                order={customerOrder}
+              />
+            </div>
           }
         </div>
       </div>

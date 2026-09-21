@@ -28,8 +28,16 @@ const BanHangPage = React.lazy(() => import('@/pages/banhang'));
 export const CohoiConfig = {
     auth: authRoles.user,
     routes: [
-        { path: '/sale/co-hoi', element: <CohoiPage /> },
-        { path: '/sale/ban-hang', element: <BanHangPage /> },
-        { path: '/sale/ban-hang/:orderId', element: <BanHangPage /> }
+        { path: '/sale/co-hoi/seven-day', permission: 'sales.opportunity.overdue.view', element: <CohoiPage /> },
+        { path: '/sale/co-hoi', permission: 'sales.opportunity.view', element: <CohoiPage /> },
+        { path: '/sale/co-hoi/*', permission: 'sales.opportunity.view', element: <CohoiPage /> },
+        { path: '/sale/ban-hang', permission: ({ search }) => new URLSearchParams(search).has('dataId')
+            ? 'sales.lead.convert_opportunity'
+            : 'sales.opportunity.create', element: <BanHangPage /> },
+        { path: '/sale/ban-hang/:orderId', permission: ({ search }) => (
+            new URLSearchParams(search).get('type') === 'order'
+                ? 'sales.order.update'
+                : 'sales.opportunity.update'
+        ), element: <BanHangPage /> }
     ]
 };
