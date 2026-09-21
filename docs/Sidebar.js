@@ -65,7 +65,7 @@ const resolveLogoUrl = (logo) => {
   if (isAbsoluteUrl(logo)) {
     return logo;
   }
-  return `https://biz.api.flast.vn/upload/folder/view/${encodeURIComponent(logo)}`;
+  return `https://biz.api.flast.vn/erp/folder/view/${encodeURIComponent(logo)}`;
 };
 
 function SideBar() {

@@ -61,6 +61,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from "react-router-dom";
 import SideBarStyles from './styles';
 import useGetMe from '@/hooks/useGetMe';
+import { resolveUploadUrl } from '@/containers/PreviewModal/uploadUtils';
 import {
   BUSINESS_UPDATED_EVENT,
   canManagePermissions,
@@ -101,7 +102,7 @@ const resolveLogoUrl = (logo) => {
   if (isAbsoluteUrl(logo)) {
     return logo;
   }
-  return `${GATEWAY}/upload/folder/view/${encodeURIComponent(logo)}`;
+  return `${GATEWAY}/erp/folder/view/${encodeURIComponent(logo)}`;
 };
 
 function SideBar() {
