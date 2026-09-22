@@ -15,7 +15,7 @@ const useDrawerLeaveGuard = ({
   open,
   onClose,
   enabled = true,
-  confirmOnOpen = true,
+  confirmOnOpen = false,
   resetKey,
   title = DEFAULT_TITLE,
   content = DEFAULT_CONTENT,
@@ -75,8 +75,8 @@ const useDrawerLeaveGuard = ({
   }, [guardClose, onClose]);
 
   useEffect(() => {
-    // Drawer nhập liệu luôn cần xác nhận khi người dùng chủ động rời đi.
-    // Chỉ closeAfterSubmit/markClean mới bỏ qua cảnh báo này.
+    // Mặc định drawer mới mở là sạch. Chỉ cảnh báo sau khi markDirty được gọi.
+    // confirmOnOpen chỉ dành cho luồng đặc biệt cần cảnh báo ngay khi mở.
     dirtyRef.current = Boolean(open && enabled && confirmOnOpen);
     destroyConfirm();
   }, [confirmOnOpen, destroyConfirm, enabled, open, resetKey]);

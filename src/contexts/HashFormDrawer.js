@@ -144,7 +144,7 @@ const HashFormDrawer = () => {
     removeFormHash()
   }
   const {
-    markClean,
+    closeAfterSubmit,
     markDirty,
     requestClose,
   } = useDrawerLeaveGuard({
@@ -198,8 +198,8 @@ const HashFormDrawer = () => {
             defaultValues={{}}
             hideTitle
             showTitle={false}
-            onSaved={markClean}
-            onSubmitSuccess={markClean}
+            onSaved={closeAfterSubmit}
+            onSubmitSuccess={closeAfterSubmit}
           />
         </RemoteFormBoundary>
       )}
