@@ -96,7 +96,7 @@ const ListInStock = () => {
   const onClickGiaoHang = (record) => InAppEvent.emit(HASH_MODAL, {
     hash: "#warehouse.delivery",
     title: 'Giao hàng',
-    data: { itemInStock: record }
+    data: { itemInStock: record, skuId: record.skuId }
   });
 
   const CUSTOM_ACTION = [

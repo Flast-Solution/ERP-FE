@@ -23,7 +23,6 @@ import React, { useState } from 'react'
 import { Col, Form, Row, message, Table } from 'antd'
 import { 
   FormInput, 
-  FormAddress, 
   CustomButton,
   FormSelect,
 	FormInputNumber,
@@ -48,22 +47,23 @@ const GiaoHangForm = ({ title, data }) => {
   const onChangeGetOrderItem = (value, order) => {
     let { id, details, ...values } = order;
     const {
-      customerProvinceId: provinceId,
-      customerWardId: wardId,
+      customerProvinceId: _provinceId,
+      customerWardId: _wardId,
       customerAddress: address,
       ...params
     } = values;
 
-    form.setFieldsValue({ ...params, provinceId, wardId, address });
+    form.setFieldsValue({ ...params, address, detailCode: undefined });
+    setSubmitStock({});
+    setDetails([]);
+
     if (arrayEmpty(details)) {
       return;
     }
-    let mDetails = [];
-    for (let detail of details) {
-      if(detail.skuId !== data?.skuId) {
-        continue;  
-      }
-      mDetails.push(detail);
+    const skuId = data?.skuId ?? data?.itemInStock?.skuId;
+    let mDetails = details;
+    if (skuId != null) {
+      mDetails = details.filter((detail) => detail.skuId === skuId);
     }
     if (arrayEmpty(mDetails)) {
       message.error("Đơn hàng không có sản phẩm phù hợp để giao !");
@@ -82,7 +82,7 @@ const GiaoHangForm = ({ title, data }) => {
       message.error("Chưa chọn kho giao !");
       return;
     }
-    const { quality } = values;
+    const { quality, provinceId, wardId, ...payload } = values;
     if (submitStock.quantity < quality) {
       message.error("Kho không đủ số lượng giao !");
       return;
@@ -90,7 +90,7 @@ const GiaoHangForm = ({ title, data }) => {
     const { data: response, message: MSG, errorCode } = await RequestUtils.Post("/warehouse/delivery", {
       warehouseId: submitStock.id,
       id: ship.id,
-      ...values
+      ...payload
     });
     if (errorCode === SUCCESS_CODE) {
       setShip(response);
@@ -151,7 +151,14 @@ const GiaoHangForm = ({ title, data }) => {
             placeholder={"Số điện thoại"}
           />
         </Col>
-        <FormAddress />
+        <Col md={24} xs={24}>
+          <FormInput
+            required
+            label="Địa chỉ"
+            name="address"
+            placeholder="Địa chỉ"
+          />
+        </Col>
         <Col md={12} xs={24}>
           <FormSelectAPI
             required

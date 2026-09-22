@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import dayjs from 'dayjs'
 import {
   Button,
   Checkbox,
@@ -92,6 +93,23 @@ const getInboundQuantitySummary = (detail, history = []) => {
 
 const formatQuantity = value => Number(value ?? 0).toLocaleString('vi-VN')
 
+const parseHistoryArray = value => {
+  if (Array.isArray(value)) return value
+  if (typeof value !== 'string' || !value.trim()) return []
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+const parseHistoryDate = value => {
+  if (!value) return null
+  const parsed = dayjs(value)
+  return parsed.isValid() ? parsed : null
+}
+
 const HISTORY_COLUMNS = [
   {
     title: 'Thời gian',
@@ -166,6 +184,7 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
   const [submitting, setSubmitting] = useState(false)
   const [warehouseHistory, setWarehouseHistory] = useState([])
   const [loadingWarehouseHistory, setLoadingWarehouseHistory] = useState(false)
+  const [selectedHistoryId, setSelectedHistoryId] = useState(null)
   const { closeAfterSubmit, markDirty, requestClose } = useDrawerLeaveGuard({
     open,
     onClose,
@@ -292,7 +311,7 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
       form.setFieldsValue({ item: undefined, quantity: undefined })
       return
     }
-    if (loadingWarehouseHistory) return
+    if (loadingWarehouseHistory || selectedHistoryId != null) return
 
     form.setFieldsValue({
       item: selectedDetail.id,
@@ -300,12 +319,13 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
         ? quantitySummary.remainingQuantity
         : undefined,
     })
-  }, [form, loadingWarehouseHistory, quantitySummary.remainingQuantity, selectedDetail])
+  }, [form, loadingWarehouseHistory, quantitySummary.remainingQuantity, selectedDetail, selectedHistoryId])
 
   const handleValuesChange = changedValues => {
     markDirty()
 
     if (Object.prototype.hasOwnProperty.call(changedValues, 'orderDetailId')) {
+      setSelectedHistoryId(null)
       const detail = orderDetails.find(
         item => String(item?.id) === String(changedValues.orderDetailId)
       )
@@ -314,6 +334,34 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
         quantity: undefined,
       })
     }
+  }
+
+  const handleHistoryRowClick = historyItem => {
+    const orderDetailId = historyItem?.orderDetailId ?? null
+    setSelectedHistoryId(historyItem?.id ?? null)
+    form.setFieldsValue({
+      receiptCode: historyItem?.receiptCode ?? '',
+      providerId: historyItem?.providerId ?? undefined,
+      receivedAt: parseHistoryDate(historyItem?.receivedAt ?? historyItem?.inTime),
+      orderCode: historyItem?.orderCode ?? initialOrder?.code ?? '',
+      orderDetailId,
+      lotNo: historyItem?.lotNo ?? '',
+      item: orderDetailId,
+      quantity: historyItem?.quantity ?? undefined,
+      criteria: parseHistoryArray(historyItem?.criteria).map(item => ({
+        ...item,
+        passed: Boolean(item?.passed),
+        initial: Boolean(item?.initial),
+      })),
+      inspectionNote: historyItem?.inspectionNote ?? '',
+      inspectorId: historyItem?.inspectorId ?? undefined,
+      attachments: parseHistoryArray(historyItem?.attachments),
+      warehouseId: historyItem?.warehouseId ?? historyItem?.stockId ?? undefined,
+      binLocation: historyItem?.binLocation ?? '',
+      stockStatus: historyItem?.status ?? undefined,
+      effectiveDate: parseHistoryDate(historyItem?.effectiveDate),
+    })
+    form.scrollToField('receiptCode', { behavior: 'smooth', block: 'start' })
   }
 
   const handleSubmit = async values => {
@@ -740,6 +788,12 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
               pagination={false}
               scroll={{ x: 1240 }}
               locale={{ emptyText: 'Chưa có lịch sử chuyển kho' }}
+              rowClassName={item => (
+                String(item.id) === String(selectedHistoryId) ? 'is-selected' : ''
+              )}
+              onRow={item => ({
+                onClick: () => handleHistoryRowClick(item),
+              })}
             />
           </section>
         </main>
