@@ -90,6 +90,22 @@
 
 .order-inbound-summary > div + div { border-left: 1px solid var(--inbound-border); }
 .order-inbound-summary small { color: var(--inbound-muted); }
+
+.order-inbound-history {
+  .ant-table-container {
+    overflow: hidden;
+    border: 1px solid var(--inbound-border);
+    border-radius: 6px;
+  }
+
+  .ant-table-thead > tr > th {
+    background: #f8fafc;
+    color: var(--inbound-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+  }
+}
+
 .order-inbound-footer {
   position: sticky;
   bottom: 0;

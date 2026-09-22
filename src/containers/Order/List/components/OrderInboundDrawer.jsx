@@ -8,8 +8,10 @@ import {
   Form,
   Input,
   InputNumber,
+  message,
   Row,
   Select,
+  Table,
 } from 'antd'
 import {
   DeleteOutlined,
@@ -23,9 +25,12 @@ import './OrderInboundDrawer.less'
 
 const USER_BUSINESS_API = '/auth/user-bussiness/list-user'
 const WAREHOUSE_API = '/warehouse/fetch-stock'
+const PROVIDER_API = '/provider/fetch'
 const EVALUATION_LIST_API = 'evaluation/list'
 const EVALUATION_SAVE_API = 'evaluation/save'
 const EVALUATION_SAVE_LIST_API = '/evaluation/save-list'
+const WAREHOUSE_CREATE_API = '/warehouse/created'
+const WAREHOUSE_HISTORY_API = '/erp/warehouse/fetch-history'
 
 const createReceiptCode = () => {
   const now = new Date()
@@ -63,18 +68,105 @@ const getDefaultCriteria = evaluationList => evaluationList
     initial: true,
   }))
 
+const getInboundQuantitySummary = (detail, history = []) => {
+  const orderedQuantity = Number(detail?.quantity)
+  const safeOrderedQuantity = Number.isFinite(orderedQuantity) && orderedQuantity > 0
+    ? orderedQuantity
+    : 0
+  const importedQuantity = history
+    .filter(item => {
+      const itemQuantity = Number(item?.quantity)
+      return String(item?.orderDetailId) === String(detail?.id)
+        && item?.stockId != null
+        && Number.isFinite(itemQuantity)
+        && itemQuantity > 0
+    })
+    .reduce((total, item) => total + Number(item.quantity), 0)
+
+  return {
+    orderedQuantity: safeOrderedQuantity,
+    importedQuantity,
+    remainingQuantity: Math.max(safeOrderedQuantity - importedQuantity, 0),
+  }
+}
+
+const formatQuantity = value => Number(value ?? 0).toLocaleString('vi-VN')
+
+const HISTORY_COLUMNS = [
+  {
+    title: 'Thời gian',
+    key: 'time',
+    width: 160,
+    render: (_, item) => item.inTime || item.createdDate || '—',
+  },
+  {
+    title: 'Mã phiếu',
+    dataIndex: 'receiptCode',
+    key: 'receiptCode',
+    width: 190,
+    render: value => value || '—',
+  },
+  {
+    title: 'Đơn con',
+    dataIndex: 'orderDetailCode',
+    key: 'orderDetailCode',
+    width: 160,
+    render: value => value || '—',
+  },
+  {
+    title: 'Lô nội bộ',
+    dataIndex: 'lotNo',
+    key: 'lotNo',
+    width: 120,
+    render: value => value || '—',
+  },
+  {
+    title: 'Kho nhận',
+    key: 'warehouse',
+    width: 180,
+    render: (_, item) => item.stockName || (item.warehouseId ? `Kho #${item.warehouseId}` : '—'),
+  },
+  {
+    title: 'Vị trí',
+    dataIndex: 'binLocation',
+    key: 'binLocation',
+    width: 110,
+    render: value => value || '—',
+  },
+  {
+    title: 'Số lượng',
+    dataIndex: 'quantity',
+    key: 'quantity',
+    width: 100,
+    align: 'right',
+    render: value => value ?? '—',
+  },
+  {
+    title: 'Ghi chú',
+    dataIndex: 'inspectionNote',
+    key: 'inspectionNote',
+    width: 220,
+    render: value => value || '—',
+  },
+]
+
 const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
   const [form] = Form.useForm()
   const [businessUsers, setBusinessUsers] = useState([])
   const [warehouses, setWarehouses] = useState([])
+  const [providers, setProviders] = useState([])
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [loadingWarehouses, setLoadingWarehouses] = useState(false)
+  const [loadingProviders, setLoadingProviders] = useState(false)
   const [evaluationCriteria, setEvaluationCriteria] = useState([])
   const [loadingEvaluations, setLoadingEvaluations] = useState(false)
   const [newEvaluationName, setNewEvaluationName] = useState('')
   const [savingEvaluation, setSavingEvaluation] = useState(false)
   const [savingDefaultCriteria, setSavingDefaultCriteria] = useState(false)
-  const { markDirty, requestClose } = useDrawerLeaveGuard({
+  const [submitting, setSubmitting] = useState(false)
+  const [warehouseHistory, setWarehouseHistory] = useState([])
+  const [loadingWarehouseHistory, setLoadingWarehouseHistory] = useState(false)
+  const { closeAfterSubmit, markDirty, requestClose } = useDrawerLeaveGuard({
     open,
     onClose,
     resetKey: initialOrder?.id ?? 'order-inbound-ui',
@@ -88,10 +180,14 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
     .filter(detail => detail?.id !== undefined && detail?.id !== null)
     .map(detail => ({ value: detail.id, label: getDetailLabel(detail) })), [orderDetails])
   const selectedDetailId = Form.useWatch('orderDetailId', form)
-  const quantityReceived = Form.useWatch('quantityReceived', form)
+  const quantity = Form.useWatch('quantity', form)
   const selectedDetail = useMemo(() => orderDetails.find(
     detail => String(detail?.id) === String(selectedDetailId)
   ), [orderDetails, selectedDetailId])
+  const quantitySummary = useMemo(
+    () => getInboundQuantitySummary(selectedDetail, warehouseHistory),
+    [selectedDetail, warehouseHistory]
+  )
   const criteria = Form.useWatch('criteria', form) ?? []
   const passedCriteria = criteria.filter(item => item?.passed).length
 
@@ -101,6 +197,7 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
     let mounted = true
     setLoadingUsers(true)
     setLoadingWarehouses(true)
+    setLoadingProviders(true)
     setLoadingEvaluations(true)
 
     RequestUtils.Get(USER_BUSINESS_API)
@@ -125,6 +222,20 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
         if (mounted) setLoadingWarehouses(false)
       })
 
+    RequestUtils.Get(PROVIDER_API)
+      .then(response => {
+        if (mounted) setProviders(getArrayData(response))
+      })
+      .catch(() => {
+        if (mounted) {
+          setProviders([])
+          message.error('Không tải được danh sách đơn vị giao')
+        }
+      })
+      .finally(() => {
+        if (mounted) setLoadingProviders(false)
+      })
+
     RequestUtils.Get(`/${EVALUATION_LIST_API}`)
       .then(response => {
         console.log('[OrderInbound][evaluation/list response]', response)
@@ -147,6 +258,50 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
     }
   }, [form, open])
 
+  useEffect(() => {
+    const orderId = initialOrder?.id
+    if (!open || orderId == null) return undefined
+
+    let mounted = true
+    setWarehouseHistory([])
+    setLoadingWarehouseHistory(true)
+    RequestUtils.Get(WAREHOUSE_HISTORY_API, {
+      orderId,
+      isFull: 'True',
+    })
+      .then(response => {
+        if (mounted) setWarehouseHistory(getArrayData(response))
+      })
+      .catch(error => {
+        if (mounted) {
+          setWarehouseHistory([])
+          message.error(error?.message || 'Không tải được lịch sử chuyển kho')
+        }
+      })
+      .finally(() => {
+        if (mounted) setLoadingWarehouseHistory(false)
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [initialOrder?.id, open])
+
+  useEffect(() => {
+    if (!selectedDetail) {
+      form.setFieldsValue({ item: undefined, quantity: undefined })
+      return
+    }
+    if (loadingWarehouseHistory) return
+
+    form.setFieldsValue({
+      item: selectedDetail.id,
+      quantity: quantitySummary.remainingQuantity > 0
+        ? quantitySummary.remainingQuantity
+        : undefined,
+    })
+  }, [form, loadingWarehouseHistory, quantitySummary.remainingQuantity, selectedDetail])
+
   const handleValuesChange = changedValues => {
     markDirty()
 
@@ -156,26 +311,76 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
       )
       form.setFieldsValue({
         item: detail?.id,
-        quantityReceived: detail?.quantity ?? undefined,
+        quantity: undefined,
       })
     }
   }
 
-  const handleSubmit = values => {
-    const payload = {
-      ...values,
-      orderId: initialOrder?.id,
-      orderDetailId: selectedDetail?.id ?? values.orderDetailId,
-      orderDetailCode: selectedDetail?.code ?? selectedDetail?.key ?? null,
-      productId: selectedDetail?.productId ?? null,
-      skuId: selectedDetail?.skuId ?? null,
-      receivedAt: values.receivedAt?.format?.('YYYY-MM-DD HH:mm:ss') ?? values.receivedAt ?? null,
-      effectiveDate: values.effectiveDate?.format?.('YYYY-MM-DD') ?? values.effectiveDate ?? null,
-      attachments: Array.isArray(values.attachments) ? values.attachments : [],
-    }
-    delete payload.item
+  const handleSubmit = async values => {
+    setSubmitting(true)
+    try {
+      const historyResponse = await RequestUtils.Get(WAREHOUSE_HISTORY_API, {
+        orderId: initialOrder?.id,
+        isFull: 'True',
+      })
+      const historySuccess = historyResponse?.success === true
+        || Number(historyResponse?.errorCode) === 200
+      if (!historySuccess) {
+        throw new Error(historyResponse?.message || 'Không kiểm tra được lịch sử nhập kho')
+      }
 
-    console.log('[OrderInbound][submit payload]', payload)
+      const latestHistory = getArrayData(historyResponse)
+      const latestSummary = getInboundQuantitySummary(selectedDetail, latestHistory)
+      const requestedQuantity = Number(values.quantity)
+      setWarehouseHistory(latestHistory)
+
+      if (!Number.isFinite(requestedQuantity) || requestedQuantity <= 0) {
+        form.setFields([{ name: 'quantity', errors: ['Số lượng nhập phải lớn hơn 0'] }])
+        return
+      }
+      if (latestSummary.remainingQuantity <= 0) {
+        form.setFields([{ name: 'quantity', errors: ['Đơn con này đã được nhập đủ số lượng'] }])
+        message.warning('Đơn con này đã được nhập đủ số lượng')
+        return
+      }
+      if (requestedQuantity > latestSummary.remainingQuantity) {
+        const errorMessage = `Số lượng nhập không được vượt quá ${formatQuantity(latestSummary.remainingQuantity)}`
+        form.setFields([{ name: 'quantity', errors: [errorMessage] }])
+        message.warning(errorMessage)
+        return
+      }
+
+      const infoReceip = {
+        ...values,
+        orderId: initialOrder?.id,
+        orderDetailId: selectedDetail?.id ?? values.orderDetailId,
+        orderDetailCode: selectedDetail?.code ?? selectedDetail?.key ?? null,
+        productId: selectedDetail?.productId ?? null,
+        skuId: selectedDetail?.skuId ?? null,
+        receivedAt: values.receivedAt?.format?.('YYYY-MM-DD HH:mm:ss') ?? values.receivedAt ?? null,
+        effectiveDate: values.effectiveDate?.startOf?.('day')?.format?.('YYYY-MM-DD HH:mm:ss')
+          ?? values.effectiveDate
+          ?? null,
+        attachments: Array.isArray(values.attachments) ? values.attachments : [],
+      }
+      delete infoReceip.item
+
+      const response = await RequestUtils.Post(WAREHOUSE_CREATE_API, {
+        infoReceip,
+      })
+      const isSuccess = response?.success === true || Number(response?.errorCode) === 200
+      if (!isSuccess) {
+        message.error(response?.message || 'Nhập kho thất bại')
+        return
+      }
+
+      message.success(response?.message || 'Nhập kho thành công')
+      closeAfterSubmit()
+    } catch (error) {
+      message.error(error?.message || 'Nhập kho thất bại')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleDefaultCriteriaChange = async (fieldIndex, checked) => {
@@ -245,6 +450,7 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
         initialValues={{
           receiptCode: createReceiptCode(),
           orderCode: initialOrder?.code,
+          providerId: initialOrder?.providerId ?? initialOrder?.provider?.id,
           criteria: [],
         }}
         onValuesChange={handleValuesChange}
@@ -260,8 +466,21 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
                 </Form.Item>
               </Col>
               <Col lg={8} md={12} xs={24}>
-                <Form.Item name="fromUnit" label={<span>Đơn vị giao <b>*</b></span>}>
-                  <Input placeholder="Nhập đơn vị giao" />
+                <Form.Item name="providerId" label={<span>Đơn vị giao <b>*</b></span>}>
+                  <Select
+                    showSearch
+                    allowClear
+                    loading={loadingProviders}
+                    optionFilterProp="label"
+                    placeholder="Chọn đơn vị giao"
+                    options={providers
+                      .filter(provider => provider?.id !== undefined && provider?.id !== null)
+                      .map(provider => ({
+                        value: provider.id,
+                        label: [provider.code, provider.name].filter(Boolean).join(' - ')
+                          || `Nhà cung cấp #${provider.id}`,
+                      }))}
+                  />
                 </Form.Item>
               </Col>
               <Col lg={8} md={12} xs={24}>
@@ -275,7 +494,11 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
                 </Form.Item>
               </Col>
               <Col lg={8} md={12} xs={24}>
-                <Form.Item name="orderDetailId" label={<span>Đơn con cần nhập <b>*</b></span>}>
+                <Form.Item
+                  name="orderDetailId"
+                  label={<span>Đơn con cần nhập <b>*</b></span>}
+                  rules={[{ required: true, message: 'Vui lòng chọn đơn con cần nhập kho' }]}
+                >
                   <Select
                     showSearch
                     optionFilterProp="label"
@@ -302,8 +525,45 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
                 </Form.Item>
               </Col>
               <Col lg={8} md={12} xs={24}>
-                <Form.Item name="quantityReceived" label={<span>SL thực nhận <b>*</b></span>}>
-                  <InputNumber placeholder="Nhập số lượng" style={{ width: '100%' }} />
+                <Form.Item
+                  name="quantity"
+                  label={<span>SL thực nhận <b>*</b></span>}
+                  extra={selectedDetail && !loadingWarehouseHistory
+                    ? `Đã nhập ${formatQuantity(quantitySummary.importedQuantity)} / ${formatQuantity(quantitySummary.orderedQuantity)} · Còn lại ${formatQuantity(quantitySummary.remainingQuantity)}`
+                    : undefined}
+                  rules={[{
+                    validator: (_, value) => {
+                      if (loadingWarehouseHistory) {
+                        return Promise.reject(new Error('Đang kiểm tra lịch sử nhập kho'))
+                      }
+                      if (!selectedDetail) {
+                        return Promise.reject(new Error('Vui lòng chọn đơn con cần nhập kho'))
+                      }
+                      const numericValue = Number(value)
+                      if (value == null || value === '' || !Number.isFinite(numericValue) || numericValue <= 0) {
+                        return Promise.reject(new Error('Số lượng nhập phải lớn hơn 0'))
+                      }
+                      if (quantitySummary.remainingQuantity <= 0) {
+                        return Promise.reject(new Error('Đơn con này đã được nhập đủ số lượng'))
+                      }
+                      if (numericValue > quantitySummary.remainingQuantity) {
+                        return Promise.reject(new Error(
+                          `Số lượng nhập không được vượt quá ${formatQuantity(quantitySummary.remainingQuantity)}`
+                        ))
+                      }
+                      return Promise.resolve()
+                    },
+                  }]}
+                >
+                  <InputNumber
+                    min={0.000001}
+                    max={selectedDetail ? quantitySummary.remainingQuantity : undefined}
+                    disabled={!selectedDetail
+                      || loadingWarehouseHistory
+                      || quantitySummary.remainingQuantity <= 0}
+                    placeholder="Nhập số lượng"
+                    style={{ width: '100%' }}
+                  />
                 </Form.Item>
               </Col>
             </Row>
@@ -452,7 +712,7 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
               </Col>
               <Col lg={8} md={12} xs={24}>
                 <Form.Item label="SL nhập kho">
-                  <Input readOnly value={quantityReceived} placeholder="Tự lấy từ SL thực nhận" />
+                  <Input readOnly value={quantity} placeholder="Tự lấy từ SL thực nhận" />
                 </Form.Item>
               </Col>
               <Col lg={8} md={12} xs={24}>
@@ -467,12 +727,36 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
               </Col>
             </Row>
           </section>
+
+          <section className="order-inbound-section">
+            <div className="order-inbound-section__head"><span>5</span><h2>Lịch sử chuyển kho</h2></div>
+            <Table
+              className="order-inbound-history"
+              rowKey={item => item.id ?? `${item.receiptCode}-${item.createdDate}`}
+              size="small"
+              loading={loadingWarehouseHistory}
+              columns={HISTORY_COLUMNS}
+              dataSource={warehouseHistory}
+              pagination={false}
+              scroll={{ x: 1240 }}
+              locale={{ emptyText: 'Chưa có lịch sử chuyển kho' }}
+            />
+          </section>
         </main>
 
         <footer className="order-inbound-footer">
           <div>
             <Button onClick={requestClose}>Hủy</Button>
-            <Button type="primary" icon={<SaveOutlined />} htmlType="submit">Xác nhận & nhập kho</Button>
+            <Button
+              type="primary"
+              icon={<SaveOutlined />}
+              htmlType="submit"
+              loading={submitting}
+              disabled={loadingWarehouseHistory
+                || Boolean(selectedDetail && quantitySummary.remainingQuantity <= 0)}
+            >
+              Xác nhận & nhập kho
+            </Button>
           </div>
         </footer>
       </Form>

@@ -53,7 +53,7 @@ const GenerateSkuDetailsOnSubmit = (oldSku, newSku) => {
 }
 const log = (value) => console.log('[container.product.index] ', value);
 
-const Product = ({ data, registerCloseGuard }) => {
+const Product = ({ data, registerCloseGuard, closeModalAfterSubmit }) => {
 
   const [form] = Form.useForm();
   const [ record, setRecord ] = useState({});
@@ -181,9 +181,10 @@ const Product = ({ data, registerCloseGuard }) => {
     if (isSuccess) {
       markClean();
       f5List('erp/product/fetch');
+      closeModalAfterSubmit?.();
     }
     InAppEvent.normalInfo(isSuccess ? "Cập nhật thành công" : "Lỗi cập nhật, vui lòng thử lại sau");
-  }, [ data, markClean ]);
+  }, [ closeModalAfterSubmit, data, markClean ]);
 
   return (
     <Form
