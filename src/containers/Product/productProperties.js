@@ -1,51 +1,44 @@
+const hasId = (id) => id !== undefined && id !== null && id !== ''
+
 export const mergeInitialProductProperties = (properties = [], attributes = []) => {
-  const currentProperties = Array.isArray(properties) ? properties : [];
+  const currentProperties = Array.isArray(properties) ? properties : []
   const currentAttributeIds = new Set(
-    currentProperties
-      .map(item => item?.attributedId)
-      .filter(id => id !== undefined && id !== null && id !== '')
-      .map(String),
-  );
+    currentProperties.map(item => item?.attributedId).filter(hasId).map(String),
+  )
 
   const initialProperties = (Array.isArray(attributes) ? attributes : [])
-    .reduce((result, attribute) => {
-      if (
-        attribute?.initial !== true
-        || attribute?.id === undefined
-        || attribute?.id === null
-        || attribute?.id === ''
-        || currentAttributeIds.has(String(attribute.id))
-      ) {
-        return result;
-      }
-
-      currentAttributeIds.add(String(attribute.id));
-      result.push({
+    .filter(attribute => (
+      attribute?.initial === true
+      && hasId(attribute?.id)
+      && !currentAttributeIds.has(String(attribute.id))
+    ))
+    .map(attribute => {
+      currentAttributeIds.add(String(attribute.id))
+      return {
         attributedId: attribute.id,
         attributedValueId: [],
-      });
-      return result;
-    }, []);
+      }
+    })
 
-  return [...currentProperties, ...initialProperties];
-};
+  return [...currentProperties, ...initialProperties]
+}
 
 export const syncSelectedProductProperties = (properties = [], selectedAttributeIds = []) => {
-  const currentProperties = Array.isArray(properties) ? properties : [];
+  const currentProperties = Array.isArray(properties) ? properties : []
   const currentByAttributeId = new Map(
     currentProperties
-      .filter(item => item?.attributedId !== undefined && item?.attributedId !== null)
+      .filter(item => hasId(item?.attributedId))
       .map(item => [String(item.attributedId), item]),
-  );
+  )
 
-  return Array.from(new Set(
+  return [...new Set(
     (Array.isArray(selectedAttributeIds) ? selectedAttributeIds : [])
-      .filter(id => id !== undefined && id !== null && id !== '')
+      .filter(hasId)
       .map(String),
-  )).map(attributeId => (
+  )].map(attributeId => (
     currentByAttributeId.get(attributeId) ?? {
-      attributedId: Number.isNaN(Number(attributeId)) ? attributeId : Number(attributeId),
+      attributedId: Number(attributeId),
       attributedValueId: [],
     }
-  ));
-};
+  ))
+}

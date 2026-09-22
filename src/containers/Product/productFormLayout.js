@@ -39,8 +39,8 @@ const cloneDefaultLayout = () => DEFAULT_PRODUCT_FORM_LAYOUT.map(block => ({
 }));
 
 export const createProductFormLayoutStorageKey = (user = {}) => {
-  const bizId = user?.bizId ?? user?.biz_id ?? 'default';
-  const userId = user?.id ?? user?.userId ?? 'anonymous';
+  const bizId = user?.bizId ?? 'default';
+  const userId = user?.id ?? 'anonymous';
   return `flast:ui:product-form-layout:v${PRODUCT_FORM_LAYOUT_VERSION}:${bizId}:${userId}`;
 };
 
