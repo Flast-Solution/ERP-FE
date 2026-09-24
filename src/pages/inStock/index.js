@@ -23,7 +23,6 @@ import React, { useCallback, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Button, Popconfirm, Form, message, Tooltip } from 'antd';
 import {
-  EditOutlined,
   EyeOutlined,
   SwapOutlined,
   TruckOutlined
@@ -50,7 +49,6 @@ const ListInStock = () => {
   const { hasPermission } = useGetMe();
   const canViewReceipt = hasPermission('inventory.receipt.view');
   const canCreateReceipt = hasPermission('inventory.receipt.create');
-  const canUpdateReceipt = hasPermission('inventory.receipt.update');
   const canTransfer = hasPermission('inventory.transfer.create');
   const canDeliver = hasPermission('inventory.delivery.create');
 
@@ -70,16 +68,16 @@ const ListInStock = () => {
     });
   }, []);
 
-  const openStockForm = useCallback((record, mode) => {
+  const openStockForm = useCallback((record) => {
     const onAfterSubmit = () => {
       f5List("warehouse/fetch");
     };
 
     InAppEvent.emit(HASH_MODAL, {
       hash: "#stock.add",
-      title: mode === 'view' ? 'Chi tiết nhập kho' : 'Chỉnh sửa nhập kho',
+      title: 'Chi tiết nhập kho',
       data: {
-        mode,
+        mode: 'view',
         model: record,
         onSave: onAfterSubmit
       }
@@ -135,13 +133,13 @@ const ListInStock = () => {
     },
     {
       title: 'Tồn kho',
-      dataIndex: 'quantity',
+      dataIndex: 'total',
       width: 80,
       ellipsis: true
     },
     {
-      title: 'Đã nhập',
-      dataIndex: 'total',
+      title: 'Đã nhận',
+      dataIndex: 'quantity',
       width: 80,
       ellipsis: true
     },
@@ -158,7 +156,7 @@ const ListInStock = () => {
       ellipsis: true,
       render: (inTime) => formatTime(inTime)
     },
-    ...(canViewReceipt || canUpdateReceipt || canDeliver || canTransfer ? [{
+    ...(canViewReceipt || canDeliver || canTransfer ? [{
       title: 'Thao tác',
       key: 'action',
       fixed: 'right',
@@ -170,15 +168,7 @@ const ListInStock = () => {
               size="small"
               icon={<EyeOutlined />}
               aria-label="Xem chi tiết"
-              onClick={() => openStockForm(record, 'view')}
-            />
-          </Tooltip>}
-          {canUpdateReceipt && <Tooltip title="Chỉnh sửa">
-            <Button
-              size="small"
-              icon={<EditOutlined />}
-              aria-label="Chỉnh sửa"
-              onClick={() => openStockForm(record, 'edit')}
+              onClick={() => openStockForm(record)}
             />
           </Tooltip>}
           {canDeliver && <Tooltip title="Giao hàng">

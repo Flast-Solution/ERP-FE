@@ -19,17 +19,32 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Table } from 'antd';
 import { arrayNotEmpty } from '@flast-erp/core/utils';
 import { ShowSkuDetail } from '@/containers/Product/SkuView'
 
-const InStockTable = ({ data = [], onChangeSelected, showWhenEmpty = false }) => {
+const InStockTable = ({
+  data = [],
+  onChangeSelected,
+  showWhenEmpty = false,
+  selectable = true,
+  selectedRowKey: controlledSelectedRowKey
+}) => {
 
-  const [selectedRowKey, setSelectedRowKey] = useState(null);
+  const [internalSelectedRowKey, setInternalSelectedRowKey] = useState(null);
+  const selectedRowKey = controlledSelectedRowKey ?? internalSelectedRowKey;
+
+  useEffect(() => {
+    if (controlledSelectedRowKey === undefined && data.length > 0 && internalSelectedRowKey === null) {
+      setInternalSelectedRowKey(data[0].id);
+      onChangeSelected?.(data[0]);
+    }
+  }, [controlledSelectedRowKey, data, internalSelectedRowKey, onChangeSelected]);
+
   const onChangeSelectedRow = (key, item) => {
-    setSelectedRowKey(key);
-    onChangeSelected(item);
+    setInternalSelectedRowKey(key);
+    onChangeSelected?.(item);
   };
 
   const columns = [
@@ -60,7 +75,7 @@ const InStockTable = ({ data = [], onChangeSelected, showWhenEmpty = false }) =>
       ellipsis: true,
       render: (skuDetails) => <ShowSkuDetail skuDetails={skuDetails} />
     },
-    {
+    ...(selectable ? [{
       title: "Chọn",
       width: 80,
       fixed: 'right',
@@ -74,14 +89,14 @@ const InStockTable = ({ data = [], onChangeSelected, showWhenEmpty = false }) =>
           />
         </div>
       )
-    }
+    }] : [])
   ];
 
   const onRow = (record) => {
     return {
-      onClick: () => {
-        setSelectedRowKey(record.id);
-      }
+      onClick: selectable ? () => {
+        onChangeSelectedRow(record.id, record);
+      } : undefined
     }
   };
 
@@ -94,7 +109,7 @@ const InStockTable = ({ data = [], onChangeSelected, showWhenEmpty = false }) =>
       dataSource={data}
       pagination={data.length > 10}
       onRow={onRow}
-      style={{ cursor: "pointer", marginBottom: 20 }}
+      style={{ cursor: selectable ? "pointer" : "default", marginBottom: 20 }}
     />
   ) : null;
 };

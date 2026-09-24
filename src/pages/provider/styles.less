@@ -1,0 +1,93 @@
+.provider-form {
+  margin-top: 16px;
+  padding-bottom: 72px;
+
+  &__section {
+    margin-bottom: 16px;
+    padding: 16px 16px 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #fff;
+  }
+
+  &__section-title,
+  &__subsection-title {
+    color: #111827;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  &__section-description {
+    margin: 4px 0 16px;
+    color: #6b7280;
+    font-size: 13px;
+  }
+
+  &__subsection-title {
+    margin: 4px 0 12px;
+    font-size: 14px;
+  }
+
+  &__list {
+    display: flex;
+    width: 100%;
+    margin-bottom: 16px;
+  }
+
+  &__list-item {
+    padding: 12px 14px 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fafafa;
+  }
+
+  &__list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 32px;
+    margin-bottom: 4px;
+    color: #374151;
+    font-weight: 600;
+  }
+
+  &__additional {
+    margin-bottom: 16px;
+    background: #fff;
+
+    .ant-collapse-content-box {
+      padding-bottom: 0 !important;
+    }
+  }
+
+  &__footer {
+    position: sticky;
+    z-index: 5;
+    bottom: -16px;
+    display: flex;
+    justify-content: flex-end;
+    margin: 0 -24px;
+    padding: 12px 24px;
+    border-top: 1px solid #e5e7eb;
+    background: #fff;
+    box-shadow: 0 -6px 16px rgb(15 23 42 / 6%);
+  }
+}
+
+.provider-contact-cell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  strong,
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  span {
+    color: #6b7280;
+    font-size: 12px;
+  }
+}

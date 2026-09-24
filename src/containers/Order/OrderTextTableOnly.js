@@ -22,7 +22,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Table, Typography } from "antd";
 import styled from "styled-components";
-import { arrayEmpty, formatMoney } from '@flast-erp/core/utils';
+import { arrayEmpty } from '@flast-erp/core/utils';
 import { ShowSkuDetail } from '@/containers/Product/SkuView';
 
 const { Text } = Typography;
@@ -45,7 +45,39 @@ const StyledTable = styled.div`
 	}
 `;
 
-const OrderTextTableOnly = ({ details }) => {
+const CURRENCY_USD = 'USD';
+const CURRENCY_VND = 'VND';
+
+const formatCurrency = (value, currency) => Number(value ?? 0).toLocaleString(
+	currency === CURRENCY_USD ? 'en-US' : 'vi-VN',
+	{
+		style: 'currency',
+		currency,
+		minimumFractionDigits: currency === CURRENCY_USD ? 2 : 0,
+		maximumFractionDigits: currency === CURRENCY_USD ? 2 : 0
+	}
+);
+
+const convertOriginalAmount = (value, fromCurrency, toCurrency, exchangeRate) => {
+	if (fromCurrency === toCurrency) return Number(value ?? 0);
+	if (fromCurrency === CURRENCY_USD) return Number(value ?? 0) * exchangeRate;
+	return Number(value ?? 0) / exchangeRate;
+};
+
+const convertVndAmount = (value, currency, exchangeRate) => (
+	currency === CURRENCY_USD ? Number(value ?? 0) / exchangeRate : Number(value ?? 0)
+);
+
+const convertToVnd = (value, currency, exchangeRate) => (
+	Number(value ?? 0) * (currency === CURRENCY_USD ? exchangeRate : 1)
+);
+
+const OrderTextTableOnly = ({
+	details,
+	currency = CURRENCY_VND,
+	orderCurrency = CURRENCY_VND,
+	exchangeRate = 1
+}) => {
 
 	const [rawData, setRawData] = useState([]);
 	const generateRaws = useCallback((datas) => {
@@ -61,7 +93,7 @@ const OrderTextTableOnly = ({ details }) => {
 			raws.push({
 				isNoiDungMoRong: true,
 				key: `${key}-sub`,
-				mSkuDetails: detail.mSkuDetails
+				skuDetails: detail.skuDetails
 			});
 		}
 		return raws;
@@ -95,7 +127,7 @@ const OrderTextTableOnly = ({ details }) => {
 			render: (_, record) => {
 				if (record.isNoiDungMoRong) {
 					return {
-						children: <ShowSkuDetail skuDetails={record.mSkuDetails} />,
+						children: <ShowSkuDetail skuDetails={record.skuDetails} />,
 						...COL_SPAN_4
 					};
 				}
@@ -115,21 +147,36 @@ const OrderTextTableOnly = ({ details }) => {
 			align: "center",
 			render: (price, record) => record.isNoiDungMoRong ? COL_SPAN_0 : (
 				<>
-					{formatMoney(price)}
-					{record.discountAmount > 0 &&
-						<strong><br />Giảm: ({formatMoney(record.discountAmount)}) </strong>
+					{formatCurrency(
+						convertOriginalAmount(price, orderCurrency, currency, exchangeRate),
+						currency
+					)}
+					{record.priceOff > 0 &&
+						<strong><br />Giảm: ({formatCurrency(
+							convertOriginalAmount(record.priceOff, orderCurrency, currency, exchangeRate),
+							currency
+						)}) </strong>
 					}
 				</>
 			)
 		},
 		{
 			title: "Thành tiền",
-			dataIndex: "totalPrice",
+			dataIndex: "total",
 			align: "center",
-			render: (totalPrice, record) => record.isNoiDungMoRong ? COL_SPAN_0 : (
-				<Text strong>{record.discountAmount > 0
-					? formatMoney(totalPrice - record.discountAmount)
-					: formatMoney(totalPrice)}
+			render: (total, record) => record.isNoiDungMoRong ? COL_SPAN_0 : (
+				<Text strong>{formatCurrency(
+					convertVndAmount(
+						Math.max(
+							Number(total ?? 0)
+								- convertToVnd(record.priceOff, orderCurrency, exchangeRate),
+							0
+						),
+						currency,
+						exchangeRate
+					),
+					currency
+				)}
 				</Text>
 			)
 		}

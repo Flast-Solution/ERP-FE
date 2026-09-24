@@ -19,8 +19,11 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { Button, Col, Form, message, Row } from 'antd';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { Button, Col, Empty, Form, message, Row, Table, Tag } from 'antd';
+import { ExportOutlined, PrinterOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
+import { useReactToPrint } from 'react-to-print';
 import {
   FormContextCustom,
   FormSelectInfiniteProduct,
@@ -36,8 +39,86 @@ import {
 import InStockTable from '@/containers/WareHouse/InStockTable'
 import { ShowSkuDetail } from '@/containers/Product/SkuView';
 import { isEmpty } from 'lodash';
-import { RequestUtils, createMSkuDetails } from '@flast-erp/core/utils';
+import { InAppEvent, RequestUtils, createMSkuDetails } from '@flast-erp/core/utils';
 import { useEffectAsync } from '@flast-erp/core/hooks';
+import { HASH_MODAL } from '@/configs';
+import useGetMe from '@/hooks/useGetMe';
+import './ModalNhapKho.less';
+
+const displayValue = value => (
+  value === undefined || value === null || value === '' ? '—' : value
+);
+
+const formatDateTime = value => {
+  if (!value) return '—';
+  const date = dayjs(value);
+  return date.isValid() ? date.format('DD/MM/YYYY · HH:mm') : value;
+};
+
+const formatQuantity = (value, unit) => {
+  if (value === undefined || value === null || value === '') return '—';
+  const number = Number(value);
+  const formatted = Number.isFinite(number) ? number.toLocaleString('vi-VN') : value;
+  return [formatted, unit].filter(Boolean).join(' ');
+};
+
+const formatCurrency = (value, currency) => {
+  if (value === undefined || value === null || value === '') return '—';
+  return Number(value).toLocaleString(currency === 'USD' ? 'en-US' : 'vi-VN', {
+    style: 'currency',
+    currency: currency || 'VND',
+    maximumFractionDigits: currency === 'USD' ? 2 : 0
+  });
+};
+
+const parseCriteria = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== 'string' || !value.trim()) return [];
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const parseSkuInfo = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== 'string' || !value.trim()) return [];
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const getArrayData = response => {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.data)) return response.data;
+  if (Array.isArray(response?.data?.data)) return response.data.data;
+  if (Array.isArray(response?.data?.embedded)) return response.data.embedded;
+  return [];
+};
+
+const DetailItem = ({ label, value, mono = false, wide = false }) => (
+  <div className={`warehouse-receipt-detail__item${wide ? ' warehouse-receipt-detail__item--wide' : ''}`}>
+    <span>{label}</span>
+    <strong className={mono ? 'warehouse-receipt-detail__mono' : undefined}>
+      {displayValue(value)}
+    </strong>
+  </div>
+);
+
+const SectionHeader = ({ number, title, extra }) => (
+  <div className="warehouse-receipt-detail__section-head">
+    <span className="warehouse-receipt-detail__section-number">{number}</span>
+    <h3>{title}</h3>
+    {extra}
+  </div>
+);
 
 const getFormValues = (model = {}) => ({
   id: model?.id ?? null,
@@ -49,22 +130,6 @@ const getFormValues = (model = {}) => ({
   stockId: model?.stockId ?? model?.warehouseId ?? model?.stock?.id ?? null
 });
 
-const parseSkuInfo = (skuInfo) => {
-  if (Array.isArray(skuInfo)) {
-    return skuInfo;
-  }
-  if (typeof skuInfo !== 'string' || !skuInfo.trim()) {
-    return [];
-  }
-
-  try {
-    const parsedSkuInfo = JSON.parse(skuInfo);
-    return Array.isArray(parsedSkuInfo) ? parsedSkuInfo : [];
-  } catch {
-    return [];
-  }
-};
-
 const ModalNhapKho = ({
   product,
   onSave,
@@ -73,7 +138,13 @@ const ModalNhapKho = ({
 }) => {
 
   const [ form ] = Form.useForm();
+  const printRef = useRef(null);
+  const { hasPermission } = useGetMe();
+  const canCreateDelivery = hasPermission('inventory.delivery.create');
   const [ inStocks, setInStocks ] = useState([]);
+  const [ selectedInStockId, setSelectedInStockId ] = useState(null);
+  const [ evaluationCriteria, setEvaluationCriteria ] = useState([]);
+  const [ businessUsers, setBusinessUsers ] = useState([]);
   const [ skus, setSkus ] = useState([]);
   const [ record, setRecord ] = useState({});
   const model = useMemo(() => data?.model ?? data?.record ?? {}, [data]);
@@ -83,6 +154,16 @@ const ModalNhapKho = ({
   const [ mProduct, setProduct ] = useState(product || data?.product || model?.product || {});
   const [ sku, setSkuDetail ] = useState();
   const handleSave = onSave || data?.onSave;
+  const evaluationNameById = useMemo(() => new Map(
+    evaluationCriteria.map(item => [String(item.evaluationCriteriaId), item.name])
+  ), [evaluationCriteria]);
+  const userNameById = useMemo(() => new Map(
+    businessUsers.map(user => [String(user.id), user.fullName])
+  ), [businessUsers]);
+  const printReceipt = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `phieu-nhap-kho-${model?.id ?? ''}`
+  });
 
   useEffect(() => {
     const values = getFormValues(model);
@@ -116,33 +197,62 @@ const ModalNhapKho = ({
   }, [model, product]);
 
   useEffectAsync(async () => {
-    if (!isEdit || !model?.id) {
+    if (!model?.id) {
+      setInStocks([]);
+      setSelectedInStockId(null);
       return;
     }
 
-    const response = await RequestUtils.Get('/erp/warehouse/fetch-history', {
-      warehouseId: model.id
-    });
-
+    const historyParams = model?.orderId
+      ? { orderId: model.orderId, isFull: 'True' }
+      : { warehouseId: model.id, isFull: 'True' };
+    const response = await RequestUtils.Get('/erp/warehouse/fetch-history', historyParams);
     const historyItems = Array.isArray(response?.data?.embedded)
       ? response.data.embedded
       : [];
 
-    setInStocks(historyItems.map((item) => {
-      const skuDetails = parseSkuInfo(item?.skuInfo);
-      const skuName = skuDetails
-        .flatMap(detail => detail?.values ?? [])
-        .map(value => value?.text)
-        .filter(Boolean)
-        .join(' - ');
+    const relevantHistory = historyItems
+      .filter(item => String(item?.warehouserProductId) === String(model.id))
+      .map(item => {
+        const skuDetails = parseSkuInfo(item?.skuInfo);
+        return {
+          ...item,
+          skuDetails,
+          skuName: skuDetails
+            .flatMap(detail => detail?.values ?? [])
+            .map(value => value?.text)
+            .filter(Boolean)
+            .join(' - ')
+        };
+      });
 
-      return {
-        ...item,
-        skuName,
-        skuDetails
-      };
-    }));
-  }, [isEdit, model]);
+    setInStocks(relevantHistory);
+    setSelectedInStockId(relevantHistory[0]?.id ?? null);
+  }, [model]);
+
+  useEffect(() => {
+    if (!readOnly) return undefined;
+
+    let mounted = true;
+    Promise.all([
+      RequestUtils.Get('/evaluation/list').catch(() => []),
+      RequestUtils.Get('/auth/user-bussiness/list-user').catch(() => [])
+    ])
+      .then(([evaluationResponse, userResponse]) => {
+        if (!mounted) return;
+        setEvaluationCriteria(getArrayData(evaluationResponse));
+        setBusinessUsers(getArrayData(userResponse));
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setEvaluationCriteria([]);
+        setBusinessUsers([]);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [readOnly]);
 
   const onFinish = useCallback(async (values) => {
     const mSkuDetails = sku
@@ -194,6 +304,174 @@ const ModalNhapKho = ({
   const updateRecord = useCallback((values) => {
     setRecord(pre => ({ ...pre, ...values }));
   }, []);
+
+  if (readOnly) {
+    const receiptDetail = inStocks.find(item => item.id === selectedInStockId)
+      ?? inStocks[0]
+      ?? null;
+    const unit = model?.product?.unit;
+    const currency = model?.product?.currency;
+    const productLabel = [model?.product?.code, model?.product?.name]
+      .filter(Boolean)
+      .join(' · ');
+    const criteria = parseCriteria(receiptDetail?.criteria);
+    const attachments = parseCriteria(receiptDetail?.attachments);
+    const passedCriteria = criteria.filter(item => item?.passed === true).length;
+    const criteriaColumns = [
+      {
+        title: 'STT',
+        width: 60,
+        render: (_, item, index) => String(index + 1).padStart(2, '0')
+      },
+      {
+        title: 'Chỉ tiêu',
+        dataIndex: 'criterionId',
+        render: criterionId => displayValue(evaluationNameById.get(String(criterionId)))
+      },
+      {
+        title: 'Tiêu chuẩn',
+        dataIndex: 'standard',
+        render: displayValue
+      },
+      {
+        title: 'Kết quả',
+        dataIndex: 'measuredValue',
+        render: displayValue
+      },
+      {
+        title: 'Đánh giá',
+        dataIndex: 'passed',
+        width: 110,
+        align: 'center',
+        render: passed => (
+          <Tag color={passed === true ? 'success' : 'error'}>
+            {passed === true ? 'Đạt' : 'Chưa đạt'}
+          </Tag>
+        )
+      }
+    ];
+    const openCreateDelivery = () => {
+      closeModal?.();
+      setTimeout(() => InAppEvent.emit(HASH_MODAL, {
+        hash: '#warehouse.delivery',
+        title: 'Tạo lệnh xuất kho',
+        data: {
+          itemInStock: model,
+          receiptDetail,
+          inStocks,
+          skuId: model?.skuId
+        }
+      }), 0);
+    };
+
+    return (
+      <div className="warehouse-receipt-detail" ref={printRef}>
+        <section className="warehouse-receipt-detail__section">
+          <SectionHeader number="1" title="Thông tin đơn nhập" />
+          <div className="warehouse-receipt-detail__grid">
+            <DetailItem label="Đơn vị giao" value={model?.providerName} />
+            <DetailItem label="Ngày nhận" value={formatDateTime(receiptDetail?.receivedAt)} mono />
+            <DetailItem label="Mặt hàng" value={productLabel} />
+            <DetailItem label="Mã phiếu" value={receiptDetail?.receiptCode} mono />
+            <DetailItem label="Mã đơn" value={receiptDetail?.orderCode} mono />
+            <DetailItem label="Đơn con" value={receiptDetail?.orderDetailCode} mono />
+            <DetailItem label="Lô nội bộ" value={receiptDetail?.lotNo} mono />
+            <DetailItem label="SL thực nhận" value={formatQuantity(receiptDetail?.quantity, unit)} mono />
+            <DetailItem
+              label="Người kiểm"
+              value={userNameById.get(String(receiptDetail?.inspectorId))}
+            />
+          </div>
+        </section>
+
+        <section className="warehouse-receipt-detail__section">
+          <SectionHeader
+            number="2"
+            title="Kết quả kiểm tra nhanh"
+            extra={criteria.length > 0 ? (
+              <Tag className="warehouse-receipt-detail__result" color={passedCriteria === criteria.length ? 'success' : 'error'}>
+                Đạt {passedCriteria} / {criteria.length}
+              </Tag>
+            ) : null}
+          />
+          {criteria.length > 0 ? (
+            <Table
+              rowKey={(item, index) => item?.criterionId ?? index}
+              columns={criteriaColumns}
+              dataSource={criteria}
+              pagination={false}
+              bordered
+              size="small"
+            />
+          ) : (
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description="Chưa có kết quả kiểm tra nhanh"
+            />
+          )}
+          {receiptDetail?.inspectionNote ? (
+            <div className="warehouse-receipt-detail__note">{receiptDetail.inspectionNote}</div>
+          ) : null}
+          {attachments.length > 0 ? (
+            <div className="warehouse-receipt-detail__attachments">
+              {attachments.map(file => (
+                <span key={file}>{String(file).split('/').pop()}</span>
+              ))}
+            </div>
+          ) : null}
+        </section>
+
+        <section className="warehouse-receipt-detail__section">
+          <SectionHeader number="3" title="Tồn kho hiện tại" />
+          <div className="warehouse-receipt-detail__grid">
+            <DetailItem label="Kho nhận" value={receiptDetail?.stockName} />
+            <DetailItem label="Vị trí lưu" value={receiptDetail?.binLocation} mono />
+            <DetailItem label="Ngày hiệu lực" value={formatDateTime(receiptDetail?.effectiveDate)} mono />
+          </div>
+          <div className="warehouse-receipt-detail__metrics">
+            <div>
+              <span>Đã nhận</span>
+              <strong>{formatQuantity(model?.quantity, unit)}</strong>
+            </div>
+            <div>
+              <span>Tồn hiện tại</span>
+              <strong className="warehouse-receipt-detail__metric-highlight">
+                {formatQuantity(model?.total, unit)}
+              </strong>
+            </div>
+            <div>
+              <span>Phí nhập kho</span>
+              <strong>{formatCurrency(model?.fee, currency)}</strong>
+            </div>
+          </div>
+        </section>
+
+        <section className="warehouse-receipt-detail__section">
+          <SectionHeader number="4" title="Lịch sử nhập kho" />
+          <InStockTable
+            data={inStocks}
+            showWhenEmpty
+            selectedRowKey={selectedInStockId}
+            onChangeSelected={item => setSelectedInStockId(item.id)}
+          />
+        </section>
+
+        <div className="warehouse-receipt-detail__footer">
+          <div className="warehouse-receipt-detail__actions">
+            <Button icon={<PrinterOutlined />} onClick={printReceipt}>In phiếu</Button>
+            <Button
+              type="primary"
+              icon={<ExportOutlined />}
+              disabled={!canCreateDelivery}
+              onClick={openCreateDelivery}
+            >
+              Tạo lệnh xuất kho
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Form form={form} layout="vertical" onFinish={onFinish} disabled={readOnly}>
@@ -273,13 +551,7 @@ const ModalNhapKho = ({
             </Col>
           )}
           <Col span={24}>
-            {readOnly ? (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
-                <Button disabled={false} onClick={() => closeModal?.()}>Đóng</Button>
-              </div>
-            ) : (
-              <BtnSubmit marginTop={10} text={isEdit ? 'Cập nhật' : 'Hoàn thành'} />
-            )}
+            <BtnSubmit marginTop={10} text={isEdit ? 'Cập nhật' : 'Hoàn thành'} />
           </Col>
         </Row>
       </FormContextCustom.Provider>

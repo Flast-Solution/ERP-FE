@@ -23,7 +23,9 @@ export const SUCCESS_CODE = 200;
 export const GATE_EVN = {
   Loc: process.env.REACT_APP_API_BASE_URL,
   WS: process.env.REACT_APP_API_WS_URL,
-  Pro: 'https://biz.api.flast.vn/api',
+  // Pro: 'https://biz.api.flast.vn',
+  Pro: 'http://157.10.199.138:9080/api',
+
   Web: 'https://flast-vn'
 };
 

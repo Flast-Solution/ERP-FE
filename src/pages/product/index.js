@@ -22,7 +22,7 @@
 import React, { useCallback, useState } from 'react';
 import { useGetList } from "@flast-erp/core/hooks";
 import { Helmet } from "react-helmet";
-import { RestList, BreadcrumbCustom, CustomImage } from '@flast-erp/core/components';
+import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
 import Filter from './Filter';
 import { Button, Dropdown, Space, Tooltip } from 'antd';
 import { ApartmentOutlined, EyeOutlined } from '@ant-design/icons';
@@ -39,10 +39,19 @@ import useWorkflowModal from '@/containers/Order/List/hooks/useWorkflowModal';
 import useWorkflowProgressDrawer from '@/containers/Order/List/hooks/useWorkflowProgressDrawer';
 import { PRODUCT_WORKFLOW_ENTITY_TYPE } from '@/containers/Order/List/constants';
 import { enrichEntitiesWithWorkflowData } from '@/containers/Order/List/services/workflowApi';
-import { getProductImagePreviewUrl } from '@/containers/Product/productImages';
 import useGetMe from '@/hooks/useGetMe';
 
 const PRODUCT_API_PATH = 'erp/product/fetch';
+
+const formatProductPrice = (value, currency = 'VND') => {
+  if (value === undefined || value === null || value === '') return 'Chưa có giá';
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return 'Chưa có giá';
+
+  return `${amount.toLocaleString(currency === 'USD' ? 'en-US' : 'vi-VN', {
+    maximumFractionDigits: currency === 'USD' ? 2 : 4
+  })} ${currency}`;
+};
 
 const Index = () => {
   const { hasPermission } = useGetMe();
@@ -129,23 +138,24 @@ const Index = () => {
     {
       title: "Mã",
       dataIndex: 'code',
-      width: 110,
+      width: 200,
       ellipsis: true
     },
-    {
-      title: "Hình ảnh",
-      dataIndex: 'image',
-      width: 150,
-      ellipsis: true,
-      render: (image) => getProductImagePreviewUrl(image) ? (
-        <CustomImage
-          preview={false}
-          width={50}
-          src={getProductImagePreviewUrl(image)}
-          alt='image'
-        />
-      ) : ('Chưa có')
-    },
+
+    // {
+    //   title: "Hình ảnh",
+    //   dataIndex: 'image',
+    //   width: 150,
+    //   ellipsis: true,
+    //   render: (image) => getProductImagePreviewUrl(image) ? (
+    //     <CustomImage
+    //       preview={false}
+    //       width={50}
+    //       src={getProductImagePreviewUrl(image)}
+    //       alt='image'
+    //     />
+    //   ) : ('Chưa có')
+    // },
     {
       title: "Sản phẩm",
       key: 'name',
@@ -156,6 +166,13 @@ const Index = () => {
         : record.name
     },
     {
+      title: "Status",
+      dataIndex: 'status',
+      ellipsis: true,
+      width: 120,
+      render: (status) => (status || 0) === 0 ? 'Ngưng' : 'Kích hoạt'
+    },
+    {
       title: "SKus",
       dataIndex: 'skus',
       width: 400,
@@ -164,10 +181,25 @@ const Index = () => {
     },
     {
       title: "Giá bán",
-      dataIndex: 'skus',
+      key: 'price',
       width: 250,
       ellipsis: true,
-      render: (skus) => <PriceView skus={skus} />
+      render: (_, record) => {
+        const skus = Array.isArray(record?.skus) ? record.skus : [];
+        const hasSkuPrices = skus.some(sku => Array.isArray(sku?.skuPrices) && sku.skuPrices.length > 0);
+
+        return (
+          <div>
+            <strong>{formatProductPrice(record?.price, record?.currency)}</strong>
+            {record?.priceRef !== undefined && record?.priceRef !== null ? (
+              <div style={{ color: '#8c8c8c', fontSize: 12 }}>
+                Tham khảo: {formatProductPrice(record.priceRef, record?.currency)}
+              </div>
+            ) : null}
+            {hasSkuPrices ? <PriceView skus={skus} /> : null}
+          </div>
+        );
+      }
     },
     {
       title: "Created",
@@ -176,13 +208,7 @@ const Index = () => {
       ellipsis: true,
       render: (createdAt) => formatTime(createdAt)
     },
-    {
-      title: "Status",
-      dataIndex: 'status',
-      ellipsis: true,
-      width: 120,
-      render: (status) => (status || 0) === 0 ? 'Ngưng' : 'Kích hoạt'
-    },
+
     {
       title: "",
       width: 190,
