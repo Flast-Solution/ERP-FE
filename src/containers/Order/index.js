@@ -20,7 +20,7 @@
 /**************************************************************************/
 
 import React, { useCallback, useState } from 'react';
-import { Table, Button, DatePicker, Input, InputNumber, Select, Space, Typography, message } from 'antd';
+import { Table, Button, DatePicker, Input, InputNumber, Select, Space, Tooltip, Typography, message } from 'antd';
 import { ShowSkuDetail } from '@/containers/Product/SkuView';
 import { arrayEmpty, arrayNotEmpty, formatMoney } from '@flast-erp/core/utils';
 import { formatterInputNumber, parserInputNumber } from '@flast-erp/core/utils';
@@ -54,6 +54,39 @@ const currencyOptions = [
   { label: 'USD', value: CURRENCY_USD }
 ];
 const vatOptions = [0, 8, 10].map(value => ({ label: `${value}%`, value }));
+
+const SkuOrderLineTooltip = ({ skuDetails, orderLine }) => {
+  const details = Array.isArray(skuDetails) ? skuDetails : [];
+  const orderLineEntries = Object.entries(parseOrderLine(orderLine));
+
+  if (details.length === 0 && orderLineEntries.length === 0) {
+    return <span>Chưa có thông tin SKU và thông tin bổ sung.</span>;
+  }
+
+  return (
+    <div style={{ maxHeight: 360, overflowY: 'auto', paddingRight: 4 }}>
+      <Text strong style={{ color: 'inherit' }}>Thông tin SKU</Text>
+      {details.length > 0 ? details.map((detail, index) => (
+        <div key={`${detail?.text ?? 'sku'}-${index}`} style={{ marginTop: 6 }}>
+          <strong>{detail?.text || 'Thuộc tính'}: </strong>
+          {(Array.isArray(detail?.values) ? detail.values : [])
+            .map(value => value?.text ?? value?.value ?? value?.id)
+            .filter(value => value !== undefined && value !== null && value !== '')
+            .join(', ') || '—'}
+        </div>
+      )) : <div style={{ marginTop: 6 }}>Chưa có</div>}
+
+      <div style={{ marginTop: 12 }}>
+        <Text strong style={{ color: 'inherit' }}>Thông tin bổ sung</Text>
+        {orderLineEntries.length > 0 ? orderLineEntries.map(([key, value]) => (
+          <div key={key} style={{ marginTop: 6 }}>
+            <strong>{key}: </strong>{String(value ?? '—')}
+          </div>
+        )) : <div style={{ marginTop: 6 }}>Chưa có</div>}
+      </div>
+    </div>
+  );
+};
 
 const OpportunityTable = styled(Table)`
   .ant-table-cell {
@@ -878,18 +911,26 @@ const BanHangPage = ({
         return <Text style={{ width: 120 }} ellipsis> {text || '(Chưa nhập)'} </Text>;
       }
       if (column.dataIndex === 'mSkuDetails') {
+        const skuDetails = record.mSkuDetails ?? record.skuDetails ?? [];
         const orderLineEntries = Object.entries(parseOrderLine(record.orderLine));
 
         return (
-          <div>
-            <ShowSkuDetail skuDetails={record.mSkuDetails ?? record.skuDetails} width={260} />
-            {orderLineEntries.map(([key, value]) => (
-              <Text key={key} ellipsis style={{ display: 'block', width: 260 }} title={`${key}: ${value ?? ''}`}>
-                <strong>{key}: </strong>
-                <span>{String(value ?? '')}</span>
-              </Text>
-            ))}
-          </div>
+          <Tooltip
+            placement="topLeft"
+            mouseEnterDelay={0.2}
+            styles={{ root: { maxWidth: 520 } }}
+            title={<SkuOrderLineTooltip skuDetails={skuDetails} orderLine={record.orderLine} />}
+          >
+            <div style={{ cursor: 'help' }}>
+              <ShowSkuDetail skuDetails={skuDetails} width={260} />
+              {orderLineEntries.map(([key, value]) => (
+                <Text key={key} ellipsis style={{ display: 'block', width: 260 }}>
+                  <strong>{key}: </strong>
+                  <span>{String(value ?? '')}</span>
+                </Text>
+              ))}
+            </div>
+          </Tooltip>
         );
       }
       const isFormatted = ['price', 'discountAmount', 'totalPrice'].includes(column.dataIndex);

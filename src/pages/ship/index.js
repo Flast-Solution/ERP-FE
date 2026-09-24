@@ -21,15 +21,37 @@
 
 import React, { useCallback, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import { Button } from 'antd';
+import { Button, Tooltip } from 'antd';
 import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
 import ShipFilter from './Filter';
 import { useGetList } from "@flast-erp/core/hooks";
 import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils';
 import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
-import { ShowSkuDetail } from '@/containers/Product/SkuView';
 import { HASH_MODAL } from '@/configs/constant';
 import useGetMe from '@/hooks/useGetMe';
+
+const getLots = record => Array.isArray(record?.lots) ? record.lots : [];
+const getTotalQuantity = record => getLots(record).reduce(
+  (total, lot) => total + Number(lot?.quantity ?? 0),
+  0
+);
+const getStockNames = record => Array.from(new Set(
+  getLots(record).map(lot => lot?.stockName).filter(Boolean)
+)).join(', ');
+const getProductSkuLabel = record => [
+  record?.productId ? `SP #${record.productId}` : null,
+  record?.skuId ? `SKU #${record.skuId}` : null
+].filter(Boolean).join(' · ') || '—';
+const renderTooltip = value => (
+  <Tooltip title={value || '—'}>
+    <span>{value || '—'}</span>
+  </Tooltip>
+);
+const getDeliveryMode = delivery => {
+  if (delivery?.mode === 'self') return 'Tự giao';
+  if (delivery?.mode === 'carrier') return delivery?.carrier || 'Đơn vị vận chuyển';
+  return '—';
+};
 
 const ShipPage = () => {
 
@@ -43,13 +65,9 @@ const ShipPage = () => {
   }, []);
 
   const onClickGiaoHang = (record) => {
-    if(!record.warehouseProduct) {
-      InAppEvent.normalError("Giao hàng mà chưa có sản phẩm trong kho!");
-      return;
-    }
     InAppEvent.emit(HASH_MODAL, {
       hash: "#ship.update",
-      title: 'Phiếu xuất kho #' + record.orderCode,
+      title: 'Phiếu xuất kho #' + (record.deliveryCode || record.orderCode),
       data: record
     });
   };
@@ -67,81 +85,80 @@ const ShipPage = () => {
 
   const CUSTOM_ACTION = [
     ...(canUpdate || canPrint ? [{
-      title: 'Mã S.Phẩm',
-      dataIndex: 'warehouseProduct',
-      width: 120,
+      title: 'Mã phiếu xuất',
+      dataIndex: 'deliveryCode',
+      width: 180,
       ellipsis: true,
-      render: (warehouse) => warehouse?.product?.code || '(Chưa có)'
-    },
-    {
-      title: 'Sản phẩm',
-      dataIndex: 'warehouseProduct',
-      width: 150,
-      ellipsis: true,
-      render: (warehouse) => warehouse?.product?.name || '(Chưa có)'
+      render: renderTooltip
     },
     {
       title: 'Mã đơn',
       dataIndex: 'orderCode',
-      width: 120,
+      width: 140,
       ellipsis: true
     },
     {
-      title: 'Nhân viên',
-      dataIndex: 'ssoId',
-      width: 120,
+      title: 'Mã đơn con',
+      dataIndex: 'detailCode',
+      width: 140,
+      render: (_, record) => record?.detailCode || record?.orderDetailId || '—',
       ellipsis: true
+    },
+    {
+      title: 'Sản phẩm / SKU',
+      width: 150,
+      render: (_, record) => renderTooltip(getProductSkuLabel(record)),
+      ellipsis: true,
     },
     {
       title: 'Người nhận',
-      dataIndex: 'receiverName',
       width: 150,
+      render: (_, record) => record?.delivery?.recipientName || '—',
       ellipsis: true
     },
     {
       title: 'SĐT',
-      dataIndex: 'receiverMobile',
       width: 120,
+      render: (_, record) => record?.delivery?.recipientPhone || '—',
       ellipsis: true
     },
     {
       title: 'Địa chỉ',
-      dataIndex: 'address',
-      width: 150,
-      ellipsis: true
-    },
-    {
-      title: 'Trạng thái',
-      dataIndex: 'statusName',
-      width: 150,
-      ellipsis: true
-    },
-    {
-      title: 'SKUS',
-      dataIndex: 'warehouseProduct',
       width: 200,
-      ellipsis: true,
-      render: (warehouse) => <ShowSkuDetail skuDetails={warehouse?.skuDetails ?? []} width={250} />
+      render: (_, record) => renderTooltip(record?.delivery?.address),
+      ellipsis: true
+    },
+    {
+      title: 'Hình thức giao',
+      width: 150,
+      render: (_, record) => getDeliveryMode(record?.delivery),
+      ellipsis: true
     },
     {
       title: 'Kho',
-      dataIndex: 'warehouseProduct',
       width: 150,
-      render: (warehouse) => warehouse?.stockName || '',
+      render: (_, record) => getStockNames(record) || '—',
       ellipsis: true
     },
     {
       title: 'Số lượng',
-      dataIndex: 'quantity',
-      width: 80,
+      width: 100,
+      render: (_, record) => getTotalQuantity(record).toLocaleString('vi-VN'),
       ellipsis: true
     },
     {
-      title: 'Thời gian',
-      dataIndex: 'inTime',
-      width: 120,
+      title: 'Ngày xuất',
+      dataIndex: 'outboundDate',
+      width: 150,
       ellipsis: true,
-      render: (inTime) => formatTime(inTime)
+      render: (outboundDate) => formatTime(outboundDate)
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'statusName',
+      width: 130,
+      render: (statusName, record) => statusName || record?.status,
+      ellipsis: true
     },
     {
       title: 'Action',

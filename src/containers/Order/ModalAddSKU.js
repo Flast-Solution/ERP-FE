@@ -286,6 +286,9 @@ const AddSKU = (props) => {
             placeholder='Chọn sản phẩm'
             name='productId'
             customValue={selectedProductId}
+            formatText={(name, item) => (
+              [name, item?.code].filter(Boolean).join(' - ')
+            )}
             required
             onChangeGetSelectedItem={onChangeSelectedProductItem}
           />

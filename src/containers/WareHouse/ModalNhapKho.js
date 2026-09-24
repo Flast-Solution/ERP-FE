@@ -358,6 +358,7 @@ const ModalNhapKho = ({
         data: {
           itemInStock: model,
           receiptDetail,
+          inStocks,
           skuId: model?.skuId
         }
       }), 0);

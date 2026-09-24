@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Typography, Table, Row, Col, message, Form } from 'antd';
+import { Typography, Table, Row, Col, message, Form, Descriptions } from 'antd';
 import { StyledHeaderInvoice } from "@/css/global";
 import { HeaderCompany, FormSelectAPI, CustomButton } from "@flast-erp/core/components";
 
@@ -8,25 +8,19 @@ import { RequestUtils, arrayEmpty, f5List } from '@flast-erp/core/utils';
 import useGetMe from '@/hooks/useGetMe';
 
 const { Title, Text } = Typography;
-const generateListProduct = (warehouse, ship) => {
-  if(arrayEmpty(warehouse?.skuDetails)) {
-    return []
-  }
-  const { note, quantity } = ship;
-  const { product } = warehouse;
-  let name = String(product.name);
-  for(let item of warehouse.skuDetails) {
-    const { text, values } = item;
-    name = name.concat(" - ").concat(text).concat(": ").concat(values.map(v => v.text).join(","));
-  }
-  return [{
-    id: product.id,
-    unit: product.unit,
-    name,
-    note,
-    quantity
-  }];
-}
+const generateListProduct = ship => (
+  (Array.isArray(ship?.lots) ? ship.lots : []).map((lot, index) => ({
+    id: lot?.historyId ?? `${ship?.id ?? 'delivery'}-${index}`,
+    productLabel: [
+      ship?.productId ? `SP #${ship.productId}` : null,
+      ship?.skuId ? `SKU #${ship.skuId}` : null
+    ].filter(Boolean).join(' · ') || '—',
+    receiptCode: lot?.receiptCode,
+    lotNo: lot?.lotNo,
+    stockLabel: [lot?.stockName, lot?.binLocation].filter(Boolean).join(' · '),
+    quantity: Number(lot?.quantity ?? 0)
+  }))
+);
 
 const DeliveryPager = ( { data }) => {
   const { hasPermission } = useGetMe();
@@ -47,39 +41,47 @@ const DeliveryPager = ( { data }) => {
 
   useEffect(() => {
     form.setFieldValue('status', data.status);
-    const { warehouseProduct, ...rest } = data;
-    const lists = generateListProduct(warehouseProduct, rest);
-    setProducts(lists);
+    setProducts(generateListProduct(data));
   }, [data, form]);
 
   const columns = [
     {
       title: 'STT',
-      dataIndex: 'id',
       key: 'id',
-      width: 50
+      width: 50,
+      render: (_, __, index) => index + 1
     },
     {
-      title: 'Tên sản phẩm',
-      dataIndex: 'name',
-      key: 'name'
+      title: 'Sản phẩm / SKU',
+      dataIndex: 'productLabel',
+      key: 'productLabel'
     },
     {
-      title: 'Đơn vị tính',
-      dataIndex: 'unit',
-      key: 'unit',
-      width: 100
+      title: 'Lô',
+      dataIndex: 'lotNo',
+      key: 'lotNo',
+      width: 110,
+      render: value => value || '—'
+    },
+    {
+      title: 'Phiếu nhập',
+      dataIndex: 'receiptCode',
+      key: 'receiptCode',
+      width: 180,
+      render: value => value || '—'
+    },
+    {
+      title: 'Kho · vị trí',
+      dataIndex: 'stockLabel',
+      key: 'stockLabel',
+      width: 180,
+      render: value => value || '—'
     },
     {
       title: 'Số lượng',
       dataIndex: 'quantity',
       key: 'quantity',
       width: 100
-    },
-    {
-      title: 'Ghi chú',
-      dataIndex: 'note',
-      key: 'note'
     }
   ];
 
@@ -88,8 +90,7 @@ const DeliveryPager = ( { data }) => {
       message.error("Lỗi không có sản phẩm giao !");
       return;
     }
-    const { warehouseProduct, ...model } = data;
-    const { message: MSG } = await RequestUtils.Post("/shipping/update", { ...model, status });
+    const { message: MSG } = await RequestUtils.Post("/shipping/update", { ...data, status });
     message.success(MSG);
     f5List("shipping/fetch")
   }
@@ -103,6 +104,13 @@ const DeliveryPager = ( { data }) => {
       </Title>
 
       <Title level={5} style={{ marginBottom: '15px' }}>Danh sách sản phẩm xuất kho:</Title>
+      <Descriptions bordered size="small" column={2} style={{ marginBottom: 20 }}>
+        <Descriptions.Item label="Mã phiếu xuất">{data?.deliveryCode || '—'}</Descriptions.Item>
+        <Descriptions.Item label="Mã đơn">{data?.orderCode || '—'}</Descriptions.Item>
+        <Descriptions.Item label="Người nhận">{data?.delivery?.recipientName || '—'}</Descriptions.Item>
+        <Descriptions.Item label="Số điện thoại">{data?.delivery?.recipientPhone || '—'}</Descriptions.Item>
+        <Descriptions.Item label="Địa chỉ" span={2}>{data?.delivery?.address || '—'}</Descriptions.Item>
+      </Descriptions>
       <Table
         dataSource={products}
         columns={columns}
