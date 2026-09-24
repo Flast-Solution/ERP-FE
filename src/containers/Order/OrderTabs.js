@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Tabs } from 'antd';
 import { arrayNotEmpty, f5List } from '@flast-erp/core/utils';
 import OrderService from '@/services/OrderService';
@@ -29,23 +29,35 @@ import { DollarOutlined, FileTextOutlined, BankOutlined } from '@ant-design/icon
 import Invoice from './Invoice';
 import EnterpriseForm from './EnterpriseForm';
 
-const OrderTabs = ({ data, title }) => {
+const OrderTabs = ({ data, title, closeModalAfterSubmit }) => {
 
   const { customerOrder, hideInvoiceTab = false } = data;
-  const [details, setDetails] = useState([]);
+  const [details, setDetails] = useState(() => (
+    Array.isArray(customerOrder?.details) ? customerOrder.details : []
+  ));
   const [customer, setCustomer] = useState();
+  const [order, setOrder] = useState(customerOrder);
+
+  useEffect(() => {
+    setOrder(customerOrder);
+    setDetails(Array.isArray(customerOrder?.details) ? customerOrder.details : []);
+  }, [customerOrder]);
 
   useEffectAsync(async (isMounted) => {
-    const { customer, data } = await OrderService.getOrderOnEdit(customerOrder.id);
+    const { customer, order, data } = await OrderService.getOrderOnEdit(customerOrder.id);
     if (customer) {
       setCustomer(customer);
     }
-    if (arrayNotEmpty(data)) {
-      setDetails(data);
+    if (order) {
+      setOrder(order);
     }
+    const resolvedDetails = arrayNotEmpty(data)
+      ? data
+      : order?.details ?? customerOrder?.details;
+    setDetails(Array.isArray(resolvedDetails) ? resolvedDetails : []);
   }, [customerOrder]);
 
-  const dataInTabs = { details, customer, customerOrder }
+  const dataInTabs = { details, customer, customerOrder: order ?? customerOrder }
   const tabData = [
     {
       key: 'pay',
@@ -54,7 +66,7 @@ const OrderTabs = ({ data, title }) => {
       component: <OrderPayment data={{
         ...dataInTabs,
         onSave: (values) => f5List("erp/order/fetch")
-      }} />
+      }} closeModalAfterSubmit={closeModalAfterSubmit} />
     },
     {
       key: 'invoice',

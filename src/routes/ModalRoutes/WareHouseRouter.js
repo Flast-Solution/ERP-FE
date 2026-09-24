@@ -36,9 +36,13 @@ const WareHoseRouter = [
   },
   {
     path: 'stock.add',
-    permission: 'inventory.receipt.create',
+    permission: ({ data }) => {
+      if (data?.mode === 'view') return 'inventory.receipt.view';
+      if (data?.model?.id) return 'inventory.receipt.update';
+      return 'inventory.receipt.create';
+    },
     Component: React.lazy(() => import('@/containers/WareHouse/ModalNhapKho')),
-    modalOptions: { title: '', width: 750 }
+    modalOptions: { title: '', width: 900 }
   },
   {
     path: 'ship.update',

@@ -356,7 +356,7 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
       inspectionNote: historyItem?.inspectionNote ?? '',
       inspectorId: historyItem?.inspectorId ?? undefined,
       attachments: parseHistoryArray(historyItem?.attachments),
-      warehouseId: historyItem?.warehouseId ?? historyItem?.stockId ?? undefined,
+      warehouseId: historyItem?.warehouseId ?? undefined,
       binLocation: historyItem?.binLocation ?? '',
       stockStatus: historyItem?.status ?? undefined,
       effectiveDate: parseHistoryDate(historyItem?.effectiveDate),
