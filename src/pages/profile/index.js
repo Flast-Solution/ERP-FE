@@ -17,6 +17,11 @@ import PasswordTab from './PasswordTab'
 import LayoutTab from './LayoutTab'
 import OmniTab from './OmniTab'
 
+const getInitialTab = () => {
+  const tab = new URLSearchParams(window.location.search).get('tab')
+  return TAB_COMPONENTS[tab] ? tab : 'profile'
+}
+
 const PROFILE_TABS = [
   { key: 'profile', label: 'Hồ sơ', icon: UserOutlined },
   { key: 'password', label: 'Mật khẩu', icon: LockOutlined },
@@ -24,19 +29,25 @@ const PROFILE_TABS = [
   { key: 'omni', label: 'Kênh tin nhắn', icon: MessageOutlined },
 ]
 
-/* Map key -> component, thay cho chuỗi ternary lồng nhau.
-   Thêm tab sau này chỉ cần khai báo ở hai chỗ trên cùng file. */
 const TAB_COMPONENTS = {
   profile: ProfileInfoTab,
-  password: PasswordTab,
   layout: LayoutTab,
   omni: OmniTab,
+  password: PasswordTab
 }
 
 const ProfilePage = () => {
 
-  const [activeTab, setActiveTab] = useState('profile')
+  const [ activeTab, setActiveTab ] = useState(getInitialTab)
   const ActiveComponent = TAB_COMPONENTS[activeTab] || ProfileInfoTab
+
+  const handleChangeTab = (key) => {
+    setActiveTab(key)
+    /* Giữ tab trên URL để F5 / chia sẻ link vẫn đúng tab */
+    const url = new URL(window.location.href)
+    url.searchParams.set('tab', key)
+    window.history.replaceState(window.history.state, '', url)
+  }
 
   const renderTabBar = () => (
     <TabBar>
@@ -45,7 +56,7 @@ const ProfilePage = () => {
           key={key}
           type="button"
           $active={activeTab === key}
-          onClick={() => setActiveTab(key)}
+          onClick={() => handleChangeTab(key)}
         >
           <Icon />
           <span>{label}</span>
