@@ -55,7 +55,6 @@
     gap: 4px;
 
     > span {
-      color: #6b7280;
       font-size: 12px;
     }
 
@@ -127,7 +126,6 @@
     }
 
     span {
-      color: #6b7280;
       font-size: 12px;
     }
 
@@ -144,27 +142,47 @@
   &__footer {
     position: sticky;
     z-index: 5;
-    bottom: -16px;
+    bottom: 0;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: 16px;
-    margin: 0 -24px -72px;
+    margin: 0 -24px -16px;
     padding: 12px 24px;
     border-top: 1px solid #e5e7eb;
     background: #fff;
     box-shadow: 0 -6px 16px rgb(15 23 42 / 6%);
 
     span {
-      color: #6b7280;
       font-size: 12px;
     }
   }
 
   &__actions {
     display: flex;
+    justify-content: flex-end;
     gap: 10px;
     flex-shrink: 0;
+    margin-left: auto;
+
+    .ant-btn-primary:not(:disabled) {
+      color: #fff !important;
+      border-color: #2563eb !important;
+      background: #2563eb !important;
+    }
+
+    .ant-btn-primary:not(:disabled):hover,
+    .ant-btn-primary:not(:disabled):focus {
+      color: #fff !important;
+      border-color: #1d4ed8 !important;
+      background: #1d4ed8 !important;
+    }
+
+    .ant-btn-primary:disabled {
+      color: #9ca3af !important;
+      border-color: #d1d5db !important;
+      background: #f3f4f6 !important;
+    }
   }
 }
 

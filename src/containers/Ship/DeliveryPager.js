@@ -1,181 +1,266 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Typography, Table, Row, Col, message, Form, Descriptions } from 'antd';
-import { StyledHeaderInvoice } from "@/css/global";
-import { HeaderCompany, FormSelectAPI, CustomButton } from "@flast-erp/core/components";
-
-import { useReactToPrint } from "react-to-print";
-import { RequestUtils, arrayEmpty, f5List } from '@flast-erp/core/utils';
+import React, { useEffect, useRef } from 'react';
+import {
+  Button,
+  Checkbox,
+  Col,
+  Form,
+  message,
+  Row,
+  Table,
+  Tag,
+  Tooltip
+} from 'antd';
+import { PrinterOutlined, SaveOutlined } from '@ant-design/icons';
+import { FormSelectAPI } from '@flast-erp/core/components';
+import { RequestUtils, f5List } from '@flast-erp/core/utils';
+import { useReactToPrint } from 'react-to-print';
+import dayjs from 'dayjs';
 import useGetMe from '@/hooks/useGetMe';
+import '@/containers/WareHouse/GiaoHang.less';
 
-const { Title, Text } = Typography;
-const generateListProduct = ship => (
-  (Array.isArray(ship?.lots) ? ship.lots : []).map((lot, index) => ({
-    id: lot?.historyId ?? `${ship?.id ?? 'delivery'}-${index}`,
-    productLabel: [
-      ship?.productId ? `SP #${ship.productId}` : null,
-      ship?.skuId ? `SKU #${ship.skuId}` : null
-    ].filter(Boolean).join(' · ') || '—',
-    receiptCode: lot?.receiptCode,
-    lotNo: lot?.lotNo,
-    stockLabel: [lot?.stockName, lot?.binLocation].filter(Boolean).join(' · '),
-    quantity: Number(lot?.quantity ?? 0)
-  }))
+const DOCUMENT_OPTIONS = [
+  { label: 'Phiếu xuất kho', value: 'warehouseSlip' },
+  { label: 'Biên bản giao nhận', value: 'handoverReport' },
+  { label: 'COA', value: 'coa' },
+  { label: 'Hoá đơn VAT', value: 'vatInvoice' }
+];
+
+const DELIVERY_MODE_LABELS = {
+  self: 'Tự giao',
+  carrier: 'Đơn vị vận chuyển'
+};
+
+const DELIVERY_METHOD_LABELS = {
+  company_vehicle: 'Xe công ty',
+  customer_pickup: 'Khách tự lấy'
+};
+
+const FREIGHT_PAYER_LABELS = {
+  sender: 'Bên gửi',
+  receiver: 'Bên nhận'
+};
+
+const formatDateTime = value => (
+  value && dayjs(value).isValid() ? dayjs(value).format('DD/MM/YYYY · HH:mm') : '—'
 );
 
-const DeliveryPager = ( { data }) => {
+const formatQuantity = value => {
+  const number = Number(value ?? 0);
+  return Number.isFinite(number) ? number.toLocaleString('vi-VN') : '0';
+};
+
+const formatCurrency = value => {
+  if (value === null || value === undefined || value === '') return '—';
+  const number = Number(value);
+  return Number.isFinite(number) ? `${number.toLocaleString('vi-VN')} ₫` : '—';
+};
+
+const getFileName = path => String(path || '').split('/').filter(Boolean).pop() || 'Tệp đính kèm';
+
+const Section = ({ number, title, children }) => (
+  <section className="warehouse-delivery__section">
+    <div className="warehouse-delivery__section-head">
+      <span>{number}</span>
+      <h3>{title}</h3>
+    </div>
+    {children}
+  </section>
+);
+
+const ReadonlyField = ({ label, value, mono = false }) => (
+  <div className="warehouse-delivery__readonly">
+    <label>{label}</label>
+    <div className={mono ? 'warehouse-delivery__mono' : undefined}>{value || '—'}</div>
+  </div>
+);
+
+const DeliveryPager = ({ data = {} }) => {
   const { hasPermission } = useGetMe();
   const canUpdate = hasPermission('shipping.delivery.update');
   const canPrint = hasPermission('shipping.delivery.print');
-  
   const contentRef = useRef();
-  const reactToPrintFn = useReactToPrint({ contentRef });
-
-  const [ form ] = Form.useForm();
-  const [ products, setProducts ] =  useState([]);
+  const [form] = Form.useForm();
+  const delivery = data?.delivery ?? {};
+  const lots = Array.isArray(data?.lots) ? data.lots : [];
+  const requiredDocuments = Array.isArray(data?.requiredDocuments) ? data.requiredDocuments : [];
+  const attachments = Array.isArray(data?.attachments) ? data.attachments : [];
+  const printReceipt = useReactToPrint({
+    contentRef,
+    documentTitle: `phieu-xuat-kho-${data?.deliveryCode ?? data?.id ?? ''}`
+  });
 
   useEffect(() => {
-    const domContent = document.getElementById("drawer-content");
-    domContent.style.padding = "0px 24px";
-    return () => domContent.style.padding = "16px 24px";
+    const domContent = document.getElementById('drawer-content');
+    if (!domContent) return undefined;
+    domContent.style.padding = '0px 24px';
+    return () => {
+      domContent.style.padding = '16px 24px';
+    };
   }, []);
 
   useEffect(() => {
-    form.setFieldValue('status', data.status);
-    setProducts(generateListProduct(data));
-  }, [data, form]);
+    form.setFieldValue('status', data?.status);
+  }, [data?.status, form]);
+
+  const productLabel = [
+    data?.productId ? `SP #${data.productId}` : null,
+    data?.skuId ? `SKU #${data.skuId}` : null
+  ].filter(Boolean).join(' · ') || '—';
+  const orderDetailLabel = data?.detailCode || data?.orderDetailId || '—';
+  const totalQuantity = lots.reduce(
+    (total, lot) => total + Number(lot?.quantity ?? 0),
+    0
+  );
 
   const columns = [
     {
       title: 'STT',
-      key: 'id',
-      width: 50,
+      width: 60,
+      align: 'center',
       render: (_, __, index) => index + 1
     },
     {
-      title: 'Sản phẩm / SKU',
-      dataIndex: 'productLabel',
-      key: 'productLabel'
+      title: 'Lô · phiếu nhập',
+      width: 210,
+      render: (_, lot) => (
+        <div className="warehouse-delivery__lot">
+          <strong>{lot?.lotNo || '—'}</strong>
+          <span>{lot?.receiptCode || '—'}</span>
+        </div>
+      )
     },
     {
-      title: 'Lô',
-      dataIndex: 'lotNo',
-      key: 'lotNo',
-      width: 110,
+      title: 'Kho hàng',
+      dataIndex: 'stockName',
+      width: 160,
       render: value => value || '—'
     },
     {
-      title: 'Phiếu nhập',
-      dataIndex: 'receiptCode',
-      key: 'receiptCode',
-      width: 180,
+      title: 'Vị trí',
+      dataIndex: 'binLocation',
+      width: 120,
       render: value => value || '—'
     },
     {
-      title: 'Kho · vị trí',
-      dataIndex: 'stockLabel',
-      key: 'stockLabel',
-      width: 180,
-      render: value => value || '—'
+      title: 'Tồn trước xuất',
+      dataIndex: 'availableQuantity',
+      width: 130,
+      align: 'right',
+      render: formatQuantity
     },
     {
-      title: 'Số lượng',
+      title: 'SL xuất',
       dataIndex: 'quantity',
-      key: 'quantity',
-      width: 100
+      width: 110,
+      align: 'right',
+      render: formatQuantity
     }
   ];
 
   const onFinish = async ({ status }) => {
-    if(arrayEmpty(products)) {
-      message.error("Lỗi không có sản phẩm giao !");
-      return;
+    try {
+      const response = await RequestUtils.Post('/warehouse/delivery', { ...data, status });
+      message.success(response?.message || 'Cập nhật trạng thái thành công');
+      f5List('shipping/fetch');
+    } catch (error) {
+      message.error(error?.message || 'Không cập nhật được trạng thái');
     }
-    const { message: MSG } = await RequestUtils.Post("/shipping/update", { ...data, status });
-    message.success(MSG);
-    f5List("shipping/fetch")
-  }
+  };
 
-  const totalQuantity = products.reduce((sum, product) => sum + product.quantity, 0);
-  return <>
-    <StyledHeaderInvoice ref={contentRef} style={{background: '#fff', padding: '50px 30px', marginBottom: 40}}>
-      <HeaderCompany />
-      <Title level={3} style={{ textAlign: 'center', margin: '30px 0px' }}>
-        PHIẾU XUẤT KHO
-      </Title>
-
-      <Title level={5} style={{ marginBottom: '15px' }}>Danh sách sản phẩm xuất kho:</Title>
-      <Descriptions bordered size="small" column={2} style={{ marginBottom: 20 }}>
-        <Descriptions.Item label="Mã phiếu xuất">{data?.deliveryCode || '—'}</Descriptions.Item>
-        <Descriptions.Item label="Mã đơn">{data?.orderCode || '—'}</Descriptions.Item>
-        <Descriptions.Item label="Người nhận">{data?.delivery?.recipientName || '—'}</Descriptions.Item>
-        <Descriptions.Item label="Số điện thoại">{data?.delivery?.recipientPhone || '—'}</Descriptions.Item>
-        <Descriptions.Item label="Địa chỉ" span={2}>{data?.delivery?.address || '—'}</Descriptions.Item>
-      </Descriptions>
-      <Table
-        dataSource={products}
-        columns={columns}
-        pagination={false}
-        rowKey="id"
-        bordered
-        size="small"
-      />
-
-      <div style={{ marginTop: '15px', textAlign: 'right' }}>
-        <Text strong>Tổng số lượng: </Text>
-        <Text strong style={{ fontSize: '16px', color: '#1890ff' }}>{totalQuantity}</Text>
-      </div>
-
-      <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'space-around' }}>
-        <div style={{ textAlign: 'center' }}>
-          <Text strong>Người nhận hàng</Text>
-          <br />
-          <Text>(Ký, ghi rõ họ tên)</Text>
-          <br /><br /><br />
-          <Text>____________________</Text>
+  return (
+    <>
+      <div className="warehouse-delivery warehouse-delivery--compact" ref={contentRef}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0 4px' }}>
+          <div>
+            <div style={{ color: '#6b7280', fontSize: 13, fontWeight: 600 }}>CHI TIẾT PHIẾU XUẤT KHO</div>
+            <div style={{ color: '#111827', fontSize: 26, fontWeight: 700 }}>{data?.deliveryCode || `#${data?.id ?? ''}`}</div>
+          </div>
+          <Tag color={data?.submitType === 'confirm' ? 'success' : 'default'}>
+            {data?.submitType === 'confirm' ? 'Đã xác nhận' : 'Bản nháp'}
+          </Tag>
         </div>
-        
-        <div style={{ textAlign: 'center' }}>
-          <Text strong>Người xuất hàng</Text>
-          <br />
-          <Text>(Ký, ghi rõ họ tên)</Text>
-          <br /><br /><br />
-          <Text>____________________</Text>
-        </div>
+
+        <Section number="1" title="Thông tin lệnh xuất">
+          <Row gutter={[24, 0]}>
+            <Col md={8} xs={24}><ReadonlyField label="Mã phiếu xuất" value={data?.deliveryCode} mono /></Col>
+            <Col md={8} xs={24}><ReadonlyField label="Loại xuất" value={data?.outboundType} /></Col>
+            <Col md={8} xs={24}><ReadonlyField label="Ngày xuất" value={formatDateTime(data?.outboundDate)} mono /></Col>
+            <Col md={8} xs={24}><ReadonlyField label="Mã đơn" value={data?.orderCode} mono /></Col>
+            <Col md={8} xs={24}><ReadonlyField label="Mã đơn con" value={orderDetailLabel} mono /></Col>
+            <Col md={8} xs={24}><ReadonlyField label="Sản phẩm / SKU" value={productLabel} mono /></Col>
+          </Row>
+        </Section>
+
+        <Section number="2" title="Chi tiết lô xuất">
+          <Table
+            rowKey={(lot, index) => lot?.historyId ?? index}
+            columns={columns}
+            dataSource={lots}
+            pagination={false}
+            bordered
+            scroll={{ x: 890 }}
+          />
+          <div className="warehouse-delivery__summary" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+            <div><span>Số lô xuất</span><strong>{lots.length}</strong></div>
+            <div><span>Tổng số lượng xuất</span><strong className="warehouse-delivery__highlight">{formatQuantity(totalQuantity)}</strong></div>
+          </div>
+        </Section>
+
+        <Section number="3" title="Thông tin giao hàng">
+          <Row gutter={[24, 0]}>
+            <Col md={8} xs={24}><ReadonlyField label="Hình thức giao" value={DELIVERY_MODE_LABELS[delivery?.mode] || delivery?.mode} /></Col>
+            <Col md={8} xs={24}><ReadonlyField label="Phương thức" value={DELIVERY_METHOD_LABELS[delivery?.method] || delivery?.method} /></Col>
+            <Col md={8} xs={24}><ReadonlyField label="Dự kiến giao" value={formatDateTime(delivery?.scheduledAt)} mono /></Col>
+            <Col md={8} xs={24}><ReadonlyField label="Người nhận" value={delivery?.recipientName} /></Col>
+            <Col md={8} xs={24}><ReadonlyField label="Số điện thoại" value={delivery?.recipientPhone} mono /></Col>
+            <Col md={8} xs={24}><ReadonlyField label="Đơn vị vận chuyển" value={delivery?.carrier} /></Col>
+            <Col span={24}><ReadonlyField label="Địa chỉ nhận" value={delivery?.address} /></Col>
+            <Col md={8} xs={24}><ReadonlyField label="Biển số xe" value={delivery?.vehiclePlate} mono /></Col>
+            <Col md={8} xs={24}><ReadonlyField label="Tài xế" value={delivery?.driverName} /></Col>
+            <Col md={8} xs={24}><ReadonlyField label="Mã vận đơn" value={delivery?.trackingCode} mono /></Col>
+            <Col md={8} xs={24}><ReadonlyField label="Dịch vụ" value={delivery?.service} /></Col>
+            <Col md={8} xs={24}><ReadonlyField label="Khối lượng" value={delivery?.weight != null ? `${formatQuantity(delivery.weight)} kg` : '—'} /></Col>
+            <Col md={8} xs={24}><ReadonlyField label="Số kiện" value={delivery?.packages != null ? formatQuantity(delivery.packages) : '—'} /></Col>
+            <Col md={8} xs={24}><ReadonlyField label="Người trả cước" value={FREIGHT_PAYER_LABELS[delivery?.freightPayer] || delivery?.freightPayer} /></Col>
+            <Col md={8} xs={24}><ReadonlyField label="Cước dự kiến" value={formatCurrency(delivery?.expectedShippingCost)} /></Col>
+            <Col span={24}><ReadonlyField label="Ghi chú giao hàng" value={delivery?.note} /></Col>
+          </Row>
+        </Section>
+
+        <Section number="4" title="Chứng từ kèm theo">
+          <div className="warehouse-delivery__documents">
+            <Checkbox.Group options={DOCUMENT_OPTIONS} value={requiredDocuments} disabled />
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+            {attachments.length > 0 ? attachments.map(path => (
+              <Tooltip key={path} title={path}>
+                <Tag>{getFileName(path)}</Tag>
+              </Tooltip>
+            )) : <span style={{ color: '#6b7280' }}>Không có tệp đính kèm</span>}
+          </div>
+        </Section>
       </div>
 
-      <div style={{ marginTop: '30px', fontSize: '12px', color: '#666' }}>
-        <Text italic>Ghi chú: Phiếu xuất kho này được lập thành 02 bản, trong đó:</Text>
-        <br />
-        <Text italic>- 01 bản giao cho người nhận hàng</Text>
-        <br />
-        <Text italic>- 01 bản kế toán lưu</Text>
-      </div>
-    </StyledHeaderInvoice>
-
-    <Form form={form} onFinish={onFinish} >
-      <Row gutter={24} style={{padding: 10}}>
-        {canUpdate && <Col md={12} xs={24}>
-          <FormSelectAPI
-            required
-            apiPath="shipping/fetch-status"
-            name="status"
-            placeholder={"Chọn trạng thái"}
-          />
-        </Col>}
-        {canUpdate && <Col md={10} xs={24}>
-          <CustomButton 
-            htmlType="submit"
-            variant="outlined" 
-            title="Cập nhật trạng thái" 
-            inRigth={false}
-          />
-        </Col>}
-        {canPrint && <Col md={2} xs={24}>
-          <CustomButton onClick={reactToPrintFn} title="In phiếu" />
-        </Col>}
-      </Row>
-    </Form>
-  </>
+      <Form form={form} layout="vertical" onFinish={onFinish}>
+        <footer className="warehouse-delivery__footer">
+          <span>Phiếu xuất kho được hiển thị ở chế độ xem chi tiết.</span>
+          <div>
+            {canUpdate && (
+              <FormSelectAPI
+                required
+                apiPath="shipping/fetch-status"
+                name="status"
+                placeholder="Chọn trạng thái"
+                formItemProps={{ style: { width: 220, marginBottom: 0 } }}
+              />
+            )}
+            {canUpdate && <Button htmlType="submit" icon={<SaveOutlined />}>Cập nhật trạng thái</Button>}
+            {canPrint && <Button type="primary" icon={<PrinterOutlined />} onClick={printReceipt}>In phiếu</Button>}
+          </div>
+        </footer>
+      </Form>
+    </>
+  );
 };
 
 export default DeliveryPager;

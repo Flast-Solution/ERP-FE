@@ -67,7 +67,7 @@ const ShipPage = () => {
   const onClickGiaoHang = (record) => {
     InAppEvent.emit(HASH_MODAL, {
       hash: "#ship.update",
-      title: 'Phiếu xuất kho #' + (record.deliveryCode || record.orderCode),
+      title: 'Chi tiết phiếu xuất kho #' + (record.deliveryCode || record.orderCode),
       data: record
     });
   };
@@ -171,7 +171,7 @@ const ShipPage = () => {
           size="small"
           onClick={() => onClickGiaoHang(record)}
         >
-          {canUpdate ? 'Cập nhật' : 'Xem phiếu'}
+          Chi tiết
         </Button>
       )
     }] : [])

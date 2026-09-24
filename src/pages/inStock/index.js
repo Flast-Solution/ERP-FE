@@ -133,13 +133,13 @@ const ListInStock = () => {
     },
     {
       title: 'Tồn kho',
-      dataIndex: 'quantity',
+      dataIndex: 'total',
       width: 80,
       ellipsis: true
     },
     {
-      title: 'Đã nhập',
-      dataIndex: 'total',
+      title: 'Đã nhận',
+      dataIndex: 'quantity',
       width: 80,
       ellipsis: true
     },

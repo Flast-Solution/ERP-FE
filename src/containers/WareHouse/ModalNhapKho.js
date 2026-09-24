@@ -430,13 +430,13 @@ const ModalNhapKho = ({
           </div>
           <div className="warehouse-receipt-detail__metrics">
             <div>
-              <span>Đã nhập</span>
-              <strong>{formatQuantity(model?.total, unit)}</strong>
+              <span>Đã nhận</span>
+              <strong>{formatQuantity(model?.quantity, unit)}</strong>
             </div>
             <div>
               <span>Tồn hiện tại</span>
               <strong className="warehouse-receipt-detail__metric-highlight">
-                {formatQuantity(model?.quantity, unit)}
+                {formatQuantity(model?.total, unit)}
               </strong>
             </div>
             <div>

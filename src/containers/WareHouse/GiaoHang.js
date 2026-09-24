@@ -86,6 +86,8 @@ const formatQuantity = (value, unit) => {
 
 const emptyToNull = (value) => (value === undefined || value === '' ? null : value);
 
+const toDayjs = value => (value && dayjs(value).isValid() ? dayjs(value) : undefined);
+
 const DeliverySection = ({ number, title, children }) => (
   <section className="warehouse-delivery__section">
     <div className="warehouse-delivery__section-head">
@@ -171,20 +173,27 @@ const OutboundDocumentsUpload = () => {
 const GiaoHangForm = ({ data = {}, closeModal }) => {
   const [form] = Form.useForm();
   const submitTypeRef = useRef('confirm');
+  const hasSubmittedDataRef = useRef(false);
+  const draftIdRef = useRef(null);
   const itemInStock = data.itemInStock ?? EMPTY_RECORD;
   const [historyItems, setHistoryItems] = useState(
     Array.isArray(data.inStocks) ? data.inStocks : []
   );
   const product = itemInStock.product ?? EMPTY_RECORD;
   const unit = product.unit ?? '';
-  const deliveryCode = useMemo(createDeliveryCode, []);
+  const initialDeliveryCode = useMemo(createDeliveryCode, []);
+  const [deliveryCode, setDeliveryCode] = useState(initialDeliveryCode);
   const [deliveryMode, setDeliveryMode] = useState('self');
   const [selectedLotKeys, setSelectedLotKeys] = useState([]);
   const [lotQuantities, setLotQuantities] = useState({});
+  const [lotValidationError, setLotValidationError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const orderMeta = historyItems[0] ?? data.receiptDetail ?? EMPTY_RECORD;
-  const orderId = orderMeta.orderId ?? itemInStock.orderId;
+  // Meta đơn lấy từ history (fetch-history / receiptDetail), không fallback itemInStock
+  const orderMeta = historyItems[0] ?? data.receiptDetail ?? null;
+  const orderId = orderMeta?.orderId;
+  const orderCode = orderMeta?.orderCode;
+  const productId = orderMeta?.productId;
 
   useEffect(() => {
     if (!orderId) return undefined;
@@ -192,7 +201,7 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
     let mounted = true;
     RequestUtils.Get('/erp/order/view-on-edit', { orderId })
       .then(response => {
-        if (!mounted) return;
+        if (!mounted || hasSubmittedDataRef.current) return;
         const orderData = response?.data ?? EMPTY_RECORD;
         const order = orderData.order ?? EMPTY_RECORD;
         form.setFieldsValue({
@@ -211,6 +220,70 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
       mounted = false;
     };
   }, [form, orderId]);
+
+  useEffect(() => {
+    if (!orderCode || !productId) return undefined;
+
+    let mounted = true;
+    RequestUtils.Get('/shipping/find-submit', { orderCode, productId })
+      .then(response => {
+        if (!mounted) return;
+        const submittedData = response?.data;
+        if (!submittedData || typeof submittedData !== 'object' || Array.isArray(submittedData)) {
+          return;
+        }
+
+        const delivery = submittedData.delivery ?? EMPTY_RECORD;
+        const lots = Array.isArray(submittedData.lots) ? submittedData.lots : [];
+        const mode = delivery.mode ?? 'self';
+
+        hasSubmittedDataRef.current = true;
+        draftIdRef.current = submittedData.submitType === 'draft'
+          ? submittedData.id ?? null
+          : null;
+        setDeliveryCode(submittedData.deliveryCode || initialDeliveryCode);
+        setDeliveryMode(mode);
+        setSelectedLotKeys(lots.map(lot => lot.historyId).filter(id => id != null));
+        setLotQuantities(lots.reduce((quantities, lot) => {
+          if (lot.historyId != null) quantities[lot.historyId] = Number(lot.quantity ?? 0);
+          return quantities;
+        }, {}));
+        form.setFieldsValue({
+          outboundType: submittedData.outboundType,
+          outboundDate: toDayjs(submittedData.outboundDate),
+          deliveryMode: mode,
+          selfMethod: delivery.method,
+          carrier: delivery.carrier,
+          service: delivery.service,
+          trackingCode: delivery.trackingCode,
+          address: delivery.address,
+          recipientName: delivery.recipientName,
+          recipientPhone: delivery.recipientPhone,
+          scheduledAt: toDayjs(delivery.scheduledAt),
+          vehiclePlate: delivery.vehiclePlate,
+          driverName: delivery.driverName,
+          weight: delivery.weight,
+          packages: delivery.packages,
+          freightPayer: delivery.freightPayer,
+          expectedShippingCost: delivery.expectedShippingCost,
+          note: delivery.note,
+          requiredDocuments: Array.isArray(submittedData.requiredDocuments)
+            ? submittedData.requiredDocuments
+            : [],
+          attachments: Array.isArray(submittedData.attachments)
+            ? submittedData.attachments
+            : []
+        });
+      })
+      .catch(error => {
+        if (!mounted) return;
+        message.error(error?.message ?? 'Không tải được dữ liệu lệnh xuất đã lưu');
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [form, initialDeliveryCode, orderCode, productId]);
 
   useEffect(() => {
     if (Array.isArray(data.inStocks) && data.inStocks.length > 0) {
@@ -246,7 +319,7 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
   }, [data.inStocks, itemInStock]);
 
   const productLabel = [product.code, product.name].filter(Boolean).join(' · ');
-  const orderLabel = [orderMeta.orderCode, orderMeta.orderDetailCode]
+  const orderLabel = [orderMeta?.orderCode, orderMeta?.orderDetailCode]
     .filter(Boolean)
     .join(' · ');
 
@@ -292,6 +365,7 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
   );
 
   const toggleLot = row => {
+    setLotValidationError('');
     setSelectedLotKeys(current => {
       if (current.includes(row.id)) {
         setLotQuantities(values => ({ ...values, [row.id]: 0 }));
@@ -347,7 +421,10 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
           max={row.quantity}
           value={lotQuantities[row.id] ?? 0}
           disabled={!selectedLotKeys.includes(row.id)}
-          onChange={value => setLotQuantities(current => ({ ...current, [row.id]: value ?? 0 }))}
+          onChange={value => {
+            setLotValidationError('');
+            setLotQuantities(current => ({ ...current, [row.id]: value ?? 0 }));
+          }}
         />
       )
     },
@@ -362,9 +439,10 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
 
   const onFinish = async values => {
     if (selectedLotKeys.length === 0 || selectedQuantity <= 0) {
-      message.error('Vui lòng chọn lô và nhập số lượng xuất');
+      setLotValidationError('Vui lòng chọn lô và nhập số lượng xuất lớn hơn 0');
       return;
     }
+    setLotValidationError('');
 
     const selectedLots = lotRows.filter(row => selectedLotKeys.includes(row.id));
     const primaryLot = selectedLots[0];
@@ -381,6 +459,9 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
     }));
 
     const payload = {
+      ...(submitTypeRef.current === 'confirm' && draftIdRef.current != null
+        ? { id: draftIdRef.current }
+        : {}),
       submitType: submitTypeRef.current,
       deliveryCode,
       outboundType: values.outboundType,
@@ -450,13 +531,21 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
             <ReadonlyField label="Mã phiếu xuất" value={deliveryCode} mono />
           </Col>
           <Col md={8} xs={24}>
-            <Form.Item label="Loại xuất" name="outboundType" rules={[{ required: true }]}>
+            <Form.Item
+              label="Loại xuất"
+              name="outboundType"
+              rules={[{ required: true, message: 'Vui lòng nhập loại xuất' }]}
+            >
               <Input placeholder="Nhập loại xuất" />
             </Form.Item>
           </Col>
           <Col md={8} xs={24}>
-            <Form.Item label="Ngày xuất" name="outboundDate" rules={[{ required: true }]}>
-              <DatePicker showTime format="DD/MM/YYYY · HH:mm" className="warehouse-delivery__control" />
+            <Form.Item
+              label="Ngày xuất"
+              name="outboundDate"
+              rules={[{ required: true, message: 'Vui lòng chọn ngày xuất' }]}
+            >
+              <DatePicker placeholder="Chọn ngày xuất" showTime format="DD/MM/YYYY · HH:mm" className="warehouse-delivery__control" />
             </Form.Item>
           </Col>
           <Col md={8} xs={24}>
@@ -483,6 +572,11 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
             if (!event.target.closest('.ant-input-number, .ant-checkbox-wrapper')) toggleLot(row);
           } })}
         />
+        {lotValidationError && (
+          <div style={{ marginTop: 6, color: '#ff4d4f', fontSize: 14 }}>
+            {lotValidationError}
+          </div>
+        )}
         <div className="warehouse-delivery__summary">
           <div><span>Yêu cầu</span><strong>{formatQuantity(requiredQuantity, unit)}</strong></div>
           <div><span>Đã chọn</span><strong className="warehouse-delivery__highlight">{formatQuantity(selectedQuantity, unit)}</strong></div>
@@ -502,7 +596,11 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
         {deliveryMode === 'self' ? (
           <Row gutter={16}>
             <Col span={24}>
-              <Form.Item label="Hình thức" name="selfMethod" rules={[{ required: true }]}>
+              <Form.Item
+                label="Hình thức"
+                name="selfMethod"
+                rules={[{ required: true, message: 'Vui lòng chọn hình thức giao hàng' }]}
+              >
                 <Radio.Group>
                   <Radio value="company_vehicle">Xe công ty</Radio>
                   <Radio value="customer_pickup">Khách tự lấy</Radio>
@@ -526,6 +624,7 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
                 apiAddNewItem="transporter/save"
                 label="Đơn vị vận chuyển"
                 name="carrier"
+                messageRequire="Vui lòng chọn đơn vị vận chuyển"
                 valueProp="id"
                 titleProp="name"
                 searchKey="name"
@@ -533,7 +632,13 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
               />
             </Col>
             <Col md={12} xs={24}>
-              <Form.Item label="Dịch vụ" name="service" rules={[{ required: true }]}><Input /></Form.Item>
+              <Form.Item
+                label="Dịch vụ"
+                name="service"
+                rules={[{ required: true, message: 'Vui lòng nhập dịch vụ vận chuyển' }]}
+              >
+                <Input placeholder="Nhập dịch vụ vận chuyển" />
+              </Form.Item>
             </Col>
             <Col md={12} xs={24}>
               <Form.Item label="Mã vận đơn" name="trackingCode"><Input /></Form.Item>
@@ -545,7 +650,11 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
               <Form.Item label="Số kiện" name="packages"><InputNumber min={0} className="warehouse-delivery__control" /></Form.Item>
             </Col>
             <Col md={12} xs={24}>
-              <Form.Item label="Người trả cước" name="freightPayer" rules={[{ required: true }]}>
+              <Form.Item
+                label="Người trả cước"
+                name="freightPayer"
+                rules={[{ required: true, message: 'Vui lòng chọn người trả cước' }]}
+              >
                 <Radio.Group><Radio value="sender">Bên gửi</Radio><Radio value="receiver">Bên nhận</Radio></Radio.Group>
               </Form.Item>
             </Col>
@@ -557,17 +666,49 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
 
         <Row gutter={16}>
           <Col span={24}>
-            <Form.Item label="Địa chỉ nhận" name="address" rules={[{ required: true }]}><Input /></Form.Item>
+            <Form.Item
+              label="Địa chỉ nhận"
+              name="address"
+              rules={[{ required: true, message: 'Vui lòng nhập địa chỉ nhận' }]}
+            >
+              <Input placeholder="Nhập địa chỉ nhận" />
+            </Form.Item>
           </Col>
           <Col md={12} xs={24}>
-            <Form.Item label="Người nhận" name="recipientName" rules={[{ required: true }]}><Input /></Form.Item>
+            <Form.Item
+              label="Người nhận"
+              name="recipientName"
+              rules={[{ required: true, message: 'Vui lòng nhập người nhận' }]}
+            >
+              <Input placeholder="Nhập tên người nhận" />
+            </Form.Item>
           </Col>
           <Col md={12} xs={24}>
-            <Form.Item label="Số điện thoại" name="recipientPhone" rules={[{ required: true }]}><Input /></Form.Item>
+            <Form.Item
+              label="Số điện thoại"
+              name="recipientPhone"
+              rules={[{ required: true, message: 'Vui lòng nhập số điện thoại người nhận' }]}
+            >
+              <Input placeholder="Nhập số điện thoại" />
+            </Form.Item>
           </Col>
           <Col md={12} xs={24}>
-            <Form.Item label={deliveryMode === 'self' ? 'Dự kiến giao' : 'Hẹn lấy hàng'} name="scheduledAt" rules={[{ required: true }]}>
-              <DatePicker showTime format="DD/MM/YYYY · HH:mm" className="warehouse-delivery__control" />
+            <Form.Item
+              label={deliveryMode === 'self' ? 'Dự kiến giao' : 'Hẹn lấy hàng'}
+              name="scheduledAt"
+              rules={[{
+                required: true,
+                message: deliveryMode === 'self'
+                  ? 'Vui lòng chọn thời gian dự kiến giao'
+                  : 'Vui lòng chọn thời gian hẹn lấy hàng'
+              }]}
+            >
+              <DatePicker
+                placeholder={deliveryMode === 'self' ? 'Chọn thời gian giao' : 'Chọn thời gian lấy hàng'}
+                showTime
+                format="DD/MM/YYYY · HH:mm"
+                className="warehouse-delivery__control"
+              />
             </Form.Item>
           </Col>
           <Col span={24}>

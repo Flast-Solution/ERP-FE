@@ -167,6 +167,59 @@
       display: flex;
       flex-shrink: 0;
       gap: 10px;
+      margin-left: auto;
+    }
+  }
+
+  &--compact {
+    .warehouse-delivery__section {
+      padding: 12px 0 14px;
+    }
+
+    .warehouse-delivery__section:first-child {
+      padding-top: 2px;
+    }
+
+    .warehouse-delivery__section-head {
+      margin-bottom: 10px;
+    }
+
+    .warehouse-delivery__readonly {
+      margin-bottom: 10px;
+
+      label {
+        margin-bottom: 2px;
+        color: #6b7280;
+        font-size: 12px;
+      }
+
+      > div {
+        min-height: 24px;
+        padding: 1px 0;
+        line-height: 20px;
+      }
+    }
+
+    .warehouse-delivery__summary {
+      margin-top: 10px;
+
+      > div {
+        gap: 3px;
+        padding: 8px 12px;
+      }
+
+      strong {
+        font-size: 15px;
+      }
+    }
+
+    .warehouse-delivery__documents .ant-checkbox-wrapper {
+      padding: 6px 10px;
+    }
+
+    .ant-table-thead > tr > th,
+    .ant-table-tbody > tr > td {
+      padding: 8px 10px;
     }
   }
 }
