@@ -10,15 +10,24 @@ import QuotationApproverSelect from './components/QuotationApproverSelect'
 import { HASH_MODAL } from '@/configs'
 import Filter from '../Filter'
 import createOrderColumns from './columns/createOrderColumns'
+import createOrderTrackingColumns from './columns/createOrderTrackingColumns'
 import OrderLotExpandable from './components/OrderLotExpandable'
+import OrderTrackingExpandedRow from './components/OrderTrackingExpandedRow'
 import WorkflowAttachModal from './components/WorkflowAttachModal'
 import WorkflowProgressDrawer from './components/WorkflowProgressDrawer'
 import useOrderLots from './hooks/useOrderLots'
 import useOrderWorkflowData from './hooks/useOrderWorkflowData'
+import useOrderTrackingList from './hooks/useOrderTrackingList'
 import useQuotationViewer from './hooks/useQuotationViewer'
 import useWorkflowModal from './hooks/useWorkflowModal'
 import useWorkflowProgressDrawer from './hooks/useWorkflowProgressDrawer'
 import OrderInboundDrawer from './components/OrderInboundDrawer'
+import {
+  getOrderDetails,
+  getShippingHistory,
+  getWarehouseHistory,
+} from './utils/orderTracking'
+import './List.less'
 
 const QUOTATION_COMMENT_MOCKS = [
   {
@@ -50,6 +59,8 @@ const QUOTATION_STATUS_META = {
   2: { label: 'Đã duyệt', color: 'success' },
 }
 
+const ORDER_TRACKING_API = 'erp/order-tracking/search'
+
 const useOpportunityOrderList = ({ queryParams, ...options }) => {
   const opportunityQueryParams = useMemo(() => ({
     ...queryParams,
@@ -77,8 +88,10 @@ const ListOrder = ({
   const navigate = useNavigate()
   const { user, hasPermission } = useGetMe()
   const [copiedIndex, setCopiedIndex] = useState(null)
+  const [activeTrackingRowKey, setActiveTrackingRowKey] = useState(null)
   const isOrderList = orderMode || filter.type === 'order'
   const isOpportunityList = filter.type === 'cohoi'
+  const listApiPath = isOrderList ? ORDER_TRACKING_API : apiPath
   const canViewDetail = hasPermission(isOpportunityList
     ? 'sales.opportunity.detail.view'
     : 'sales.order.detail.view')
@@ -93,6 +106,7 @@ const ListOrder = ({
     : 'sales.order.workflow.view')
   const canCreateReceipt = isOrderList && hasPermission('inventory.receipt.create')
   const [opportunityStatusOptions, setOpportunityStatusOptions] = useState([])
+  const [shippingStatusOptions, setShippingStatusOptions] = useState([])
   const [inboundOrder, setInboundOrder] = useState(null)
 
   useEffect(() => {
@@ -117,6 +131,29 @@ const ListOrder = ({
       mounted = false
     }
   }, [isOpportunityList])
+
+  useEffect(() => {
+    let mounted = true
+
+    if (!isOrderList) {
+      setShippingStatusOptions([])
+      return () => {
+        mounted = false
+      }
+    }
+
+    RequestUtils.GetAsList('/shipping/fetch-status')
+      .then((statuses) => {
+        if (mounted) setShippingStatusOptions(Array.isArray(statuses) ? statuses : [])
+      })
+      .catch(() => {
+        if (mounted) setShippingStatusOptions([])
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [isOrderList])
 
   const {
     expandedRowKeys,
@@ -143,7 +180,7 @@ const ListOrder = ({
     handleAttachWorkflow,
   } = useWorkflowModal({
     setLotsByOrderId,
-    onAttached: () => f5List(apiPath),
+    onAttached: () => f5List(listApiPath),
   })
 
   const {
@@ -201,7 +238,7 @@ const ListOrder = ({
     filter.type === 'cohoi' ? 260 : 220
   ) + ((extraActions?.length ?? 0) * 44) + (canCreateReceipt ? 44 : 0)
 
-  const columns = createOrderColumns({
+  const columnOptions = {
     isOpportunityList,
     showOrderDetailTooltip: isOpportunityList || isOrderList,
     opportunityStatusOptions,
@@ -225,7 +262,16 @@ const ListOrder = ({
     canViewWorkflow,
     canCreateReceipt,
     openOrderInboundDrawer: setInboundOrder,
-  })
+  }
+
+  const shippingStatusById = useMemo(() => shippingStatusOptions.reduce(
+    (result, status) => ({ ...result, [String(status?.id)]: status }),
+    {}
+  ), [shippingStatusOptions])
+
+  const columns = isOrderList
+    ? createOrderTrackingColumns({ ...columnOptions, shippingStatusById })
+    : createOrderColumns(columnOptions)
 
   const orderLotExpandable = enableLotTree
     ? OrderLotExpandable({
@@ -238,21 +284,56 @@ const ListOrder = ({
     })
     : undefined
 
+  const trackingExpandable = isOrderList
+    ? {
+      expandedRowRender: record => (
+        <OrderTrackingExpandedRow
+          record={record}
+          shippingStatusById={shippingStatusById}
+        />
+      ),
+      // Expand khi có dữ liệu cho 1 trong 3 tab của OrderTrackingExpandedRow
+      rowExpandable: record => (
+        getOrderDetails(record).length > 0
+        || getWarehouseHistory(record).length > 0
+        || getShippingHistory(record).length > 0
+      ),
+    }
+    : undefined
+
   return (
     <>
       <RestList
-        rowKey="id"
+        rowKey={isOrderList ? '_trackingRowKey' : 'id'}
         bordered
-        xScroll={isOpportunityList ? 1200 : 1800}
-        expandable={orderLotExpandable}
+        size={isOrderList ? 'small' : undefined}
+        xScroll={isOpportunityList ? 1200 : (isOrderList ? 2720 : 1800)}
+        expandable={trackingExpandable ?? orderLotExpandable}
         onData={onData}
         initialFilter={{ limit: 10, page: 1, ...filter }}
         filter={<Filter />}
         hasCreate={false}
         beforeSubmitFilter={beforeSubmitFilter}
-        useGetAllQuery={isOpportunityList ? useOpportunityOrderList : useGetList}
-        apiPath={apiPath}
+        useGetAllQuery={isOpportunityList
+          ? useOpportunityOrderList
+          : (isOrderList ? useOrderTrackingList : useGetList)}
+        apiPath={listApiPath}
         columns={columns}
+        rowClassName={record => (
+          isOrderList && record?._trackingRowKey === activeTrackingRowKey
+            ? 'order-tracking-row order-tracking-row--active'
+            : (isOrderList ? 'order-tracking-row' : '')
+        )}
+        onRow={record => isOrderList ? ({
+          tabIndex: 0,
+          onClick: () => setActiveTrackingRowKey(record?._trackingRowKey),
+          onKeyDown: event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              setActiveTrackingRowKey(record?._trackingRowKey)
+            }
+          },
+        }) : {}}
       />
 
       <WorkflowAttachModal
