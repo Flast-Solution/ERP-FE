@@ -63,6 +63,7 @@ import { Link } from "react-router-dom";
 import SideBarStyles from './styles';
 import useGetMe from '@/hooks/useGetMe';
 import { resolveUploadUrl } from '@/containers/PreviewModal/uploadUtils';
+import { isHatecoBusiness } from '@/configs/business';
 import {
   BUSINESS_UPDATED_EVENT,
   canManagePermissions,
@@ -109,6 +110,7 @@ function SideBar() {
   const canManageBusinessUnits = isSuperAdmin(user);
   const canManageUserPermissions = canManagePermissions(user);
   const bizId = user?.bizId ?? null;
+  const orderListPath = isHatecoBusiness(bizId) ? '/sale/hateco' : '/sale/order';
 
   const revokeBusinessLogoObjectUrl = useCallback(() => {
     if (!businessLogoObjectUrlRef.current) {
@@ -210,7 +212,7 @@ function SideBar() {
       ),
     ]),
     getItem('Đơn hàng', 'order_solve', <PaperClipOutlined style={iconSize} />, [
-      getItem(<Link to="/sale/order">Danh sách đơn hàng</Link>, 'order_list', <UnorderedListOutlined />, undefined, 'sales.order.view'),
+      getItem(<Link to={orderListPath}>Danh sách đơn hàng</Link>, 'order_list', <UnorderedListOutlined />, undefined, 'sales.order.view'),
       getItem(
         <Link to="/sale/order/after-sale">Đơn hàng chưa chăm sóc sau bán</Link>,
         'order_after_sale',

@@ -82,6 +82,7 @@ const ListOrder = ({
   showWorkflowProgressAction = false,
   apiPath = 'erp/order/fetch',
   orderMode = false,
+  trackingOverview = false,
   detailDrawerHash = '#order.tabs',
   detailDrawerTitle,
 }) => {
@@ -91,7 +92,8 @@ const ListOrder = ({
   const [activeTrackingRowKey, setActiveTrackingRowKey] = useState(null)
   const isOrderList = orderMode || filter.type === 'order'
   const isOpportunityList = filter.type === 'cohoi'
-  const listApiPath = isOrderList ? ORDER_TRACKING_API : apiPath
+  const useTrackingOverview = trackingOverview && isOrderList
+  const listApiPath = useTrackingOverview ? ORDER_TRACKING_API : apiPath
   const canViewDetail = hasPermission(isOpportunityList
     ? 'sales.opportunity.detail.view'
     : 'sales.order.detail.view')
@@ -135,7 +137,7 @@ const ListOrder = ({
   useEffect(() => {
     let mounted = true
 
-    if (!isOrderList) {
+    if (!useTrackingOverview) {
       setShippingStatusOptions([])
       return () => {
         mounted = false
@@ -153,7 +155,7 @@ const ListOrder = ({
     return () => {
       mounted = false
     }
-  }, [isOrderList])
+  }, [useTrackingOverview])
 
   const {
     expandedRowKeys,
@@ -269,7 +271,7 @@ const ListOrder = ({
     {}
   ), [shippingStatusOptions])
 
-  const columns = isOrderList
+  const columns = useTrackingOverview
     ? createOrderTrackingColumns({ ...columnOptions, shippingStatusById })
     : createOrderColumns(columnOptions)
 
@@ -284,7 +286,7 @@ const ListOrder = ({
     })
     : undefined
 
-  const trackingExpandable = isOrderList
+  const trackingExpandable = useTrackingOverview
     ? {
       expandedRowRender: record => (
         <OrderTrackingExpandedRow
@@ -304,10 +306,10 @@ const ListOrder = ({
   return (
     <>
       <RestList
-        rowKey={isOrderList ? '_trackingRowKey' : 'id'}
+        rowKey={useTrackingOverview ? '_trackingRowKey' : 'id'}
         bordered
-        size={isOrderList ? 'small' : undefined}
-        xScroll={isOpportunityList ? 1200 : (isOrderList ? 2720 : 1800)}
+        size={useTrackingOverview ? 'small' : undefined}
+        xScroll={isOpportunityList ? 1200 : (useTrackingOverview ? 2720 : 1800)}
         expandable={trackingExpandable ?? orderLotExpandable}
         onData={onData}
         initialFilter={{ limit: 10, page: 1, ...filter }}
@@ -316,15 +318,15 @@ const ListOrder = ({
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={isOpportunityList
           ? useOpportunityOrderList
-          : (isOrderList ? useOrderTrackingList : useGetList)}
+          : (useTrackingOverview ? useOrderTrackingList : useGetList)}
         apiPath={listApiPath}
         columns={columns}
         rowClassName={record => (
-          isOrderList && record?._trackingRowKey === activeTrackingRowKey
+          useTrackingOverview && record?._trackingRowKey === activeTrackingRowKey
             ? 'order-tracking-row order-tracking-row--active'
-            : (isOrderList ? 'order-tracking-row' : '')
+            : (useTrackingOverview ? 'order-tracking-row' : '')
         )}
-        onRow={record => isOrderList ? ({
+        onRow={record => useTrackingOverview ? ({
           tabIndex: 0,
           onClick: () => setActiveTrackingRowKey(record?._trackingRowKey),
           onKeyDown: event => {
