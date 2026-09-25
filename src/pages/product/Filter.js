@@ -19,15 +19,14 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Row, Col } from 'antd';
 import {
   FormInput,
   FormSelectUser,
-  FormSelect,
-  FormDatePicker
+  FormSelect
 } from '@flast-erp/core/components';
-import { RequestUtils } from '@flast-erp/core/utils';
+import ProductAttrService from '@/services/ProductAttrService';
 
 const PRODUCT_STATUS_OPTIONS = [
   { id: 1, name: 'Kích hoạt' },
@@ -35,23 +34,17 @@ const PRODUCT_STATUS_OPTIONS = [
 ];
 
 const ProductFilter = () => {
-  useEffect(() => {
-    let active = true;
+  const [attributes, setAttributes] = useState([]);
 
-    RequestUtils.Get('/entity-status/list-by-type', { type: 'PRODUCT' })
-      .then((response) => {
-        if (active) {
-          console.log('[ProductFilter] entity status response:', response);
-        }
-      })
-      .catch((error) => {
-        if (active) {
-          console.error('[ProductFilter] entity status error:', error);
-        }
+  useEffect(() => {
+    let mounted = true;
+    ProductAttrService.loadAll({ limit: 1000, page: 1 })
+      .then(items => {
+        if (mounted) setAttributes(Array.isArray(items) ? items : []);
       });
 
     return () => {
-      active = false;
+      mounted = false;
     };
   }, []);
 
@@ -72,10 +65,15 @@ const ProductFilter = () => {
           />
         </Col>
         <Col xl={6} lg={6} md={6} xs={24}>
-          <FormInput
+          <FormSelect
+            allowClear
+            showSearch
             label="Tên thiết lập"
             name="attributedName"
-            placeholder="Nhập tên thiết lập"
+            valueProp="name"
+            titleProp="name"
+            resourceData={attributes}
+            placeholder="Chọn tên thiết lập"
           />
         </Col>
         <Col xl={6} lg={6} md={6} xs={24}>
@@ -99,20 +97,6 @@ const ProductFilter = () => {
             titleProp='name'
             resourceData={PRODUCT_STATUS_OPTIONS}
             placeholder='Lọc theo trạng thái'
-          />
-        </Col>
-        <Col xl={6} lg={6} md={6} xs={24}>
-          <FormDatePicker
-            format='YYYY-MM-DD'
-            name='from'
-            placeholder="Start date filter"
-          />
-        </Col>
-        <Col xl={6} lg={6} md={6} xs={24}>
-          <FormDatePicker
-            format='YYYY-MM-DD'
-            name='to'
-            placeholder="End date filter"
           />
         </Col>
       </Row>

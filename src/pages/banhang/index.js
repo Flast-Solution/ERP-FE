@@ -22,12 +22,13 @@
 import Order from 'containers/Order';
 import { Helmet } from 'react-helmet';
 import { BreadcrumbCustom } from '@flast-erp/core/components';
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import { useQueryParams } from '@flast-erp/core/hooks';
 
 const title = 'Tạo cơ hội bán hàng';
 const BanHangPage = (props) => {
 	const { orderId } = useParams();
+	const { state } = useLocation();
 	const { get } = useQueryParams();
 	const isOrder = get('type') === 'order';
 	const pageTitle = isOrder
@@ -46,6 +47,7 @@ const BanHangPage = (props) => {
 		<Order
 			orderId={orderId}
 			dataId={get("dataId")}
+			business={state?.business ?? null}
 			{...props}
 		/>
 	</>;

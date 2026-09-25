@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useGetList } from "@flast-erp/core/hooks";
 import { Helmet } from "react-helmet";
 import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
@@ -28,7 +28,7 @@ import { Button, Dropdown, Space, Tooltip } from 'antd';
 import { ApartmentOutlined, EyeOutlined } from '@ant-design/icons';
 import { f5List, InAppEvent } from "@flast-erp/core/utils";
 import { HASH_MODAL } from 'configs';
-import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils';
+import { arrayEmpty, formatTime } from '@flast-erp/core/utils';
 import ProductAttrService from '@/services/ProductAttrService';
 import { cloneDeep } from 'lodash';
 import SkuView, { PriceView } from '@/containers/Product/SkuView';
@@ -53,13 +53,34 @@ const formatProductPrice = (value, currency = 'VND') => {
   })} ${currency}`;
 };
 
+const getAttributeValues = (record, attributeId) => Array.from(new Set(
+  (Array.isArray(record?.listProperties) ? record.listProperties : [])
+    .filter(property => String(property?.attributedId) === String(attributeId))
+    .map(property => property?.value)
+    .filter(value => value !== undefined && value !== null && value !== '')
+    .map(String)
+)).join(', ');
+
 const Index = () => {
+  const [attributes, setAttributes] = useState([]);
   const { hasPermission } = useGetMe();
   const canCreate = hasPermission('catalog.product.create');
   const canUpdate = hasPermission('catalog.product.update');
   const canManageBom = hasPermission('catalog.product.bom.manage');
   const canAttachWorkflow = hasPermission('catalog.product.workflow.attach');
   const canViewWorkflow = hasPermission('catalog.product.workflow.view');
+
+  useEffect(() => {
+    let mounted = true;
+    ProductAttrService.loadAll({ limit: 1000, page: 1 })
+      .then(items => {
+        if (mounted) setAttributes(Array.isArray(items) ? items : []);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const {
     workflowModalOpen,
@@ -172,6 +193,16 @@ const Index = () => {
       width: 120,
       render: (status) => (status || 0) === 0 ? 'Ngưng' : 'Kích hoạt'
     },
+    ...attributes.map(attribute => ({
+      title: attribute.name || `Thuộc tính #${attribute.id}`,
+      key: `attribute-${attribute.id}`,
+      width: 160,
+      ellipsis: true,
+      render: (_, record) => {
+        const value = getAttributeValues(record, attribute.id) || '—';
+        return <Tooltip title={value}>{value}</Tooltip>;
+      }
+    })),
     {
       title: "SKus",
       dataIndex: 'skus',
@@ -260,11 +291,6 @@ const Index = () => {
     }
   ];
 
-  const beforeSubmitFilter = useCallback((values) => {
-    dateFormatOnSubmit(values, ['from', 'to']);
-    return values;
-  }, []);
-
   const onData = useCallback(async (values) => {
     if (arrayEmpty(values.embedded)) {
       return values;
@@ -288,11 +314,10 @@ const Index = () => {
         data={[{ title: 'Trang chủ' }, { title: title }]}
       />
       <RestList
-        xScroll={1200}
+        xScroll={1200 + (attributes.length * 160)}
         onData={onData}
         initialFilter={{ limit: 10, page: 1 }}
         filter={<Filter />}
-        beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
         apiPath={PRODUCT_API_PATH}
         hasCreate={canCreate}

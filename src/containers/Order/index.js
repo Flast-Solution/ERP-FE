@@ -364,7 +364,8 @@ const EditButton = ({
 
 const BanHangPage = ({
   orderId,
-  dataId
+  dataId,
+  business
 }) => {
 
   const [data, setData] = useState([]);
@@ -429,11 +430,15 @@ const BanHangPage = ({
     }
     const { data: response, errorCode } = await RequestUtils.Get("/data/get-customer", { dataId });
     if (errorCode === SUCCESS_CODE) {
-      setCustomer(response.customer);
+      const leadBusiness = response.lead?.business ?? business;
+      setCustomer({
+        ...response.customer,
+        ...(leadBusiness ? { business: leadBusiness } : {})
+      });
       setLeadProducts(getLeadProducts(response.lead));
       onAddProduct(response.lead);
     }
-  }, [dataId]);
+  }, [business, dataId]);
 
   const onAddProduct = useCallback((lead = null) => {
     const suggestedProducts = lead ? getLeadProducts(lead) : leadProducts;
@@ -962,6 +967,11 @@ const BanHangPage = ({
         currency,
         exchangeRate: getExchangeRate(currency, exchangeRate)
       };
+      const customerBusiness = mCustomer?.business ?? business;
+      if (customerBusiness && typeof customerBusiness === 'object') {
+        params.enterpriseName = customerBusiness.companyName;
+        params.enterpriseId = customerBusiness.id;
+      }
       if (customerOrder?.id) {
         params.id = customerOrder.id;
         params.code = customerOrder.code ?? '';
@@ -1001,7 +1011,7 @@ const BanHangPage = ({
         details: data
       }
     });
-  }, [currency, data, dataId, customer, customerOrder, exchangeRate, shippingCost, vatRate]);
+  }, [business, currency, data, dataId, customer, customerOrder, exchangeRate, shippingCost, vatRate]);
 
   const onOpenFormPayment = useCallback(() => {
     InAppEvent.emit(HASH_MODAL, {
