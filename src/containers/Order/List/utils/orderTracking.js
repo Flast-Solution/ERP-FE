@@ -18,6 +18,10 @@ export const getWarehouseHistory = record => asArray(record?.warehouseHistory)
 
 export const getWarehouseProducts = record => asArray(record?.warehouseProducts)
 
+export const getWarehouseParcels = record => asArray(record?.warehouseParcels)
+
+export const getManufactureProducts = record => asArray(record?.manufactureProducts)
+
 export const getShippingHistory = record => asArray(record?.shippingHistory)
 
 export const getConfirmedShippingHistory = record => getShippingHistory(record)
@@ -27,9 +31,15 @@ export const getOrderTrackingMetrics = record => {
   const details = getOrderDetails(record)
   const warehouseHistory = getWarehouseHistory(record)
   const warehouseProducts = getWarehouseProducts(record)
+  const manufactureProducts = getManufactureProducts(record)
   const confirmedShipping = getConfirmedShippingHistory(record)
   const orderedQuantity = sumBy(details, item => item?.quantity)
   const receivedQuantity = sumBy(warehouseHistory, item => item?.quantity)
+  const plannedProductionQuantity = sumBy(
+    manufactureProducts,
+    item => sumBy(item?.details, detail => detail?.target)
+  )
+  const productionVariance = plannedProductionQuantity - orderedQuantity
   // Backend quy ước `total` trên warehouseProducts là số lượng tồn hiện tại.
   const onHandQuantity = sumBy(warehouseProducts, item => item?.total)
   const outboundQuantity = sumBy(
@@ -46,6 +56,9 @@ export const getOrderTrackingMetrics = record => {
     detailCount: details.length,
     orderedQuantity,
     receivedQuantity,
+    productionLotCount: manufactureProducts.length,
+    plannedProductionQuantity,
+    productionVariance,
     onHandQuantity,
     receiptCount: warehouseHistory.length,
     outboundCount: confirmedShipping.length,
@@ -54,6 +67,27 @@ export const getOrderTrackingMetrics = record => {
     remainingOutboundQuantity,
     progress,
   }
+}
+
+export const getLatestProductionDate = record => {
+  const manufactureProducts = getManufactureProducts(record).filter(item => item?.dateEnd)
+  if (manufactureProducts.length === 0) return undefined
+
+  return [...manufactureProducts].sort((left, right) => {
+    const leftTime = new Date(left.dateEnd).getTime() || 0
+    const rightTime = new Date(right.dateEnd).getTime() || 0
+    return rightTime - leftTime
+  })[0]?.dateEnd
+}
+
+export const getProductionPriority = record => {
+  const priorityRank = { HIGH: 3, NORMAL: 2, LOW: 1 }
+  return getManufactureProducts(record).reduce((highest, manufactureProduct) => {
+    const priority = String(manufactureProduct?.priorityLevel ?? '').toUpperCase()
+    return (priorityRank[priority] ?? 0) > (priorityRank[highest] ?? 0)
+      ? priority
+      : highest
+  }, '')
 }
 
 export const getLatestShipping = record => {
@@ -117,6 +151,7 @@ export const normalizeTrackingResponse = payload => {
         warehouseHistory: asArray(item?.warehouseHistory),
         warehouseProducts: asArray(item?.warehouseProducts),
         warehouseParcels: asArray(item?.warehouseParcels),
+        manufactureProducts: asArray(item?.manufactureProducts),
         shippingHistory: asArray(item?.shippingHistory),
         _trackingRowKey: `${order?.id ?? order?.code ?? 'order'}-${index}`,
       }

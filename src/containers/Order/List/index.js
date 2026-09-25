@@ -26,6 +26,7 @@ import {
   getOrderDetails,
   getShippingHistory,
   getWarehouseHistory,
+  getWarehouseParcels,
 } from './utils/orderTracking'
 import './List.less'
 
@@ -297,6 +298,7 @@ const ListOrder = ({
       // Expand khi có dữ liệu cho 1 trong 3 tab của OrderTrackingExpandedRow
       rowExpandable: record => (
         getOrderDetails(record).length > 0
+        || getWarehouseParcels(record).length > 0
         || getWarehouseHistory(record).length > 0
         || getShippingHistory(record).length > 0
       ),
@@ -309,7 +311,7 @@ const ListOrder = ({
         rowKey={useTrackingOverview ? '_trackingRowKey' : 'id'}
         bordered
         size={useTrackingOverview ? 'small' : undefined}
-        xScroll={isOpportunityList ? 1200 : (useTrackingOverview ? 2720 : 1800)}
+        xScroll={isOpportunityList ? 1200 : (useTrackingOverview ? 3275 : 1800)}
         expandable={trackingExpandable ?? orderLotExpandable}
         onData={onData}
         initialFilter={{ limit: 10, page: 1, ...filter }}
