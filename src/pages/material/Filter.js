@@ -23,8 +23,7 @@ import { Col, Row } from 'antd'
 
 import {
   FormDatePicker,
-  FormInput,
-  FormSelectInfiniteBusinessUser
+  FormInput
  } from '@flast-erp/core/components'
 
 const Filter = () => {
@@ -35,15 +34,6 @@ const Filter = () => {
           <FormInput
             name={'name'}
             placeholder="Tên vật liệu"
-          />
-        </Col>
-        <Col xl={6} lg={6} md={6} xs={24}>
-          <FormSelectInfiniteBusinessUser
-            name="ssoId"
-            label="Sale"
-            valueProp="id"
-            titleProp='fullName'
-            placeholder='Nhân viên'
           />
         </Col>
         <Col xl={6} lg={6} md={6} xs={24}>

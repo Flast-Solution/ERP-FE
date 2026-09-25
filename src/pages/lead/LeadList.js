@@ -91,8 +91,11 @@ const LeadList = () => {
   }, [openWorkflowDrawer]);
 
   let navigate = useNavigate();
-  const onCreateOpportunity = useCallback(({ id }) => {
-    navigate(RequestUtils.generateUrlGetParams("/sale/ban-hang", { dataId: id }));
+  const onCreateOpportunity = useCallback((record) => {
+    navigate(
+      RequestUtils.generateUrlGetParams("/sale/ban-hang", { dataId: record.id }),
+      { state: { business: record.business ?? null } }
+    );
   }, [navigate]);
 
   const CUSTOM_ACTION = [
@@ -100,7 +103,8 @@ const LeadList = () => {
       title: "Khách hàng",
       dataIndex: 'customerName',
       width: 200,
-      ellipsis: true
+      ellipsis: true,
+      render: (customerName, record) => record?.business?.companyName || customerName || '-'
     },
     {
       title: "Số đ/t",

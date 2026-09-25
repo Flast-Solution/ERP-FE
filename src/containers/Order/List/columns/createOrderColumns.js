@@ -203,11 +203,14 @@ const createOrderColumns = ({
     render: (time) => formatTime(time),
   },
   {
-    title: isOpportunityList ? 'Khách hàng' : 'Họ tên',
+    title: 'Khách hàng',
     dataIndex: 'customerReceiverName',
     key: 'customerReceiverName',
     width: 130,
     ellipsis: true,
+    render: (customerReceiverName, record) => (
+      record?.enterpriseName || customerReceiverName || '-'
+    ),
   },
   {
     title: 'Số điện thoại',
