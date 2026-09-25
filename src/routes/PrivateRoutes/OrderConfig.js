@@ -23,6 +23,7 @@ import React from 'react';
 import { authRoles } from '@/auth';
 
 const OrderPage = React.lazy(() => import('@/pages/order'));
+const HatecoOrderPage = React.lazy(() => import('@/pages/hateco/order'));
 const OrderProductionPage = React.lazy(() => import('@/pages/order/OrderProduction'));
 const OrderProgressPage = React.lazy(() => import('@/pages/order/Progress'));
 const ManufacturingLot = React.lazy(() => import('@/pages/order/ManufacturingLotCreate'));
@@ -34,6 +35,7 @@ export const OrderConfig = {
         { path: '/sale/order/progress', permission: 'sales.order.workflow.view', element: <OrderProgressPage /> },
         { path: '/sale/order/after-sale', permission: 'sales.order.after_sale.view', element: <OrderPage /> },
         { path: '/sale/order/cancelled', permission: 'sales.order.cancelled.view', element: <OrderPage /> },
+        { path: '/sale/hateco', permission: 'sales.order.view', element: <HatecoOrderPage /> },
         { path: '/sale/order', permission: 'sales.order.view', element: <OrderPage /> },
         { path: '/sale/order/*', permission: 'sales.order.view', element: <OrderPage /> },
         { path: '/sale/order-production', permission: 'manufacturing.progress.view', element: <OrderProductionPage /> },
