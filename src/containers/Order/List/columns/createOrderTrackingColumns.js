@@ -7,10 +7,12 @@ import { copyToClipboard } from '../utils/clipboard'
 import {
   formatQuantity,
   getLatestShipping,
+  getLatestProductionDate,
   getOrderDetails,
   getOrderTrackingMetrics,
   getOrderUnit,
   getProductSummary,
+  getProductionPriority,
   getSkuText,
 } from '../utils/orderTracking'
 
@@ -136,6 +138,69 @@ const createOrderTrackingColumns = ({
         key: 'userCreateUsername',
         width: 125,
         ellipsis: true,
+      },
+    ],
+  },
+  {
+    title: 'Sản xuất',
+    children: [
+      {
+        title: 'Số lô',
+        key: 'productionLotCount',
+        width: 85,
+        align: 'center',
+        render: (_, record) => {
+          const count = getOrderTrackingMetrics(record).productionLotCount
+          return <Tag color={count > 0 ? 'purple' : 'default'}>{count}</Tag>
+        },
+      },
+      {
+        title: 'SL kế hoạch',
+        key: 'plannedProductionQuantity',
+        width: 120,
+        align: 'right',
+        render: (_, record) => {
+          const metrics = getOrderTrackingMetrics(record)
+          return renderMetric(metrics.plannedProductionQuantity, getOrderUnit(record), '#722ed1')
+        },
+      },
+      {
+        title: 'Dư / thiếu KH',
+        key: 'productionVariance',
+        width: 125,
+        align: 'center',
+        render: (_, record) => {
+          const { productionLotCount, productionVariance } = getOrderTrackingMetrics(record)
+          if (productionLotCount === 0) return <Tag>Chưa lập lô</Tag>
+          if (productionVariance === 0) return <Tag color="success">Đủ</Tag>
+          return (
+            <Tag color={productionVariance > 0 ? 'purple' : 'warning'}>
+              {productionVariance > 0 ? 'Dư' : 'Thiếu'}{' '}
+              {formatQuantity(Math.abs(productionVariance), getOrderUnit(record))}
+            </Tag>
+          )
+        },
+      },
+      {
+        title: 'Hoàn thành DK',
+        key: 'productionExpectedDate',
+        width: 130,
+        render: (_, record) => formatTime(getLatestProductionDate(record)) || '—',
+      },
+      {
+        title: 'Ưu tiên',
+        key: 'productionPriority',
+        width: 95,
+        align: 'center',
+        render: (_, record) => {
+          const priority = getProductionPriority(record)
+          const meta = {
+            HIGH: { label: 'Cao', color: 'red' },
+            NORMAL: { label: 'Thường', color: 'blue' },
+            LOW: { label: 'Thấp', color: 'default' },
+          }[priority]
+          return meta ? <Tag color={meta.color}>{meta.label}</Tag> : '—'
+        },
       },
     ],
   },
