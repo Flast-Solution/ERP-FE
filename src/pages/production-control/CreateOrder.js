@@ -6,7 +6,7 @@ import {
   CustomButton,
   CustomButtonIcon,
   FormDatePicker,
-  FormHidden,
+  FormInput,
   FormInputNumber,
   FormSelect,
   FormSelectAPI,
@@ -203,7 +203,7 @@ const CreateOrder = ({
       onNext({
         ...initialValues,
         ...values,
-        productionOrderCode,
+        productionOrderCode: values.productionOrderCode,
         salesOrderCode: selectedOrder?.code,
         customerName: selectedOrder?.customerReceiverName,
         orderDetails: selectedProducts,
@@ -221,18 +221,6 @@ const CreateOrder = ({
   return (
     <ProductionPage>
       <div className="production-card production-create-card">
-        <header className="page-head production-create-head">
-          <div className="production-create-crumb">
-            <span>Kiểm soát sản xuất</span>
-            <span>›</span>
-            <span className="current">{mode === 'view' ? 'Chi tiết lệnh sản xuất' : mode === 'edit' ? 'Chỉnh sửa lệnh sản xuất' : 'Tạo lệnh sản xuất'}</span>
-          </div>
-          <h1>{mode === 'view' ? 'Chi tiết lệnh sản xuất' : mode === 'edit' ? 'Chỉnh sửa lệnh sản xuất' : 'Tạo lệnh sản xuất'}</h1>
-          <div className="subtitle">
-            Từ đơn TO · Bill of Materials · ISO 9001:2015 §8.5
-          </div>
-        </header>
-
         <Form
           form={form}
           disabled={readOnly}
@@ -245,7 +233,6 @@ const CreateOrder = ({
           onFinish={handleSubmit}
           onValuesChange={onValuesChange}
         >
-          <FormHidden name="productionOrderCode" />
           <div className="body production-create-body">
             <section className="section production-create-section">
               <div className="section-head">
@@ -253,7 +240,14 @@ const CreateOrder = ({
                 <h2>Đơn hàng khách</h2>
               </div>
               <div className="production-info-grid">
-                <ReadonlyField label="Mã lệnh SX" value={productionOrderCode} mono />
+                <div className="production-info-field">
+                  <FormInput
+                    required
+                    name="productionOrderCode"
+                    label="Mã lệnh SX"
+                    placeholder="Nhập mã lệnh sản xuất"
+                  />
+                </div>
                 <div className="production-info-field">
                   <FormSelectAPI
                     required

@@ -116,7 +116,6 @@ const ProductionPage = styled.div`
     overflow: hidden;
   }
   .production-create-card { color: #172033; }
-  .production-create-head { padding: 18px 24px; }
   .production-create-crumb {
     display: flex;
     align-items: center;

@@ -19,6 +19,11 @@ const ProductionOrderDrawer = ({
   onBack,
   onConfirm,
 }) => {
+  const drawerTitle = drawerMode === 'view'
+    ? 'Chi tiết lệnh sản xuất'
+    : drawerMode === 'edit'
+      ? 'Chỉnh sửa lệnh sản xuất'
+      : 'Tạo lệnh sản xuất'
   const {
     markDirty,
     requestClose,
@@ -32,13 +37,13 @@ const ProductionOrderDrawer = ({
   return (
     <Drawer
     open={open}
-    title={null}
+    title={<h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{drawerTitle}</h1>}
     placement="right"
     width="min(750px, calc(100vw - 16px))"
     destroyOnHidden
     onClose={requestClose}
     styles={{
-      header: { minHeight: 48, padding: '8px 16px' },
+      header: { minHeight: 56, padding: '10px 16px' },
       body: { padding: 0, overflowY: 'auto' },
     }}
   >
