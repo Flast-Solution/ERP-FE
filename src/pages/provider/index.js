@@ -252,7 +252,7 @@ const ProviderForm = ({ record, onCancel, onSaved, onValuesChange, disabled = fa
               {fields.map((field, index) => (
                 <div className="provider-form__list-item" key={field.key}>
                   <div className="provider-form__list-header">
-                    <span>Người liên hệ {index + 1}</span>
+                    <span>Người liên hệ</span>
                     {!disabled && (
                       <Tooltip title="Xóa người liên hệ">
                         <Button
@@ -356,7 +356,7 @@ const ProviderForm = ({ record, onCancel, onSaved, onValuesChange, disabled = fa
                             <Col md={10} xs={24}>
                               <FormInput
                                 name={[field.name, 'name']}
-                                label={`Tên nhà máy ${index + 1}`}
+                                label={`Tên nhà máy`}
                                 placeholder="Nhập tên nhà máy"
                               />
                             </Col>
@@ -374,7 +374,7 @@ const ProviderForm = ({ record, onCancel, onSaved, onValuesChange, disabled = fa
                                     danger
                                     type="text"
                                     icon={<DeleteOutlined />}
-                                    aria-label={`Xóa nhà máy ${index + 1}`}
+                                    aria-label={`Xóa nhà máy`}
                                     onClick={() => remove(field.name)}
                                   />
                                 </Tooltip>
@@ -413,7 +413,7 @@ const ProviderForm = ({ record, onCancel, onSaved, onValuesChange, disabled = fa
                   rows={3}
                 />
               </Col>
-              <Col md={12} xs={24}>
+              <Col md={24} xs={24}>
                 <FormTextArea
                   name="note"
                   label="Ghi chú"
@@ -435,7 +435,7 @@ const ProviderForm = ({ record, onCancel, onSaved, onValuesChange, disabled = fa
         </div>
       )}
     </Form>
-  );
+  )
 };
 
 const ProviderPage = () => {
@@ -612,7 +612,7 @@ const ProviderPage = () => {
         />
       </DrawerCustom>
     </div>
-  );
+  )
 };
 
 export default ProviderPage;
