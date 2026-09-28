@@ -260,6 +260,23 @@
       background: #fff;
     }
 
+    .pl-tracker {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .pl-tracker__step:first-child { margin-left: auto; }
+    .pl-tracker__step:last-child { margin-right: auto; }
+
+    [data-lead-form-instruction="true"],
+    [data-lead-stage-outcome="true"],
+    [data-lead-creation-summary="true"] { display: none !important; }
+
+    .workflow-form-footer {
+      padding-top: 16px;
+      border-top: 1px solid #e5e7eb;
+    }
+
     .pl-tracker__step {
       appearance: none;
       border: 0;

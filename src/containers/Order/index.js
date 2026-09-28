@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Table, Button, DatePicker, Input, InputNumber, Select, Space, Tooltip, Typography, message } from 'antd';
 import { ShowSkuDetail } from '@/containers/Product/SkuView';
 import { arrayEmpty, arrayNotEmpty, formatMoney } from '@flast-erp/core/utils';
@@ -40,6 +40,8 @@ import { HASH_MODAL, SUCCESS_CODE } from '@/configs';
 import OrderService, { getWarehouseByProduct } from '@/services/OrderService';
 import { useEffectAsync } from '@flast-erp/core/hooks';
 import { mergeSavedOrderLines, parseOrderLine } from './orderLine';
+import { resolveOrderSkuDetails } from './orderSku';
+import { calculateConvertedLineTotal } from './orderPricing';
 import styled from 'styled-components';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
@@ -206,142 +208,6 @@ function resolveUnitPrice({ skuPrices = [], quantity, product = {} }) {
   );
 }
 
-const tokenizeFormula = (formula = '') => {
-  const tokens = [];
-  let index = 0;
-
-  while (index < formula.length) {
-    const char = formula[index];
-    if (/\s/.test(char)) {
-      index += 1;
-      continue;
-    }
-    if (/[0-9.]/.test(char)) {
-      const match = formula.slice(index).match(/^(?:\d+(?:\.\d*)?|\.\d+)/);
-      if (!match) throw new Error('Số trong công thức không hợp lệ');
-      tokens.push({ type: 'number', value: Number(match[0]) });
-      index += match[0].length;
-      continue;
-    }
-    if (/[A-Za-z_]/.test(char)) {
-      const match = formula.slice(index).match(/^[A-Za-z_][A-Za-z0-9_]*/);
-      tokens.push({ type: 'identifier', value: match[0] });
-      index += match[0].length;
-      continue;
-    }
-    if ('+-*/()%'.includes(char)) {
-      tokens.push({ type: char, value: char });
-      index += 1;
-      continue;
-    }
-    throw new Error(`Ký tự không được hỗ trợ trong công thức: ${char}`);
-  }
-
-  return tokens;
-};
-
-const evaluateCalculationFormula = (formula, variables) => {
-  if (!formula?.trim()) return null;
-
-  try {
-    const tokens = tokenizeFormula(formula);
-    let cursor = 0;
-    const peek = () => tokens[cursor];
-    const consume = type => {
-      const token = tokens[cursor];
-      if (!token || token.type !== type) {
-        throw new Error(`Thiếu token ${type}`);
-      }
-      cursor += 1;
-      return token;
-    };
-
-    const parsePrimary = () => {
-      const token = peek();
-      let value;
-      if (token?.type === 'number') {
-        value = consume('number').value;
-      } else if (token?.type === 'identifier') {
-        const variableName = consume('identifier').value;
-        if (!Object.prototype.hasOwnProperty.call(variables, variableName)) {
-          throw new Error(`Biến ${variableName} không tồn tại`);
-        }
-        value = Number(variables[variableName] ?? 0);
-      } else if (token?.type === '(') {
-        consume('(');
-        value = parseExpression();
-        consume(')');
-      } else {
-        throw new Error('Công thức không hợp lệ');
-      }
-
-      while (peek()?.type === '%') {
-        consume('%');
-        value /= 100;
-      }
-      return value;
-    };
-
-    const parseUnary = () => {
-      if (peek()?.type === '+') {
-        consume('+');
-        return parseUnary();
-      }
-      if (peek()?.type === '-') {
-        consume('-');
-        return -parseUnary();
-      }
-      return parsePrimary();
-    };
-
-    const parseTerm = () => {
-      let value = parseUnary();
-      while (peek()?.type === '*' || peek()?.type === '/') {
-        const operator = tokens[cursor].type;
-        cursor += 1;
-        const right = parseUnary();
-        value = operator === '*' ? value * right : value / right;
-      }
-      return value;
-    };
-
-    function parseExpression() {
-      let value = parseTerm();
-      while (peek()?.type === '+' || peek()?.type === '-') {
-        const operator = tokens[cursor].type;
-        cursor += 1;
-        const right = parseTerm();
-        value = operator === '+' ? value + right : value - right;
-      }
-      return value;
-    }
-
-    const result = parseExpression();
-    if (cursor !== tokens.length || !Number.isFinite(result)) return null;
-    return Math.round((result + Number.EPSILON) * 100) / 100;
-  } catch (_) {
-    return null;
-  }
-};
-
-const calculateLineTotal = ({ item, shippingCost, formula }) => {
-  if (!formula) {
-    return Number(item?.price ?? 0) * Number(item?.quantity ?? 0);
-  }
-  return evaluateCalculationFormula(formula, {
-    price: Number(item?.price ?? 0),
-    quantity: Number(item?.quantity ?? 0),
-    shippingCost: Number(shippingCost ?? 0),
-    profit: Number(item?.profit ?? 0),
-  });
-};
-
-const calculateConvertedLineTotal = ({ item, shippingCost, formula, currency, exchangeRate }) => {
-  const amount = calculateLineTotal({ item, shippingCost, formula })
-    ?? (Number(item?.price ?? 0) * Number(item?.quantity ?? 0));
-  return Math.round(amount * getExchangeRate(currency, exchangeRate));
-};
-
 const EditButton = ({
   editable,
   onEdit,
@@ -368,7 +234,7 @@ const BanHangPage = ({
   business
 }) => {
 
-  const [data, setData] = useState([]);
+  const [lineItems, setData] = useState([]);
   const [customer, setCustomer] = useState();
   const [leadProducts, setLeadProducts] = useState([]);
 
@@ -379,6 +245,17 @@ const BanHangPage = ({
   const [exchangeRate, setExchangeRate] = useState(1);
   const [vatRate, setVatRate] = useState(0);
   const [calculationFormula, setCalculationFormula] = useState('');
+
+  const data = useMemo(() => lineItems.map(item => {
+    const totalPrice = calculateConvertedLineTotal({ item, shippingCost, formula: calculationFormula, currency, exchangeRate });
+    return {
+      ...item,
+      currency,
+      exchangeRate: getExchangeRate(currency, exchangeRate),
+      totalPrice,
+      total: totalPrice,
+    };
+  }), [lineItems, calculationFormula, currency, exchangeRate, shippingCost]);
 
   useEffectAsync(async () => {
     const { data: configs, errorCode } = await RequestUtils.Get('/erp/config/fetch', {
@@ -453,7 +330,7 @@ const BanHangPage = ({
       order.productCode = productCode ?? mProduct.code ?? null;
       order.productName = mProduct.name;
       order.unit = mProduct.unit ?? "N/A";
-      order.mSkuDetails = mSkuDetails;
+      order.mSkuDetails = resolveOrderSkuDetails({ mSkuDetails, skuDetails: values.skuDetails, skuId }, mProduct);
       order.orderLine = orderLine ?? {};
       order.skuId = String(skuId);
       order.quantity = quantity;
@@ -570,43 +447,6 @@ const BanHangPage = ({
       editable: true
     },
     {
-      title: `Chi phí vận chuyển (${currency})`,
-      dataIndex: 'shippingCost',
-      key: 'shippingCost',
-      width: 140,
-      align: 'right',
-      onCell: (_, index) => ({
-        rowSpan: index === 0 ? Math.max(data.length, 1) : 0
-      }),
-      render: (_, __, index) => index === 0 ? (
-        <InputNumber
-          size="small"
-          min={0}
-          value={shippingCost}
-          onChange={value => {
-            const nextShippingCost = Number(value ?? 0);
-            setShippingCost(nextShippingCost);
-            if (calculationFormula) {
-              setData(current => current.map(item => ({
-                ...item,
-                totalPrice: calculateConvertedLineTotal({
-                  item,
-                  shippingCost: nextShippingCost,
-                  formula: calculationFormula,
-                  currency,
-                  exchangeRate
-                })
-              })));
-            }
-          }}
-          formatter={formatterInputNumber}
-          parser={parserInputNumber}
-          controls={false}
-          style={{ width: '100%', textAlign: 'right' }}
-        />
-      ) : null
-    },
-    {
       title: 'Lợi nhuận (%)',
       dataIndex: 'profit',
       key: 'profit',
@@ -678,7 +518,7 @@ const BanHangPage = ({
       render: (_, record) => renderVndAmount(getLineAmount(record) + getLineVat(record))
     },
     {
-      title: 'Deadline',
+      title: customerOrder?.type === 'order' ? 'Ngày Chốt' : 'Ngày D.kiến',
       dataIndex: 'dayQuote',
       key: 'dayQuote',
       width: 150,
@@ -768,32 +608,14 @@ const BanHangPage = ({
   const totalVat = totalSubOrder * (vatRate / 100);
   const totalOrder = totalSubOrder + totalVat;
 
-  const recalculateTotals = useCallback((nextCurrency, nextExchangeRate) => {
-    setData(current => current.map(item => ({
-      ...item,
-      currency: nextCurrency,
-      exchangeRate: getExchangeRate(nextCurrency, nextExchangeRate),
-      totalPrice: calculateConvertedLineTotal({
-        item,
-        shippingCost,
-        formula: calculationFormula,
-        currency: nextCurrency,
-        exchangeRate: nextExchangeRate
-      })
-    })));
-  }, [calculationFormula, shippingCost]);
-
   const handleCurrencyChange = (nextCurrency) => {
-    const nextExchangeRate = nextCurrency === CURRENCY_USD ? exchangeRate : 1;
     setCurrency(nextCurrency);
     if (nextCurrency === CURRENCY_VND) setExchangeRate(1);
-    recalculateTotals(nextCurrency, nextExchangeRate);
   };
 
   const handleExchangeRateChange = (value) => {
     const nextExchangeRate = Number(value ?? 0);
     setExchangeRate(nextExchangeRate);
-    recalculateTotals(currency, nextExchangeRate);
   };
 
   const editRow = (key) => {
@@ -806,7 +628,7 @@ const BanHangPage = ({
   };
 
   const handleChange = (key, field, value) => {
-    const newData = [...data];
+    const newData = data.map(item => ({ ...item }));
     const target = newData.find((item) => item.key === key);
     if (!target) {
       return;
@@ -916,7 +738,7 @@ const BanHangPage = ({
         return <Text style={{ width: 120 }} ellipsis> {text || '(Chưa nhập)'} </Text>;
       }
       if (column.dataIndex === 'mSkuDetails') {
-        const skuDetails = record.mSkuDetails ?? record.skuDetails ?? [];
+        const skuDetails = resolveOrderSkuDetails(record);
         const orderLineEntries = Object.entries(parseOrderLine(record.orderLine));
 
         return (
@@ -960,7 +782,7 @@ const BanHangPage = ({
         details: data.map(({ mSkuDetails, ...detail }) => ({
           ...detail,
           dayQuote: formatDayQuoteForPayload(detail.dayQuote),
-          skuDetails: detail.skuDetails ?? mSkuDetails ?? []
+          skuDetails: resolveOrderSkuDetails({ ...detail, mSkuDetails })
         })),
         shippingCost: Number(shippingCost || 0),
         vat: vatRate,
@@ -1037,7 +859,7 @@ const BanHangPage = ({
     <>
       <OpportunityTable
         bordered
-        scroll={{ x: 2700 }}
+        scroll={{ x: 2560 }}
         dataSource={data}
         columns={columns.map(col => ({
           ...col,
@@ -1051,7 +873,6 @@ const BanHangPage = ({
           render: [
             'code',
             'profit',
-            'shippingCost',
             'salePrice',
             'lineAmount',
             'vatAmount',
@@ -1093,21 +914,20 @@ const BanHangPage = ({
               </Space>
             </Table.Summary.Cell>
             <Table.Summary.Cell index={3}></Table.Summary.Cell>
-            <Table.Summary.Cell index={4} align="right">{formatCurrencyAmount(shippingCost, currency)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={4}></Table.Summary.Cell>
             <Table.Summary.Cell index={5}></Table.Summary.Cell>
-            <Table.Summary.Cell index={6}></Table.Summary.Cell>
-            <Table.Summary.Cell index={7} align="right">{totalQuantity}</Table.Summary.Cell>
-            <Table.Summary.Cell index={8} align="right">{formatMoney(totalSubOrder)}</Table.Summary.Cell>
-            <Table.Summary.Cell index={9} align="right">{formatMoney(totalVat)}</Table.Summary.Cell>
-            <Table.Summary.Cell index={10} align="right"><Text strong>{formatMoney(totalOrder)}</Text></Table.Summary.Cell>
+            <Table.Summary.Cell index={6} align="right">{totalQuantity}</Table.Summary.Cell>
+            <Table.Summary.Cell index={7} align="right">{formatMoney(totalSubOrder)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={8} align="right">{formatMoney(totalVat)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={9} align="right"><Text strong>{formatMoney(totalOrder)}</Text></Table.Summary.Cell>
+            <Table.Summary.Cell index={10}></Table.Summary.Cell>
             <Table.Summary.Cell index={11}></Table.Summary.Cell>
-            <Table.Summary.Cell index={12}></Table.Summary.Cell>
-            <Table.Summary.Cell index={13} align="right">{formatCurrencyAmount(totalDiscount, currency)}</Table.Summary.Cell>
-            <Table.Summary.Cell index={14} colSpan={5}></Table.Summary.Cell>
+            <Table.Summary.Cell index={12} align="right">{formatCurrencyAmount(totalDiscount, currency)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={13} colSpan={5}></Table.Summary.Cell>
           </Table.Summary.Row>
         )}
       />
-      <div style={{ marginTop: 25, display: 'flex', justifyContent: 'space-between' }}>
+      <div style={{ marginTop: 25, display: 'flex', flexWrap: 'wrap', gap: 24, justifyContent: 'space-between' }}>
         <div>
           <Button
             disabled={arrayEmpty(data)}
@@ -1147,30 +967,47 @@ const BanHangPage = ({
             In hóa đơn
           </Button>
         </div>
-        <div>
-          {isOrder &&
-            <div style={{ minWidth: 430 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                <Text strong style={{ whiteSpace: 'nowrap' }}>
-                  {customerOrder.type === 'order' ? 'Mã đơn hàng:' : 'Mã cơ hội:'}
-                </Text>
-                <br/>
-                <Input
-                  value={customerOrder.code ?? ''}
-                  maxLength={100}
-                  placeholder="Nhập mã"
-                  onChange={event => setCustomerOrder(current => ({
-                    ...current,
-                    code: event.target.value
-                  }))}
-                  style={{ flex: 1 }}
-                />
-              </div>
-              <InvoiceTable
-                order={customerOrder}
+        <div style={{ width: 480, maxWidth: '100%', marginLeft: 'auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16, marginBottom: 12 }}>
+            <div>
+              <label htmlFor="order-code" style={{ display: 'block', fontWeight: 600, marginBottom: 8 }}>
+                {customerOrder?.type === 'order' ? 'Mã đơn hàng' : 'Mã cơ hội'}
+              </label>
+              <Input
+                id="order-code"
+                size="small"
+                value={customerOrder?.code ?? ''}
+                maxLength={100}
+                placeholder={isOrder ? 'Nhập mã' : 'Tự tạo khi lưu'}
+                disabled={!isOrder}
+                onChange={event => setCustomerOrder(current => ({ ...current, code: event.target.value }))}
               />
             </div>
-          }
+            <div>
+              <label htmlFor="order-shipping-cost" style={{ display: 'block', fontWeight: 600, marginBottom: 8 }}>
+                Phí vận chuyển ({currency})
+              </label>
+              <InputNumber
+                id="order-shipping-cost"
+                size="small"
+                min={0}
+                value={shippingCost}
+                onChange={value => setShippingCost(Number(value ?? 0))}
+                formatter={formatterInputNumber}
+                parser={parserInputNumber}
+                controls={false}
+                style={{ width: '100%' }}
+              />
+            </div>
+          </div>
+          <InvoiceTable order={{
+            ...customerOrder,
+            subtotal: totalSubOrder,
+            vat: vatRate,
+            total: totalOrder + Math.round(shippingCost * getExchangeRate(currency, exchangeRate)),
+            paid: customerOrder?.paid ?? 0,
+            priceOff: customerOrder?.priceOff ?? 0,
+          }} />
         </div>
       </div>
     </>

@@ -22,6 +22,8 @@
 import { SUCCESS_CODE } from "@/configs";
 import { RequestUtils, arrayEmpty } from '@flast-erp/core/utils';
 
+import { resolveOrderSkuDetails } from '../containers/Order/orderSku';
+
 export const getWarehouseByProduct = (skuId, mProduct) => {
   if (arrayEmpty(mProduct?.warehouses)) {
     return []
@@ -75,7 +77,7 @@ const normalizeOrderDetail = (detail, product, order) => {
     productCode: detail?.productCode ?? product?.code ?? null,
     productName: detail?.productName ?? product?.name ?? '',
     unit: detail?.unit ?? product?.unit ?? '(Chưa có)',
-    mSkuDetails: detail?.mSkuDetails ?? detail?.skuDetails ?? [],
+    mSkuDetails: resolveOrderSkuDetails(detail, product),
     price,
     quantity,
     discountAmount,

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react'
+import React, { useCallback, useEffect, useMemo } from 'react'
 import { Button, Select, Spin, Typography } from 'antd'
 import { BarChartOutlined } from '@ant-design/icons'
 
@@ -12,6 +12,8 @@ import WorkflowOrderDetailCard from './WorkflowOrderDetailCard'
 import WorkflowProductCard from './WorkflowProductCard'
 import WorkflowEntityCard from './WorkflowEntityCard'
 import { getFormSubmitButtonConfig } from '@/utils/formSubmitButton'
+
+import { getLeadForwardOptions, hideLeadCreationSummary, hideLeadStageOutcome, hideLeadFormInstructions } from '../utils/leadWorkflow'
 
 const { Text } = Typography
 const LEAD_ASSET_BASE_URL = 'http://view.user.flast.vn/assets/icons'
@@ -170,17 +172,34 @@ const WorkflowInstanceContent = ({
   const displaySubmitButton = getFormSubmitButtonConfig(submissionState.displayForm)
   const openedHiddenStepCode = workflowState.openedHiddenStepCode
   const backToCurrentStep = workflowState.backToCurrentStep
-  const handleFormSubmitSuccess = useCallback(() => {
+  const leadForwardOptions = getLeadForwardOptions({
+    steps: workflowState.allSteps,
+    currentStep: workflowState.currentStep,
+    options: workflowState.stepTransitionOptions,
+    buttons: workflowState.currentStepButtons,
+  })
+  const leadNextStepCode = leadForwardOptions.length === 1
+    ? leadForwardOptions[0].value
+    : leadForwardOptions.find(option => option.value === workflowState.selectedToStepCode)?.value
+  const handleFormSubmitSuccess = async (response, preview) => {
+    if (leadMode && !openedHiddenStepCode && !workflowState.isReviewingSubmission
+      && leadNextStepCode && preview
+      && String(preview.processInstance?.currentStepCode) === String(workflowState.currentStep?.stepCode)) {
+      const savedSubmission = preview.submissions?.find(item => (
+        String(item.stepCode) === String(workflowState.currentStep?.stepCode)
+        && Number(item.templateId) === Number(submissionState.currentForm?.id)
+      ))
+      await workflowState.advanceWorkflow({
+        currentSubmission: savedSubmission,
+        currentForm: submissionState.currentForm,
+        toStepCode: leadNextStepCode,
+      })
+    }
     onSubmitSuccess?.()
     if (openedHiddenStepCode && displaySubmitButton.closeAfterSubmit) {
       backToCurrentStep()
     }
-  }, [
-    backToCurrentStep,
-    displaySubmitButton.closeAfterSubmit,
-    openedHiddenStepCode,
-    onSubmitSuccess,
-  ])
+  }
   const formState = useWorkflowRemoteForm({
     currentForm: workflowState.openedHiddenStepCode
       ? submissionState.displayForm
@@ -195,6 +214,21 @@ const WorkflowInstanceContent = ({
     refreshWorkflow: workflowState.refreshWorkflow,
     onSubmitSuccess: handleFormSubmitSuccess,
   })
+  useEffect(() => {
+    if (!leadMode || !formState.RemoteForm) return undefined
+    const container = formState.remoteFormContainerRef.current
+    if (!container) return undefined
+    const hideSummary = () => {
+      hideLeadCreationSummary(container)
+      hideLeadStageOutcome(container)
+      hideLeadFormInstructions(container)
+    }
+    hideSummary()
+    const observer = new MutationObserver(hideSummary)
+    observer.observe(container, { childList: true, subtree: true })
+    return () => observer.disconnect()
+  }, [leadMode, formState.RemoteForm, formState.remoteRenderKey, formState.remoteFormContainerRef])
+
   const workflowName = workflowState.workflow?.name
     ?? `Workflow #${workflowState.workflow?.id ?? workflowInstance?.processId}`
   const canAdvance = (
@@ -318,7 +352,9 @@ const WorkflowInstanceContent = ({
   }
 
   if (leadMode) {
-    const configuredButtons = workflowState.currentStepButtons
+    const configuredButtons = workflowState.currentStepButtons.filter(button => (
+      !leadForwardOptions.some(option => option.value === button.targetStepCode)
+    ))
     const auxiliaryCodes = new Set(
       workflowState.allSteps.flatMap(step => (
         Array.isArray(step?.buttons)
@@ -338,9 +374,6 @@ const WorkflowInstanceContent = ({
     })
     const mainSteps = sortSteps(
       workflowState.steps.filter(step => !auxiliaryCodes.has(String(step?.stepCode))),
-    )
-    const auxiliarySteps = sortSteps(
-      workflowState.allSteps.filter(step => auxiliaryCodes.has(String(step?.stepCode))),
     )
     const lead = orderDetail ?? order ?? {}
     const displayName = lead?.customerName ?? lead?.business?.companyName ?? lead?.companyName ?? `Lead #${lead?.id ?? ''}`
@@ -362,13 +395,6 @@ const WorkflowInstanceContent = ({
         toStepName: item?.toStepName ?? item?.toStage,
         note: item?.note ?? item?.description,
       })) : [])
-    const buttonIcon = button => (
-      String(button?.style).toUpperCase() === 'DANGER'
-        ? 'circle-x.svg'
-        : button?.type === 'OPEN_HIDDEN_STEP'
-          ? 'clock.svg'
-          : 'target.svg'
-    )
 
     return (
       <div className="lead-workflow-detail">
@@ -401,46 +427,6 @@ const WorkflowInstanceContent = ({
                 onStepClick={workflowState.reviewStep}
               />
 
-              {auxiliarySteps.length ? (
-                <div className="pl-tracker__branches">
-                  {auxiliarySteps.map(step => (
-                    <span className="pl-tracker__branch" key={step?.stepCode}>
-                      <img src={`${LEAD_ASSET_BASE_URL}/${/đóng|lost/i.test(step?.name ?? '') ? 'circle-x.svg' : 'clock.svg'}`} alt="" />
-                      Nhánh phụ: {step?.name ?? step?.stepCode}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-
-              <div className="pl-lockrow">
-                <img src={`${LEAD_ASSET_BASE_URL}/shield.svg`} alt="" />
-                <span title="Bước hiện tại không thể sửa trực tiếp — chỉ chuyển qua các action được cấu hình.">
-                  Bước hiện tại không thể sửa trực tiếp — chỉ chuyển qua các action được cấu hình.
-                </span>
-              </div>
-
-              {configuredButtons.length ? (
-                <div className="pl-actions">
-                  {configuredButtons.map((button, index) => {
-                    const styleType = String(button?.style ?? 'DEFAULT').toUpperCase()
-                    const disabled = workflowState.transitioning
-                      || !button?.targetStepCode
-                      || (Boolean(button?.requireSubmission) && !submissionState.hasCurrentSubmission)
-                    return (
-                      <Button
-                        key={button?.id ?? index}
-                        className={`btn ${styleType === 'DANGER' ? 'btn--danger' : styleType === 'PRIMARY' ? 'btn--primary' : 'btn--secondary'}`}
-                        loading={workflowState.transitioning}
-                        disabled={disabled}
-                        onClick={() => handleConfiguredButton(button)}
-                      >
-                        <img src={`${LEAD_ASSET_BASE_URL}/${buttonIcon(button)}`} alt="" width="14" height="14" />
-                        {button?.label ?? `Action ${index + 1}`}
-                      </Button>
-                    )
-                  })}
-                </div>
-              ) : null}
             </div>
 
             <div className="lead-workflow-form">
@@ -458,6 +444,40 @@ const WorkflowInstanceContent = ({
                 isReviewingSubmission={workflowState.isReviewingSubmission}
                 isAuxiliaryStep={Boolean(workflowState.openedHiddenStepCode)}
                 onBack={workflowState.backToCurrentStep}
+                submitBusy={workflowState.transitioning}
+                submitDisabled={leadForwardOptions.length > 1 && !leadNextStepCode && !openedHiddenStepCode}
+                footerActions={!workflowState.isReviewingSubmission && !openedHiddenStepCode ? (
+                  <>
+                    {configuredButtons.map((button, index) => (
+                      <Button
+                        key={button.id ?? index}
+                        danger={String(button.style).toUpperCase() === 'DANGER'}
+                        disabled={formState.submittingForm || workflowState.transitioning
+                          || !button.targetStepCode
+                          || (Boolean(button.requireSubmission) && !submissionState.hasCurrentSubmission)}
+                        onClick={() => handleConfiguredButton(button)}
+                      >
+                        {button.label ?? `Action ${index + 1}`}
+                      </Button>
+                    ))}
+                    {leadForwardOptions.length > 1 ? (
+                      <Select
+                        style={{ minWidth: 180 }}
+                        placeholder="Chọn bước tiếp theo"
+                        options={leadForwardOptions}
+                        value={leadNextStepCode}
+                        disabled={formState.submittingForm || workflowState.transitioning}
+                        onChange={workflowState.setSelectedToStepCode}
+                      />
+                    ) : null}
+                    {!submissionState.currentForm && !formState.remoteEntry && leadNextStepCode ? (
+                      <Button type="primary" loading={workflowState.transitioning}
+                        onClick={() => workflowState.advanceWorkflow({ toStepCode: leadNextStepCode, requireSubmission: false })}>
+                        Tiếp tục
+                      </Button>
+                    ) : null}
+                  </>
+                ) : null}
                 formState={formState}
               />
             </div>

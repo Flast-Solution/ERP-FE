@@ -38,14 +38,15 @@ import { useEffectAsync } from '@flast-erp/core/hooks';
 import { ShowSkuDetail } from '@/containers/Product/SkuView';
 import {
   arrayNotEmpty,
-  RequestUtils,
-  createMSkuDetails
+  RequestUtils
 } from '@flast-erp/core/utils';
 import {
   buildOrderLine,
   getDuplicateOrderLineKeys,
   hasIncompleteOrderLineEntries,
 } from './orderLine';
+
+import { normalizeOrderSkuDetails, resolveOrderSkuDetails } from './orderSku';
 
 const AddSKU = (props) => {
   const {
@@ -211,7 +212,7 @@ const AddSKU = (props) => {
         orderLine: buildOrderLine(orderLineEntries),
         status: draft.values?.status ?? 0,
         mProduct: draft.product,
-        mSkuDetails: createMSkuDetails(draft.sku?.skuDetails ?? []),
+        mSkuDetails: resolveOrderSkuDetails({ ...draftValues, skuDetails: draft.sku?.skuDetails }, draft.product),
       });
     });
     message.success(`Đã thêm ${selectedProductIds.length} sản phẩm vào cơ hội bán hàng.`);
@@ -227,15 +228,16 @@ const AddSKU = (props) => {
   ]);
 
   const onChangeGetSelectedSku = (value, item) => {
-    skuRef.current = item;
-    setSkuDetail(item);
+    const selectedSku = skus.find(candidate => String(candidate.id) === String(value)) ?? item;
+    skuRef.current = selectedSku;
+    setSkuDetail(selectedSku);
   };
 
   const memoSkuDetail = React.useMemo(() => {
     if(isEmpty(sku)) {
       return <span />;
     }
-    const mSkuDetails = createMSkuDetails(sku.skuDetails ?? []);
+    const mSkuDetails = normalizeOrderSkuDetails(sku.skuDetails);
     return <ShowSkuDetail skuDetails={mSkuDetails} />
   }, [ sku ]);
 
@@ -390,7 +392,7 @@ const AddSKU = (props) => {
         </Col>
         <Col span={24}>
           <BtnSubmit
-            marginTop={0}
+            marginTop={24}
             text="Hoàn thành"
           />
         </Col>

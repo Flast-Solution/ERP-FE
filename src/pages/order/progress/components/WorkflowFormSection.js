@@ -19,6 +19,9 @@ import { InspectionResultList } from '../InspectionResults'
 
 const WorkflowFormSection = ({
   bare = false,
+  footerActions,
+  submitBusy = false,
+  submitDisabled = false,
   order,
   selectedLot,
   workflowEntity,
@@ -151,19 +154,22 @@ const WorkflowFormSection = ({
         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Bước này chưa có dữ liệu đã gửi" />
       )}
       {remoteFormContent}
-      {remoteEntry && RemoteForm && canSubmitForm ? (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+      {footerActions || (remoteEntry && RemoteForm && canSubmitForm) ? (
+        <div className="workflow-form-footer" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+          {footerActions}
+          {remoteEntry && RemoteForm && canSubmitForm ? (
           <Button
             type={submitType === 'PRIMARY' ? 'primary' : 'default'}
             danger={submitType === 'DANGER'}
             icon={submitIcon}
             style={customColorStyle}
-            loading={submittingForm}
-            disabled={loadingRemote || Boolean(remoteError)}
+            loading={submittingForm || submitBusy}
+            disabled={loadingRemote || Boolean(remoteError) || submitDisabled}
             onClick={submitCurrentForm}
           >
             {submitButton.label}
           </Button>
+          ) : null}
         </div>
       ) : null}
     </div>
