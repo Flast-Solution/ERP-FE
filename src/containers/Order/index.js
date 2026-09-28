@@ -1152,10 +1152,10 @@ const BanHangPage = ({
             <div style={{ minWidth: 430 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                 <Text strong style={{ whiteSpace: 'nowrap' }}>
-                  {customerOrder.type === 'order' ? 'Mã đơn hàng' : 'Mã cơ hội'}
+                  {customerOrder.type === 'order' ? 'Mã đơn hàng:' : 'Mã cơ hội:'}
                 </Text>
+                <br/>
                 <Input
-                  size="small"
                   value={customerOrder.code ?? ''}
                   maxLength={100}
                   placeholder="Nhập mã"
