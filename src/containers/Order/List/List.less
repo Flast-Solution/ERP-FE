@@ -45,7 +45,28 @@
     .ant-table-thead > tr:first-child > th {
       text-align: center;
       font-weight: 600;
-      background: #eef2f7;
+    }
+
+    .ant-table-thead > tr > th {
+      &.order-tracking-header--detail {
+        background: #e6f4ff;
+        color: #003a8c;
+      }
+
+      &.order-tracking-header--production {
+        background: #fff7e6;
+        color: #873800;
+      }
+
+      &.order-tracking-header--inbound {
+        background: #f6ffed;
+        color: #135200;
+      }
+
+      &.order-tracking-header--outbound {
+        background: #f9f0ff;
+        color: #391085;
+      }
     }
 
     .ant-table-tbody > tr > td[rowspan] {

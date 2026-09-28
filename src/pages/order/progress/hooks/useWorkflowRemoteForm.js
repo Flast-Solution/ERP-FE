@@ -24,6 +24,7 @@ export const useWorkflowRemoteForm = ({
   syncWorkflowInstance,
   onSubmitSuccess,
 }) => {
+  const submitInFlightRef = useRef(false)
   const remoteFormRef = useRef(null)
   const remoteFormContainerRef = useRef(null)
   const [submittingForm, setSubmittingForm] = useState(false)
@@ -72,6 +73,7 @@ export const useWorkflowRemoteForm = ({
   }, [currentFormName, remoteRenderKey])
 
   const handleRemoteFormSubmit = useCallback(async (values) => {
+    if (submitInFlightRef.current) return
     const payload = buildWorkflowSubmissionPayload({
       values,
       currentForm,
@@ -100,6 +102,7 @@ export const useWorkflowRemoteForm = ({
       return
     }
 
+    submitInFlightRef.current = true
     setSubmittingForm(true)
     try {
       const response = await RequestUtils.Post(WORKFLOW_SUBMISSION_API, payload)
@@ -114,10 +117,11 @@ export const useWorkflowRemoteForm = ({
       if (preview?.processInstance) {
         syncWorkflowInstance?.(preview.processInstance)
       }
-      onSubmitSuccess?.(response)
+      await onSubmitSuccess?.(response, preview)
     } catch (error) {
       message.error(error?.message || 'Không lưu được dữ liệu form.')
     } finally {
+      submitInFlightRef.current = false
       setSubmittingForm(false)
     }
   }, [

@@ -88,6 +88,7 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById }) => {
   const columns = [
     {
       title: 'Đơn con',
+      key: 'detail',
       children: [
         {
           title: 'Mã đơn con',
@@ -149,6 +150,7 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById }) => {
     },
     {
       title: 'Lệnh sản xuất',
+      key: 'production',
       children: [
         {
           title: 'Lệnh sản xuất',
@@ -182,6 +184,7 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById }) => {
     },
     {
       title: 'Nhập kho',
+      key: 'inbound',
       children: [
         {
           title: 'Phiếu nhập',
@@ -212,6 +215,7 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById }) => {
     },
     {
       title: 'Xuất kho giao hàng',
+      key: 'outbound',
       children: [
         {
           title: 'Phiếu xuất',
@@ -258,7 +262,14 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById }) => {
         bordered
         pagination={false}
         rowKey="_rowKey"
-        columns={columns}
+        columns={columns.map(group => ({
+          ...group,
+          onHeaderCell: () => ({ className: `order-tracking-header--${group.key}` }),
+          children: group.children.map(column => ({
+            ...column,
+            onHeaderCell: () => ({ className: `order-tracking-header--${group.key}` }),
+          })),
+        }))}
         dataSource={rows}
         locale={{ emptyText: 'Đơn hàng chưa có đơn con' }}
         scroll={{ x: 2160 }}
