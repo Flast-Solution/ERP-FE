@@ -3,7 +3,7 @@ import { message } from 'antd'
 import { RequestUtils } from '@flast-erp/core/utils'
 
 // Same paginated workflow catalogue used by the Lead form.
-export const useWorkflowOptions = () => {
+export const useWorkflowOptions = (type) => {
   const [workflows, setWorkflows] = useState([])
   const [loading, setLoading] = useState(false)
   const state = useRef({ offset: 0, loading: false, more: true })
@@ -15,6 +15,7 @@ export const useWorkflowOptions = () => {
     try {
       const response = await RequestUtils.Get('/workflow/process/filter', {
         limit: '50', offset: String(state.current.offset),
+        ...(type ? { type } : {}),
       })
       if (!mounted.current) return
       if (response?.success === false || (response?.errorCode != null && Number(response.errorCode) !== 200)) {
@@ -31,7 +32,7 @@ export const useWorkflowOptions = () => {
       state.current.loading = false
       if (mounted.current) setLoading(false)
     }
-  }, [])
+  }, [type])
   useEffect(() => {
     mounted.current = true
     loadMore()

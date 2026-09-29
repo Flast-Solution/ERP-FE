@@ -1,1 +1,3 @@
-export { useWorkflowOptions as useProductionWorkflows } from '@/hooks/useWorkflowOptions'
+import { useWorkflowOptions } from '@/hooks/useWorkflowOptions'
+
+export const useProductionWorkflows = () => useWorkflowOptions('PRODUCTION')

@@ -6,7 +6,6 @@ import { useProductionOrderFlow } from './useProductionOrderFlow'
 jest.mock('antd', () => ({ message: { error: jest.fn(), success: jest.fn(), warning: jest.fn() } }))
 jest.mock('@flast-erp/core/utils', () => ({ RequestUtils: { Post: jest.fn() } }), { virtual: true })
 jest.mock('@/containers/Order/List/services/workflowApi', () => ({ attachSelectedWorkflows: jest.fn() }), { virtual: true })
-jest.mock('@/containers/Order/List/constants', () => ({ ORDER_WORKFLOW_ENTITY_TYPE: 'order' }), { virtual: true })
 let root, flow
 const options = { resetWaitingOrders: jest.fn(), reloadWaitingOrders: jest.fn(), onSaved: jest.fn() }
 const productionOrder = { id: 10, orderDetails: [{ id: 21, productId: 5 }, { id: 22, productId: 5 }], productDetails: { 21: { workflowProcessIds: [1, 2] }, 22: { workflowProcessIds: [3] } } }
@@ -27,8 +26,8 @@ test.each(['create', 'edit'])('starts workflows for each child after a successfu
   RequestUtils.Post.mockResolvedValue({ errorCode: 200, data: { id: 10 } })
   await act(async () => flow.finishFlow({ productionOrder }))
   expect(attachSelectedWorkflows.mock.calls.map(([body]) => body)).toEqual([
-    { processIds: [1, 2], entityType: 'order', entityId: 21 },
-    { processIds: [3], entityType: 'order', entityId: 22 },
+    { processIds: [1, 2], entityType: 'PRODUCTION', entityId: 21 },
+    { processIds: [3], entityType: 'PRODUCTION', entityId: 22 },
   ])
   expect(RequestUtils.Post.mock.invocationCallOrder[0]).toBeLessThan(attachSelectedWorkflows.mock.invocationCallOrder[0])
 })

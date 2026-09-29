@@ -10,7 +10,7 @@ import {
 } from '../utils'
 
 import { useWorkflowDrawer } from '@/contexts/WorkflowDrawerContext'
-import { ORDER_WORKFLOW_ENTITY_TYPE } from '@/containers/Order/List/constants'
+import { PRODUCTION_WORKFLOW_ENTITY_TYPE } from '../constants'
 
 const getProductionOrderColumns = ({
   onView,
@@ -180,8 +180,8 @@ const ProductionOrderTable = ({
   const { openWorkflowDrawer } = useWorkflowDrawer()
   const onWorkflow = useCallback((record, detail) => {
     openWorkflowDrawer(record.order ?? record, { ...detail, id: detail.orderDetailId ?? detail.id }, {
-      entityName: ORDER_WORKFLOW_ENTITY_TYPE,
-      entityType: ORDER_WORKFLOW_ENTITY_TYPE,
+      entityName: PRODUCTION_WORKFLOW_ENTITY_TYPE,
+      entityType: PRODUCTION_WORKFLOW_ENTITY_TYPE,
       entityLabel: 'Đơn con',
       workflowInstances: detail.workflowInstances ?? [],
       includeAllInstances: true,
