@@ -21,14 +21,20 @@
 
 import React, { useCallback, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import { Button, Tooltip } from 'antd';
+import { Button, Dropdown, Space, Tooltip } from 'antd';
 import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
 import ShipFilter from './Filter';
 import { useGetList } from "@flast-erp/core/hooks";
 import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils';
-import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
+import { RequestUtils, InAppEvent, f5List } from '@flast-erp/core/utils';
 import { HASH_MODAL } from '@/configs/constant';
 import useGetMe from '@/hooks/useGetMe';
+import { ApartmentOutlined, EyeOutlined } from '@ant-design/icons';
+import WorkflowAttachModal from '@/containers/Order/List/components/WorkflowAttachModal';
+import useWorkflowModal from '@/containers/Order/List/hooks/useWorkflowModal';
+import { useWorkflowDrawer } from '@/contexts/WorkflowDrawerContext';
+import { SHIPPING_WORKFLOW_ENTITY_TYPE } from '@/containers/Order/List/constants';
+import { enrichEntitiesWithWorkflowData } from '@/containers/Order/List/services/workflowApi';
 
 const getLots = record => Array.isArray(record?.lots) ? record.lots : [];
 const getTotalQuantity = record => getLots(record).reduce(
@@ -57,6 +63,9 @@ const ShipPage = () => {
 
   const [title] = useState("Đã giao");
   const { hasPermission } = useGetMe();
+  const { openWorkflowDrawer } = useWorkflowDrawer();
+  const canViewWorkflow = hasPermission('shipping.delivery.view');
+  const workflow = useWorkflowModal({ onAttached: () => f5List('shipping/fetch') });
   const canUpdate = hasPermission('shipping.delivery.update');
   const canPrint = hasPermission('shipping.delivery.print');
   const beforeSubmitFilter = useCallback((values) => {
@@ -80,11 +89,11 @@ const ShipPage = () => {
     for (let ship of values.embedded) {
       ship.statusName = listStatus.find(i => i.id === ship.status)?.name || '';
     }
-    return values;
+    return enrichEntitiesWithWorkflowData(values, SHIPPING_WORKFLOW_ENTITY_TYPE);
   }
 
   const CUSTOM_ACTION = [
-    ...(canUpdate || canPrint ? [{
+    ...(canViewWorkflow || canUpdate || canPrint ? [{
       title: 'Mã phiếu xuất',
       dataIndex: 'deliveryCode',
       width: 180,
@@ -164,15 +173,58 @@ const ShipPage = () => {
       title: 'Action',
       key: 'action',
       fixed: 'right',
-      width: 100,
+      width: 135,
       render: (record) => (
-        <Button
+        <Space size={4}>
+        {canUpdate || canPrint ? <Button
           type="primary"
           size="small"
           onClick={() => onClickGiaoHang(record)}
         >
           Chi tiết
-        </Button>
+        </Button> : null}
+        {(canViewWorkflow && record.workflowInstances?.length > 0) || canUpdate ? <Dropdown
+          trigger={['click']}
+          placement="bottomRight"
+          menu={{
+            items: [
+              ...(canViewWorkflow && record.workflowInstances?.length > 0 ? [{
+                key: 'progress',
+                icon: <EyeOutlined />,
+                label: <><strong>Mã</strong> {record.deliveryCode || record.orderCode || `#${record.id}`}</>,
+                onClick: ({ domEvent }) => {
+                  domEvent.stopPropagation();
+                  openWorkflowDrawer(record, record, {
+                    entityName: SHIPPING_WORKFLOW_ENTITY_TYPE,
+                    entityType: SHIPPING_WORKFLOW_ENTITY_TYPE,
+                    entityLabel: 'Phiếu xuất kho',
+                    workflowInstances: record.workflowInstances ?? [],
+                    includeAllInstances: true,
+                  });
+                },
+              }] : []),
+              ...(canUpdate ? [{
+                key: 'attach',
+                icon: <ApartmentOutlined />,
+                label: 'Gắn thêm workflow',
+                onClick: ({ domEvent }) => {
+                  domEvent.stopPropagation();
+                  workflow.openWorkflowModal({ ...record, code: record.deliveryCode || record.orderCode }, SHIPPING_WORKFLOW_ENTITY_TYPE);
+                },
+              }] : []),
+            ],
+          }}
+          disabled={!record?.id}
+        >
+          <Button
+            size="small"
+            icon={<EyeOutlined />}
+            aria-label="Workflow"
+            disabled={!record?.id}
+            onClick={event => event.stopPropagation()}
+          />
+        </Dropdown> : null}
+        </Space>
       )
     }] : [])
   ];
@@ -195,6 +247,22 @@ const ShipPage = () => {
         useGetAllQuery={useGetList}
         apiPath={'shipping/fetch'}
         columns={CUSTOM_ACTION}
+      />
+      <WorkflowAttachModal
+        open={workflow.workflowModalOpen}
+        onCancel={workflow.closeWorkflowModal}
+        onOk={workflow.handleAttachWorkflow}
+        confirmLoading={workflow.workflowAttaching}
+        workflowTargets={workflow.workflowTargets}
+        selectedWorkflowIdsByTarget={workflow.selectedWorkflowIdsByTarget}
+        initialWorkflowIdsByTarget={workflow.initialWorkflowIdsByTarget}
+        setWorkflowIdsForTarget={workflow.setWorkflowIdsForTarget}
+        workflows={workflow.workflows}
+        workflowLoading={workflow.workflowLoading}
+        selectedOrder={workflow.selectedOrder}
+        selectedWorkflowEntityType={workflow.selectedWorkflowEntityType}
+        canSubmit={workflow.canSubmit}
+        entityLabel="Phiếu xuất kho"
       />
     </div>
   )

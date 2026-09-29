@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react'
-import { Button, Select, Space, Table, Tooltip } from 'antd'
-import { EditOutlined, EyeOutlined } from '@ant-design/icons'
+import React, { useCallback, useMemo } from 'react'
+import { Button, Dropdown, Select, Space, Table, Tooltip } from 'antd'
+import { EditOutlined, EyeOutlined, ApartmentOutlined } from '@ant-design/icons'
 import {
   formatListDate,
   getBomVersions,
@@ -9,10 +9,14 @@ import {
   getProductionQuantity,
 } from '../utils'
 
+import { useWorkflowDrawer } from '@/contexts/WorkflowDrawerContext'
+import { ORDER_WORKFLOW_ENTITY_TYPE } from '@/containers/Order/List/constants'
+
 const getProductionOrderColumns = ({
   onView,
   onEdit,
   onStatusChange,
+  onWorkflow,
   statusOptions,
   updatingStatusId,
 }) => [
@@ -107,7 +111,7 @@ const getProductionOrderColumns = ({
   {
     title: 'Thao tác',
     key: 'actions',
-    width: 100,
+    width: 145,
     align: 'center',
     fixed: 'right',
     render: (_, record) => (
@@ -123,6 +127,31 @@ const getProductionOrderColumns = ({
             }}
           />
         </Tooltip>
+        <Dropdown
+          trigger={['click']}
+          menu={{
+            items: (record.orderDetails ?? []).map(detail => ({
+              key: String(detail.id),
+              label: detail.code || detail.productName || `Đơn con #${detail.id}`,
+              disabled: !(detail.orderDetailId ?? (!String(detail.id).startsWith('manufacture-') && detail.id)),
+              onClick: ({ domEvent }) => {
+                domEvent.stopPropagation()
+                onWorkflow(record, detail)
+              },
+            })),
+          }}
+          disabled={!(record.orderDetails ?? []).length}
+        >
+          <Tooltip title="Xem tiến trình workflow theo đơn con">
+            <Button
+              type="text"
+              icon={<ApartmentOutlined />}
+              aria-label="Xem tiến trình workflow"
+              style={{ color: record.orderDetails?.some(detail => detail.workflowInstances?.length) ? '#52c41a' : undefined }}
+              onClick={event => event.stopPropagation()}
+            />
+          </Tooltip>
+        </Dropdown>
         <Tooltip title="Chỉnh sửa">
           <Button
             type="text"
@@ -148,15 +177,26 @@ const ProductionOrderTable = ({
   statusOptions = [],
   updatingStatusId,
 }) => {
+  const { openWorkflowDrawer } = useWorkflowDrawer()
+  const onWorkflow = useCallback((record, detail) => {
+    openWorkflowDrawer(record.order ?? record, { ...detail, id: detail.orderDetailId ?? detail.id }, {
+      entityName: ORDER_WORKFLOW_ENTITY_TYPE,
+      entityType: ORDER_WORKFLOW_ENTITY_TYPE,
+      entityLabel: 'Đơn con',
+      workflowInstances: detail.workflowInstances ?? [],
+      includeAllInstances: true,
+    })
+  }, [openWorkflowDrawer])
   const columns = useMemo(
     () => getProductionOrderColumns({
       onView,
       onEdit,
       onStatusChange,
+      onWorkflow,
       statusOptions,
       updatingStatusId,
     }),
-    [onView, onEdit, onStatusChange, statusOptions, updatingStatusId],
+    [onView, onEdit, onStatusChange, onWorkflow, statusOptions, updatingStatusId],
   )
 
   return (

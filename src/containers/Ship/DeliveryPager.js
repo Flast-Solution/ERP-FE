@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Button,
   Checkbox,
@@ -80,6 +80,8 @@ const DeliveryPager = ({ data = {} }) => {
   const canPrint = hasPermission('shipping.delivery.print');
   const contentRef = useRef();
   const [form] = Form.useForm();
+  const savingRef = useRef(false);
+  const [saving, setSaving] = useState(false);
   const delivery = data?.delivery ?? {};
   const lots = Array.isArray(data?.lots) ? data.lots : [];
   const requiredDocuments = Array.isArray(data?.requiredDocuments) ? data.requiredDocuments : [];
@@ -158,12 +160,22 @@ const DeliveryPager = ({ data = {} }) => {
   ];
 
   const onFinish = async ({ status }) => {
+    if (!canUpdate || savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
     try {
       const response = await RequestUtils.Post('/warehouse/delivery', { ...data, status });
-      message.success(response?.message || 'Cập nhật trạng thái thành công');
+      if (!(response?.success === true || Number(response?.errorCode) === 200)) {
+        message.error(response?.message || 'Không cập nhật được phiếu giao hàng');
+        return;
+      }
+      message.success(response?.message || 'Đã cập nhật trạng thái giao hàng');
       f5List('shipping/fetch');
     } catch (error) {
-      message.error(error?.message || 'Không cập nhật được trạng thái');
+      message.error(error?.message || 'Không cập nhật được phiếu giao hàng');
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
   };
 
@@ -241,7 +253,7 @@ const DeliveryPager = ({ data = {} }) => {
         </Section>
       </div>
 
-      <Form form={form} layout="vertical" onFinish={onFinish}>
+      <Form form={form} layout="vertical" onFinish={onFinish} disabled={saving}>
         <footer className="warehouse-delivery__footer">
           <span>Phiếu xuất kho được hiển thị ở chế độ xem chi tiết.</span>
           <div>
@@ -254,7 +266,7 @@ const DeliveryPager = ({ data = {} }) => {
                 formItemProps={{ style: { width: 220, marginBottom: 0 } }}
               />
             )}
-            {canUpdate && <Button htmlType="submit" icon={<SaveOutlined />}>Cập nhật trạng thái</Button>}
+            {canUpdate && <Button htmlType="submit" loading={saving} icon={<SaveOutlined />}>Cập nhật</Button>}
             {canPrint && <Button type="primary" icon={<PrinterOutlined />} onClick={printReceipt}>In phiếu</Button>}
           </div>
         </footer>

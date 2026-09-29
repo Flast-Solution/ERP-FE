@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { message } from 'antd'
 import { RequestUtils } from '@flast-erp/core/utils'
+import { enrichEntitiesWithWorkflowData } from '@/containers/Order/List/services/workflowApi'
+import { ORDER_WORKFLOW_ENTITY_TYPE } from '@/containers/Order/List/constants'
 import {
   EMPTY_FILTERS,
   MANUFACTURE_FETCH_API,
@@ -98,9 +100,22 @@ export const useProductionOrders = (initialOrderCode = '') => {
         label: status.name,
         color: status.color,
       })))
-      setOrders(embedded.map((record) => ({
+      const mappedOrders = embedded.map(record => ({
         ...mapManufactureOrder(record, manufactureStatuses),
         createdByName: userNameMap.get(String(record?.createdBy)),
+      }))
+      const childDetails = [...new Map(mappedOrders.flatMap(record => record.orderDetails ?? [])
+        .filter(detail => detail.orderDetailId != null || !String(detail.id).startsWith('manufacture-'))
+        .map(detail => [String(detail.orderDetailId ?? detail.id), { ...detail, id: detail.orderDetailId ?? detail.id }])).values()]
+      const enriched = await enrichEntitiesWithWorkflowData({ embedded: childDetails }, ORDER_WORKFLOW_ENTITY_TYPE)
+      if (requestId !== requestIdRef.current) return
+      const workflowById = new Map(enriched.embedded.map(detail => [String(detail.id), detail.workflowInstances]))
+      setOrders(mappedOrders.map(record => ({
+        ...record,
+        orderDetails: record.orderDetails.map(detail => ({
+          ...detail,
+          workflowInstances: workflowById.get(String(detail.orderDetailId ?? detail.id)) ?? detail.workflowInstances ?? [],
+        })),
       })))
       setPagination({
         current: page,

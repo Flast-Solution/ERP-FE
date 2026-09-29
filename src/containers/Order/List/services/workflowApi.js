@@ -26,17 +26,36 @@ export const fetchWorkflowList = async (flowType) => {
   return resolveWorkflowList(response)
 }
 
-export const attachWorkflow = async () => {
-  // Tạm thời không khởi tạo workflow từ FE.
-  // return RequestUtils.Post('/workflow/process/start', {
-  //   processId,
-  //   entityType,
-  //   entityId,
-  // })
-  return {
-    success: false,
-    message: 'Chức năng khởi tạo workflow đang tạm tắt.',
+export const attachWorkflow = async ({ processId, entityType, entityId }) => (
+  RequestUtils.Post('/workflow/process/start', { processId, entityType, entityId })
+)
+
+// Check persisted instances after saving: editing or retrying must not start
+// another instance of an already attached process.
+export const attachSelectedWorkflows = async ({ processIds = [], entityType, entityId }) => {
+  const selected = [...new Set(processIds.filter(id => id != null && id !== '').map(String))]
+  if (!selected.length) return []
+  if (!entityId) return selected.map(processId => ({ processId, message: 'Không có ID bản ghi đã lưu.' }))
+  let instances
+  try {
+    instances = await fetchWorkflowInstancesByEntity({ entityName: entityType, entityIds: [entityId] })
+  } catch (error) {
+    return selected.map(processId => ({ processId, message: error?.message || 'Không kiểm tra được workflow đã gắn.' }))
   }
+  const attached = new Set(instances.filter(instance => String(instance.entityId) === String(entityId))
+    .map(instance => String(instance.processId)))
+  const failures = []
+  for (const processId of selected.filter(id => !attached.has(id))) {
+    try {
+      const response = await attachWorkflow({ processId: Number(processId), entityType, entityId })
+      if (!(response?.success === true || Number(response?.errorCode) === 200)) {
+        failures.push({ processId, message: response?.message || 'Khởi tạo workflow thất bại.' })
+      }
+    } catch (error) {
+      failures.push({ processId, message: error?.message || 'Khởi tạo workflow thất bại.' })
+    }
+  }
+  return failures
 }
 
 export const fetchWorkflowInstancesByEntity = async ({ entityName, entityIds }) => {
@@ -44,6 +63,9 @@ export const fetchWorkflowInstancesByEntity = async ({ entityName, entityIds }) 
     entityName,
     entityIds,
   })
+  if (response?.success === false || (response?.errorCode != null && Number(response.errorCode) !== 200 && response?.success !== true)) {
+    throw new Error(response?.message || 'Không tải được workflow đã gắn.')
+  }
   return resolveWorkflowInstances(response)
     .map(normalizeWorkflowInstance)
     .filter(Boolean)
