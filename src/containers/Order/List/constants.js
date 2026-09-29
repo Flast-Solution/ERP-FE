@@ -10,3 +10,5 @@ export const PRODUCT_WORKFLOW_ENTITY_TYPE = 'product'
 export const LEAD_WORKFLOW_ENTITY_TYPE = 'lead'
 
 export const QUOTATION_APPROVAL_STATUS = { DRAFT: 0, PENDING: 1, APPROVED: 2 }
+
+export const SHIPPING_WORKFLOW_ENTITY_TYPE = 'shipping'

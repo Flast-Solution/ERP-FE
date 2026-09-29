@@ -73,6 +73,10 @@ export const buildManufacturePayload = ({ productionOrder = {}, materialConfirma
     const unitPrice = Number(product.unitPrice ?? product.price ?? 0)
 
     return {
+      ...(isEdit && product.manufactureDetailId != null ? { id: product.manufactureDetailId } : {}),
+      orderDetailId: product.orderDetailId ?? (Number.isFinite(Number(product.id)) ? product.id : null),
+      workflowProcessIds: [...new Set((detailValues.workflowProcessIds ?? product.workflowProcessIds ?? []).map(String))]
+        .map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0),
       productId: product.productId,
       providerId: detailValues.providerId
         ?? product.providerId
@@ -119,7 +123,8 @@ export const mapManufactureOrder = (record, manufactureStatuses = MANUFACTURE_SY
   const manufactureDetails = Array.isArray(record?.details) ? record.details : []
   const usedOrderDetailIds = new Set()
   const editingOrderDetails = manufactureDetails.map((detail, index) => {
-    const orderDetail = orderDetails.find(item => (
+    const orderDetail = orderDetails.find(item => detail.orderDetailId != null && String(item.id) === String(detail.orderDetailId))
+      ?? orderDetails.find(item => (
       !usedOrderDetailIds.has(String(item.id))
       && String(item.productId) === String(detail.productId)
     ))
@@ -130,8 +135,11 @@ export const mapManufactureOrder = (record, manufactureStatuses = MANUFACTURE_SY
 
     return {
       ...orderDetail,
-      id: orderDetail?.id ?? `manufacture-${detail.id ?? index}`,
+      id: orderDetail?.id ?? detail.orderDetailId ?? `manufacture-${detail.id ?? index}`,
       manufactureDetailId: detail.id,
+      orderDetailId: detail.orderDetailId ?? orderDetail?.id,
+      workflowProcessIds: detail.workflowProcessIds ?? orderDetail?.workflowProcessIds ?? [],
+      workflowInstances: orderDetail?.workflowInstances ?? detail.workflowInstances ?? [],
       productId: detail.productId,
       productName: orderDetail?.productName ?? `Sản phẩm #${detail.productId}`,
       skuId: detail.skuId ?? orderDetail?.skuId ?? null,
@@ -168,6 +176,7 @@ export const mapManufactureOrder = (record, manufactureStatuses = MANUFACTURE_SY
       String(detail?.id),
       {
         target: detail?.target ?? 0,
+        workflowProcessIds: detail?.workflowProcessIds ?? [],
         deadline: editDeadline,
         providerId: detail?.providerId ?? detail?.provider?.id ?? null,
       },

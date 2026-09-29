@@ -139,6 +139,8 @@ const ModalNhapKho = ({
 
   const [ form ] = Form.useForm();
   const printRef = useRef(null);
+  const savingRef = useRef(false);
+  const [saving, setSaving] = useState(false);
   const { hasPermission } = useGetMe();
   const canCreateDelivery = hasPermission('inventory.delivery.create');
   const [ inStocks, setInStocks ] = useState([]);
@@ -255,32 +257,42 @@ const ModalNhapKho = ({
   }, [readOnly]);
 
   const onFinish = useCallback(async (values) => {
-    const mSkuDetails = sku
-      ? createMSkuDetails(sku?.skuDetails ?? [])
-      : (model?.mSkuDetails ?? model?.skuDetails ?? []);
-    const { skuId } = values;
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      const mSkuDetails = sku
+        ? createMSkuDetails(sku?.skuDetails ?? [])
+        : (model?.mSkuDetails ?? model?.skuDetails ?? []);
+      const { skuId } = values;
 
-    const skuName = mProduct?.skus?.find(item => String(item?.id) === String(skuId))?.name
-      || model?.skuName
-      || '';
-    const submitModel = {
-      ...values,
-      ...(isEdit ? { id: model.id } : {}),
-      skuName
-    };
-    const endpoint = isEdit ? '/warehouse/updated' : '/warehouse/created';
+      const skuName = mProduct?.skus?.find(item => String(item?.id) === String(skuId))?.name
+        || model?.skuName
+        || '';
+      const submitModel = {
+        ...values,
+        ...(isEdit ? { id: model.id } : {}),
+        skuName
+      };
+      const endpoint = isEdit ? '/warehouse/updated' : '/warehouse/created';
 
-    const { message: msg, data: responseData, errorCode } = await RequestUtils.Post(
-      endpoint,
-      { model: submitModel, mSkuDetails }
-    );
-    if (errorCode !== 200) {
-      message.error(msg);
-      return;
+      const { message: msg, data: responseData, errorCode } = await RequestUtils.Post(
+        endpoint,
+        { model: submitModel, mSkuDetails }
+      );
+      if (errorCode !== 200) {
+        message.error(msg);
+        return;
+      }
+      message.success(msg);
+      handleSave?.({ data: responseData, errorCode });
+      closeModal?.();
+    } catch (error) {
+      message.error(error?.message || 'Không lưu được phiếu nhập kho.');
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
-    message.success(msg);
-    handleSave?.({ data: responseData, errorCode });
-    closeModal?.();
   }, [closeModal, handleSave, isEdit, model, sku, mProduct]);
 
   const onChangeGetSelectedItem = (value, nProduct) => {
@@ -474,7 +486,7 @@ const ModalNhapKho = ({
   }
 
   return (
-    <Form form={form} layout="vertical" onFinish={onFinish} disabled={readOnly}>
+    <Form form={form} layout="vertical" onFinish={onFinish} disabled={readOnly || saving}>
       <FormContextCustom.Provider value={{ form, record, updateRecord }}>
         <Row gutter={16}>
           <Col span={24}>
@@ -551,7 +563,7 @@ const ModalNhapKho = ({
             </Col>
           )}
           <Col span={24}>
-            <BtnSubmit marginTop={10} text={isEdit ? 'Cập nhật' : 'Hoàn thành'} />
+            <BtnSubmit loading={saving} disabled={saving} marginTop={10} text={isEdit ? 'Cập nhật' : 'Hoàn thành'} />
           </Col>
         </Row>
       </FormContextCustom.Provider>

@@ -1,14 +1,17 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { message } from 'antd'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { MANUFACTURE_SAVE_API } from '../constants'
 import { buildManufacturePayload } from '../utils'
+import { attachSelectedWorkflows } from '@/containers/Order/List/services/workflowApi'
+import { ORDER_WORKFLOW_ENTITY_TYPE } from '@/containers/Order/List/constants'
 
 export const useProductionOrderFlow = ({
   resetWaitingOrders,
   reloadWaitingOrders,
   onSaved,
 }) => {
+  const savingRef = useRef(false)
   const [open, setOpen] = useState(false)
   const [drawerMode, setDrawerMode] = useState('create')
   const [step, setStep] = useState(1)
@@ -46,9 +49,11 @@ export const useProductionOrderFlow = ({
   const backToCreate = useCallback(() => setStep(1), [])
 
   const saveProductionOrder = useCallback(async ({ productionOrder, materialConfirmation = {} }) => {
+    if (savingRef.current) return
     const isEdit = drawerMode === 'edit'
     const payload = buildManufacturePayload({ productionOrder, materialConfirmation, isEdit })
 
+    savingRef.current = true
     setSavingOrder(true)
     try {
       const response = await RequestUtils.Post(MANUFACTURE_SAVE_API, payload)
@@ -60,9 +65,22 @@ export const useProductionOrderFlow = ({
         return
       }
 
-      message.success(response?.message || (isEdit
-        ? 'Đã cập nhật lệnh sản xuất.'
-        : 'Đã tạo lệnh sản xuất.'))
+      const workflowFailures = []
+      for (const detail of payload.manufactureProduct.details) {
+        const failures = await attachSelectedWorkflows({
+          processIds: detail.workflowProcessIds,
+          entityType: ORDER_WORKFLOW_ENTITY_TYPE,
+          entityId: detail.orderDetailId,
+        })
+        workflowFailures.push(...failures.map(failure => ({ ...failure, orderDetailId: detail.orderDetailId })))
+      }
+      if (workflowFailures.length) {
+        message.warning(`Đã lưu lệnh sản xuất nhưng chưa gắn được một số workflow (${workflowFailures.map(item => `${item.orderDetailId ?? '?'}: #${item.processId}`).join(', ')}). Mở chỉnh sửa lệnh để thử lại.`)
+      } else {
+        message.success(response?.message || (isEdit
+          ? 'Đã cập nhật lệnh sản xuất.'
+          : 'Đã tạo lệnh sản xuất.'))
+      }
       closeFlow()
       await onSaved?.()
     } catch (error) {
@@ -70,6 +88,7 @@ export const useProductionOrderFlow = ({
         ? 'Cập nhật lệnh sản xuất thất bại.'
         : 'Tạo lệnh sản xuất thất bại.'))
     } finally {
+      savingRef.current = false
       setSavingOrder(false)
     }
   }, [closeFlow, drawerMode, onSaved])
