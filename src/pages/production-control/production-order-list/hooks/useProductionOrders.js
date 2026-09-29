@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { message } from 'antd'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { enrichEntitiesWithWorkflowData } from '@/containers/Order/List/services/workflowApi'
-import { ORDER_WORKFLOW_ENTITY_TYPE } from '@/containers/Order/List/constants'
+import { PRODUCTION_WORKFLOW_ENTITY_TYPE } from '../constants'
 import {
   EMPTY_FILTERS,
   MANUFACTURE_FETCH_API,
@@ -82,7 +82,7 @@ export const useProductionOrders = (initialOrderCode = '') => {
       let manufactureStatuses = mergeManufactureStatuses()
       const [userResult, statusResult] = await Promise.allSettled([
         fetchUserNameMap(embedded.map(record => record?.createdBy)),
-        RequestUtils.Get(MANUFACTURE_STATUS_LIST_API, { type: 'MANUFACTURE' }),
+        RequestUtils.Get(MANUFACTURE_STATUS_LIST_API, { type: 'PRODUCTION' }),
       ])
       if (userResult.status === 'fulfilled') {
         userNameMap = userResult.value
@@ -107,7 +107,7 @@ export const useProductionOrders = (initialOrderCode = '') => {
       const childDetails = [...new Map(mappedOrders.flatMap(record => record.orderDetails ?? [])
         .filter(detail => detail.orderDetailId != null || !String(detail.id).startsWith('manufacture-'))
         .map(detail => [String(detail.orderDetailId ?? detail.id), { ...detail, id: detail.orderDetailId ?? detail.id }])).values()]
-      const enriched = await enrichEntitiesWithWorkflowData({ embedded: childDetails }, ORDER_WORKFLOW_ENTITY_TYPE)
+      const enriched = await enrichEntitiesWithWorkflowData({ embedded: childDetails }, PRODUCTION_WORKFLOW_ENTITY_TYPE)
       if (requestId !== requestIdRef.current) return
       const workflowById = new Map(enriched.embedded.map(detail => [String(detail.id), detail.workflowInstances]))
       setOrders(mappedOrders.map(record => ({

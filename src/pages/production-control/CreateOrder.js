@@ -21,7 +21,7 @@ import {
 } from './production-order-list/constants';
 import { mergeManufactureStatuses } from './production-order-list/utils';
 
-const MANUFACTURE_STATUS_FILTER = { type: 'MANUFACTURE' };
+const MANUFACTURE_STATUS_FILTER = { type: 'PRODUCTION' };
 const MANUFACTURE_STATUS_CREATE_DEFAULTS = {
   color: '#64748b',
   entityType: 'MANUFACTURE',

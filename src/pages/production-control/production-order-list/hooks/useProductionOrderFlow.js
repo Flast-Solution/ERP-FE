@@ -4,7 +4,7 @@ import { RequestUtils } from '@flast-erp/core/utils'
 import { MANUFACTURE_SAVE_API } from '../constants'
 import { buildManufacturePayload } from '../utils'
 import { attachSelectedWorkflows } from '@/containers/Order/List/services/workflowApi'
-import { ORDER_WORKFLOW_ENTITY_TYPE } from '@/containers/Order/List/constants'
+import { PRODUCTION_WORKFLOW_ENTITY_TYPE } from '../constants'
 
 export const useProductionOrderFlow = ({
   resetWaitingOrders,
@@ -69,7 +69,7 @@ export const useProductionOrderFlow = ({
       for (const detail of payload.manufactureProduct.details) {
         const failures = await attachSelectedWorkflows({
           processIds: detail.workflowProcessIds,
-          entityType: ORDER_WORKFLOW_ENTITY_TYPE,
+          entityType: PRODUCTION_WORKFLOW_ENTITY_TYPE,
           entityId: detail.orderDetailId,
         })
         workflowFailures.push(...failures.map(failure => ({ ...failure, orderDetailId: detail.orderDetailId })))

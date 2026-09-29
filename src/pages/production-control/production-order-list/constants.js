@@ -35,3 +35,5 @@ export const EMPTY_FILTERS = {
   status: undefined,
   dateRange: null,
 }
+
+export const PRODUCTION_WORKFLOW_ENTITY_TYPE = 'PRODUCTION'
