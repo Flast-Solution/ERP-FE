@@ -58,7 +58,7 @@ export const getOrderTrackingMetrics = record => {
     detailCount: details.length,
     orderedQuantity,
     receivedQuantity,
-    productionLotCount: manufactureProducts.length,
+    productionLotCount: sumBy(manufactureProducts, item => asArray(item?.details).length),
     plannedProductionQuantity,
     productionVariance,
     onHandQuantity,

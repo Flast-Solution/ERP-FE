@@ -1,3 +1,4 @@
+import { isProviderProduction } from './productionProvider';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -395,15 +396,17 @@ const ProductionOverview = ({ data = {}, closeModal }) => {
   }, [customerOrder.code, customerOrder.manufactureProduct]);
 
   const metrics = useMemo(() => getOrderMetrics(productionOrders), [productionOrders]);
-  const detailCount = productionOrders.reduce((sum, item) => sum + (item?.details?.length ?? 0), 0);
-  const persistedBomConfirmedCount = productionOrders.reduce((sum, item) => (
+  const providerProduction = productionOrders.length > 0 && productionOrders.every(isProviderProduction);
+  const internalOrders = productionOrders.filter(order => !isProviderProduction(order));
+  const detailCount = internalOrders.reduce((sum, item) => sum + (item?.details?.length ?? 0), 0);
+  const persistedBomConfirmedCount = internalOrders.reduce((sum, item) => (
     sum + (item?.details ?? []).filter(hasConfirmedBom).length
   ), 0);
-  const materialReadinessValues = Object.values(materialReadinessByOrderId);
+  const materialReadinessValues = internalOrders.map(order => materialReadinessByOrderId[String(order.id)]).filter(Boolean);
   const evaluatedBomCount = materialReadinessValues.reduce((sum, item) => (
     sum + toNumber(item?.confirmedDetailCount)
   ), 0);
-  const bomConfirmedCount = materialReadinessValues.length === productionOrders.length
+  const bomConfirmedCount = materialReadinessValues.length === internalOrders.length
     ? Math.max(persistedBomConfirmedCount, evaluatedBomCount)
     : persistedBomConfirmedCount;
   const allocationKnownOrders = materialReadinessValues.filter(item => item?.percent != null);
@@ -425,7 +428,7 @@ const ProductionOverview = ({ data = {}, closeModal }) => {
     },
     { label: 'Đang sản xuất', current: !allCompleted && productionOrders.some(item => Number(item?.status) === 1), meta: `Đã sản xuất ${metrics.achieved.toLocaleString('vi-VN')}` },
     { label: 'Hoàn thành', done: allCompleted, meta: allCompleted ? 'Đã hoàn thành' : 'Đang chờ' },
-  ];
+  ].filter(item => !providerProduction || ['Đã tạo LSX', 'Đang sản xuất', 'Hoàn thành'].includes(item.label));
 
   const getStatus = (status) => {
     const configured = statuses.find(item => String(item.id) === String(status));
@@ -498,7 +501,7 @@ const ProductionOverview = ({ data = {}, closeModal }) => {
           </aside>
 
           <main className="overview-main">
-            {!materialReadinessLoading && missingBomCount > 0 && (
+            {!providerProduction && !materialReadinessLoading && missingBomCount > 0 && (
               <Alert
                 className="overview-alert"
                 type="warning"
@@ -527,7 +530,8 @@ const ProductionOverview = ({ data = {}, closeModal }) => {
                     toNumber(materialReadiness?.confirmedDetailCount),
                   ) === detailTotal;
                 const materialReadinessPercent = materialReadiness?.percent;
-                const blocked = !hasBom || materialReadinessPercent === 0;
+                const providerOrder = isProviderProduction(productionOrder);
+                const blocked = !providerOrder && (!hasBom || materialReadinessPercent === 0);
                 return (
                   <article
                     className={`production-order${blocked ? ' is-blocked' : ''}`}
@@ -554,7 +558,7 @@ const ProductionOverview = ({ data = {}, closeModal }) => {
                         <span>Hạn: {formatDate(productionOrder.dateEnd)}</span>
                       </div>
                     </div>
-                    <div className="production-order-progress">
+                    {!providerOrder && <div className="production-order-progress">
                       <div>
                         <div className="progress-caption"><span>Tiến độ</span><strong>{orderMetrics.progress}%</strong></div>
                         <Progress percent={orderMetrics.progress} showInfo={false} strokeColor={blocked ? '#e5484d' : '#159447'} size="small" />
@@ -577,7 +581,7 @@ const ProductionOverview = ({ data = {}, closeModal }) => {
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </div>}
                   </article>
                 );
               })}

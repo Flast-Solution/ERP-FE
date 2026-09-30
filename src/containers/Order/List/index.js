@@ -1,3 +1,4 @@
+import { isHatecoBusiness } from '@/configs/business'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Space, Tag } from 'antd'
@@ -94,7 +95,8 @@ const ListOrder = ({
   const [activeTrackingRowKey, setActiveTrackingRowKey] = useState(null)
   const isOrderList = orderMode || filter.type === 'order'
   const isOpportunityList = filter.type === 'cohoi'
-  const useTrackingOverview = trackingOverview && isOrderList
+  const useTrackingOverview = isHatecoBusiness(user?.bizId)
+    && ((trackingOverview && isOrderList) || isOpportunityList)
   const listApiPath = useTrackingOverview ? ORDER_TRACKING_API : apiPath
   const canViewDetail = hasPermission(isOpportunityList
     ? 'sales.opportunity.detail.view'
@@ -257,8 +259,12 @@ const ListOrder = ({
     openQuotationViewer,
     openWorkflowModal: handleOpenWorkflowModal,
     openWorkflowProgressDrawer,
-    navigate: (to, options) => navigate(to, hideEditorEditColumn && String(to).startsWith('/sale/ban-hang/')
-      ? { ...options, state: { ...options?.state, hideEditColumn: true } }
+    navigate: (to, options) => navigate(to, String(to).startsWith('/sale/ban-hang/')
+      ? { ...options, state: {
+        ...options?.state,
+        hideEditColumn: hideEditorEditColumn || options?.state?.hideEditColumn,
+        restrictOrderFields: (useTrackingOverview && isOrderList) || options?.state?.restrictOrderFields,
+      } }
       : options),
     canViewDetail,
     canUpdateOpportunity,
@@ -312,20 +318,23 @@ const ListOrder = ({
 
   return (
     <>
+      <div className={useTrackingOverview ? "order-tracking-compact" : undefined}>
       <RestList
         rowKey={useTrackingOverview ? '_trackingRowKey' : 'id'}
         bordered
         size={useTrackingOverview ? 'small' : undefined}
-        xScroll={isOpportunityList ? 1200 : (useTrackingOverview ? 3275 : 1800)}
+        xScroll={useTrackingOverview
+          ? columns.flatMap(column => column.children ?? [column]).reduce((width, column) => width + (Number(column.width) || 100), 0)
+          : (isOpportunityList ? 1200 : 1800)}
         expandable={trackingExpandable ?? orderLotExpandable}
         onData={onData}
         initialFilter={{ limit: 10, page: 1, ...filter }}
         filter={<Filter />}
         hasCreate={false}
         beforeSubmitFilter={beforeSubmitFilter}
-        useGetAllQuery={isOpportunityList
-          ? useOpportunityOrderList
-          : (useTrackingOverview ? useOrderTrackingList : useGetList)}
+        useGetAllQuery={useTrackingOverview
+          ? useOrderTrackingList
+          : (isOpportunityList ? useOpportunityOrderList : useGetList)}
         apiPath={listApiPath}
         columns={columns}
         rowClassName={record => (
@@ -350,6 +359,7 @@ const ListOrder = ({
         }) : {}}
       />
 
+      </div>
       <WorkflowAttachModal
         open={workflowModalOpen}
         onCancel={closeWorkflowModal}

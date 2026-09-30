@@ -91,6 +91,16 @@ const SkuOrderLineTooltip = ({ skuDetails, orderLine }) => {
   );
 };
 
+const OrderEditorShell = styled.div`
+  .ant-input-disabled,
+  .ant-input[disabled],
+  .ant-input-number-disabled .ant-input-number-input {
+    color: #374151;
+    -webkit-text-fill-color: #374151;
+    opacity: 1;
+  }
+`;
+
 const OpportunityTable = styled(Table)`
   .ant-table-cell {
     padding: 12px 10px !important;
@@ -120,7 +130,7 @@ const parseDayQuote = value => {
 };
 const formatDayQuoteForPayload = value => {
   const dateValue = parseDayQuote(value);
-  return dateValue?.isValid() ? dateValue.format('DD/MM/YYYY') : null;
+  return dateValue?.isValid() ? dateValue.format('YYYY-MM-DD HH:mm:ss') : null;
 };
 const warrantyOptions = [
   { name: '(Chưa có)', id: 1 },
@@ -233,6 +243,7 @@ const BanHangPage = ({
   business,
   onSaveSuccess,
   hideEditColumn = false,
+  restrictOrderFields = false,
 }) => {
 
   const [lineItems, setData] = useState([]);
@@ -439,6 +450,7 @@ const BanHangPage = ({
           size="small"
           value={value}
           maxLength={100}
+          disabled={restrictOrderFields}
           placeholder="Nhập số đơn"
           onChange={event => handleChange(record.key, 'code', event.target.value)}
         />
@@ -477,6 +489,7 @@ const BanHangPage = ({
           size="small"
           min={0}
           max={99.99}
+          disabled={restrictOrderFields}
           value={Number(record?.profit ?? 0)}
           onChange={value => handleChange(record.key, 'profit', value)}
           formatter={value => `${value ?? 0}%`}
@@ -497,6 +510,7 @@ const BanHangPage = ({
           onFocus={selectNumberOnFocus}
           size="small"
           min={0}
+          disabled={restrictOrderFields}
           value={getSalePrice(record)}
           onChange={value => handleChange(record.key, 'manualSalePrice', value)}
           formatter={formatterInputNumber}
@@ -566,7 +580,7 @@ const BanHangPage = ({
             onChange={date => handleChange(
               record.key,
               'dayQuote',
-              date ? date.format('DD/MM/YYYY') : null,
+              date ? date.format('YYYY-MM-DD HH:mm:ss') : null,
             )}
             style={{ width: '100%' }}
           />
@@ -664,6 +678,7 @@ const BanHangPage = ({
   };
 
   const handleChange = (key, field, value) => {
+    if (restrictOrderFields && ['code', 'profit', 'manualSalePrice'].includes(field)) return;
     const newData = data.map(item => ({ ...item }));
     const target = newData.find((item) => item.key === key);
     if (!target) {
@@ -685,7 +700,7 @@ const BanHangPage = ({
     }
 
     /* Calculate dependent fields */
-    if (field === 'quantity' && arrayNotEmpty(target.skuPrices)) {
+    if (field === 'quantity' && !restrictOrderFields && arrayNotEmpty(target.skuPrices)) {
       delete target.manualSalePrice;
       target.productPrice = resolveUnitPrice({
         skuPrices: target.skuPrices,
@@ -714,7 +729,7 @@ const BanHangPage = ({
   };
 
   const renderCell = (text, record, index, column) => {
-    if (record.editable && column.editable) {
+    if ((record.editable && column.editable) || (restrictOrderFields && column.dataIndex === 'quantity')) {
       if (column.dataIndex === 'warehouse') {
         return (
           <Select
@@ -905,7 +920,7 @@ const BanHangPage = ({
   }, [customerOrder, customer, data]);
 
   return (
-    <>
+    <OrderEditorShell>
       <OpportunityTable
         bordered
         scroll={{ x: 2560 }}
@@ -1025,6 +1040,7 @@ const BanHangPage = ({
               </label>
               <Input
                 id="order-code"
+                disabled={restrictOrderFields}
                 size="small"
                 value={customerOrder?.code ?? ''}
                 maxLength={100}
@@ -1063,7 +1079,7 @@ const BanHangPage = ({
           }} />
         </div>
       </div>
-    </>
+    </OrderEditorShell>
   );
 }
 

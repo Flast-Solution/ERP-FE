@@ -33,15 +33,17 @@ const getProductionOrderColumns = ({
     ),
   },
   {
-    title: 'K.hàng · Đ.hàng',
-    key: 'customerOrder',
+    title: 'Mã đơn hàng',
+    key: 'salesOrderCode',
     width: 185,
-    render: (_, record) => (
-      <>
-        <span>{record.customerName || '-'}</span>
-        <span className="production-cell-secondary">{record.salesOrderCode || `#${record.salesOrderId}`}</span>
-      </>
-    ),
+    render: (_, record) => record.salesOrderCode || (record.salesOrderId != null ? `#${record.salesOrderId}` : '-'),
+  },
+ 
+  {
+    title: 'Khách hàng',
+    key: 'customerName',
+    width: 185,
+    render: (_, record) => record.customerName || '-',
   },
   {
     title: 'Sản phẩm',
@@ -209,7 +211,7 @@ const ProductionOrderTable = ({
         pagination={false}
         bordered
         locale={{ emptyText: 'Chưa có lệnh sản xuất' }}
-        scroll={{ x: 1450 }}
+        scroll={{ x: 1635 }}
       />
     </div>
   )
