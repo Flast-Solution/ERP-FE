@@ -1,3 +1,5 @@
+import { parseOrderLine } from '../../orderLine'
+
 const asArray = value => Array.isArray(value) ? value : []
 
 const asNumber = value => {
@@ -163,3 +165,7 @@ export const normalizeTrackingResponse = payload => {
     },
   }
 }
+
+export const getOrderLineText = detail => Object.entries(parseOrderLine(detail?.orderLine))
+  .map(([label, value]) => `${label}: ${value != null && typeof value === 'object' ? JSON.stringify(value) : value ?? ''}`)
+  .join(' · ')
