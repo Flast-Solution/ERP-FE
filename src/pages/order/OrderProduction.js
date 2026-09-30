@@ -69,7 +69,7 @@ const OrderProduction = () => {
             <BreadcrumbCustom
                 data={[{ title: 'Trang chủ' }, { title: title }]}
             />
-            <ListOrder
+            <ListOrder hideEditorEditColumn
                 filter={filter}
                 apiPath="erp/manufacture/get-order"
                 initialPage={0}

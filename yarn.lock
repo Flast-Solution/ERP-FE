@@ -1967,10 +1967,10 @@
   resolved "https://registry.yarnpkg.com/@eslint/js/-/js-8.57.1.tgz#de633db3ec2ef6a3c89e2f19038063e8a122e2c2"
   integrity sha512-d9zaMRSTIKDLhctzH12MtXvJKSSUhaHcjV+2Z+GK+EEY7XKpP5yR4x+N3TAcHTcu963nIr+TMcCb4DBCYX1z6Q==
 
-"@flast-erp/core@^1.0.26":
-  version "1.0.26"
-  resolved "https://registry.yarnpkg.com/@flast-erp/core/-/core-1.0.26.tgz#475935d9303287cc905a5bd6e35d614fb943cff0"
-  integrity sha512-PsHxLzi0/6H+aFTZ32jG83OCxe68tgux3AYhgB4bm3ys2s00g8gIeQstiHldW2iix8yGFKK/y2nYSDgPGZ8aoA==
+"@flast-erp/core@^1.0.27":
+  version "1.0.27"
+  resolved "https://registry.yarnpkg.com/@flast-erp/core/-/core-1.0.27.tgz#c4a87da2da224f72ca219db6067a6672acc4e252"
+  integrity sha512-PzH+n9ABBk8FaccYyhFmAnsyo7m6vfEpJiVOjXNCrkvsxszLLJTC8GCXo2V5c4riiNvm0YXMkR8BPMESOJSqSg==
   dependencies:
     "@babel/runtime" "^7.29.7"
     "@rollup/plugin-alias" "^6.0.0"

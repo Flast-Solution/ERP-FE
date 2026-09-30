@@ -1,3 +1,4 @@
+import { formatOrderCurrency as formatCurrency, formatOrderNumber } from './orderFormatting';
 /**************************************************************************/
 /*  OrderPayment.js                                                       */
 /**************************************************************************/
@@ -66,15 +67,6 @@ const toVnd = (value, currency, exchangeRate) => (
 );
 const fromVnd = (value, currency, exchangeRate) => (
   Number(value ?? 0) / (currency === CURRENCY_USD ? exchangeRate : 1)
-);
-const formatCurrency = (value, currency) => Number(value ?? 0).toLocaleString(
-  currency === CURRENCY_USD ? 'en-US' : 'vi-VN',
-  {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: currency === CURRENCY_USD ? 2 : 0,
-    maximumFractionDigits: currency === CURRENCY_USD ? 2 : 0
-  }
 );
 const roundCurrency = (value, currency) => (
   currency === CURRENCY_USD
@@ -283,7 +275,7 @@ const OrderPayment = ({ data, readOnly = false, closeModalAfterSubmit }) => {
         </Col>
         <Col md={12} xs={24}>
           <span>Tỷ giá: <strong>{orderCurrency === CURRENCY_USD
-            ? `1 USD = ${exchangeRate.toLocaleString('vi-VN')} VND`
+            ? `1 USD = ${formatOrderNumber(exchangeRate)} VND`
             : '1 VND = 1 VND'}</strong></span>
         </Col>
       </Row>

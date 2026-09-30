@@ -1,7 +1,7 @@
 import { calculateConvertedLineTotal } from './orderPricing';
 
 const calculate = overrides => calculateConvertedLineTotal({
-  item: { price: 100, quantity: 2, profit: 20 },
+  item: { productPrice: 100, quantity: 2, profit: 20 },
   shippingCost: 10,
   currency: 'USD',
   exchangeRate: 25000,
@@ -18,7 +18,7 @@ test('preserves configured profit and shipping calculations when inputs change',
   const formula = '(price * quantity + shippingCost) / (1 - profit%)';
   expect(calculate({ formula })).toBe(6562500);
   expect(calculate({ formula, shippingCost: 20 })).toBe(6875000);
-  expect(calculate({ formula, item: { price: 100, quantity: 2, profit: 0 } })).toBe(5250000);
+  expect(calculate({ formula, item: { productPrice: 100, quantity: 2, profit: 0 } })).toBe(5250000);
 });
 
 test('preserves fallback for invalid formulas', () => {

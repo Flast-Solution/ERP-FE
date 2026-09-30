@@ -120,10 +120,10 @@ const evaluateCalculationFormula = (formula, variables) => {
 
 const calculateLineTotal = ({ item, shippingCost, formula }) => {
   if (!formula) {
-    return Number(item?.price ?? 0) * Number(item?.quantity ?? 0);
+    return Number(item?.productPrice ?? 0) * Number(item?.quantity ?? 0);
   }
   return evaluateCalculationFormula(formula, {
-    price: Number(item?.price ?? 0),
+    price: Number(item?.productPrice ?? 0),
     quantity: Number(item?.quantity ?? 0),
     shippingCost: Number(shippingCost ?? 0),
     profit: Number(item?.profit ?? 0),
@@ -132,7 +132,7 @@ const calculateLineTotal = ({ item, shippingCost, formula }) => {
 
 export const calculateConvertedLineTotal = ({ item, shippingCost, formula, currency, exchangeRate }) => {
   const amount = calculateLineTotal({ item, shippingCost, formula })
-    ?? (Number(item?.price ?? 0) * Number(item?.quantity ?? 0));
+    ?? (Number(item?.productPrice ?? 0) * Number(item?.quantity ?? 0));
   return Math.round(amount * getExchangeRate(currency, exchangeRate));
 };
 

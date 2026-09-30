@@ -1,6 +1,8 @@
+/* These tests use React DOM directly, not Testing Library render/act helpers. */
+/* eslint-disable testing-library/no-render-in-setup, testing-library/no-unnecessary-act */
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Table, InputNumber, Select } from 'antd';
+import { Table, Input, InputNumber, Select } from 'antd';
 import { RequestUtils } from '@flast-erp/core/utils';
 import OrderService from '@/services/OrderService';
 import OrderEditor from './index';
@@ -18,7 +20,7 @@ jest.mock('antd', () => {
   return {
     Table, Typography: { Text: Wrapper }, Space: Wrapper, Tooltip: Wrapper,
     Button: ({ children, onClick }) => <button onClick={onClick}>{children}</button>,
-    Input: () => null, DatePicker: () => null,
+    Input: jest.fn(() => null), DatePicker: () => null,
     InputNumber: jest.fn(() => null), Select: jest.fn(() => null),
     message: { info: jest.fn() },
   };
@@ -59,7 +61,7 @@ beforeEach(() => {
   RequestUtils.Get.mockResolvedValue({ errorCode: 200, data: [{ key: 'CACULATOR_TOTAL', value: '(price * quantity + shippingCost) / (1 - profit%)' }] });
   OrderService.getOrderOnEdit.mockResolvedValue({
     customer: { id: 1 }, order: { id: 2, type: 'opportunity', currency: 'USD', exchangeRate: 25000, vat: 0, shippingCost: 0, paid: 100 },
-    data: [{ key: 'line', productId: 3, price: 100, quantity: 2, profit: 0, discountAmount: 0, totalPrice: 5000000 }],
+    data: [{ key: 'line', productId: 3, productPrice: 100, price: 2500000, quantity: 2, profit: 0, discountAmount: 0, totalPrice: 5000000 }],
   });
 });
 afterEach(async () => {
@@ -88,13 +90,87 @@ test('keeps row prices and summary in sync as rate, profit and order shipping ch
   expect(totalsTable().dataSource[1].rightValue).toBe('273');
   await act(async () => mainTable().columns.find(col => col.key === 'operation').render(null, mainTable().dataSource[0]).props.onEdit());
   await act(async () => mainTable().columns.find(col => col.key === 'quantity').render(2, mainTable().dataSource[0]).props.onChange(3));
-  await act(async () => mainTable().columns.find(col => col.key === 'price').render(100, mainTable().dataSource[0]).props.onChange(200));
+  await act(async () => mainTable().columns.find(col => col.key === 'productPrice').render(100, mainTable().dataSource[0]).props.onChange(200));
   expect(mainTable().dataSource[0].totalPrice).toBe(763);
   expect(totalsTable().dataSource[1].rightValue).toBe('773');
   const saveButton = Array.from(container.querySelectorAll('button')).find(button => button.textContent === 'Lưu đơn hàng');
   await act(async () => saveButton.click());
   expect(RequestUtils.Post).toHaveBeenCalledWith('/order/save', expect.objectContaining({
     currency: 'VND', exchangeRate: 1, shippingCost: 10,
-    details: [expect.objectContaining({ price: 200, quantity: 3, totalPrice: 763, total: 763 })],
+    details: [expect.objectContaining({ productPrice: 200, quantity: 3, totalPrice: 763, total: 763, price: 763 / 3 })],
   }));
+});
+
+
+test('allows opportunity code and sale price edits and recalculates after rate changes', async () => {
+  await act(async () => root.render(<OrderEditor orderId={2} />));
+  const codeInput = Input.mock.calls.map(call => call[0]).filter(props => props.id === 'order-code').at(-1);
+  expect(codeInput.disabled).toBeUndefined();
+  await act(async () => codeInput.onChange({ target: { value: 'CH-123' } }));
+  const saleInput = mainTable().columns.find(col => col.key === 'salePrice').render(null, mainTable().dataSource[0]).props;
+  const select = jest.fn();
+  saleInput.onFocus({ target: { select } });
+  expect(select).toHaveBeenCalledTimes(1);
+  await act(async () => saleInput.onChange(3000000));
+  expect(mainTable().dataSource[0].totalPrice).toBe(6000000);
+  expect(totalsTable().dataSource[0].leftValue).toBe('6000000');
+  await act(async () => Array.from(container.querySelectorAll('button')).find(button => button.textContent === 'Lưu đơn hàng').click());
+  const payload = RequestUtils.Post.mock.calls.find(([url]) => url === '/order/save')[1];
+  expect(payload.code).toBe('CH-123');
+  expect(payload.details[0].totalPrice).toBe(6000000);
+  expect(payload.details[0].price).toBe(3000000);
+  expect(payload.details[0]).not.toHaveProperty('manualSalePrice');
+  expect(payload.details[0]).not.toHaveProperty('salePrice');
+  expect(payload.details[0].productPrice).toBe(100);
+  const rateInput = InputNumber.mock.calls.map(call => call[0]).filter(props => props.style?.width === 170).at(-1);
+  await act(async () => rateInput.onChange(26000));
+  expect(mainTable().dataSource[0].totalPrice).toBe(5200000);
+});
+
+
+test('preserves fractional sale price in the controlled input, save payload and reload', async () => {
+  await act(async () => root.render(<OrderEditor orderId={2} />));
+  const saleInput = () => mainTable().columns.find(col => col.key === 'salePrice')
+    .render(null, mainTable().dataSource[0]).props;
+  await act(async () => saleInput().onChange(123451.313));
+  expect(saleInput().value).toBe(123451.313);
+  expect(mainTable().dataSource[0].totalPrice).toBe(246903);
+  OrderService.getOrderOnEdit.mockResolvedValue({
+    customer: { id: 1 },
+    order: { id: 2, type: 'opportunity', currency: 'VND', exchangeRate: 1 },
+    data: [{ key: 'line', productPrice: 100, quantity: 2, price: 123451.313, totalPrice: 246903 }],
+  });
+  await act(async () => Array.from(container.querySelectorAll('button'))
+    .find(button => button.textContent === 'Lưu đơn hàng').click());
+  const payload = RequestUtils.Post.mock.calls.find(([url]) => url === '/order/save')[1];
+  expect(payload.details[0].price).toBe(123451.313);
+  expect(saleInput().value).toBe(123451.313);
+});
+
+
+test('displays backend purchase and sale prices without dropping decimal digits', async () => {
+  OrderService.getOrderOnEdit.mockResolvedValue({
+    customer: { id: 46 },
+    order: { id: 34049, type: 'cohoi', currency: 'VND', exchangeRate: 1, vat: 0 },
+    data: [{ key: 'line', productPrice: 100000.222, price: 100.323, quantity: 1, totalPrice: 100, discountAmount: 0 }],
+  });
+  await act(async () => root.render(<OrderEditor orderId={34049} />));
+  const table = mainTable();
+  const row = table.dataSource[0];
+  const purchase = table.columns.find(col => col.key === 'productPrice');
+  expect(purchase.render(row.productPrice, row)).toContain('100,000.222');
+  expect(table.columns.find(col => col.key === 'salePrice').render(null, row).props.value).toBe(100.323);
+  expect(row.totalPrice).toBe(100);
+});
+
+test('returns through the success callback only after a successful save and hides production edit column', async () => {
+  const onSaveSuccess = jest.fn();
+  await act(async () => root.render(<OrderEditor orderId={2} onSaveSuccess={onSaveSuccess} hideEditColumn />));
+  expect(mainTable().columns.some(column => column.key === 'operation')).toBe(false);
+  const save = () => Array.from(container.querySelectorAll('button')).find(button => button.textContent === 'Lưu đơn hàng').click();
+  RequestUtils.Post.mockResolvedValueOnce({ errorCode: 400, message: 'Failed' });
+  await act(async () => save());
+  expect(onSaveSuccess).not.toHaveBeenCalled();
+  await act(async () => save());
+  expect(onSaveSuccess).toHaveBeenCalledWith({ id: 2, details: [] });
 });
