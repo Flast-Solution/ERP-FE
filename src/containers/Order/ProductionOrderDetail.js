@@ -1,3 +1,4 @@
+import { isProviderProduction } from './productionProvider';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -265,6 +266,7 @@ const ProductionOrderDetail = ({ data = {}, closeModal }) => {
   const status = statuses.find(item => String(item.id) === String(record.status))
     ?? SYSTEM_STATUSES[record.status]
     ?? { name: `Trạng thái #${record.status}`, color: 'default' };
+  const providerProduction = isProviderProduction(record);
   const confirmedBomCount = bomItems.filter(item => item.confirmed).length;
   const allocations = Array.isArray(record.outbound) ? record.outbound : [];
 
@@ -316,6 +318,7 @@ const ProductionOrderDetail = ({ data = {}, closeModal }) => {
           <div className="detail-metric"><span>Tiến độ</span><strong style={{ color: '#0f4c81' }}>{metrics.progress}%</strong></div>
         </section>
 
+        {!providerProduction && <>
         <section className="detail-card">
           <div className="detail-card-head"><h2 className="detail-card-title">Tiến độ sản xuất</h2></div>
           <div className="detail-card-body">
@@ -392,6 +395,8 @@ const ProductionOrderDetail = ({ data = {}, closeModal }) => {
           )}
         </section>
 
+        </>}
+
         <section className="detail-card">
           <div className="detail-card-head"><h2 className="detail-card-title">Nhật ký sản xuất</h2></div>
           <div className="activity-list">
@@ -399,13 +404,13 @@ const ProductionOrderDetail = ({ data = {}, closeModal }) => {
               <CheckCircleFilled className="activity-icon" />
               <div className="activity-content"><strong>Đã tạo lệnh sản xuất</strong><span>{formatDate(record.createdDate ?? record.dateStart)}</span></div>
             </div>
-            {confirmedBomCount > 0 && (
+            {!providerProduction && confirmedBomCount > 0 && (
               <div className="activity-item">
                 <CheckCircleFilled className="activity-icon" />
                 <div className="activity-content"><strong>Đã xác nhận BOM</strong><span>{confirmedBomCount}/{bomItems.length} hạng mục sản xuất</span></div>
               </div>
             )}
-            {allocations.length > 0 && (
+            {!providerProduction && allocations.length > 0 && (
               <div className="activity-item">
                 <CheckCircleFilled className="activity-icon" />
                 <div className="activity-content"><strong>Đã phân bổ vật tư</strong><span>{allocations.length} lượt phân bổ kho</span></div>

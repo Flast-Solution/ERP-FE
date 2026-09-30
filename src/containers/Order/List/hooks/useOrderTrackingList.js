@@ -14,7 +14,7 @@ const FILTER_CONFIG = {
   workflowDataKeyword: { source: 'WORKFLOW_DATA', field: 'value', operator: 'CONTAINS' },
 }
 
-const createRequestBody = queryParams => {
+export const createRequestBody = queryParams => {
   const dynamicFilters = Object.entries(FILTER_CONFIG).reduce((result, [key, config]) => {
     const value = queryParams?.[key]
     if (value === undefined || value === null || value === '') return result
@@ -26,7 +26,7 @@ const createRequestBody = queryParams => {
       {
         field: 'type',
         operator: 'EQUALS',
-        value: 'order',
+        value: queryParams?.type === 'cohoi' ? 'cohoi' : 'order',
       },
       ...dynamicFilters,
     ],

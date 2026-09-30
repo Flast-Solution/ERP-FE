@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 /* These tests use React DOM directly, not Testing Library render/act helpers. */
 /* eslint-disable testing-library/no-render-in-setup, testing-library/no-unnecessary-act */
 import React, { act } from 'react';
@@ -105,7 +106,7 @@ test('keeps row prices and summary in sync as rate, profit and order shipping ch
 test('allows opportunity code and sale price edits and recalculates after rate changes', async () => {
   await act(async () => root.render(<OrderEditor orderId={2} />));
   const codeInput = Input.mock.calls.map(call => call[0]).filter(props => props.id === 'order-code').at(-1);
-  expect(codeInput.disabled).toBeUndefined();
+  expect(codeInput.disabled).toBeFalsy();
   await act(async () => codeInput.onChange({ target: { value: 'CH-123' } }));
   const saleInput = mainTable().columns.find(col => col.key === 'salePrice').render(null, mainTable().dataSource[0]).props;
   const select = jest.fn();
@@ -173,4 +174,30 @@ test('returns through the success callback only after a successful save and hide
   expect(onSaveSuccess).not.toHaveBeenCalled();
   await act(async () => save());
   expect(onSaveSuccess).toHaveBeenCalledWith({ id: 2, details: [] });
+});
+
+test('locks overview order identifiers and prices while allowing quantity and date changes', async () => {
+  await act(async () => root.render(<OrderEditor orderId={2} restrictOrderFields />));
+  const row = () => mainTable().dataSource[0];
+  const cell = key => mainTable().columns.find(column => column.key === key).render(row()[key], row());
+  expect(cell('code').props.disabled).toBe(true);
+  expect(cell('profit').props.disabled).toBe(true);
+  expect(cell('salePrice').props.disabled).toBe(true);
+  expect(Input.mock.calls.map(call => call[0]).filter(props => props.id === 'order-code').at(-1).disabled).toBe(true);
+  expect(cell('quantity').props.disabled).toBeUndefined();
+  expect(cell('dayQuote').props.disabled).toBeUndefined();
+  await act(async () => cell('quantity').props.onChange(3));
+  expect(row().quantity).toBe(3);
+  expect(row().price).toBe(2500000);
+  expect(row().totalPrice).toBe(7500000);
+});
+
+
+test('saves dayQuote as a full timestamp and preserves its time', async () => {
+  await act(async () => root.render(<OrderEditor orderId={2} />));
+  const dateColumn = mainTable().columns.find(column => column.key === 'dayQuote');
+  await act(async () => dateColumn.render(null, mainTable().dataSource[0]).props.onChange(dayjs('2026-09-21 08:32:28')));
+  await act(async () => Array.from(container.querySelectorAll('button')).find(button => button.textContent === 'Lưu đơn hàng').click());
+  const payload = RequestUtils.Post.mock.calls.find(([url]) => url === '/order/save')[1];
+  expect(payload.details[0].dayQuote).toBe('2026-09-21 08:32:28');
 });

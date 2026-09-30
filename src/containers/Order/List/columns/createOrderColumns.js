@@ -162,38 +162,38 @@ const createOrderColumns = ({
     width: 300,
     render: (products, record) => renderArrayColor(products, record.detailstatus),
   },
-  {
-    title: 'T.Thái',
-    dataIndex: 'detailstatus',
-    key: 'detailstatus',
-    width: 150,
-    ellipsis: true,
-    render: (array, record) => {
-      if (isOpportunityList) {
-        const detailStatuses = Array.isArray(record?.details)
-          ? record.details.map(detail => detail?.status)
-          : []
+  // {
+  //   title: 'T.Thái',
+  //   dataIndex: 'detailstatus',
+  //   key: 'detailstatus',
+  //   width: 150,
+  //   ellipsis: true,
+  //   render: (array, record) => {
+  //     if (isOpportunityList) {
+  //       const detailStatuses = Array.isArray(record?.details)
+  //         ? record.details.map(detail => detail?.status)
+  //         : []
 
-        return detailStatuses.length > 0
-          ? detailStatuses.map((status, index) => {
-            const statusItem = DEFAULT_OPPORTUNITY_STATUS[Number(status)]
-              ?? opportunityStatusOptions.find(item => String(item.id) === String(status))
+  //       return detailStatuses.length > 0
+  //         ? detailStatuses.map((status, index) => {
+  //           const statusItem = DEFAULT_OPPORTUNITY_STATUS[Number(status)]
+  //             ?? opportunityStatusOptions.find(item => String(item.id) === String(status))
 
-            return (
-              <div key={record.details[index]?.id ?? index}>
-                {index + 1} -{' '}
-                {statusItem
-                  ? <Tag color={statusItem.color || undefined}>{statusItem.name}</Tag>
-                  : '-'}
-              </div>
-            )
-          })
-          : '-'
-      }
+  //           return (
+  //             <div key={record.details[index]?.id ?? index}>
+  //               {index + 1} -{' '}
+  //               {statusItem
+  //                 ? <Tag color={statusItem.color || undefined}>{statusItem.name}</Tag>
+  //                 : '-'}
+  //             </div>
+  //           )
+  //         })
+  //         : '-'
+  //     }
 
-      return renderArrayColor(array, record.detailstatus)
-    },
-  },
+  //     return renderArrayColor(array, record.detailstatus)
+  //   },
+  // },
   {
     title: 'T.G Chốt',
     dataIndex: 'opportunityAt',

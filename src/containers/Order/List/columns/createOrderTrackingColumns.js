@@ -40,6 +40,8 @@ const ProductTooltip = ({ record }) => (
 )
 
 const createOrderTrackingColumns = ({
+  isOpportunityList = false,
+  canUpdateOpportunity,
   shippingStatusById,
   copiedIndex,
   setCopiedIndex,
@@ -66,7 +68,7 @@ const createOrderTrackingColumns = ({
     dataIndex: 'code',
     key: 'code',
     fixed: 'left',
-    width: 165,
+    width: 150,
     ellipsis: true,
     render: (code, record, index) => (
       <Tooltip title="Bấm để sao chép mã đơn">
@@ -86,7 +88,7 @@ const createOrderTrackingColumns = ({
   {
     title: 'Khách hàng',
     key: 'customer',
-    width: 180,
+    width: 160,
     ellipsis: true,
     render: (_, record) => {
       const name = record?.enterpriseName || record?.customerReceiverName || '—'
@@ -103,7 +105,7 @@ const createOrderTrackingColumns = ({
   {
     title: 'Sản phẩm / SKU',
     key: 'product',
-    width: 230,
+    width: 205,
     ellipsis: true,
     render: (_, record) => (
       <Tooltip placement="rightTop" styles={{ root: { maxWidth: 520 } }} title={<ProductTooltip record={record} />}>
@@ -117,7 +119,7 @@ const createOrderTrackingColumns = ({
       {
         title: 'SL đặt',
         key: 'orderedQuantity',
-        width: 110,
+        width: 90,
         align: 'right',
         render: (_, record) => {
           const metrics = getOrderTrackingMetrics(record)
@@ -128,14 +130,14 @@ const createOrderTrackingColumns = ({
         title: 'Ngày đặt',
         dataIndex: 'createdAt',
         key: 'createdAt',
-        width: 120,
+        width: 100,
         render: value => formatTime(value) || '—',
       },
       {
         title: 'Kinh doanh',
         dataIndex: 'userCreateUsername',
         key: 'userCreateUsername',
-        width: 125,
+        width: 105,
         ellipsis: true,
       },
     ],
@@ -146,7 +148,7 @@ const createOrderTrackingColumns = ({
       {
         title: 'Số lô',
         key: 'productionLotCount',
-        width: 85,
+        width: 65,
         align: 'center',
         render: (_, record) => {
           const count = getOrderTrackingMetrics(record).productionLotCount
@@ -156,7 +158,7 @@ const createOrderTrackingColumns = ({
       {
         title: 'SL kế hoạch',
         key: 'plannedProductionQuantity',
-        width: 120,
+        width: 100,
         align: 'right',
         render: (_, record) => {
           const metrics = getOrderTrackingMetrics(record)
@@ -166,7 +168,7 @@ const createOrderTrackingColumns = ({
       {
         title: 'Dư / thiếu KH',
         key: 'productionVariance',
-        width: 125,
+        width: 105,
         align: 'center',
         render: (_, record) => {
           const { productionLotCount, productionVariance } = getOrderTrackingMetrics(record)
@@ -183,13 +185,13 @@ const createOrderTrackingColumns = ({
       {
         title: 'Hoàn thành DK',
         key: 'productionExpectedDate',
-        width: 130,
+        width: 110,
         render: (_, record) => formatTime(getLatestProductionDate(record)) || '—',
       },
       {
         title: 'Ưu tiên',
         key: 'productionPriority',
-        width: 95,
+        width: 75,
         align: 'center',
         render: (_, record) => {
           const priority = getProductionPriority(record)
@@ -209,7 +211,7 @@ const createOrderTrackingColumns = ({
       {
         title: 'Đã nhập',
         key: 'receivedQuantity',
-        width: 110,
+        width: 90,
         align: 'right',
         render: (_, record) => {
           const metrics = getOrderTrackingMetrics(record)
@@ -219,7 +221,7 @@ const createOrderTrackingColumns = ({
       {
         title: 'Tồn hiện tại',
         key: 'onHandQuantity',
-        width: 120,
+        width: 100,
         align: 'right',
         render: (_, record) => {
           const metrics = getOrderTrackingMetrics(record)
@@ -229,7 +231,7 @@ const createOrderTrackingColumns = ({
       {
         title: 'Phiếu nhập',
         key: 'receiptCount',
-        width: 90,
+        width: 75,
         align: 'center',
         render: (_, record) => {
           const count = getOrderTrackingMetrics(record).receiptCount
@@ -244,7 +246,7 @@ const createOrderTrackingColumns = ({
       {
         title: 'Đã xuất',
         key: 'outboundQuantity',
-        width: 110,
+        width: 90,
         align: 'right',
         render: (_, record) => {
           const metrics = getOrderTrackingMetrics(record)
@@ -254,7 +256,7 @@ const createOrderTrackingColumns = ({
       {
         title: 'Chưa xuất',
         key: 'remainingOutboundQuantity',
-        width: 110,
+        width: 90,
         align: 'right',
         render: (_, record) => {
           const metrics = getOrderTrackingMetrics(record)
@@ -268,7 +270,7 @@ const createOrderTrackingColumns = ({
       {
         title: 'Dư / thiếu',
         key: 'outboundVariance',
-        width: 115,
+        width: 95,
         align: 'center',
         render: (_, record) => {
           const { outboundVariance } = getOrderTrackingMetrics(record)
@@ -284,7 +286,7 @@ const createOrderTrackingColumns = ({
       {
         title: 'Tiến độ',
         key: 'outboundProgress',
-        width: 150,
+        width: 125,
         render: (_, record) => (
           <Progress
             percent={getOrderTrackingMetrics(record).progress}
@@ -296,7 +298,7 @@ const createOrderTrackingColumns = ({
       {
         title: 'Trạng thái giao',
         key: 'shippingStatus',
-        width: 150,
+        width: 125,
         ellipsis: true,
         render: (_, record) => {
           const latest = getLatestShipping(record)
@@ -308,7 +310,7 @@ const createOrderTrackingColumns = ({
       {
         title: 'Dự kiến giao',
         key: 'scheduledAt',
-        width: 125,
+        width: 105,
         render: (_, record) => formatTime(getLatestShipping(record)?.delivery?.scheduledAt) || '—',
       },
     ],
@@ -320,7 +322,7 @@ const createOrderTrackingColumns = ({
         title: 'Tổng tiền',
         dataIndex: 'total',
         key: 'total',
-        width: 135,
+        width: 120,
         align: 'right',
         render: value => formatMoney(value),
       },
@@ -328,14 +330,14 @@ const createOrderTrackingColumns = ({
         title: 'Đã thanh toán',
         dataIndex: 'paid',
         key: 'paid',
-        width: 135,
+        width: 120,
         align: 'right',
         render: value => formatMoney(value),
       },
       {
         title: 'Còn lại',
         key: 'remainingAmount',
-        width: 135,
+        width: 120,
         align: 'right',
         render: (_, record) => (
           <Text type={Number(record?.total ?? 0) - Number(record?.paid ?? 0) > 0 ? 'danger' : undefined}>
@@ -353,7 +355,7 @@ const createOrderTrackingColumns = ({
       <Space size={4}>
         <OrderActions
           record={record}
-          isOpportunityList={false}
+          isOpportunityList={isOpportunityList}
           hideQuoteButton={hideQuoteButton}
           disableWorkflowAttach={disableWorkflowAttach}
           showWorkflowProgressAction={showWorkflowProgressAction}
@@ -364,7 +366,7 @@ const createOrderTrackingColumns = ({
           openWorkflowProgressDrawer={openWorkflowProgressDrawer}
           navigate={navigate}
           canViewDetail={canViewDetail}
-          canUpdateOpportunity={false}
+          canUpdateOpportunity={canUpdateOpportunity}
           canUpdateOrder={canUpdateOrder}
           canViewQuotation={canViewQuotation}
           canAttachWorkflow={canAttachWorkflow}

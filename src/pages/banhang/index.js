@@ -51,6 +51,7 @@ const BanHangPage = (props) => {
 			business={state?.business ?? null}
 			onSaveSuccess={() => navigate(-1)}
 			hideEditColumn={state?.hideEditColumn === true}
+			restrictOrderFields={state?.restrictOrderFields === true}
 			{...props}
 		/>
 	</>;

@@ -103,3 +103,55 @@
     background: #d9efff !important;
   }
 }
+
+
+// Shared compact layout for Hateco opportunity and order tracking tables.
+.order-tracking-compact {
+  .ant-table {
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ant-table.ant-table-small {
+    .ant-table-thead > tr > th,
+    .ant-table-tbody > tr > td {
+      padding: 5px 6px;
+      line-height: 1.35;
+    }
+
+    .ant-table-thead > tr > th {
+      white-space: normal;
+      overflow-wrap: break-word;
+    }
+
+    .ant-table-expanded-row > td {
+      padding: 4px;
+    }
+  }
+
+  .ant-tag {
+    margin-inline-end: 0;
+    padding-inline: 4px;
+    font-size: 12px;
+    line-height: 20px;
+  }
+
+  .ant-btn-sm {
+    padding-inline: 6px;
+    font-size: 12px;
+  }
+
+  .ant-progress {
+    margin: 0;
+    font-size: 12px;
+  }
+
+  .order-tracking-master {
+    padding: 2px;
+  }
+}
+
+.order-tracking-compact .ant-table-wrapper .ant-table.ant-table-small
+  .ant-table-tbody .order-tracking-master .ant-table-wrapper:only-child .ant-table {
+  margin-inline: 0;
+}
