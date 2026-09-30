@@ -19,16 +19,37 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Form, Input } from 'antd';
+import { Alert, Form, Input } from 'antd';
 import { FormInput, CustomButton } from '@flast-erp/core/components';
-import { useLogin } from '@flast-erp/core/hooks';
+import { RequestUtils, jwtService } from '@flast-erp/core/utils';
+
+const LOGIN_FAILED_MESSAGE = 'Tài khoản hoặc mật khẩu chưa chính xác. Vui lòng kiểm tra lại.';
 
 function Login() {
 
-  const { login } = useLogin();
   const { t } = useTranslation();
   const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
+
+  const login = async (values) => {
+    setLoading(true);
+    setErrorMessage(null);
+    // RequestUtils trả về lỗi axios (không throw) khi HTTP 4xx, body nằm ở response.data
+    const result = await RequestUtils.Post('/auth/sign-in', values);
+    setLoading(false);
+
+    const body = result?.response?.data ?? result;
+    if (body?.success) {
+      jwtService.setSession(body.data);
+      return;
+    }
+
+    setErrorMessage(LOGIN_FAILED_MESSAGE);
+    form.resetFields(['password']);
+  };
 
   return (
     <div>
@@ -40,7 +61,15 @@ function Login() {
           {t('login.botTitle')}
         </div>
       </div>
-      <Form layout="vertical" onFinish={login} form={form}>
+      {errorMessage && (
+        <Alert type="error" showIcon message={errorMessage} style={{ marginBottom: 16 }} />
+      )}
+      <Form
+        layout="vertical"
+        onFinish={login}
+        onValuesChange={() => setErrorMessage(null)}
+        form={form}
+      >
         <FormInput
           name="username"
           label="input.email.label"
@@ -65,7 +94,7 @@ function Login() {
           size="large"
         />
         <div className="btn-auth">
-          <CustomButton htmlType="submit" title='Đăng nhập' />
+          <CustomButton htmlType="submit" title='Đăng nhập' loading={loading} />
         </div>
       </Form>
     </div>

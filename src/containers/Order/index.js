@@ -1,3 +1,4 @@
+import { formatOrderCurrency as formatCurrencyAmount } from './orderFormatting';
 /**************************************************************************/
 /*  index.js                                                              */
 /**************************************************************************/
@@ -107,11 +108,6 @@ const OpportunityTable = styled(Table)`
   }
 `;
 
-const formatCurrencyAmount = (value, currency = CURRENCY_VND) => Number(value ?? 0).toLocaleString(
-  currency === CURRENCY_USD ? 'en-US' : 'vi-VN',
-  { style: 'currency', currency, maximumFractionDigits: currency === CURRENCY_USD ? 2 : 0 }
-);
-
 const getExchangeRate = (currency, exchangeRate) => (
   currency === CURRENCY_USD ? Number(exchangeRate ?? 0) : 1
 );
@@ -147,6 +143,7 @@ const ORDER_TEMPLATE = {
   warrantyPeriod: "(Chưa có)",
   quantity: 1,
   price: 0,
+  productPrice: 0,
   totalPrice: 0,
   warehouse: "",
   stock: 0,
@@ -174,6 +171,8 @@ function getLeadProducts(lead = {}) {
       name: productNames[index] || `Sản phẩm #${productId}`,
     }));
 }
+
+const selectNumberOnFocus = event => event.target.select();
 
 function randomString(length = 8) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -231,7 +230,9 @@ const EditButton = ({
 const BanHangPage = ({
   orderId,
   dataId,
-  business
+  business,
+  onSaveSuccess,
+  hideEditColumn = false,
 }) => {
 
   const [lineItems, setData] = useState([]);
@@ -247,11 +248,17 @@ const BanHangPage = ({
   const [calculationFormula, setCalculationFormula] = useState('');
 
   const data = useMemo(() => lineItems.map(item => {
-    const totalPrice = calculateConvertedLineTotal({ item, shippingCost, formula: calculationFormula, currency, exchangeRate });
+    const totalPrice = item.manualSalePrice != null
+      ? Math.round(item.manualSalePrice * Number(item.quantity ?? 0)
+        + Number(item.discountAmount ?? 0) * getExchangeRate(currency, exchangeRate))
+      : calculateConvertedLineTotal({ item, shippingCost, formula: calculationFormula, currency, exchangeRate });
     return {
       ...item,
       currency,
       exchangeRate: getExchangeRate(currency, exchangeRate),
+      price: item.manualSalePrice ?? (Number(item.quantity ?? 0) > 0
+        ? Math.max(totalPrice - Number(item.discountAmount ?? 0) * getExchangeRate(currency, exchangeRate), 0) / Number(item.quantity)
+        : 0),
       totalPrice,
       total: totalPrice,
     };
@@ -297,7 +304,18 @@ const BanHangPage = ({
       setVatRate(Number(order.vat ?? 0));
     }
     if (arrayNotEmpty(data)) {
-      setData(mergeSavedOrderLines(data, localOrder.savedDetails));
+      setData(mergeSavedOrderLines(data, localOrder.savedDetails).map(item => {
+        if (item.price != null) {
+          return { ...item, manualSalePrice: Number(item.price) };
+        }
+        const quantity = Number(item.quantity ?? 0);
+        const savedTotal = item.totalPrice ?? item.total;
+        return savedTotal != null && quantity > 0 ? {
+          ...item,
+          manualSalePrice: Math.max(Number(savedTotal)
+            - Number(item.discountAmount ?? 0) * getExchangeRate(order?.currency, order?.exchangeRate), 0) / quantity,
+        } : item;
+      }));
     }
   }, [localOrder]);
 
@@ -353,7 +371,7 @@ const BanHangPage = ({
         order.stock = warehouse?.quantity ?? 0;
       }
 
-      order.price = resolveUnitPrice({
+      order.productPrice = resolveUnitPrice({
         skuPrices,
         quantity: order.quantity,
         product: mProduct
@@ -396,6 +414,7 @@ const BanHangPage = ({
     0,
   ), [currency, exchangeRate]);
   const getSalePrice = useCallback((item) => {
+    if (item?.manualSalePrice != null) return Number(item.manualSalePrice);
     const quantity = Number(item?.quantity ?? 0);
     return quantity > 0 ? getLineAmount(item) / quantity : 0;
   }, [getLineAmount]);
@@ -439,9 +458,9 @@ const BanHangPage = ({
       width: 260
     },
     {
-      title: `Đơn giá mua (${currency})`,
-      dataIndex: 'price',
-      key: 'price',
+      title: 'Giá mua',
+      dataIndex: 'productPrice',
+      key: 'productPrice',
       width: 140,
       align: 'right',
       editable: true
@@ -454,6 +473,7 @@ const BanHangPage = ({
       align: 'right',
       render: (_, record) => (
         <InputNumber
+          onFocus={selectNumberOnFocus}
           size="small"
           min={0}
           max={99.99}
@@ -467,12 +487,24 @@ const BanHangPage = ({
       )
     },
     {
-      title: 'Giá bán (VND)',
+      title: 'Giá bán',
       dataIndex: 'salePrice',
       key: 'salePrice',
       width: 140,
       align: 'right',
-      render: (_, record) => renderVndAmount(getSalePrice(record))
+      render: (_, record) => (
+        <InputNumber
+          onFocus={selectNumberOnFocus}
+          size="small"
+          min={0}
+          value={getSalePrice(record)}
+          onChange={value => handleChange(record.key, 'manualSalePrice', value)}
+          formatter={formatterInputNumber}
+          parser={parserInputNumber}
+          controls={false}
+          style={{ width: '100%', textAlign: 'right' }}
+        />
+      )
     },
     {
       title: 'Số lượng',
@@ -483,7 +515,7 @@ const BanHangPage = ({
       align: 'right'
     },
     {
-      title: 'Thành tiền (VND)',
+      title: 'Thành tiền',
       dataIndex: 'lineAmount',
       key: 'lineAmount',
       width: 150,
@@ -510,7 +542,7 @@ const BanHangPage = ({
       render: (_, record) => renderVndAmount(getLineVat(record))
     },
     {
-      title: 'Tổng tiền (VND)',
+      title: 'Tổng tiền',
       dataIndex: 'grandTotal',
       key: 'grandTotal',
       width: 150,
@@ -608,12 +640,16 @@ const BanHangPage = ({
   const totalVat = totalSubOrder * (vatRate / 100);
   const totalOrder = totalSubOrder + totalVat;
 
+  const clearManualSalePrices = () => setData(items => items.map(({ manualSalePrice, ...item }) => item));
+
   const handleCurrencyChange = (nextCurrency) => {
+    clearManualSalePrices();
     setCurrency(nextCurrency);
     if (nextCurrency === CURRENCY_VND) setExchangeRate(1);
   };
 
   const handleExchangeRateChange = (value) => {
+    clearManualSalePrices();
     const nextExchangeRate = Number(value ?? 0);
     setExchangeRate(nextExchangeRate);
   };
@@ -634,7 +670,7 @@ const BanHangPage = ({
       return;
     }
 
-    if (['quantity', 'price', 'discountRate', 'discountAmount', 'profit', 'totalPrice'].includes(field)) {
+    if (['quantity', 'productPrice', 'discountRate', 'discountAmount', 'profit', 'totalPrice', 'manualSalePrice'].includes(field)) {
       target[field] = parseFloat(value || 0);
     } else if (field === 'warehouse') {
       target[field] = target.warehouseOptions.find(option => option.id === value)?.stockName || '';
@@ -644,9 +680,14 @@ const BanHangPage = ({
       target[field] = value;
     }
 
+    if (['productPrice', 'profit', 'discountRate', 'discountAmount'].includes(field)) {
+      delete target.manualSalePrice;
+    }
+
     /* Calculate dependent fields */
     if (field === 'quantity' && arrayNotEmpty(target.skuPrices)) {
-      target.price = resolveUnitPrice({
+      delete target.manualSalePrice;
+      target.productPrice = resolveUnitPrice({
         skuPrices: target.skuPrices,
         quantity: target.quantity,
         product: {
@@ -654,7 +695,7 @@ const BanHangPage = ({
         }
       });
     }
-    if (['quantity', 'price', 'profit'].includes(field)) {
+    if (['quantity', 'productPrice', 'profit'].includes(field)) {
       target.totalPrice = calculateConvertedLineTotal({
         item: target,
         shippingCost,
@@ -664,10 +705,10 @@ const BanHangPage = ({
       });
     }
     if (field === 'discountRate') {
-      target.discountAmount = (target.price * target.quantity * target.discountRate) / 100;
+      target.discountAmount = (target.productPrice * target.quantity * target.discountRate) / 100;
     }
     if (field === 'discountAmount') {
-      target.discountRate = ((target.discountAmount / (target.price * target.quantity)) * 100).toFixed(2);
+      target.discountRate = Number(((target.discountAmount / (target.productPrice * target.quantity)) * 100).toFixed(2));
     }
     setData(newData);
   };
@@ -709,6 +750,7 @@ const BanHangPage = ({
       if (column.dataIndex === 'quantity') {
         return (
           <InputNumber
+            onFocus={selectNumberOnFocus}
             size="small"
             min={1}
             value={text}
@@ -722,6 +764,7 @@ const BanHangPage = ({
       }
       return (
         <InputNumber
+          onFocus={selectNumberOnFocus}
           size="small"
           min={0}
           max={column.dataIndex === 'profit' ? 99.99 : undefined}
@@ -760,7 +803,7 @@ const BanHangPage = ({
           </Tooltip>
         );
       }
-      const isFormatted = ['price', 'discountAmount', 'totalPrice'].includes(column.dataIndex);
+      const isFormatted = ['productPrice', 'discountAmount', 'totalPrice'].includes(column.dataIndex);
       if (column.dataIndex === 'profit') {
         return `${Number(text ?? 0)}%`;
       }
@@ -779,8 +822,9 @@ const BanHangPage = ({
     const submit = async (mCustomer) => {
       let params = {
         customer: mCustomer,
-        details: data.map(({ mSkuDetails, ...detail }) => ({
+        details: data.map(({ mSkuDetails, manualSalePrice, salePrice, ...detail }) => ({
           ...detail,
+          price: manualSalePrice ?? getSalePrice(detail),
           dayQuote: formatDayQuoteForPayload(detail.dayQuote),
           skuDetails: resolveOrderSkuDetails({ ...detail, mSkuDetails })
         })),
@@ -796,14 +840,19 @@ const BanHangPage = ({
       }
       if (customerOrder?.id) {
         params.id = customerOrder.id;
-        params.code = customerOrder.code ?? '';
+
       }
+      if (customerOrder?.code != null) params.code = customerOrder.code;
       if (dataId) {
         params.dataId = dataId;
       }
       const { message: eMsg, data: order, errorCode } = await RequestUtils.Post("/order/save", params);
       message.info(eMsg);
       if (errorCode === SUCCESS_CODE) {
+        if (onSaveSuccess) {
+          onSaveSuccess(order);
+          return;
+        }
         setLocalOrder(pre => ({
           orderId: order.id,
           reload: !pre.reload,
@@ -833,7 +882,7 @@ const BanHangPage = ({
         details: data
       }
     });
-  }, [business, currency, data, dataId, customer, customerOrder, exchangeRate, shippingCost, vatRate]);
+  }, [business, currency, data, dataId, customer, customerOrder, exchangeRate, getSalePrice, onSaveSuccess, shippingCost, vatRate]);
 
   const onOpenFormPayment = useCallback(() => {
     InAppEvent.emit(HASH_MODAL, {
@@ -861,7 +910,7 @@ const BanHangPage = ({
         bordered
         scroll={{ x: 2560 }}
         dataSource={data}
-        columns={columns.map(col => ({
+        columns={columns.filter(col => !hideEditColumn || col.key !== 'operation').map(col => ({
           ...col,
           onHeaderCell: () => ({
             style: { whiteSpace: 'nowrap' }
@@ -901,6 +950,7 @@ const BanHangPage = ({
                 <Space size={6}>
                   <Text>Tỷ giá</Text>
                   <InputNumber
+                    onFocus={selectNumberOnFocus}
                     size="small"
                     min={currency === CURRENCY_USD ? 0.01 : 1}
                     value={exchangeRate}
@@ -923,7 +973,7 @@ const BanHangPage = ({
             <Table.Summary.Cell index={10}></Table.Summary.Cell>
             <Table.Summary.Cell index={11}></Table.Summary.Cell>
             <Table.Summary.Cell index={12} align="right">{formatCurrencyAmount(totalDiscount, currency)}</Table.Summary.Cell>
-            <Table.Summary.Cell index={13} colSpan={5}></Table.Summary.Cell>
+            <Table.Summary.Cell index={13} colSpan={hideEditColumn ? 4 : 5}></Table.Summary.Cell>
           </Table.Summary.Row>
         )}
       />
@@ -978,8 +1028,7 @@ const BanHangPage = ({
                 size="small"
                 value={customerOrder?.code ?? ''}
                 maxLength={100}
-                placeholder={isOrder ? 'Nhập mã' : 'Tự tạo khi lưu'}
-                disabled={!isOrder}
+                placeholder="Nhập mã (để trống để tự tạo)"
                 onChange={event => setCustomerOrder(current => ({ ...current, code: event.target.value }))}
               />
             </div>
@@ -988,11 +1037,15 @@ const BanHangPage = ({
                 Phí vận chuyển ({currency})
               </label>
               <InputNumber
+                onFocus={selectNumberOnFocus}
                 id="order-shipping-cost"
                 size="small"
                 min={0}
                 value={shippingCost}
-                onChange={value => setShippingCost(Number(value ?? 0))}
+                onChange={value => {
+                  clearManualSalePrices();
+                  setShippingCost(Number(value ?? 0));
+                }}
                 formatter={formatterInputNumber}
                 parser={parserInputNumber}
                 controls={false}

@@ -83,6 +83,7 @@ const ListOrder = ({
   showWorkflowProgressAction = false,
   apiPath = 'erp/order/fetch',
   orderMode = false,
+  hideEditorEditColumn = false,
   trackingOverview = false,
   detailDrawerHash = '#order.tabs',
   detailDrawerTitle,
@@ -256,7 +257,9 @@ const ListOrder = ({
     openQuotationViewer,
     openWorkflowModal: handleOpenWorkflowModal,
     openWorkflowProgressDrawer,
-    navigate,
+    navigate: (to, options) => navigate(to, hideEditorEditColumn && String(to).startsWith('/sale/ban-hang/')
+      ? { ...options, state: { ...options?.state, hideEditColumn: true } }
+      : options),
     canViewDetail,
     canUpdateOpportunity,
     canUpdateOrder,
@@ -289,6 +292,8 @@ const ListOrder = ({
 
   const trackingExpandable = useTrackingOverview
     ? {
+      showExpandColumn: false,
+      expandedRowKeys: activeTrackingRowKey == null ? [] : [activeTrackingRowKey],
       expandedRowRender: record => (
         <OrderTrackingExpandedRow
           record={record}
@@ -330,11 +335,16 @@ const ListOrder = ({
         )}
         onRow={record => useTrackingOverview ? ({
           tabIndex: 0,
-          onClick: () => setActiveTrackingRowKey(record?._trackingRowKey),
+          onClick: () => setActiveTrackingRowKey(current => (
+            current === record?._trackingRowKey ? null : record?._trackingRowKey
+          )),
           onKeyDown: event => {
+            if (event.target !== event.currentTarget) return
             if (event.key === 'Enter' || event.key === ' ') {
               event.preventDefault()
-              setActiveTrackingRowKey(record?._trackingRowKey)
+              setActiveTrackingRowKey(current => (
+                current === record?._trackingRowKey ? null : record?._trackingRowKey
+              ))
             }
           },
         }) : {}}

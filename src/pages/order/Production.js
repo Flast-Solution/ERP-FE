@@ -45,7 +45,7 @@ const OrderProductionPage = () => {
     {
       key: '1',
       label: 'Đơn hàng đang SX',
-      children: <ListOrder filter={filter} hideQuoteButton={true} extraActions={extraActions} />
+      children: <ListOrder hideEditorEditColumn filter={filter} hideQuoteButton={true} extraActions={extraActions} />
     },
     {
       key: '2',
@@ -61,7 +61,7 @@ const OrderProductionPage = () => {
     <CustomBreadcrumb
       data={[{ title: 'Trang chủ' }, { title: title }]}
     />
-    {/* <ListOrder filter={filter} hideQuoteButton={true} extraActions={extraActions} /> */}
+    {/* <ListOrder hideEditorEditColumn filter={filter} hideQuoteButton={true} extraActions={extraActions} /> */}
     <Tabs defaultActiveKey="1" items={items} />
   </>
 };

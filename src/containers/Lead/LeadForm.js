@@ -1,7 +1,9 @@
+import useEnterpriseSearch from './useEnterpriseSearch'
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, DatePicker, Form, Input, Radio, Select, Spin, Tag, message } from 'antd'
 import {
   FormContextCustom,
+  FormAutoCompleteInfinite,
   FormHidden,
   FormSelectAPI,
   FormSelectInfiniteProduct,
@@ -52,6 +54,12 @@ const mergeById = (currentItems, nextItems) => {
   })
   return Array.from(itemsById.values())
 }
+
+const EnterpriseOption = ({ enterprise }) => (
+  <span>
+    {enterprise.companyName} — {enterprise.taxCode || `#${enterprise.id}`} — {enterprise.contactName || 'Chưa có người liên hệ'}
+  </span>
+)
 
 const ASSET_BASE_URL = 'http://view.user.flast.vn/assets/icons'
 
@@ -145,6 +153,7 @@ const LeadForm = ({ listSale = [], submitting = false, canSave = true }) => {
   const workflowHasMoreRef = useRef(true)
   const workflowItemsRef = useRef([])
   const enterpriseLookupSequenceRef = useRef(0)
+  const selectedEnterpriseTaxRef = useRef(null)
   const isEditing = Boolean(record?.id)
   const customerType = Form.useWatch('customerType', form) ?? record?.customerType ?? 'INDIVIDUAL'
   const taxCode = Form.useWatch(['business', 'taxCode'], form)
@@ -166,7 +175,7 @@ const LeadForm = ({ listSale = [], submitting = false, canSave = true }) => {
     const normalizedTaxCode = String(taxCode ?? '').trim()
     const lookupSequence = ++enterpriseLookupSequenceRef.current
 
-    if (customerType !== 'BUSINESS' || !normalizedTaxCode) {
+    if (customerType !== 'BUSINESS' || !normalizedTaxCode || normalizedTaxCode === selectedEnterpriseTaxRef.current) {
       setLoadingEnterprise(false)
       return undefined
     }
@@ -359,13 +368,48 @@ const LeadForm = ({ listSale = [], submitting = false, canSave = true }) => {
             disabled={customerType !== 'BUSINESS'}
             suffix={loadingEnterprise ? <Spin size="small" /> : null}
           />
-          <LeadInput
-            required
+          <FormAutoCompleteInfinite
+            required={customerType === 'BUSINESS'}
             name={['business', 'companyName']}
             label="Tên doanh nghiệp"
-            code="company_name"
             placeholder="Nhập tên doanh nghiệp"
             disabled={customerType !== 'BUSINESS'}
+            useGetAllQuery={useEnterpriseSearch}
+            initialFilter={{ limit: 20, page: 1 }}
+            searchKey="name"
+            filterField="name"
+            valueProp="selectionValue"
+            titleProp={null}
+            className="pl-select"
+            formItemProps={{ className: 'pl-field' }}
+            formatText={enterprise => <EnterpriseOption enterprise={enterprise} />}
+            customGetValueFromEvent={(value, enterprise) => enterprise?.companyName ?? value}
+            onChange={() => {
+              enterpriseLookupSequenceRef.current += 1
+              selectedEnterpriseTaxRef.current = null
+              form.setFieldValue('enterpriseId', null)
+            }}
+            onSelect={(_, option) => {
+              const enterprise = option.children?.props?.enterprise
+              if (!enterprise) return
+              enterpriseLookupSequenceRef.current += 1
+              selectedEnterpriseTaxRef.current = String(enterprise.taxCode ?? '').trim()
+              setLoadingEnterprise(false)
+              form.setFieldsValue({
+                enterpriseId: enterprise.id,
+                business: {
+                  companyName: enterprise.companyName ?? '',
+                  taxCode: enterprise.taxCode ?? '',
+                  contactName: enterprise.contactName ?? '',
+                  jobTitle: enterprise.jobTitle ?? '',
+                  website: enterprise.website ?? '',
+                },
+                ...(enterprise.contactName ? { customerName: enterprise.contactName } : {}),
+                ...(enterprise.mobilePhone ? { customerMobile: enterprise.mobilePhone } : {}),
+                ...(enterprise.email ? { customerEmail: enterprise.email } : {}),
+                ...(enterprise.address ? { address: enterprise.address } : {}),
+              })
+            }}
           />
           <LeadInput required name={['business', 'contactName']} label="Người liên hệ" code="contact_name" placeholder="Nguyễn Văn Hùng" disabled={customerType !== 'BUSINESS'} />
           <LeadInput name={['business', 'jobTitle']} label="Chức vụ" code="job_title" placeholder="Giám đốc" disabled={customerType !== 'BUSINESS'} />

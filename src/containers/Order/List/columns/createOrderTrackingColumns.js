@@ -62,24 +62,6 @@ const createOrderTrackingColumns = ({
   openOrderInboundDrawer,
 }) => [
   {
-    title: 'Khách hàng',
-    key: 'customer',
-    fixed: 'left',
-    width: 180,
-    ellipsis: true,
-    render: (_, record) => {
-      const name = record?.enterpriseName || record?.customerReceiverName || '—'
-      return (
-        <Tooltip title={name}>
-          <div>
-            <Text strong>{name}</Text>
-            <div><Text type="secondary">{record?.customerMobilePhone || 'Chưa có SĐT'}</Text></div>
-          </div>
-        </Tooltip>
-      )
-    },
-  },
-  {
     title: 'Mã đơn',
     dataIndex: 'code',
     key: 'code',
@@ -100,6 +82,23 @@ const createOrderTrackingColumns = ({
         </span>
       </Tooltip>
     ),
+  },
+  {
+    title: 'Khách hàng',
+    key: 'customer',
+    width: 180,
+    ellipsis: true,
+    render: (_, record) => {
+      const name = record?.enterpriseName || record?.customerReceiverName || '—'
+      return (
+        <Tooltip title={name}>
+          <div>
+            <Text strong>{name}</Text>
+            <div><Text type="secondary">{record?.customerMobilePhone || 'Chưa có SĐT'}</Text></div>
+          </div>
+        </Tooltip>
+      )
+    },
   },
   {
     title: 'Sản phẩm / SKU',
@@ -349,7 +348,6 @@ const createOrderTrackingColumns = ({
   {
     title: 'Action',
     key: 'action',
-    fixed: 'right',
     width: actionWidth,
     render: (_, record) => (
       <Space size={4}>

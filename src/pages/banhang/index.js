@@ -22,11 +22,12 @@
 import Order from 'containers/Order';
 import { Helmet } from 'react-helmet';
 import { BreadcrumbCustom } from '@flast-erp/core/components';
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useQueryParams } from '@flast-erp/core/hooks';
 
 const title = 'Tạo cơ hội bán hàng';
 const BanHangPage = (props) => {
+	const navigate = useNavigate();
 	const { orderId } = useParams();
 	const { state } = useLocation();
 	const { get } = useQueryParams();
@@ -48,6 +49,8 @@ const BanHangPage = (props) => {
 			orderId={orderId}
 			dataId={get("dataId")}
 			business={state?.business ?? null}
+			onSaveSuccess={() => navigate(-1)}
+			hideEditColumn={state?.hideEditColumn === true}
 			{...props}
 		/>
 	</>;

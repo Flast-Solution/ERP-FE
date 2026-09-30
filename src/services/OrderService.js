@@ -87,7 +87,7 @@ const normalizeOrderDetail = (detail, product, order) => {
     // `view-on-edit` trả `totalPrice` theo loại tiền gốc; response lưu mới
     // trả `total` đã quy đổi. Chỉ nhân tỷ giá khi `total` chưa có.
     totalPrice: convertedTotal,
-    productPrice: Number(product?.price ?? product?.priceRef ?? price),
+    productPrice: Number(detail?.productPrice ?? product?.price ?? product?.priceRef ?? 0),
     skuPrices: selectedSku?.skuPrices ?? [],
     currency,
     exchangeRate,

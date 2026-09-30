@@ -13,6 +13,7 @@ import {
 } from '@flast-erp/core/components';
 import { formatMoney, RequestUtils } from '@flast-erp/core/utils';
 import ProductionPage from './styles';
+import { parseOrderLine } from '@/containers/Order/orderLine';
 import { useProductionWorkflows } from './production-order-list/hooks/useProductionWorkflows';
 import { createSnowflakeId } from '@/utils/snowflake';
 import {
@@ -48,8 +49,12 @@ const getSkuSummary = (detail = {}) => (
     .join(', ')
 );
 
+const getOrderLineSummary = detail => Object.entries(parseOrderLine(detail?.orderLine))
+  .map(([label, value]) => `${label}: ${typeof value === 'object' && value !== null ? JSON.stringify(value) : value ?? ''}`)
+  .join(' · ');
+
 const getDetailLabel = (detail = {}) => (
-  [detail.code ?? `#${detail.id}`, getSkuSummary(detail)].filter(Boolean).join(' · ')
+  [detail.code ?? `#${detail.id}`, getSkuSummary(detail), getOrderLineSummary(detail)].filter(Boolean).join(' · ')
 );
 
 const ReadonlyField = ({ label, value, mono = false }) => (
@@ -208,7 +213,7 @@ const CreateOrder = ({
         ...values,
         productionOrderCode: values.productionOrderCode,
         salesOrderCode: selectedOrder?.code,
-        customerName: selectedOrder?.customerReceiverName,
+        customerName: selectedOrder?.enterpriseName,
         orderDetails: selectedProducts,
         productDetails,
       });
@@ -281,7 +286,7 @@ const CreateOrder = ({
                     showSearch
                     filterOption={false}
                     onSearch={onSearchWaitingOrders}
-                    formatText={(code, item) => [code, item?.customerReceiverName].filter(Boolean).join(' · ')}
+                    formatText={(code, item) => [code, item?.enterpriseName].filter(Boolean).join(' · ')}
                     onChange={handleOrderChange}
                     onPopupScroll={(event) => {
                       const target = event.currentTarget;
@@ -291,7 +296,7 @@ const CreateOrder = ({
                     }}
                   />
                 </div>
-                <ReadonlyField label="Khách hàng" value={selectedOrder?.customerReceiverName} />
+                <ReadonlyField label="Khách hàng" value={selectedOrder?.enterpriseName} />
                 <ReadonlyField label="Người liên hệ" value={contact} />
                 <ReadonlyField label="Ngày đặt hàng" value={formatOrderDate(selectedOrder?.createdAt)} mono />
                 <ReadonlyField
@@ -326,6 +331,7 @@ const CreateOrder = ({
                           optionFilterProp="label"
                           value={product?.id}
                           options={options}
+                          optionRender={option => <div style={{ whiteSpace: 'normal' }}>{option.label}</div>}
                           placeholder="Chọn mã đơn con"
                           onChange={value => selectProductForRow(row.key, value)}
                           style={{ width: '100%' }}
@@ -339,6 +345,11 @@ const CreateOrder = ({
                           />
                         )}
                       </div>
+                      {getOrderLineSummary(product) && (
+                        <div style={{ marginTop: 8, overflowWrap: 'anywhere' }}>
+                          {getOrderLineSummary(product)}
+                        </div>
+                      )}
                       {product && (
                         <div className="production-child-card__body">
                           <FormInputNumber
