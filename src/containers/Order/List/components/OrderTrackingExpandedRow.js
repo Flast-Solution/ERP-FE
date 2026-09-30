@@ -1,3 +1,5 @@
+import ProductAttributesTooltip from './ProductAttributesTooltip'
+import { matchesProductionDetail } from '../utils/productionDetailMatch'
 import React, { useState } from 'react'
 import { Table, Tag, Tooltip, Typography } from 'antd'
 import { formatMoney, formatTime } from '@flast-erp/core/utils'
@@ -7,6 +9,7 @@ import {
   getOrderDetails,
   getShippingHistory,
   getSkuText,
+  getOrderLineText,
   getWarehouseHistory,
 } from '../utils/orderTracking'
 
@@ -57,13 +60,9 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById }) => {
 
   const rows = details.flatMap((detail, detailIndex) => {
     const detailGroupKey = getDetailId(detail) ?? getDetailCode(detail) ?? detailIndex
-    const detailManufactureProducts = manufactureDetails.filter(item => {
-      const manufactureDetail = item?.manufactureDetail ?? {}
-      if (String(manufactureDetail?.productId) !== String(detail?.productId)) return false
-      return manufactureDetail?.skuId == null
-        || detail?.skuId == null
-        || String(manufactureDetail.skuId) === String(detail.skuId)
-    })
+    const detailManufactureProducts = manufactureDetails.filter(item => (
+      matchesProductionDetail(item.manufactureDetail, detail, details)
+    ))
     const detailReceipts = receipts.filter(item => belongsToDetail(item, detail))
     const detailShipping = shipping.filter(item => belongsToDetail(item, detail))
     const rowCount = Math.max(
@@ -106,11 +105,16 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById }) => {
           render: (_, detail) => {
             const product = [detail?.productName, detail?.productCode].filter(Boolean).join(' - ') || '—'
             const sku = getSkuText(detail)
+            const orderLine = getOrderLineText(detail)
             return (
-              <Tooltip title={<><div>{product}</div>{sku && <div>SKU: {sku}</div>}</>}>
+              <Tooltip
+                styles={{ root: { maxWidth: 480 } }}
+                title={<><strong>{product}</strong><ProductAttributesTooltip detail={detail} /></>}
+              >
                 <div>
                   <div>{product}</div>
                   {sku && <Text type="secondary">{sku}</Text>}
+                  {orderLine && <div style={{ whiteSpace: 'normal', overflowWrap: 'anywhere' }}>{orderLine}</div>}
                 </div>
               </Tooltip>
             )

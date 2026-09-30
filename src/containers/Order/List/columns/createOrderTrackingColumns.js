@@ -1,3 +1,4 @@
+import ProductAttributesTooltip from '../components/ProductAttributesTooltip'
 import React from 'react'
 import { Progress, Space, Tag, Tooltip, Typography } from 'antd'
 import { CopyOutlined } from '@ant-design/icons'
@@ -13,7 +14,6 @@ import {
   getOrderUnit,
   getProductSummary,
   getProductionPriority,
-  getSkuText,
 } from '../utils/orderTracking'
 
 const { Text } = Typography
@@ -32,7 +32,7 @@ const ProductTooltip = ({ record }) => (
           {index + 1}. {[detail?.productName, detail?.productCode].filter(Boolean).join(' - ') || 'Sản phẩm'}
         </Text>
         <div>Đơn con: {detail?.code || '—'}</div>
-        <div>SKU: {getSkuText(detail) || '—'}</div>
+        <ProductAttributesTooltip detail={detail} />
         <div>Số lượng: {formatQuantity(detail?.quantity, detail?.unit)}</div>
       </div>
     ))}
@@ -106,7 +106,7 @@ const createOrderTrackingColumns = ({
     width: 230,
     ellipsis: true,
     render: (_, record) => (
-      <Tooltip placement="rightTop" title={<ProductTooltip record={record} />}>
+      <Tooltip placement="rightTop" styles={{ root: { maxWidth: 520 } }} title={<ProductTooltip record={record} />}>
         <span>{getProductSummary(record)}</span>
       </Tooltip>
     ),
