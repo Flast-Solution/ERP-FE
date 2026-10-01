@@ -33,7 +33,9 @@ const ProductAttributeSelector = () => {
   useEffect(() => {
     if (loading || saving || previousTypeRef.current === productTypeId) return;
     previousTypeRef.current = productTypeId;
-    const ids = productTypeId == null || productTypeId === '' ? [] : attributes
+    // Legacy products have no type: keep their saved properties and values.
+    if (productTypeId == null || productTypeId === '') return;
+    const ids = attributes
       .filter(item => isDefaultProductAttribute(item, productTypeId)).map(item => item.id);
     form.setFieldValue('listProperties', syncSelectedProductProperties(form.getFieldValue('listProperties'), ids));
   }, [attributes, form, loading, saving, productTypeId]);
