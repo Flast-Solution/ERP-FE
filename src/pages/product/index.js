@@ -1,3 +1,4 @@
+import { isDefaultProductAttribute } from '@/containers/Product/productProperties';
 /**************************************************************************/
 /*  index.js                                                           		*/
 /**************************************************************************/
@@ -63,6 +64,23 @@ const getAttributeValues = (record, attributeId) => Array.from(new Set(
 
 const Index = () => {
   const [attributes, setAttributes] = useState([]);
+  const [activeProductTypeId, setActiveProductTypeId] = useState(null);
+  const useProductList = useCallback(function useProductList(options) {
+    const typeId = options.queryParams?.productTypeId;
+    useEffect(() => {
+      let active = true;
+      setActiveProductTypeId(typeId ?? null);
+      if (typeId != null && typeId !== '') {
+        ProductAttrService.loadAll({ limit: 1000, page: 1 }).then(items => {
+          if (active) setAttributes(Array.isArray(items) ? items : []);
+        });
+      }
+      return () => { active = false; };
+    }, [typeId]);
+    return useGetList(options);
+  }, []);
+  const visibleAttributes = activeProductTypeId == null || activeProductTypeId === '' ? []
+    : attributes.filter(attribute => isDefaultProductAttribute(attribute, activeProductTypeId));
   const { hasPermission } = useGetMe();
   const canCreate = hasPermission('catalog.product.create');
   const canUpdate = hasPermission('catalog.product.update');
@@ -193,7 +211,7 @@ const Index = () => {
       width: 120,
       render: (status) => (status || 0) === 0 ? 'Ngưng' : 'Kích hoạt'
     },
-    ...attributes.map(attribute => ({
+    ...visibleAttributes.map(attribute => ({
       title: attribute.name || `Thuộc tính #${attribute.id}`,
       key: `attribute-${attribute.id}`,
       width: 160,
@@ -314,11 +332,11 @@ const Index = () => {
         data={[{ title: 'Trang chủ' }, { title: title }]}
       />
       <RestList
-        xScroll={1200 + (attributes.length * 160)}
+        xScroll={1200 + (visibleAttributes.length * 160)}
         onData={onData}
         initialFilter={{ limit: 10, page: 1 }}
         filter={<Filter />}
-        useGetAllQuery={useGetList}
+        useGetAllQuery={useProductList}
         apiPath={PRODUCT_API_PATH}
         hasCreate={canCreate}
         customClickCreate={onCreateProduct}

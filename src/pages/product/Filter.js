@@ -24,6 +24,7 @@ import { Row, Col } from 'antd';
 import {
   FormInput,
   FormSelectUser,
+  FormSelectAPI,
   FormSelect
 } from '@flast-erp/core/components';
 import ProductAttrService from '@/services/ProductAttrService';
@@ -51,6 +52,21 @@ const ProductFilter = () => {
   return (
     <>
       <Row gutter={16}>
+        <Col xl={6} lg={6} md={6} xs={24}>
+          <FormSelectAPI
+            allowClear
+            showSearch
+            label="Loại sản phẩm"
+            name="productTypeId"
+            formatValue={value => String(value)}
+            formItemProps={{
+              getValueProps: value => ({ value: value == null || value === '' ? undefined : String(value) }),
+            }}
+            apiPath="product-type/get-all"
+            onData={data => Array.isArray(data) ? data : data?.embedded ?? []}
+            placeholder="Chọn loại sản phẩm"
+          />
+        </Col>
         <Col xl={6} lg={6} md={6} xs={24}>
           <FormInput
             name={'name'}
