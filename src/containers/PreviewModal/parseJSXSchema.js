@@ -115,6 +115,16 @@ const propToString = (prop, fallback = '') => {
   return fallback
 }
 
+// Schema keys must be static. Runtime NamePaths belong to the custom JSX form.
+const parseFieldKey = (prop) => {
+  if (typeof prop === 'string') return prop
+  if (prop?.type === 'expr') {
+    const match = prop.value.trim().match(/^(['"])([^'"]+)\1$/)
+    if (match) return match[2]
+  }
+  throw new Error('Mã field phải là chuỗi cố định. Field có name động phải nằm trong Form.List có name cố định.')
+}
+
 const parseSelectApiOnDataMapping = (prop) => {
   const source = prop?.type === 'expr' ? prop.value : ''
   if (!source) return null
@@ -375,7 +385,7 @@ const mapComponentToField = (componentName, props, span, constants = new Map()) 
   return {
     _id: nanoid(),
     id: null,
-    fieldKey: propToString(props.name),
+    fieldKey: parseFieldKey(props.name),
     label: propToString(props.label ?? props.title),
     inputType,
     isRequired: Boolean(props.required),
@@ -560,7 +570,7 @@ const parseFieldNodes = (content = '', constants = new Map()) => {
         fields.push({
           _id: nanoid(),
           id: null,
-          fieldKey: propToString(itemProps.name),
+          fieldKey: parseFieldKey(itemProps.name),
           label: propToString(itemProps.label),
           inputType: 'checkbox',
           isRequired: Boolean(itemProps.required),
@@ -630,9 +640,44 @@ const extractDirectFieldBlocks = (content = '') => {
   return blocks
 }
 
+// Store a repeated form as one structured value, not as flat required child fields.
+const extractListFields = (source) => {
+  const fields = []
+  let content = source
+  const pattern = /<Form\.List\b/g
+  let match
+  while ((match = pattern.exec(content))) {
+    const start = match.index
+    const openingEnd = findOpeningTagEnd(content, start)
+    if (openingEnd < 0) throw new Error('Form.List không hợp lệ.')
+    const props = parseProps(content.slice(start + '<Form.List'.length, openingEnd))
+    let depth = 1
+    const tags = /<Form\.List\b|<\/Form\.List\s*>/g
+    tags.lastIndex = openingEnd + 1
+    let end = -1
+    let tag
+    while ((tag = tags.exec(content))) {
+      if (tag[0].startsWith('</')) depth -= 1
+      else depth += 1
+      if (!depth) { end = tags.lastIndex; break }
+    }
+    if (end < 0) throw new Error('Không tìm thấy thẻ đóng Form.List.')
+    // A list is a structured block; `hidden` is not a backend InputType.
+    const field = mapComponentToField('FormBlockPreview', props, 24)
+    field.label = field.label || field.fieldKey
+    field.isRequired = false
+    field.isIndexed = false
+    fields.push(field)
+    content = content.slice(0, start) + content.slice(end)
+    pattern.lastIndex = start
+  }
+  return { content, fields }
+}
+
 export const parseJsxToSchema = (jsxCode, meta = {}) => {
   const constants = extractNamedConstants(jsxCode)
-  const fields = parseFieldNodes(jsxCode, constants)
+  const lists = extractListFields(jsxCode)
+  const fields = [...parseFieldNodes(lists.content, constants), ...lists.fields]
 
   if (fields.length === 0) {
     throw new Error('Khong parse duoc field nao tu JSX.')
