@@ -12,7 +12,7 @@
  *   event: close data: ""               — server đóng session (idle timeout)
  */
 
-const BASE_URL     = 'http://127.0.0.1:8000'
+const BASE_URL     = 'https://ai.flast.vn'
 const PING_INTERVAL_MS = 60_000
 const SSE_DEBUG = process.env.NODE_ENV !== 'production'
 
