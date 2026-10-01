@@ -7,6 +7,7 @@ export const DEFAULT_PRODUCT_FORM_LAYOUT = [
     items: [
       'name',
       'code',
+      'productTypeId',
       'serviceId',
       'providerId',
       'unit',
@@ -68,6 +69,10 @@ export const normalizeProductFormLayout = (savedLayout) => {
         validItems.has(item) && items.indexOf(item) === index
       ))
       : [];
+    if (defaultBlock.id === 'general' && !savedItems.includes('productTypeId')) {
+      const serviceIndex = savedItems.indexOf('serviceId');
+      savedItems.splice(serviceIndex >= 0 ? serviceIndex : 0, 0, 'productTypeId');
+    }
     const missingItems = defaultBlock.items.filter(item => !savedItems.includes(item));
 
     normalized.push({

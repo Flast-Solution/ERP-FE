@@ -1,5 +1,6 @@
 import {
   mergeInitialProductProperties,
+  updateAttributeDefaults,
   syncSelectedProductProperties,
 } from './productProperties';
 
@@ -57,4 +58,19 @@ describe('syncSelectedProductProperties', () => {
       { attributedId: 10008, attributedValueId: [] },
     ]);
   });
+});
+
+
+test('type defaults use listType instead of global initial flags', () => {
+  const attrs = [{ id: 1, initial: true, listType: [8] }, { id: 2, initial: false, listType: [9] }];
+  expect(mergeInitialProductProperties([], attrs, 9)).toEqual([{ attributedId: 2, attributedValueId: [] }]);
+  expect(mergeInitialProductProperties([], attrs)).toEqual([{ attributedId: 1, attributedValueId: [] }]);
+});
+
+test('updates membership for one type without changing other types or global defaults', () => {
+  const attrs = [{ id: 1, initial: true, listType: [8, 9] }, { id: 2, initial: false, listType: [8] }];
+  const result = updateAttributeDefaults(attrs, ['2'], 9);
+  expect(result).toEqual([{ id: 1, initial: true, listType: [8] }, { id: 2, initial: false, listType: [8, 9] }]);
+  expect(updateAttributeDefaults(result, ['2'], 9)).toEqual(result);
+  expect(updateAttributeDefaults(attrs, ['2'], null)[0]).toEqual({ id: 1, initial: false, listType: [8, 9] });
 });

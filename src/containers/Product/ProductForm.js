@@ -66,6 +66,7 @@ import {
 const PRODUCT_FORM_ITEMS = {
   name: { label: 'Tên sản phẩm', md: 12 },
   code: { label: 'Mã sản phẩm', md: 12 },
+  productTypeId: { label: 'Loại sản phẩm', md: 12 },
   serviceId: { label: 'Dịch vụ', md: 12 },
   providerId: { label: 'Nhà cung cấp', md: 12 },
   unit: { label: 'Đơn vị tính', md: 12 },
@@ -159,6 +160,19 @@ const ProductForm = () => {
             label="Mã sản phẩm"
             name="code"
             placeholder="Nhập mã sản phẩm"
+          />
+        );
+      case 'productTypeId':
+        return (
+          <FormSelectAPI
+            showSearch
+            allowClear
+            onData={data => Array.isArray(data) ? data : data?.embedded ?? []}
+            apiPath="product-type/get-all"
+            apiAddNewItem="product-type/create"
+            label="Loại sản phẩm"
+            name="productTypeId"
+            placeholder="Chọn loại sản phẩm"
           />
         );
       case 'serviceId':

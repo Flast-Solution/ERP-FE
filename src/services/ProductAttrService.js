@@ -1,3 +1,4 @@
+import { updateAttributeDefaults } from '@/containers/Product/productProperties';
 /**************************************************************************/
 /*  ProductAttrService.js                                                 */
 /**************************************************************************/
@@ -58,30 +59,19 @@ const ProductAttrService = {
     this.allData = data?.embedded ?? [];
     return this.allData;
   },
-  async updateDefault(attributes = [], selectedIds = []) {
+  async updateDefault(attributes = [], selectedIds = [], typeId) {
     const allAttributes = (Array.isArray(attributes) ? attributes : [])
       .filter(item => item && typeof item === 'object' && item.id !== undefined && item.id !== null);
-    const selectedIdSet = new Set(
-      (Array.isArray(selectedIds) ? selectedIds : []).map(String),
-    );
-    const payload = allAttributes.map(item => ({
-      ...item,
-      initial: selectedIdSet.has(String(item.id)),
-    }));
+    const payload = updateAttributeDefaults(allAttributes, selectedIds, typeId);
     const response = await RequestUtils.Post('/erp/attributed/update-default', payload);
     if (response?.errorCode !== SUCCESS_CODE && response?.success !== true) {
       return response;
     }
 
-    this.allData = this.allData.map(item => ({
-      ...item,
-      initial: selectedIdSet.has(String(item.id)),
-    }));
+    const updatedById = new Map(payload.map(item => [String(item.id), item]));
+    this.allData = this.allData.map(item => updatedById.get(String(item.id)) ?? item);
     Object.keys(this.attrs).forEach(id => {
-      this.attrs[id] = {
-        ...this.attrs[id],
-        initial: selectedIdSet.has(String(id)),
-      };
+      this.attrs[id] = updatedById.get(String(id)) ?? this.attrs[id];
     });
     return response;
   },

@@ -32,7 +32,7 @@ import {
   serializeProductAssets,
   splitProductAssets,
 } from './productImages';
-import { mergeInitialProductProperties } from './productProperties';
+import { mergeInitialProductProperties, isDefaultProductAttribute } from './productProperties';
 import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard';
 
 /**
@@ -78,7 +78,7 @@ const Product = ({ data, registerCloseGuard, closeModalAfterSubmit }) => {
     (async () => {
       let dRe = {}, skus = []
       const allAttributes = await ProductAttrService.loadAll({ limit: 1000, page: 1 });
-      const initialAttributes = allAttributes.filter(attribute => attribute?.initial === true);
+      const initialAttributes = data?.productTypeId == null ? [] : allAttributes.filter(attribute => isDefaultProductAttribute(attribute, data.productTypeId));
       if (arrayNotEmpty(data?.listProperties || [])) {
         let attrIds = data.listProperties.map(i => i.attributedId) ?? [];
         let attrValueIds = [];
@@ -113,7 +113,7 @@ const Product = ({ data, registerCloseGuard, closeModalAfterSubmit }) => {
         ...data,
         image: productAssets.images,
         file: productAssets.files,
-        listProperties: mergeInitialProductProperties(data?.listProperties, allAttributes),
+        listProperties: mergeInitialProductProperties(data?.listProperties, data?.productTypeId == null ? [] : allAttributes, data?.productTypeId),
         skus,
         dRe
       });
@@ -163,6 +163,7 @@ const Product = ({ data, registerCloseGuard, closeModalAfterSubmit }) => {
     } = values;
     const body = {
       ...productValues,
+      productTypeId: productValues.productTypeId ?? null,
       image: serializeProductAssets({
         images: image ?? legacyImages,
         files: file ?? legacyFiles ?? legacyAttachments,
