@@ -18,7 +18,8 @@
 /* Đội ngũ phát triển mong rằng phần mềm được sử dụng đúng mục đích và    */
 /* có trách nghiệm                                                        */
 /**************************************************************************/
-import { arrayEmpty, formatTime, formatMoney } from '@flast-erp/core/utils';
+import { arrayEmpty, formatTime } from '@flast-erp/core/utils';
+import { formatCurrency as formatMoney } from '../../utils/formatCurrency';
 
 export const renderArrayColor = (datas, colors) => {
   if (arrayEmpty(datas) || arrayEmpty(colors)) {

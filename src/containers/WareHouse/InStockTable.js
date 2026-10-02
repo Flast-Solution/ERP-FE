@@ -27,6 +27,7 @@ import { ShowSkuDetail } from '@/containers/Product/SkuView'
 const InStockTable = ({
   data = [],
   onChangeSelected,
+  showSku = true,
   showWhenEmpty = false,
   selectable = true,
   selectedRowKey: controlledSelectedRowKey
@@ -105,7 +106,7 @@ const InStockTable = ({
       bordered
       scroll={{ x: 750 }}
       rowKey="id"
-      columns={columns}
+      columns={showSku ? columns : columns.filter(column => column.key !== "skuName")}
       dataSource={data}
       pagination={data.length > 10}
       onRow={onRow}

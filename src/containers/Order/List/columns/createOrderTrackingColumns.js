@@ -2,7 +2,8 @@ import ProductAttributesTooltip from '../components/ProductAttributesTooltip'
 import React from 'react'
 import { Progress, Space, Tag, Tooltip, Typography } from 'antd'
 import { CopyOutlined } from '@ant-design/icons'
-import { formatMoney, formatTime } from '@flast-erp/core/utils'
+import { formatTime } from '@flast-erp/core/utils';
+import { formatCurrency as formatMoney } from '../../../../utils/formatCurrency';
 import OrderActions from '../components/OrderActions'
 import { copyToClipboard } from '../utils/clipboard'
 import {

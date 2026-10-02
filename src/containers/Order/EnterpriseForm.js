@@ -24,7 +24,6 @@ import { Form, Row, Col, Button, Upload, Space, Card } from "antd";
 
 import {
   CustomButton,
-  FormAddress,
   FormHidden,
   FormInput,
   FormInputNumber,
@@ -218,7 +217,6 @@ const EnterpriseForm = ({
           <FormInput
             label="Mã số thuế"
             name="taxCode"
-            required
             placeholder="Mã số thuế"
           />
         </Col>
@@ -242,10 +240,9 @@ const EnterpriseForm = ({
         </Col>
         <Col md={12} xs={24}>
           <FormInput
-            label="Giám đốc"
+            label="Người đại diện"
             name="director"
-            required
-            placeholder="Giám đốc công ty"
+            placeholder="Người đại diện"
           />
         </Col>
         <Col md={12} xs={24}>
@@ -260,7 +257,6 @@ const EnterpriseForm = ({
           <FormInput
             label="Điện thoại liên hệ"
             name="mobilePhone"
-            required
             placeholder="Điện thoại liên hệ"
           />
         </Col>
@@ -271,8 +267,15 @@ const EnterpriseForm = ({
             placeholder="Email"
           />
         </Col>
-        {/* Address */}
-        <FormAddress />
+        <Col span={24}>
+          <FormInput
+            label="Địa chỉ"
+            name="address"
+            placeholder="Địa chỉ"
+          />
+          <FormHidden name="provinceId" />
+          <FormHidden name="wardId" />
+        </Col>
         {!customerOrder && (
           <>
             <Col span={24}>

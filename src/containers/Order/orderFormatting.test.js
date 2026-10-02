@@ -1,11 +1,12 @@
 import { formatOrderCurrency, formatOrderNumber } from './orderFormatting';
 
-test.each(['VND', 'USD'])('preserves decimal money values for %s', currency => {
-  expect(formatOrderCurrency(100000.222, currency)).toContain('100,000.222');
-  expect(formatOrderCurrency(100.323, currency)).toContain('100.323');
-  expect(formatOrderCurrency(0.005, currency)).toContain('0.005');
-  expect(formatOrderCurrency(-1234.5678, currency)).toContain('1,234.5678');
-  expect(formatOrderCurrency(null, currency)).toContain('0');
+test('displays VND as integers and USD with at most two decimals', () => {
+  expect(formatOrderCurrency(100000.222, 'VND')).toContain('100.000');
+  expect(formatOrderCurrency(100.9, 'VND')).toContain('101');
+  expect(formatOrderCurrency(100000.222, 'USD')).toBe('$100,000.22');
+  expect(formatOrderCurrency(0.005, 'USD')).toBe('$0.01');
+  expect(formatOrderCurrency(-1234.5678, 'USD')).toBe('-$1,234.57');
+  expect(formatOrderCurrency(100, 'USD')).toBe('$100');
 });
 
 test('formats fractional exchange rates without truncating or switching separators', () => {

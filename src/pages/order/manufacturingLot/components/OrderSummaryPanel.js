@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import { Button, Divider, Spin } from 'antd'
 import { ArrowLeftOutlined, CheckCircleOutlined } from '@ant-design/icons'
-import { formatMoney } from '@flast-erp/core/utils'
+import { formatCurrency as formatMoney } from '../../../../utils/formatCurrency';
 
 import {
   buildDetailDescription,

@@ -1,3 +1,4 @@
+import { formatCurrency } from '../../utils/formatCurrency';
 /**************************************************************************/
 /*  OrderTextTableOnly.js                                                 */
 /**************************************************************************/
@@ -47,16 +48,6 @@ const StyledTable = styled.div`
 
 const CURRENCY_USD = 'USD';
 const CURRENCY_VND = 'VND';
-
-const formatCurrency = (value, currency) => Number(value ?? 0).toLocaleString(
-	currency === CURRENCY_USD ? 'en-US' : 'vi-VN',
-	{
-		style: 'currency',
-		currency,
-		minimumFractionDigits: currency === CURRENCY_USD ? 2 : 0,
-		maximumFractionDigits: currency === CURRENCY_USD ? 2 : 0
-	}
-);
 
 const convertOriginalAmount = (value, fromCurrency, toCurrency, exchangeRate) => {
 	if (fromCurrency === toCurrency) return Number(value ?? 0);

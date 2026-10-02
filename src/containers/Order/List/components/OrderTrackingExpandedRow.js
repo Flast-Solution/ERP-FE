@@ -2,7 +2,8 @@ import ProductAttributesTooltip from './ProductAttributesTooltip'
 import { matchesProductionDetail } from '../utils/productionDetailMatch'
 import React, { useState } from 'react'
 import { Table, Tag, Tooltip, Typography } from 'antd'
-import { formatMoney, formatTime } from '@flast-erp/core/utils'
+import { formatTime } from '@flast-erp/core/utils';
+import { formatCurrency as formatMoney } from '../../../../utils/formatCurrency';
 import {
   formatQuantity,
   getManufactureProducts,
@@ -141,7 +142,7 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById }) => {
           width: 130,
           align: 'right',
           onCell: detail => ({ rowSpan: detail?._detailRowSpan }),
-          render: value => formatMoney(value),
+          render: (value, detail) => formatMoney(value, detail?.currency || record?.currency),
         },
         {
           title: 'Deadline',

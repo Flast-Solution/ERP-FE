@@ -2,7 +2,7 @@ import React from 'react'
 import { Descriptions, Table, Typography } from 'antd'
 import { ShoppingCartOutlined } from '@ant-design/icons'
 
-import { formatMoney } from '@flast-erp/core/utils'
+import { formatCurrency as formatMoney } from '../../../../utils/formatCurrency';
 
 const { Text } = Typography
 

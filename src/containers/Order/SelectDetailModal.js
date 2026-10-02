@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button, Table, Tag, message } from 'antd';
-import { formatMoney, InAppEvent } from '@flast-erp/core/utils';
+import { InAppEvent } from '@flast-erp/core/utils';
+import { formatCurrency as formatMoney } from '../../utils/formatCurrency';
 import { HASH_MODAL } from '@/configs';
 import { RestEditModal } from '@flast-erp/core/components';
 import styled from 'styled-components';
@@ -53,7 +54,7 @@ const SelectDetailModal = ({ data, closeModal }) => {
             dataIndex: 'price',
             width: 120,
             align: 'right',
-            render: (price) => formatMoney(price)
+            render: (price, detail) => formatMoney(price, detail?.currency || data?.currency)
         },
         {
             title: 'Trạng thái',

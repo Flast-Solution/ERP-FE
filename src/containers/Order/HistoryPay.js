@@ -21,13 +21,8 @@
 
 import { Table } from "antd";
 import { useEffect, useState } from "react";
-import { 
-  RequestUtils, 
-  arrayNotEmpty, 
-  dataArray, 
-  formatMoney, 
-  formatTime 
-} from "@flast-erp/core/utils";
+import { RequestUtils, arrayNotEmpty, dataArray, formatTime } from '@flast-erp/core/utils';
+import { formatCurrency as formatMoney } from '../../utils/formatCurrency';
 
 const HistoryPay = ({ orderId }) => {
   const [historyPayment, setData] = useState([]);

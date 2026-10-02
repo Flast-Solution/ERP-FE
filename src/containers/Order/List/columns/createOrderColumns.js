@@ -1,7 +1,8 @@
 import React from 'react'
 import { Divider, Tag, Tooltip, Typography } from 'antd'
 import { CopyOutlined } from '@ant-design/icons'
-import { formatMoney, formatTime } from '@flast-erp/core/utils'
+import { formatTime } from '@flast-erp/core/utils';
+import { formatCurrency as formatMoney } from '../../../../utils/formatCurrency';
 import { renderArrayColor } from '../../utils'
 import { copyToClipboard } from '../utils/clipboard'
 import OrderActions from '../components/OrderActions'

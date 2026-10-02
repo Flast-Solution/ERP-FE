@@ -77,23 +77,23 @@ test('keeps row prices and summary in sync as rate, profit and order shipping ch
   const rateInput = InputNumber.mock.calls.map(call => call[0]).filter(props => props.style?.width === 170).at(-1);
   await act(async () => rateInput.onChange(26000));
   expect(mainTable().dataSource[0].totalPrice).toBe(5200000);
-  expect(totalsTable().dataSource[0].leftValue).toBe('5200000');
+  expect(totalsTable().dataSource[0].leftValue).toBe('5.200.000\u00a0₫');
   const profitColumn = mainTable().columns.find(col => col.key === 'profit');
   await act(async () => profitColumn.render(null, mainTable().dataSource[0]).props.onChange(20));
   expect(mainTable().dataSource[0].totalPrice).toBe(6500000);
   const shippingInput = InputNumber.mock.calls.map(call => call[0]).filter(props => props.id === 'order-shipping-cost').at(-1);
   await act(async () => shippingInput.onChange(10));
   expect(mainTable().dataSource[0].totalPrice).toBe(6825000);
-  expect(totalsTable().dataSource[1].rightValue).toBe('7085000');
+  expect(totalsTable().dataSource[1].rightValue).toBe('7.085.000\u00a0₫');
   const currencySelect = Select.mock.calls.map(call => call[0]).filter(props => props.options?.some(option => option.value === 'USD')).at(-1);
   await act(async () => currencySelect.onChange('VND'));
   expect(mainTable().dataSource[0].totalPrice).toBe(263);
-  expect(totalsTable().dataSource[1].rightValue).toBe('273');
+  expect(totalsTable().dataSource[1].rightValue).toBe('273\u00a0₫');
   await act(async () => mainTable().columns.find(col => col.key === 'operation').render(null, mainTable().dataSource[0]).props.onEdit());
   await act(async () => mainTable().columns.find(col => col.key === 'quantity').render(2, mainTable().dataSource[0]).props.onChange(3));
   await act(async () => mainTable().columns.find(col => col.key === 'productPrice').render(100, mainTable().dataSource[0]).props.onChange(200));
   expect(mainTable().dataSource[0].totalPrice).toBe(763);
-  expect(totalsTable().dataSource[1].rightValue).toBe('773');
+  expect(totalsTable().dataSource[1].rightValue).toBe('773\u00a0₫');
   const saveButton = Array.from(container.querySelectorAll('button')).find(button => button.textContent === 'Lưu đơn hàng');
   await act(async () => saveButton.click());
   expect(RequestUtils.Post).toHaveBeenCalledWith('/order/save', expect.objectContaining({
@@ -114,7 +114,7 @@ test('allows opportunity code and sale price edits and recalculates after rate c
   expect(select).toHaveBeenCalledTimes(1);
   await act(async () => saleInput.onChange(3000000));
   expect(mainTable().dataSource[0].totalPrice).toBe(6000000);
-  expect(totalsTable().dataSource[0].leftValue).toBe('6000000');
+  expect(totalsTable().dataSource[0].leftValue).toBe('6.000.000\u00a0₫');
   await act(async () => Array.from(container.querySelectorAll('button')).find(button => button.textContent === 'Lưu đơn hàng').click());
   const payload = RequestUtils.Post.mock.calls.find(([url]) => url === '/order/save')[1];
   expect(payload.code).toBe('CH-123');
@@ -149,7 +149,7 @@ test('preserves fractional sale price in the controlled input, save payload and 
 });
 
 
-test('displays backend purchase and sale prices without dropping decimal digits', async () => {
+test('formats displayed money while preserving editable backend precision', async () => {
   OrderService.getOrderOnEdit.mockResolvedValue({
     customer: { id: 46 },
     order: { id: 34049, type: 'cohoi', currency: 'VND', exchangeRate: 1, vat: 0 },
@@ -159,7 +159,7 @@ test('displays backend purchase and sale prices without dropping decimal digits'
   const table = mainTable();
   const row = table.dataSource[0];
   const purchase = table.columns.find(col => col.key === 'productPrice');
-  expect(purchase.render(row.productPrice, row)).toContain('100,000.222');
+  expect(purchase.render(row.productPrice, row)).toBe('100.000\u00a0₫');
   expect(table.columns.find(col => col.key === 'salePrice').render(null, row).props.value).toBe(100.323);
   expect(row.totalPrice).toBe(100);
 });

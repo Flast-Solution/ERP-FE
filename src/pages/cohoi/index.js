@@ -51,7 +51,7 @@ const CoHoiPage = () => {
         <title>{currentView.title}</title>
       </Helmet>
       <BreadcrumbCustom
-        data={[{ title: 'Trang chủ' }, { title: 'Cơ hội' }, { title: currentView.title }]}
+        data={[{ title: 'Trang chủ' },  { title: currentView.title }]}
       />
       <Content />
     </div>

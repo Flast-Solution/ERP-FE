@@ -11,7 +11,8 @@ import {
   FormSelect,
   FormSelectAPI,
 } from '@flast-erp/core/components';
-import { formatMoney, RequestUtils } from '@flast-erp/core/utils';
+import { RequestUtils } from '@flast-erp/core/utils';
+import { formatCurrency as formatMoney } from '../../utils/formatCurrency';
 import ProductionPage from './styles';
 import { parseOrderLine } from '@/containers/Order/orderLine';
 import { useProductionWorkflows } from './production-order-list/hooks/useProductionWorkflows';
@@ -55,6 +56,21 @@ const getOrderLineSummary = detail => Object.entries(parseOrderLine(detail?.orde
 
 const getDetailLabel = (detail = {}) => (
   [detail.code ?? `#${detail.id}`, getSkuSummary(detail), getOrderLineSummary(detail)].filter(Boolean).join(' · ')
+);
+
+const OrderDetailInfo = ({ detail, showCode = false }) => (
+  <div style={{ whiteSpace: 'normal', overflowWrap: 'anywhere', lineHeight: 1.6 }}>
+    {showCode && <div><strong>{detail.code ?? `#${detail.id}`}</strong></div>}
+    <div><strong>Số lượng:</strong> {detail.quantity == null ? '-' : new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 20 }).format(detail.quantity)}</div>
+    {(detail.skuDetails ?? []).map((attribute, index) => (
+      <div key={attribute.id ?? index}>
+        <strong>{attribute.text || 'SKU'}:</strong> {(attribute.values ?? []).map(value => value.text).filter(Boolean).join(', ')}
+      </div>
+    ))}
+    {Object.entries(parseOrderLine(detail.orderLine)).map(([label, value]) => (
+      <div key={label}><strong>{label}:</strong> {typeof value === 'object' && value !== null ? JSON.stringify(value) : value ?? ''}</div>
+    ))}
+  </div>
 );
 
 const ReadonlyField = ({ label, value, mono = false }) => (
@@ -321,7 +337,7 @@ const CreateOrder = ({
                   const product = row.product;
                   const options = (selectedOrder?.details ?? [])
                     .filter(detail => String(detail.id) === String(product?.id) || !selectedDetailIds.has(String(detail.id)))
-                    .map(detail => ({ value: detail.id, label: getDetailLabel(detail) }));
+                    .map(detail => ({ value: detail.id, label: getDetailLabel(detail), detail }));
 
                   return (
                     <div className="production-child-card" key={row.key}>
@@ -331,7 +347,8 @@ const CreateOrder = ({
                           optionFilterProp="label"
                           value={product?.id}
                           options={options}
-                          optionRender={option => <div style={{ whiteSpace: 'normal' }}>{option.label}</div>}
+                          optionRender={option => <OrderDetailInfo detail={option.data.detail} showCode />}
+                          virtual={false}
                           placeholder="Chọn mã đơn con"
                           onChange={value => selectProductForRow(row.key, value)}
                           style={{ width: '100%' }}
@@ -345,11 +362,6 @@ const CreateOrder = ({
                           />
                         )}
                       </div>
-                      {getOrderLineSummary(product) && (
-                        <div style={{ marginTop: 8, overflowWrap: 'anywhere' }}>
-                          {getOrderLineSummary(product)}
-                        </div>
-                      )}
                       {product && (
                         <div className="production-child-card__body">
                           <FormInputNumber

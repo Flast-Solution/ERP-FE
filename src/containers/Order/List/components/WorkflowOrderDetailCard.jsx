@@ -1,6 +1,6 @@
 import React from 'react'
 import { Table, Typography } from 'antd'
-import { formatMoney } from '@flast-erp/core/utils'
+import { formatCurrency as formatMoney } from '../../../../utils/formatCurrency';
 
 const { Text, Title } = Typography
 
@@ -38,7 +38,7 @@ const WorkflowOrderDetailCard = ({ order, orderDetail }) => {
       dataIndex: 'price',
       width: 150,
       align: 'right',
-      render: value => formatMoney(value ?? 0),
+      render: value => formatMoney(value ?? 0, orderDetail?.currency || order?.currency),
     },
     {
       title: 'Thành tiền',

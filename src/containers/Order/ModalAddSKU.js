@@ -32,10 +32,9 @@ import {
   FormTextArea
 } from '@flast-erp/core/components';
 
-import _, { isEmpty } from 'lodash';
+import _ from 'lodash';
 import InStockTable from '@/containers/WareHouse/InStockTable'
 import { useEffectAsync } from '@flast-erp/core/hooks';
-import { ShowSkuDetail } from '@/containers/Product/SkuView';
 import {
   arrayNotEmpty,
   RequestUtils
@@ -46,7 +45,7 @@ import {
   hasIncompleteOrderLineEntries,
 } from './orderLine';
 
-import { normalizeOrderSkuDetails, resolveOrderSkuDetails } from './orderSku';
+import { resolveOrderSkuDetails } from './orderSku';
 
 const AddSKU = (props) => {
   const {
@@ -60,7 +59,6 @@ const AddSKU = (props) => {
   const [ inStocks, setInStocks ] = useState([]);
   const [ skus, setSkus ] = useState([]);
   const [ mProduct, setProduct ] = useState({});
-  const [ sku, setSkuDetail ] = useState([]);
   const [ selectedProductId, setSelectedProductId ] = useState(productId ?? leadProducts[0]?.id);
   const [ configuredProductIds, setConfiguredProductIds ] = useState([]);
   const selectedProductIdRef = useRef(productId ?? leadProducts[0]?.id);
@@ -119,7 +117,6 @@ const AddSKU = (props) => {
         itemSku => String(itemSku?.id) === String(draft.values?.skuId),
       ) || draft.sku || [];
       skuRef.current = restoredSku;
-      setSkuDetail(restoredSku);
     } else {
       form.resetFields(['skuId', 'quantity', 'code', 'note', 'orderLineEntries']);
       form.setFieldsValue({
@@ -128,7 +125,6 @@ const AddSKU = (props) => {
         quantity: 1,
       });
       skuRef.current = [];
-      setSkuDetail([]);
     }
   }, [form, saveCurrentProductDraft]);
 
@@ -230,16 +226,7 @@ const AddSKU = (props) => {
   const onChangeGetSelectedSku = (value, item) => {
     const selectedSku = skus.find(candidate => String(candidate.id) === String(value)) ?? item;
     skuRef.current = selectedSku;
-    setSkuDetail(selectedSku);
   };
-
-  const memoSkuDetail = React.useMemo(() => {
-    if(isEmpty(sku)) {
-      return <span />;
-    }
-    const mSkuDetails = normalizeOrderSkuDetails(sku.skuDetails);
-    return <ShowSkuDetail skuDetails={mSkuDetails} />
-  }, [ sku ]);
 
   const onSelectedStock = useCallback((item) => {
     console.log('Selected stock: ', item);
@@ -307,11 +294,9 @@ const AddSKU = (props) => {
             onChangeGetSelectedItem={onChangeGetSelectedSku}
           />
         </Col>
-        <Col span={24} style={{marginBottom: 20}}>
-          {memoSkuDetail}
-        </Col>
         <Col span={24}>
           <InStockTable
+            showSku={false}
             data={inStocks}
             onChangeSelected={onSelectedStock}
           />
@@ -320,6 +305,7 @@ const AddSKU = (props) => {
           <FormInputNumber
             label='Số lượng'
             name='quantity'
+            addonAfter={mProduct?.unit || undefined}
             required
             placeholder={'Nhập số lượng'}
             style={{ width: '100%' }}

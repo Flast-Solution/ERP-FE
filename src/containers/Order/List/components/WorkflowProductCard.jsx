@@ -1,6 +1,6 @@
 import React from 'react'
 import { Descriptions, Tag, Typography } from 'antd'
-import { formatMoney } from '@flast-erp/core/utils'
+import { formatCurrency as formatMoney } from '../../../../utils/formatCurrency';
 
 const { Text, Title } = Typography
 
@@ -17,7 +17,7 @@ const WorkflowProductCard = ({ product }) => (
       items={[
         { key: 'code', label: 'Mã sản phẩm', children: product?.code || '-' },
         { key: 'unit', label: 'Đơn vị', children: product?.unit || '-' },
-        { key: 'price', label: 'Giá bán', children: formatMoney(product?.price ?? 0) },
+        { key: 'price', label: 'Giá bán', children: formatMoney(product?.price ?? 0, product?.currency) },
         {
           key: 'status',
           label: 'Trạng thái',
