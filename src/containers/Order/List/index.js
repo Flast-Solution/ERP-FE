@@ -232,7 +232,7 @@ const ListOrder = ({
   const onClickViewDetail = useCallback((customerOrder) => InAppEvent.emit(HASH_MODAL, {
     hash: detailDrawerHash,
     title: detailDrawerTitle ?? ('Thông tin đơn hàng ' + customerOrder.code),
-    data: { customerOrder, hideInvoiceTab: isOpportunityList },
+    data: { customerOrder, hideInvoiceTab: isOpportunityList, simplifiedPayment: isOpportunityList },
   }), [detailDrawerHash, detailDrawerTitle, isOpportunityList])
 
   const beforeSubmitFilter = useCallback((values) => {
@@ -303,6 +303,7 @@ const ListOrder = ({
       expandedRowRender: record => (
         <OrderTrackingExpandedRow
           record={record}
+          isOpportunityList={isOpportunityList}
           shippingStatusById={shippingStatusById}
         />
       ),

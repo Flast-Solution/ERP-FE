@@ -46,7 +46,7 @@ const belongsToDetail = (item, detail) => {
     && String(item?.entityId) === String(detailId)
 }
 
-const OrderTrackingExpandedRow = ({ record, shippingStatusById }) => {
+const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityList = false }) => {
   const [activeDetailRowKey, setActiveDetailRowKey] = useState()
   const details = getOrderDetails(record)
   const manufactureDetails = getManufactureProducts(record).flatMap(manufactureProduct => {
@@ -66,7 +66,7 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById }) => {
     ))
     const detailReceipts = receipts.filter(item => belongsToDetail(item, detail))
     const detailShipping = shipping.filter(item => belongsToDetail(item, detail))
-    const rowCount = Math.max(
+    const rowCount = isOpportunityList ? 1 : Math.max(
       1,
       detailManufactureProducts.length,
       detailReceipts.length,
@@ -258,7 +258,7 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById }) => {
         },
       ],
     },
-  ]
+  ].filter((_, index) => !isOpportunityList || index === 0)
 
   return (
     <div className="order-tracking-master">
@@ -277,7 +277,7 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById }) => {
         }))}
         dataSource={rows}
         locale={{ emptyText: 'Đơn hàng chưa có đơn con' }}
-        scroll={{ x: 2160 }}
+        scroll={{ x: isOpportunityList ? columns.flatMap(group => group.children).reduce((total, column) => total + (column.width || 100), 0) : 2160 }}
         rowClassName={detail => (
           detail?._detailGroupKey === activeDetailRowKey
             ? 'order-tracking-detail-row order-tracking-detail-row--active'

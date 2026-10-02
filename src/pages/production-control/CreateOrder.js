@@ -8,6 +8,7 @@ import {
   FormDatePicker,
   FormInput,
   FormInputNumber,
+  FormTextArea,
   FormSelect,
   FormSelectAPI,
 } from '@flast-erp/core/components';
@@ -323,6 +324,7 @@ const CreateOrder = ({
               </div>
             </section>
 
+            <FormTextArea name="description" label="Ghi chú lệnh sản xuất" placeholder="Nhập ghi chú" rows={3} />
             <section className="section production-create-section">
               <div className="section-head">
                 <span className="section-no">2</span>
@@ -423,6 +425,12 @@ const CreateOrder = ({
                               }}
                             />
                           </Form.Item>
+                          <FormTextArea
+                            name={['productDetails', String(product.id), 'description']}
+                            label="Ghi chú đơn con"
+                            placeholder="Nhập ghi chú"
+                            rows={3}
+                          />
                           {(product.skuDetails ?? []).map((attribute, attributeIndex) => (
                             <div className="production-child-attribute" key={`${product.id}-${attributeIndex}`}>
                               <span>{attribute.text}</span>

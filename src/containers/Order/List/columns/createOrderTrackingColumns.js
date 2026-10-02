@@ -115,27 +115,33 @@ const createOrderTrackingColumns = ({
     ),
   },
   {
-    title: 'Đơn hàng',
+    title: isOpportunityList ? 'Thông tin đơn hàng' : 'Đơn hàng',
     children: [
       {
-        title: 'SL đặt',
+        title: isOpportunityList ? 'Số lượng dự kiến' : 'SL đặt',
         key: 'orderedQuantity',
-        width: 90,
+        width: isOpportunityList ? 165 : 90,
         align: 'right',
         render: (_, record) => {
           const metrics = getOrderTrackingMetrics(record)
-          return renderMetric(metrics.orderedQuantity, getOrderUnit(record))
+          return renderMetric(metrics.orderedQuantity, isOpportunityList ? undefined : getOrderUnit(record))
         },
       },
+      ...(isOpportunityList ? [{
+        title: 'Đơn vị',
+        key: 'unit',
+        width: 85,
+        render: (_, record) => getOrderUnit(record) || '—',
+      }] : []),
       {
-        title: 'Ngày đặt',
+        title: isOpportunityList ? 'Ngày đặt dự kiến' : 'Ngày đặt',
         dataIndex: 'createdAt',
         key: 'createdAt',
-        width: 100,
+        width: isOpportunityList ? 160 : 100,
         render: value => formatTime(value) || '—',
       },
       {
-        title: 'Kinh doanh',
+        title: isOpportunityList ? 'Người phụ trách' : 'Kinh doanh',
         dataIndex: 'userCreateUsername',
         key: 'userCreateUsername',
         width: 105,
@@ -351,7 +357,7 @@ const createOrderTrackingColumns = ({
   {
     title: 'Action',
     key: 'action',
-    width: actionWidth,
+    width: isOpportunityList ? Math.max(180, actionWidth - 80) : actionWidth,
     render: (_, record) => (
       <Space size={4}>
         <OrderActions
@@ -378,6 +384,6 @@ const createOrderTrackingColumns = ({
       </Space>
     ),
   },
-]
+].filter(column => !isOpportunityList || !['Sản xuất', 'Kho', 'Xuất kho & giao hàng', 'Tài chính'].includes(column.title))
 
 export default createOrderTrackingColumns

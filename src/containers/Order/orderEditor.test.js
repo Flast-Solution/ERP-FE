@@ -115,9 +115,17 @@ test('allows opportunity code and sale price edits and recalculates after rate c
   await act(async () => saleInput.onChange(3000000));
   expect(mainTable().dataSource[0].totalPrice).toBe(6000000);
   expect(totalsTable().dataSource[0].leftValue).toBe('6.000.000\u00a0₫');
+  const termsInput = Select.mock.calls.map(call => call[0]).filter(props => props.id === 'order-payment-terms').at(-1);
+  const percentInput = InputNumber.mock.calls.map(call => call[0]).filter(props => props.id === 'order-payment-percent').at(-1);
+  expect(percentInput.min).toBe(0);
+  expect(percentInput.max).toBe(100);
+  await act(async () => termsInput.onChange('DEPOSIT'));
+  await act(async () => percentInput.onChange(30));
   await act(async () => Array.from(container.querySelectorAll('button')).find(button => button.textContent === 'Lưu đơn hàng').click());
   const payload = RequestUtils.Post.mock.calls.find(([url]) => url === '/order/save')[1];
   expect(payload.code).toBe('CH-123');
+  expect(payload.paymentTerms).toBe('DEPOSIT');
+  expect(payload.paymentPercent).toBe(30);
   expect(payload.details[0].totalPrice).toBe(6000000);
   expect(payload.details[0].price).toBe(3000000);
   expect(payload.details[0]).not.toHaveProperty('manualSalePrice');

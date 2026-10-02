@@ -77,6 +77,7 @@ export const buildManufacturePayload = ({ productionOrder = {}, materialConfirma
       orderDetailId: product.orderDetailId ?? (Number.isFinite(Number(product.id)) ? product.id : null),
       workflowProcessIds: [...new Set((detailValues.workflowProcessIds ?? product.workflowProcessIds ?? []).map(String))]
         .map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0),
+      description: detailValues.description ?? null,
       productId: product.productId,
       providerId: detailValues.providerId
         ?? product.providerId
@@ -97,6 +98,7 @@ export const buildManufacturePayload = ({ productionOrder = {}, materialConfirma
       typeOrder: productionOrder.typeOrder ?? 'PRODUCTION',
       dateStart: formatManufactureDate(productionOrder.dateStart) ?? null,
       dateEnd: formatManufactureDate(productionOrder.dateEnd ?? latestDeadline) ?? null,
+      description: productionOrder.description ?? null,
       note: productionOrder.note ?? null,
       status: productionOrder.manufactureStatus
         ?? (typeof productionOrder.status === 'number' ? productionOrder.status : 0),
@@ -136,6 +138,7 @@ export const mapManufactureOrder = (record, manufactureStatuses = MANUFACTURE_SY
     return {
       ...orderDetail,
       id: orderDetail?.id ?? detail.orderDetailId ?? `manufacture-${detail.id ?? index}`,
+      description: detail.description ?? null,
       manufactureDetailId: detail.id,
       orderDetailId: detail.orderDetailId ?? orderDetail?.id,
       workflowProcessIds: detail.workflowProcessIds ?? orderDetail?.workflowProcessIds ?? [],
@@ -175,6 +178,7 @@ export const mapManufactureOrder = (record, manufactureStatuses = MANUFACTURE_SY
     productDetails: Object.fromEntries(effectiveOrderDetails.map(detail => [
       String(detail?.id),
       {
+        description: detail?.description ?? null,
         target: detail?.target ?? 0,
         workflowProcessIds: detail?.workflowProcessIds ?? [],
         deadline: editDeadline,
