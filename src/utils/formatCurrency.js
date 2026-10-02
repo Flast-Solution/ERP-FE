@@ -16,3 +16,13 @@ export const formatCurrency = (value, currency = 'VND', locale) => {
   const amount = Number(value ?? 0);
   return formatters.get(key).format(Number.isFinite(amount) ? amount : 0);
 };
+
+// Use when the currency is already identified in the surrounding UI.
+export const formatMoneyAmount = (value, currency = 'VND') => {
+  const code = String(currency || 'VND').trim().toUpperCase();
+  const amount = Number(value ?? 0);
+  return new Intl.NumberFormat(code === 'USD' ? 'en-US' : 'vi-VN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: code === 'VND' ? 0 : 2,
+  }).format(Number.isFinite(amount) ? amount : 0);
+};

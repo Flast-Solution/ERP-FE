@@ -46,3 +46,19 @@ test('supports no workflows and keeps a child identity when the order detail is 
   expect(buildManufacturePayload({ productionOrder: mapped, isEdit: true }).manufactureProduct.details[0])
     .toMatchObject({ id: 21, orderDetailId: 102, workflowProcessIds: [] })
 })
+
+test('round trips production and individual child descriptions', () => {
+  const record = {
+    id: 9, code: 'LSX-1', description: 'Ghi chú lệnh',
+    order: { id: 1, details: [{ id: 101, productId: 7 }, { id: 102, productId: 7 }] },
+    details: [
+      { id: 11, orderDetailId: 101, productId: 7, description: 'Đơn con A', target: 10 },
+      { id: 12, orderDetailId: 102, productId: 7, description: 'Đơn con B', target: 20 },
+    ],
+  }
+  const mapped = mapManufactureOrder(record)
+  mapped.productDetails['102'].description = ''
+  const payload = buildManufacturePayload({ productionOrder: mapped, isEdit: true })
+  expect(payload.manufactureProduct.description).toBe('Ghi chú lệnh')
+  expect(payload.manufactureProduct.details.map(detail => detail.description)).toEqual(['Đơn con A', ''])
+})

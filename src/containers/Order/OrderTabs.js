@@ -31,7 +31,7 @@ import EnterpriseForm from './EnterpriseForm';
 
 const OrderTabs = ({ data, title, closeModalAfterSubmit }) => {
 
-  const { customerOrder, hideInvoiceTab = false } = data;
+  const { customerOrder, hideInvoiceTab = false, simplifiedPayment = false } = data;
   const [details, setDetails] = useState(() => (
     Array.isArray(customerOrder?.details) ? customerOrder.details : []
   ));
@@ -65,7 +65,11 @@ const OrderTabs = ({ data, title, closeModalAfterSubmit }) => {
       icon: <DollarOutlined />,
       component: <OrderPayment data={{
         ...dataInTabs,
-        onSave: (values) => f5List("erp/order/fetch")
+        simplifiedPayment,
+        onSave: (values) => {
+          if (values?.id) setOrder(current => ({ ...current, ...values }));
+          f5List("erp/order/fetch");
+        }
       }} closeModalAfterSubmit={closeModalAfterSubmit} />
     },
     {
@@ -89,7 +93,7 @@ const OrderTabs = ({ data, title, closeModalAfterSubmit }) => {
     ),
     children: component
   }));
-  return <Tabs defaultActiveKey="1" items={items} />;
+  return <Tabs defaultActiveKey="pay" items={items} />;
 }
 
 export default OrderTabs;

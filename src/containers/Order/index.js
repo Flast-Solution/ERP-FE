@@ -849,6 +849,10 @@ const BanHangPage = ({
         currency,
         exchangeRate: getExchangeRate(currency, exchangeRate)
       };
+      if (['cohoi', 'opportunity'].includes(customerOrder?.type)) {
+        params.paymentTerms = customerOrder.paymentTerms ?? null;
+        params.paymentPercent = customerOrder.paymentPercent ?? null;
+      }
       const customerBusiness = mCustomer?.business ?? business;
       if (customerBusiness && typeof customerBusiness === 'object') {
         params.enterpriseName = customerBusiness.companyName;
@@ -1070,6 +1074,41 @@ const BanHangPage = ({
               />
             </div>
           </div>
+          {['cohoi', 'opportunity'].includes(customerOrder?.type) && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16, marginBottom: 12 }}>
+              <div>
+                <label htmlFor="order-payment-terms" style={{ display: 'block', fontWeight: 600, marginBottom: 8 }}>Điều kiện thanh toán</label>
+                <Select
+                  id="order-payment-terms"
+                  size="small"
+                  allowClear
+                  placeholder="Chọn điều kiện thanh toán"
+                  style={{ width: '100%' }}
+                  value={customerOrder.paymentTerms ?? undefined}
+                  options={[
+                    { value: 'PREPAID', label: 'Trả trước' },
+                    { value: 'POSTPAID', label: 'Trả sau' },
+                    { value: 'DEPOSIT', label: 'Đặt cọc' },
+                  ]}
+                  onChange={value => setCustomerOrder(current => ({ ...current, paymentTerms: value ?? null }))}
+                />
+              </div>
+              <div>
+                <label htmlFor="order-payment-percent" style={{ display: 'block', fontWeight: 600, marginBottom: 8 }}>Thanh toán (%)</label>
+                <InputNumber
+                  id="order-payment-percent"
+                  size="small"
+                  min={0}
+                  max={100}
+                  addonAfter="%"
+                  style={{ width: '100%' }}
+                  value={customerOrder.paymentPercent}
+                  onFocus={selectNumberOnFocus}
+                  onChange={value => setCustomerOrder(current => ({ ...current, paymentPercent: value }))}
+                />
+              </div>
+            </div>
+          )}
           <InvoiceTable order={{
             ...customerOrder,
             subtotal: totalSubOrder,

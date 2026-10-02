@@ -1,3 +1,4 @@
+import { formatMoneyAmount } from '../../utils/formatCurrency';
 import { formatOrderCurrency as formatCurrency, formatOrderNumber } from './orderFormatting';
 /**************************************************************************/
 /*  OrderPayment.js                                                       */
@@ -20,7 +21,7 @@ import { formatOrderCurrency as formatCurrency, formatOrderNumber } from './orde
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { Checkbox, Col, Form, message, Modal, Row } from 'antd'
+import { Button, Checkbox, Col, Descriptions, Form, Input, message, Modal, Row } from 'antd'
 
 import {
   FormDatePicker,
@@ -41,12 +42,6 @@ const OptionPrice = [
   { title: 'Tiền mặt', name: 'tienmat' },
   { title: 'MoMo', name: 'momo' },
   { title: 'VNpay', name: 'vnpay' }
-]
-
-const VATOPTIONS = [
-  { name: 'VAT 0%', value: 0 },
-  { name: 'VAT 8%', value: 8 },
-  { name: 'VAT 10%', value: 10 }
 ]
 
 const CURRENCY_VND = 'VND';
@@ -78,11 +73,11 @@ const OrderPayment = ({ data, readOnly = false, closeModalAfterSubmit }) => {
 
   const [form] = Form.useForm();
   const { hasPermission } = useGetMe();
-  const watchedVat = Form.useWatch('vat', form);
-  const watchedShip = Form.useWatch('shippingCost', form);
   const watchedPaymentCurrency = Form.useWatch('currency', form);
 
-  const { onSave, details, customer, customerOrder } = data;
+  const { onSave, details, customer, customerOrder, simplifiedPayment = false } = data;
+  const isOpportunity = ['cohoi', 'opportunity'].includes(customerOrder?.type);
+  const [savingInfo, setSavingInfo] = useState(false);
   const [convertedToOrder, setConvertedToOrder] = useState(customerOrder?.type === 'order');
   const [convertingToOrder, setConvertingToOrder] = useState(false);
   const canConvertToOrder = hasPermission(['sales.opportunity.save', 'sales.opportunity.update']);
@@ -102,14 +97,23 @@ const OrderPayment = ({ data, readOnly = false, closeModalAfterSubmit }) => {
     form.setFieldValue('vat', customerOrder.vat);
     form.setFieldValue('shippingCost', customerOrder.shippingCost);
     form.setFieldValue('currency', orderCurrency);
+    form.setFieldsValue({
+      customerReceiverName: customerOrder?.customerReceiverName ?? customer?.name ?? '',
+      customerMobilePhone: customerOrder?.customerMobilePhone ?? customer?.mobilePhone ?? '',
+      customerAddress: customerOrder?.customerAddress ?? customer?.address ?? '',
+    });
     paymentCurrencyRef.current = orderCurrency;
-  }, [form, customerOrder, orderCurrency, readOnly]);
+  }, [form, customerOrder, customer, orderCurrency, readOnly]);
 
   const onSubmitPayment = useCallback(async (values) => {
-    const paymentCurrency = normalizeCurrency(values.currency);
-    const originalAmount = Number(values.amount ?? 0);
-    const amount = roundCurrency(toVnd(originalAmount, paymentCurrency, exchangeRate), CURRENCY_VND);
     const remaining = Math.max(Number(customerOrder?.total ?? 0) - Number(customerOrder?.paid ?? 0), 0);
+    const paymentCurrency = simplifiedPayment ? orderCurrency : normalizeCurrency(values.currency);
+    const originalAmount = simplifiedPayment
+      ? roundCurrency(fromVnd(remaining, paymentCurrency, exchangeRate), paymentCurrency)
+      : Number(values.amount ?? 0);
+    const amount = simplifiedPayment
+      ? roundCurrency(remaining, CURRENCY_VND)
+      : roundCurrency(toVnd(originalAmount, paymentCurrency, exchangeRate), CURRENCY_VND);
 
     if (amount <= 0) {
       message.error('Số tiền thanh toán phải lớn hơn 0.');
@@ -133,7 +137,7 @@ const OrderPayment = ({ data, readOnly = false, closeModalAfterSubmit }) => {
       onSave?.(data);
       closeModalAfterSubmit?.();
     }
-  }, [closeModalAfterSubmit, onSave, customerOrder, exchangeRate]);
+  }, [closeModalAfterSubmit, onSave, customerOrder, exchangeRate, orderCurrency, simplifiedPayment]);
 
   const onConvertToOrder = useCallback(async () => {
     if (convertedToOrder || convertingToOrder) return;
@@ -149,6 +153,7 @@ const OrderPayment = ({ data, readOnly = false, closeModalAfterSubmit }) => {
       }));
       const response = await RequestUtils.Post('/order/save', {
         ...customerOrder,
+        ...(isOpportunity ? form.getFieldsValue(['customerReceiverName', 'customerMobilePhone', 'customerAddress']) : {}),
         customer,
         details: normalizedDetails,
         type: 'order'
@@ -167,7 +172,35 @@ const OrderPayment = ({ data, readOnly = false, closeModalAfterSubmit }) => {
     } finally {
       setConvertingToOrder(false);
     }
-  }, [closeModalAfterSubmit, convertedToOrder, convertingToOrder, customer, customerOrder, details, onSave]);
+  }, [closeModalAfterSubmit, convertedToOrder, convertingToOrder, customer, customerOrder, details, onSave, form, isOpportunity]);
+
+  const onSaveDelivery = async () => {
+    const values = await form.validateFields(['customerReceiverName', 'customerMobilePhone', 'customerAddress']);
+    setSavingInfo(true);
+    try {
+      const response = await RequestUtils.Post('/order/save', {
+        ...customerOrder,
+        ...values,
+        customer,
+        details: (details ?? []).map(({ mSkuDetails, ...detail }) => ({
+          ...detail,
+          id: detail.id ?? detail.detailId,
+          skuDetails: detail.skuDetails ?? mSkuDetails ?? [],
+          total: detail.total ?? detail.totalPrice,
+          priceOff: detail.priceOff ?? detail.discountAmount ?? 0,
+        })),
+      });
+      if (Number(response?.errorCode) !== SUCCESS_CODE && response?.success !== true) {
+        throw new Error(response?.message || 'Không thể lưu thông tin giao hàng');
+      }
+      message.success('Đã lưu thông tin giao hàng');
+      onSave?.(response.data);
+    } catch (error) {
+      message.error(error?.response?.data?.message || error.message);
+    } finally {
+      setSavingInfo(false);
+    }
+  };
 
   const onRequestConvertToOrder = useCallback((event) => {
     if (!event.target.checked || convertedToOrder || convertingToOrder) return;
@@ -184,13 +217,13 @@ const OrderPayment = ({ data, readOnly = false, closeModalAfterSubmit }) => {
 
   const subtotal = customerOrder?.subtotal || 0;
   const paid = customerOrder?.paid || 0;
-  const vatValue = readOnly ? (customerOrder?.vat || 0) : (watchedVat || 0);
-  const shipValue = readOnly ? (customerOrder?.shippingCost || 0) : (watchedShip || 0);
+  const vatValue = Number(customerOrder?.vat ?? 0);
+  const shipValue = Number(customerOrder?.shippingCost ?? 0);
   const monneyVAT = subtotal * (vatValue / 100);
   const shippingCostVnd = toVnd(shipValue, orderCurrency, exchangeRate);
   const calculatedTotal = subtotal + monneyVAT + shippingCostVnd;
   const total = Number(customerOrder?.total ?? calculatedTotal);
-  const displayAmount = value => formatCurrency(
+  const displayAmount = value => formatMoneyAmount(
     fromVnd(value, displayCurrency, exchangeRate),
     displayCurrency
   );
@@ -210,62 +243,6 @@ const OrderPayment = ({ data, readOnly = false, closeModalAfterSubmit }) => {
     paymentCurrencyRef.current = nextCurrency;
   };
 
-  const summaryBox = (
-    <Row style={{ marginTop: 20, padding: 15, border: '0.5px dashed #bdafaf' }}>
-      {!readOnly ? (
-        <>
-          <Col md={10} xs={24}>
-            <FormSelect
-              label="Chọn VAT"
-              name={"vat"}
-              valueProp="value"
-              placeholder='Chọn VAT'
-              resourceData={VATOPTIONS}
-            />
-          </Col>
-          <Col md={2} />
-          <Col md={10} xs={24}>
-            <FormInputNumber
-              placeholder='Phí vận chuyển (nếu có)'
-              label="Phí vận chuyển"
-              name={"shippingCost"}
-            />
-          </Col>
-        </>
-      ) : (
-        <>
-          <Col md={12} xs={12}>
-            <p>Chọn VAT: VAT {vatValue}%</p>
-          </Col>
-          <Col md={12} xs={12}>
-            <p>Phí vận chuyển: {displayAmount(shippingCostVnd)}</p>
-          </Col>
-        </>
-      )}
-      <Col md={12} xs={12}>
-        <p>Tổng đơn: {displayAmount(subtotal)}</p>
-      </Col>
-      <Col md={12} xs={12}>
-        <p>VAT: {displayAmount(monneyVAT)}</p>
-      </Col>
-      <Col md={12} xs={12}>
-        <p>Tổng chi phí: {displayAmount(total)}</p>
-      </Col>
-      <Col md={12} xs={12}>
-        <p>Phí vận chuyển: {displayAmount(shippingCostVnd)}</p>
-      </Col>
-      <Col md={12} xs={12}>
-        <p>Đã thanh toán: {displayAmount(paid)}</p>
-      </Col>
-      <Col md={12} xs={12}>
-        <p>Chiết khấu: {displayAmount(customerOrder?.priceOff || 0)}</p>
-      </Col>
-      <Col md={12} xs={12}>
-        <strong>Còn lại: {displayAmount(Math.max(total - paid, 0))}</strong>
-      </Col>
-    </Row>
-  );
-
   return (
     <div style={{ padding: 15 }}>
       <p><strong>Thông tin đơn hàng #{customerOrder?.code || ''}</strong></p>
@@ -273,11 +250,11 @@ const OrderPayment = ({ data, readOnly = false, closeModalAfterSubmit }) => {
         <Col md={12} xs={24}>
           <span>Loại tiền đơn hàng: <strong>{orderCurrency}</strong></span>
         </Col>
-        <Col md={12} xs={24}>
-          <span>Tỷ giá: <strong>{orderCurrency === CURRENCY_USD
-            ? `1 USD = ${formatOrderNumber(exchangeRate)} VND`
-            : '1 VND = 1 VND'}</strong></span>
-        </Col>
+        {orderCurrency === CURRENCY_USD && (
+          <Col md={12} xs={24}>
+            <span>Tỷ giá: <strong>{`1 USD = ${formatOrderNumber(exchangeRate)} VND`}</strong></span>
+          </Col>
+        )}
       </Row>
       {!readOnly && canConvertToOrder ? (
         <div style={{ marginBottom: 16 }}>
@@ -297,9 +274,31 @@ const OrderPayment = ({ data, readOnly = false, closeModalAfterSubmit }) => {
         exchangeRate={exchangeRate}
       />
 
-      {readOnly ? summaryBox : (
-        <Form form={form} layout="vertical" onFinish={onSubmitPayment}>
-          {summaryBox}
+      <Form form={form} layout="vertical" disabled={readOnly} initialValues={customerOrder} onFinish={onSubmitPayment}>
+          <div style={{ border: '1px solid #e5e7eb', borderTop: 0, padding: 16, marginBottom: 24 }}>
+            <Row justify="space-between"><strong>Thành tiền</strong><strong>{displayAmount(subtotal)}</strong></Row>
+            <Row gutter={[16, 12]} style={{ marginTop: 12, marginBottom: 12 }}>
+              <Col xs={24} sm={12}>VAT: {vatValue}% — {displayAmount(monneyVAT)}</Col>
+              <Col xs={24} sm={12}>Chi phí vận chuyển: {displayAmount(shippingCostVnd)}</Col>
+            </Row>
+            <Row justify="space-between" style={{ borderTop: '1px solid #e5e7eb', paddingTop: 12 }}>
+              <strong>Tổng tiền (đã bao gồm VAT)</strong><strong>{displayAmount(total)}</strong>
+            </Row>
+          </div>
+          <Descriptions bordered size="small" column={1} style={{ marginBottom: 24 }} items={[
+            { key: 'terms', label: 'Điều kiện thanh toán', children: ({ PREPAID: 'Trả trước', POSTPAID: 'Trả sau', DEPOSIT: 'Đặt cọc' })[customerOrder?.paymentTerms] || customerOrder?.paymentTerms || '—' },
+            { key: 'percent', label: 'Mức thanh toán (%)', children: customerOrder?.paymentPercent == null ? '—' : `${customerOrder.paymentPercent}%` },
+          ]} />
+          <h3>Thông tin giao hàng</h3>
+          <Row gutter={16}>
+            <Col xs={24} sm={12}><Form.Item name="customerReceiverName" label="Người nhận"><Input placeholder="Nhập tên người nhận" /></Form.Item></Col>
+            <Col xs={24} sm={12}><Form.Item name="customerMobilePhone" label="Số điện thoại"><Input type="tel" placeholder="Nhập số điện thoại" /></Form.Item></Col>
+            <Col span={24}><Form.Item name="customerAddress" label="Địa chỉ nhận"><Input.TextArea rows={3} placeholder="Nhập địa chỉ nhận hàng" /></Form.Item></Col>
+          </Row>
+          {!readOnly && !simplifiedPayment && <div style={{ textAlign: 'right' }}><Button type="primary" loading={savingInfo} onClick={onSaveDelivery}>Lưu thông tin giao hàng</Button></div>}
+          {!readOnly && (simplifiedPayment || !isOpportunity) && (
+          <>
+          <p>Đã thanh toán: {displayAmount(paid)} · Còn lại: {displayAmount(Math.max(total - paid, 0))}</p>
           <Row gutter={16} style={{ marginTop: 20 }}>
             <Col md={8} xs={24}>
               <FormSelect
@@ -312,27 +311,31 @@ const OrderPayment = ({ data, readOnly = false, closeModalAfterSubmit }) => {
                 titleProp="title"
               />
             </Col>
-            <Col md={8} xs={24}>
-              <FormSelect
-                required
-                name="currency"
-                label="Loại tiền thanh toán"
-                resourceData={CURRENCY_OPTIONS}
-                valueProp="name"
-                titleProp="title"
-                onChange={handlePaymentCurrencyChange}
-              />
-            </Col>
-            <Col md={8} xs={24}>
-              <FormInputNumber
-                required
-                label={`Số tiền (${displayCurrency})`}
-                min="0"
-                name="amount"
-                placeholder={"Số tiền thanh toán"}
-              />
-            </Col>
-            <Col md={12} xs={24}>
+            {!simplifiedPayment && (
+              <>
+                <Col md={8} xs={24}>
+                  <FormSelect
+                    required
+                    name="currency"
+                    label="Loại tiền thanh toán"
+                    resourceData={CURRENCY_OPTIONS}
+                    valueProp="name"
+                    titleProp="title"
+                    onChange={handlePaymentCurrencyChange}
+                  />
+                </Col>
+                <Col md={8} xs={24}>
+                  <FormInputNumber
+                    required
+                    label={`Số tiền (${displayCurrency})`}
+                    min="0"
+                    name="amount"
+                    placeholder={"Số tiền thanh toán"}
+                  />
+                </Col>
+              </>
+            )}
+            <Col md={simplifiedPayment ? 8 : 12} xs={24}>
               <FormDatePicker
                 name="date"
                 format='DD/MM/YYYY'
@@ -340,7 +343,7 @@ const OrderPayment = ({ data, readOnly = false, closeModalAfterSubmit }) => {
                 placeholder={"Chọn ngày"}
               />
             </Col>
-            <Col md={12} xs={24}>
+            <Col md={simplifiedPayment ? 8 : 12} xs={24}>
               <FormAutoComplete
                 resourceData={[{ name: 'Đặt cọc' }, { name: 'Tất toán' }]}
                 valueProp='name'
@@ -354,8 +357,9 @@ const OrderPayment = ({ data, readOnly = false, closeModalAfterSubmit }) => {
               <BtnSubmit text="Hoàn thành" />
             </Col>
           </Row>
+          </>
+          )}
         </Form>
-      )}
     </div>
   )
 }
