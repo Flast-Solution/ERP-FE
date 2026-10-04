@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AudioMutedOutlined,
@@ -12,7 +13,7 @@ import {
 } from '@ant-design/icons';
 import { useCallCenterStore } from '../store/useCallCenterStore';
 import { useCallDuration } from '../hooks';
-import { CALL_DIRECTION, IN_CALL_TABS } from '../constants';
+import { CALL_DIRECTION, DIAL_KEYS, IN_CALL_TABS } from '../constants';
 import { formatDuration, formatPhone } from '../utils/format';
 import {
   CustomerAvatar,
@@ -33,6 +34,7 @@ import {
   Scrim,
   Tabs,
 } from '../styles/call.styles';
+import { DialPad } from '../styles/dialer.styles';
 
 const HANGUP_STYLE = { transform: 'rotate(135deg)' };
 
@@ -106,6 +108,8 @@ const InCallDrawer = () => {
   const toggleMute = useCallCenterStore(state => state.toggleMute);
   const toggleHold = useCallCenterStore(state => state.toggleHold);
   const hangup = useCallCenterStore(state => state.hangup);
+  const sendDtmf = useCallCenterStore(state => state.sendDtmf);
+  const [showPad, setShowPad] = useState(false);
   const duration = useCallDuration(call.startedAt);
   const { customer } = call;
 
@@ -122,7 +126,10 @@ const InCallDrawer = () => {
             <b>{customer?.name || formatPhone(call.phone)}</b>
             <small>{formatPhone(call.phone)} · {directionLabel}</small>
           </div>
-          <span className="timer"><i />{formatDuration(duration)}</span>
+          <span className="timer">
+            <i />
+            {call.startedAt ? formatDuration(duration) : 'Đang đổ chuông…'}
+          </span>
           <span className="sp" />
           <CallControl type="button" title="Tắt mic" $on={call.isMuted} onClick={toggleMute}>
             <AudioMutedOutlined />
@@ -133,13 +140,29 @@ const InCallDrawer = () => {
           <CallControl type="button" title="Chuyển máy">
             <SwapOutlined />
           </CallControl>
-          <CallControl type="button" title="Bàn phím">
+          <CallControl
+            type="button"
+            title="Bàn phím"
+            $on={showPad}
+            onClick={() => setShowPad(pre => !pre)}
+          >
             <NumberOutlined />
           </CallControl>
           <CallControl type="button" title="Kết thúc" $end onClick={hangup}>
             <PhoneOutlined style={HANGUP_STYLE} />
           </CallControl>
         </CallBar>
+
+        {showPad && (
+          <DialPad>
+            {DIAL_KEYS.map(([key, letters]) => (
+              <button type="button" key={key} onClick={() => sendDtmf(key)}>
+                {key}
+                <small>{letters}</small>
+              </button>
+            ))}
+          </DialPad>
+        )}
 
         <Tabs>
           {IN_CALL_TABS.map(tab => (

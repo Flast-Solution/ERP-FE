@@ -5,6 +5,14 @@ export const CALL_STATUS = {
   IN_CALL: 'in_call',
 };
 
+/* Trạng thái đăng ký máy nhánh với SBC */
+export const CONNECTION = {
+  OFFLINE: 'offline',
+  CONNECTING: 'connecting',
+  ONLINE: 'online',
+  ERROR: 'error',
+};
+
 export const CALL_DIRECTION = {
   IN: 'in',
   OUT: 'out',
@@ -15,8 +23,10 @@ export const CALL_DIRECTION = {
 export const CALL_CENTER_INCOMING = 'CALL_CENTER_INCOMING';
 export const CALL_CENTER_ENDED = 'CALL_CENTER_ENDED';
 
-export const HOTLINE = '1900 6868';
-export const EXTENSION = '102';
+export const HOTLINE = process.env.REACT_APP_CALL_CENTER_HOTLINE || '1900 6868';
+
+/* Máy nhánh mặc định khi tài khoản chưa có field máy nhánh (vd: acme_1001) */
+export const DEFAULT_EXT = process.env.REACT_APP_CALL_CENTER_EXT || '';
 
 export const DIAL_KEYS = [
   ['1', ''], ['2', 'ABC'], ['3', 'DEF'],

@@ -10,7 +10,7 @@ import {
   CALL_DIRECTION,
   CALL_STATUS,
   DIAL_KEYS,
-  EXTENSION,
+  CONNECTION,
   HOTLINE,
 } from '../constants';
 import { formatDuration, formatPhone } from '../utils/format';
@@ -22,6 +22,7 @@ import {
   DialerHeader,
   DialerInput,
   DialerMatch,
+  DialerError,
   DialerPanel,
   DialPad,
   ReadyToggle,
@@ -35,6 +36,13 @@ const DIRECTION_ICON_STYLE = {
   [CALL_DIRECTION.MISSED]: { transform: 'rotate(135deg)' },
 };
 
+const READY_LABEL = {
+  [CONNECTION.ONLINE]: 'Sẵn sàng',
+  [CONNECTION.CONNECTING]: 'Đang kết nối…',
+  [CONNECTION.OFFLINE]: 'Tạm nghỉ',
+  [CONNECTION.ERROR]: 'Mất kết nối',
+};
+
 const describeRecent = (item) => {
   if (item.direction === CALL_DIRECTION.MISSED) {
     return `Nhỡ · ${item.time}`;
@@ -44,7 +52,9 @@ const describeRecent = (item) => {
 };
 
 const Dialer = () => {
-  const isReady = useCallCenterStore(state => state.isReady);
+  const ext = useCallCenterStore(state => state.ext);
+  const connection = useCallCenterStore(state => state.connection);
+  const error = useCallCenterStore(state => state.error);
   const dialNumber = useCallCenterStore(state => state.dialNumber);
   const recentCalls = useCallCenterStore(state => state.recentCalls);
   const callStatus = useCallCenterStore(state => state.call.status);
@@ -56,7 +66,8 @@ const Dialer = () => {
   const receiveIncoming = useCallCenterStore(state => state.receiveIncoming);
 
   const match = useMemo(() => suggestCustomer(dialNumber), [dialNumber]);
-  const canCall = isReady && !!dialNumber && callStatus === CALL_STATUS.IDLE;
+  const isOnline = connection === CONNECTION.ONLINE;
+  const canCall = isOnline && !!dialNumber && callStatus === CALL_STATUS.IDLE;
 
   const onKeyDown = (event) => {
     if (event.key === 'Enter' && canCall) {
@@ -70,16 +81,19 @@ const Dialer = () => {
         <PhoneOutlined />
         Gọi điện
         <span className="sp" />
-        <ReadyToggle type="button" $ready={isReady} onClick={toggleReady}>
+        <ReadyToggle type="button" $ready={isOnline}
+          disabled={connection === CONNECTION.CONNECTING}
+          onClick={toggleReady}>
           <i />
-          {isReady ? 'Sẵn sàng' : 'Tạm nghỉ'}
+          {READY_LABEL[connection]}
           <DownOutlined style={{ fontSize: 10 }} />
         </ReadyToggle>
       </DialerHeader>
 
       <DialerFrom>
-        Gọi từ <b>{HOTLINE}</b> · máy lẻ {EXTENSION}
+        Gọi từ <b>{HOTLINE}</b> · máy lẻ {ext || '—'}
       </DialerFrom>
+      {error && <DialerError>{error}</DialerError>}
 
       <DialerInput>
         <input
@@ -135,7 +149,7 @@ const Dialer = () => {
             </span>
             <button
               type="button"
-              disabled={!isReady || callStatus !== CALL_STATUS.IDLE}
+              disabled={!isOnline || callStatus !== CALL_STATUS.IDLE}
               onClick={() => dial(item.phone)}
               aria-label="Gọi lại"
             >

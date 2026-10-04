@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { PhoneOutlined } from '@ant-design/icons';
 import { useCallCenterStore } from '../store/useCallCenterStore';
 import { useCallDuration } from '../hooks';
-import { CALL_STATUS } from '../constants';
+import { CALL_STATUS, CONNECTION } from '../constants';
 import { color } from '../styles/tokens';
 import { formatDuration } from '../utils/format';
 import { PhoneTrigger, PhoneTriggerWrap } from '../styles/dialer.styles';
@@ -14,7 +14,7 @@ const CLOSE_DELAY = 200;
 const PhoneHeaderButton = () => {
   const [open, setOpen] = useState(false);
   const closeTimer = useRef(null);
-  const isReady = useCallCenterStore(state => state.isReady);
+  const connection = useCallCenterStore(state => state.connection);
   const call = useCallCenterStore(state => state.call);
   const duration = useCallDuration(call.startedAt);
 
@@ -46,10 +46,18 @@ const PhoneHeaderButton = () => {
     }
   }, [call.status]);
 
-  let label = isReady ? 'Sẵn sàng' : 'Tạm nghỉ';
-  let dotColor = isReady ? color.success : color.ink3;
+  const isOnline = connection === CONNECTION.ONLINE;
+  let label = isOnline ? 'Sẵn sàng' : 'Tạm nghỉ';
+  let dotColor = isOnline ? color.success : color.ink3;
+  if (connection === CONNECTION.CONNECTING) {
+    label = 'Đang kết nối…';
+  }
+  if (connection === CONNECTION.ERROR) {
+    label = 'Mất kết nối';
+    dotColor = color.danger;
+  }
   if (isInCall) {
-    label = `Đang gọi ${formatDuration(duration)}`;
+    label = call.startedAt ? `Đang gọi ${formatDuration(duration)}` : 'Đang đổ chuông';
     dotColor = color.danger;
   }
 

@@ -258,3 +258,12 @@ export const DevLink = styled.button`
   font: 500 12px/1 ${font};
   cursor: pointer;
 `;
+
+export const DialerError = styled.div`
+  margin: 8px 14px 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: ${color.criticalBg};
+  color: ${color.criticalFg};
+  font: 500 12px/16px ${font};
+`;

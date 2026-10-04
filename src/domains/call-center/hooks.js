@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { InAppEvent } from '@flast-erp/core/utils';
-import { CALL_CENTER_INCOMING, CALL_CENTER_ENDED } from './constants';
+import { CALL_CENTER_INCOMING, CALL_CENTER_ENDED, DEFAULT_EXT } from './constants';
 import { useCallCenterStore } from './store/useCallCenterStore';
 
 /* Số giây kể từ startedAt, cập nhật mỗi giây */
@@ -36,4 +36,24 @@ export const useCallCenterEvents = () => {
       InAppEvent.removeListener(CALL_CENTER_ENDED, onEnded);
     };
   }, [receiveIncoming, hangup]);
+};
+
+/* Đăng ký máy nhánh khi vào app, huỷ đăng ký khi rời trang */
+export const useSoftphoneConnection = (ext) => {
+  const connect = useCallCenterStore(state => state.connect);
+  const disconnect = useCallCenterStore(state => state.disconnect);
+  const target = ext || DEFAULT_EXT;
+
+  useEffect(() => {
+    if (!target) {
+      return undefined;
+    }
+    connect(target);
+    const onUnload = () => disconnect();
+    window.addEventListener('beforeunload', onUnload);
+    return () => {
+      window.removeEventListener('beforeunload', onUnload);
+      disconnect();
+    };
+  }, [target, connect, disconnect]);
 };
