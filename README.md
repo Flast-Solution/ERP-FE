@@ -93,6 +93,3 @@ Hướng tới đóng góp tích cực vào quá trình chuyển đối số c�
 
 ## Đội ngũ phát triển ##
 HuuNV, TrungThanh, QuangDuc, Minh3N
-
-## install lại file dc tách hook, component, untils (bên dưới là link lưu trữ các file đã build)
-https://github.com/BuiDucHung/ERP-SHARED.git
