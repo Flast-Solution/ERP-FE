@@ -1,21 +1,23 @@
 import { RequestUtils } from '@flast-erp/core/utils';
-
+import { RTC_URL, GATEWAY, SUCCESS_CODE } from '@/configs';
 /*
  * Cầu nối HTTP tới SBC webrtc_gw.
  * Backend ERP proxy mỗi endpoint sang lệnh DI tương ứng (UDP 5040) hoặc API token,
  * trả nguyên chuỗi kết quả DI trong field `result` (vd: "[0, 'incoming', '0987654321']").
  *
- *   POST call-center/webrtc/token       { ext }              -> { token, expires }
- *   POST call-center/webrtc/create      {}                   -> DI webrtc_gw create   -> [0, '<id>', '<sdp offer>']
- *   POST call-center/webrtc/register    { id, ext, token }   -> DI webrtc_gw register
- *   POST call-center/webrtc/unregister  { id }               -> DI webrtc_gw unregister
- *   POST call-center/webrtc/status      { id }               -> DI webrtc_gw status
- *   POST call-center/webrtc/answer      { id }               -> DI webrtc_gw answer
- *   POST call-center/webrtc/dial        { id, number }       -> DI webrtc_gw dial
- *   POST call-center/webrtc/dtmf        { id, digits }       -> DI webrtc_gw dtmf
- *   POST call-center/webrtc/hangup      { id }               -> DI webrtc_gw hangup
+ *   POST call-center/token      { ext }              -> { token, expires }
+ *   POST api/webrtc/create      {}                   -> DI webrtc_gw create   -> [0, '<id>', '<sdp offer>']
+ *   POST api/webrtc/register    { id, ext, token }   -> DI webrtc_gw register
+ *   POST api/webrtc/unregister  { id }               -> DI webrtc_gw unregister
+ *   POST api/webrtc/status      { id }               -> DI webrtc_gw status
+ *   POST api/webrtc/answer      { id }               -> DI webrtc_gw answer
+ *   POST api/webrtc/dial        { id, number }       -> DI webrtc_gw dial
+ *   POST api/webrtc/dtmf        { id, digits }       -> DI webrtc_gw dtmf
+ *   POST api/webrtc/hangup      { id }               -> DI webrtc_gw hangup
  */
-const BASE = '/call-center/webrtc';
+
+const BASE_RTC  = `${RTC_URL}/api/webrtc`;
+const API_TOKEN = `${GATEWAY}/call-center/token`;
 
 export const GW_STATE = {
   IDLE: 'idle',
@@ -28,11 +30,11 @@ export const GW_STATE = {
 const KNOWN_STATES = Object.values(GW_STATE);
 
 const unwrap = (response) => {
-  const payload = response?.data ?? response;
-  if (payload && typeof payload === 'object' && 'result' in payload) {
-    return payload.result;
+  const { errorCode, data } = response;
+  if(errorCode === SUCCESS_CODE) {
+    return data;
   }
-  return payload;
+  return null;
 };
 
 /* Mã kết quả đầu chuỗi DI: "[403, ...]" -> 403 */
@@ -63,12 +65,17 @@ export const parseStatus = (result) => {
 };
 
 const post = async (action, body = {}) => {
-  const response = await RequestUtils.Post(`${BASE}/${action}`, body);
+  const response = await RequestUtils.Post(`${BASE_RTC}/${action}`, body);
+  return unwrap(response);
+};
+
+const take_token = async (action, body = {}) => {
+  const response = await RequestUtils.Post(`${API_TOKEN}/${action}`, body);
   return unwrap(response);
 };
 
 export const gatewayApi = {
-  token: (ext) => post('token', { ext }),
+  token: (ext) => take_token('token', { ext }),
   create: () => post('create'),
   register: (id, ext, token) => post('register', { id, ext, token }),
   unregister: (id) => post('unregister', { id }),
