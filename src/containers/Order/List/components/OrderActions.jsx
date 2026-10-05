@@ -5,6 +5,7 @@ import { clonePlainData } from '../utils/orderMappers'
 
 const OrderActions = ({
   record,
+  compact = false,
   isOpportunityList,
   hideQuoteButton,
   disableWorkflowAttach,
@@ -104,7 +105,7 @@ const OrderActions = ({
     || singleWorkflowAction?.key?.startsWith('progress:')
 
   return (
-    <Space gap={8}>
+    <Space size={compact ? 4 : 8} wrap={compact}>
       {canViewDetail ? <Button
         type="primary"
         size="small"

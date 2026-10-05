@@ -42,6 +42,7 @@ const ProductTooltip = ({ record }) => (
 
 const createOrderTrackingColumns = ({
   isOpportunityList = false,
+  productionOverview = false,
   canUpdateOpportunity,
   cancelOpportunity,
   cancellingOpportunityId,
@@ -361,11 +362,12 @@ const createOrderTrackingColumns = ({
   {
     title: 'Action',
     key: 'action',
-    width: isOpportunityList ? Math.max(180, actionWidth - 80) : actionWidth,
+    width: productionOverview ? 180 : (isOpportunityList ? Math.max(180, actionWidth - 80) : actionWidth),
     render: (_, record) => (
       <Space size={4}>
         <OrderActions
           record={record}
+          compact={productionOverview}
           isOpportunityList={isOpportunityList}
           hideQuoteButton={hideQuoteButton}
           disableWorkflowAttach={disableWorkflowAttach}
@@ -392,6 +394,9 @@ const createOrderTrackingColumns = ({
       </Space>
     ),
   },
-].filter(column => !isOpportunityList || !['Sản xuất', 'Kho', 'Xuất kho & giao hàng', 'Tài chính'].includes(column.title))
+].filter(column => (
+  (!isOpportunityList || !['Sản xuất', 'Kho', 'Xuất kho & giao hàng', 'Tài chính'].includes(column.title))
+  && (!productionOverview || !['Khách hàng', 'Xuất kho & giao hàng', 'Tài chính'].includes(column.title))
+))
 
 export default createOrderTrackingColumns

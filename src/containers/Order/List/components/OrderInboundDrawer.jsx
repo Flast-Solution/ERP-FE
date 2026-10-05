@@ -401,10 +401,13 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
       const infoReceip = {
         ...values,
         orderId: initialOrder?.id,
+        orderCode: initialOrder?.code,
         orderDetailId: selectedDetail?.id ?? values.orderDetailId,
         orderDetailCode: selectedDetail?.code ?? selectedDetail?.key ?? null,
         productId: selectedDetail?.productId ?? null,
         skuId: selectedDetail?.skuId ?? null,
+        skuDetails: selectedDetail?.skuDetails ?? selectedDetail?.mSkuDetails ?? [],
+        orderLine: selectedDetail?.orderLine ?? {},
         receivedAt: values.receivedAt?.format?.('YYYY-MM-DD HH:mm:ss') ?? values.receivedAt ?? null,
         effectiveDate: values.effectiveDate?.startOf?.('day')?.format?.('YYYY-MM-DD HH:mm:ss')
           ?? values.effectiveDate
