@@ -1,6 +1,6 @@
 export const MANUFACTURE_SAVE_API = '/erp/manufacture/save'
 export const MANUFACTURE_FETCH_API = '/erp/manufacture/fetch'
-export const WAITING_ORDER_FETCH_API = '/erp/order/fetch'
+export const WAITING_ORDER_FETCH_API = '/erp/manufacture/get-order-incomplete'
 export const USER_LIST_API = '/user/list'
 export const MANUFACTURE_STATUS_LIST_API = '/entity-status/list-by-type'
 export const MANUFACTURE_STATUS_SAVE_API = '/entity-status/save-application-status'

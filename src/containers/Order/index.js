@@ -24,7 +24,6 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Table, Button, DatePicker, Input, InputNumber, Select, Space, Tooltip, Typography, message } from 'antd';
 import { ShowSkuDetail } from '@/containers/Product/SkuView';
 import { arrayEmpty, arrayNotEmpty } from '@flast-erp/core/utils';
-import { formatCurrency as formatMoney } from '../../utils/formatCurrency';
 import { formatterInputNumber, parserInputNumber } from '@flast-erp/core/utils';
 import { HASH_POPUP } from '@/configs/constant';
 import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
@@ -434,9 +433,11 @@ const BanHangPage = ({
     (item) => getLineAmount(item) * (vatRate / 100),
     [getLineAmount, vatRate],
   );
-  const renderVndAmount = value => (
+  const displayExchangeRate = currency === CURRENCY_USD ? Number(exchangeRate) || 1 : 1;
+  const formatDisplayAmount = value => formatCurrencyAmount(Number(value ?? 0) / displayExchangeRate, currency);
+  const renderOrderAmount = value => (
     <Text style={{ display: 'block', textAlign: 'right', whiteSpace: 'nowrap' }}>
-      {formatMoney(value)}
+      {formatDisplayAmount(value)}
     </Text>
   );
 
@@ -512,8 +513,8 @@ const BanHangPage = ({
           size="small"
           min={0}
           disabled={restrictOrderFields}
-          value={getSalePrice(record)}
-          onChange={value => handleChange(record.key, 'manualSalePrice', value)}
+          value={getSalePrice(record) / displayExchangeRate}
+          onChange={value => handleChange(record.key, 'manualSalePrice', Number(value ?? 0) * displayExchangeRate)}
           formatter={formatterInputNumber}
           parser={parserInputNumber}
           controls={false}
@@ -535,7 +536,7 @@ const BanHangPage = ({
       key: 'lineAmount',
       width: 150,
       align: 'right',
-      render: (_, record) => renderVndAmount(getLineAmount(record))
+      render: (_, record) => renderOrderAmount(getLineAmount(record))
     },
     {
       title: (
@@ -554,7 +555,7 @@ const BanHangPage = ({
       key: 'vatAmount',
       width: 170,
       align: 'right',
-      render: (_, record) => renderVndAmount(getLineVat(record))
+      render: (_, record) => renderOrderAmount(getLineVat(record))
     },
     {
       title: 'Tổng tiền',
@@ -562,7 +563,7 @@ const BanHangPage = ({
       key: 'grandTotal',
       width: 150,
       align: 'right',
-      render: (_, record) => renderVndAmount(getLineAmount(record) + getLineVat(record))
+      render: (_, record) => renderOrderAmount(getLineAmount(record) + getLineVat(record))
     },
     {
       title: customerOrder?.type === 'order' ? 'Ngày Chốt' : 'Ngày D.kiến',
@@ -824,7 +825,7 @@ const BanHangPage = ({
         return `${Number(text ?? 0)}%`;
       }
       return isFormatted
-        ? formatCurrencyAmount(text, column.dataIndex === 'totalPrice' ? CURRENCY_VND : currency)
+        ? (column.dataIndex === 'totalPrice' ? formatDisplayAmount(text) : formatCurrencyAmount(text, currency))
         : text;
     }
   };
@@ -987,9 +988,9 @@ const BanHangPage = ({
             <Table.Summary.Cell index={4}></Table.Summary.Cell>
             <Table.Summary.Cell index={5}></Table.Summary.Cell>
             <Table.Summary.Cell index={6} align="right">{totalQuantity}</Table.Summary.Cell>
-            <Table.Summary.Cell index={7} align="right">{formatMoney(totalSubOrder)}</Table.Summary.Cell>
-            <Table.Summary.Cell index={8} align="right">{formatMoney(totalVat)}</Table.Summary.Cell>
-            <Table.Summary.Cell index={9} align="right"><Text strong>{formatMoney(totalOrder)}</Text></Table.Summary.Cell>
+            <Table.Summary.Cell index={7} align="right">{formatDisplayAmount(totalSubOrder)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={8} align="right">{formatDisplayAmount(totalVat)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={9} align="right"><Text strong>{formatDisplayAmount(totalOrder)}</Text></Table.Summary.Cell>
             <Table.Summary.Cell index={10}></Table.Summary.Cell>
             <Table.Summary.Cell index={11}></Table.Summary.Cell>
             <Table.Summary.Cell index={12} align="right">{formatCurrencyAmount(totalDiscount, currency)}</Table.Summary.Cell>
@@ -1109,7 +1110,7 @@ const BanHangPage = ({
               </div>
             </div>
           )}
-          <InvoiceTable order={{
+          <InvoiceTable currency={currency} exchangeRate={displayExchangeRate} order={{
             ...customerOrder,
             subtotal: totalSubOrder,
             vat: vatRate,
@@ -1124,30 +1125,31 @@ const BanHangPage = ({
 }
 
 const InvoiceTable = ({
-  order
+  order, currency = CURRENCY_VND, exchangeRate = 1
 }) => {
+  const displayAmount = value => formatCurrencyAmount(Number(value ?? 0) / (currency === CURRENCY_USD ? exchangeRate : 1), currency);
   const { subtotal, vat, priceOff, total, paid } = order;
   const data = [
     {
       key: '1',
       leftLabel: 'Tổng chưa VAT',
-      leftValue: formatMoney(subtotal),
+      leftValue: displayAmount(subtotal),
       rightLabel: 'VAT',
-      rightValue: formatMoney(subtotal * (vat / 100))
+      rightValue: displayAmount(subtotal * (vat / 100))
     },
     {
       key: '2',
       leftLabel: 'C.Khấu | Voucher',
-      leftValue: formatMoney(priceOff),
+      leftValue: displayAmount(priceOff),
       rightLabel: 'Tổng tiền',
-      rightValue: formatMoney(total)
+      rightValue: displayAmount(total)
     },
     {
       key: '3',
       leftLabel: 'Đã thanh toán',
-      leftValue: formatMoney(paid),
+      leftValue: displayAmount(paid),
       rightLabel: 'Còn lại',
-      rightValue: formatMoney(total - paid)
+      rightValue: displayAmount(total - paid)
     }
   ];
 

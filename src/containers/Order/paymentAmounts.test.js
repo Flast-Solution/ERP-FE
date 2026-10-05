@@ -10,5 +10,5 @@ test('supports normalized details with only totalPrice', () => {
 });
 test('calculates a fallback only when both total fields are missing', () => {
   expect(getPaymentLineTotal({ price: 101, quantity: 1 })).toBe(101);
-  expect(getPaymentLineTotal({ price: 2, quantity: 3, priceOff: 1 }, 'USD', 26000)).toBe(130000);
+  expect(getPaymentLineTotal({ price: 2, quantity: 3, priceOff: 1 }, 'USD', 26000)).toBe(5);
 });

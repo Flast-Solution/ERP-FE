@@ -34,6 +34,8 @@ import {
 
 import _ from 'lodash';
 import InStockTable from '@/containers/WareHouse/InStockTable'
+import useGetMe from '@/hooks/useGetMe'
+import { isHatecoBusiness } from '@/configs/business'
 import { useEffectAsync } from '@flast-erp/core/hooks';
 import {
   arrayNotEmpty,
@@ -48,6 +50,8 @@ import {
 import { resolveOrderSkuDetails } from './orderSku';
 
 const AddSKU = (props) => {
+  const { user } = useGetMe();
+  const hideSkuStockTable = isHatecoBusiness(user?.bizId);
   const {
     onSave,
     productId,
@@ -294,13 +298,13 @@ const AddSKU = (props) => {
             onChangeGetSelectedItem={onChangeGetSelectedSku}
           />
         </Col>
-        <Col span={24}>
+        {!hideSkuStockTable && <Col span={24}>
           <InStockTable
             showSku={false}
             data={inStocks}
             onChangeSelected={onSelectedStock}
           />
-        </Col>
+        </Col>}
         <Col span={12}>
           <FormInputNumber
             label='Số lượng'
