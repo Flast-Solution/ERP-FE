@@ -1,6 +1,6 @@
 import React from 'react'
-import { Button, Dropdown, Space, Tooltip } from 'antd'
-import { ApartmentOutlined, EditFilled, EyeOutlined, InboxOutlined, TruckOutlined } from '@ant-design/icons'
+import { Button, Dropdown, Popconfirm, Space, Tooltip } from 'antd'
+import { ApartmentOutlined, DeleteOutlined, EditFilled, EyeOutlined, InboxOutlined, TruckOutlined } from '@ant-design/icons'
 import { clonePlainData } from '../utils/orderMappers'
 
 const OrderActions = ({
@@ -17,6 +17,8 @@ const OrderActions = ({
   navigate,
   canViewDetail,
   canUpdateOpportunity,
+  cancelOpportunity,
+  cancellingOpportunityId,
   canUpdateOrder,
   canViewQuotation,
   canAttachWorkflow,
@@ -161,6 +163,27 @@ const OrderActions = ({
         >
           <EditFilled />
         </Button>
+      )}
+      {isOpportunityList && canUpdateOpportunity && (
+        <span onClick={event => event.stopPropagation()}>
+          <Popconfirm
+            title="Xóa cơ hội bán hàng?"
+            description="Bạn có chắc muốn hủy cơ hội bán hàng này?"
+            okText="Xóa"
+            cancelText="Hủy"
+            okButtonProps={{ danger: true }}
+            disabled={cancellingOpportunityId != null}
+            onConfirm={() => cancelOpportunity(record)}
+          >
+            <Tooltip title="Xóa cơ hội bán hàng">
+              <Button danger size="small" icon={<DeleteOutlined />}
+                aria-label="Xóa cơ hội bán hàng"
+                loading={cancellingOpportunityId === record.id}
+                disabled={cancellingOpportunityId != null && cancellingOpportunityId !== record.id}
+              />
+            </Tooltip>
+          </Popconfirm>
+        </span>
       )}
       {canUpdateOrder && record.type === 'order' && (
         <Button

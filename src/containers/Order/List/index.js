@@ -1,7 +1,7 @@
 import { isHatecoBusiness } from '@/configs/business'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Space, Tag } from 'antd'
+import { message, Space, Tag } from 'antd'
 import useGetMe from '@/hooks/useGetMe'
 import { RestList } from '@flast-erp/core/components'
 import { useGetList } from '@flast-erp/core/hooks'
@@ -92,6 +92,7 @@ const ListOrder = ({
 }) => {
   const navigate = useNavigate()
   const { user, hasPermission } = useGetMe()
+  const [cancellingOpportunityId, setCancellingOpportunityId] = useState(null)
   const [copiedIndex, setCopiedIndex] = useState(null)
   const [activeTrackingRowKey, setActiveTrackingRowKey] = useState(null)
   const isOrderList = orderMode || filter.type === 'order'
@@ -243,9 +244,25 @@ const ListOrder = ({
     return { ...values, ...filter }
   }, [filter])
 
+  const cancelOpportunity = async (record) => {
+    setCancellingOpportunityId(record.id)
+    try {
+      const response = await RequestUtils.Post(`/order/cancel-co-hoi?orderId=${encodeURIComponent(record.id)}`, {})
+      if (response?.success === false || (response?.success !== true && Number(response?.errorCode) !== 200)) {
+        throw new Error(response?.message || 'Không thể xóa cơ hội bán hàng.')
+      }
+      message.success('Đã xóa cơ hội bán hàng.')
+      f5List(listApiPath)
+    } catch (error) {
+      message.error(error?.response?.data?.message || error?.message || 'Không thể xóa cơ hội bán hàng.')
+    } finally {
+      setCancellingOpportunityId(null)
+    }
+  }
+
   const actionWidth = (
     filter.type === 'cohoi' ? 260 : 220
-  ) + ((extraActions?.length ?? 0) * 44) + (canCreateReceipt ? 44 : 0) + (canCreateDelivery ? 44 : 0)
+  ) + ((extraActions?.length ?? 0) * 44) + (canCreateReceipt ? 44 : 0) + (canCreateDelivery ? 44 : 0) + (canUpdateOpportunity ? 44 : 0)
 
   const columnOptions = {
     isOpportunityList,
@@ -271,6 +288,8 @@ const ListOrder = ({
       : options),
     canViewDetail,
     canUpdateOpportunity,
+    cancelOpportunity,
+    cancellingOpportunityId,
     canUpdateOrder,
     canViewQuotation,
     canAttachWorkflow,
