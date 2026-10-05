@@ -43,6 +43,8 @@ const ProductTooltip = ({ record }) => (
 const createOrderTrackingColumns = ({
   isOpportunityList = false,
   canUpdateOpportunity,
+  cancelOpportunity,
+  cancellingOpportunityId,
   shippingStatusById,
   copiedIndex,
   setCopiedIndex,
@@ -376,6 +378,8 @@ const createOrderTrackingColumns = ({
           navigate={navigate}
           canViewDetail={canViewDetail}
           canUpdateOpportunity={canUpdateOpportunity}
+        cancelOpportunity={cancelOpportunity}
+        cancellingOpportunityId={cancellingOpportunityId}
           canUpdateOrder={canUpdateOrder}
           canViewQuotation={canViewQuotation}
           canAttachWorkflow={canAttachWorkflow}
