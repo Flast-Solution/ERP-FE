@@ -1,11 +1,11 @@
-import { gatewayApi, GW_STATE, parseCode, parseCreate, parseStatus } from './gatewayApi';
+import { clearGatewayToken, gatewayApi, GW_STATE, parseCode, parseCreate, parseStatus } from './gatewayApi';
 
 const POLL_INTERVAL = 500;
 const CONNECT_TIMEOUT = 5000;
 
 /*
  * Trình duyệt làm máy nhánh của SBC (theo e2e/webrtc_gw.test.js):
- * create -> nhận SDP offer -> RTCPeerConnection trả lời -> register bằng token
+ * token -> create -> nhận SDP offer -> RTCPeerConnection trả lời -> register
  * -> poll status để biết incoming / early / connected / ended.
  */
 export default class Softphone {
@@ -22,6 +22,8 @@ export default class Softphone {
 
   async connect(ext) {
     await this.disconnect();
+    /* Xin token trước, các lệnh sau dùng Bearer token này */
+    await gatewayApi.token(ext);
     const created = parseCreate(await gatewayApi.create());
     if (!created) {
       throw new Error('Không tạo được phiên WebRTC trên SBC');
@@ -29,12 +31,7 @@ export default class Softphone {
     this.id = created.id;
     await this.setupPeer(created.offer);
 
-    const tokenResponse = await gatewayApi.token(ext);
-    const token = tokenResponse?.token;
-    if (!token) {
-      throw new Error(`Không lấy được token cho máy nhánh ${ext}`);
-    }
-    const code = parseCode(await gatewayApi.register(this.id, ext, token));
+    const code = parseCode(await gatewayApi.register(this.id, ext));
     if (code !== 0) {
       throw new Error(`Đăng ký máy nhánh thất bại (${code})`);
     }
@@ -160,6 +157,7 @@ export default class Softphone {
       this.audio.remove();
       this.audio = null;
     }
+    clearGatewayToken();
   }
 }
 
