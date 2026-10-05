@@ -975,6 +975,7 @@ const BanHangPage = ({
                     size="small"
                     min={currency === CURRENCY_USD ? 0.01 : 1}
                     value={exchangeRate}
+                    controls={false}
                     disabled={currency === CURRENCY_VND}
                     onChange={handleExchangeRateChange}
                     formatter={formatterInputNumber}
