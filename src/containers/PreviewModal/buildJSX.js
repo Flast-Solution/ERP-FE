@@ -35,6 +35,8 @@
  *   export default FormView
  */
 
+import { DYNAMIC_TABLE_FACTORY_SOURCE } from './dynamicTableRuntimeSource'
+
 function esc(str) {
   return String(str)
     .replace(/&/g, '&amp;')
@@ -76,6 +78,7 @@ function toComponentName(name = '') {
 /* ─── InputType → @flast-erp/core component name ────────────────────────────── */
 
 const COMPONENT_MAP = {
+  dynamic_table: 'FormDynamicTableField',
   block       : 'FormBlockPreview',
   hidden      : 'FormHidden',
   text        : 'FormInput',
@@ -115,6 +118,10 @@ function buildProps(field) {
   }
 
   switch (inputType) {
+    case 'dynamic_table':
+      props.push({ key: 'tableConfig', value: JSON.stringify(config), kind: 'expr' })
+      props.push({ key: 'disabled', value: 'readOnly', kind: 'expr' })
+      break
     case 'hidden':
       props.length = 0
       props.push({ key: 'name', value: fieldKey, kind: 'str' })
@@ -423,8 +430,10 @@ function buildImports(fields) {
   collect(fields)
   used.delete('FormBlockPreview')
   used.delete('FormFileUpload')
+  const hasDynamicTable = used.delete('FormDynamicTableField')
 
   const lines = [`import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react'`]
+  if (hasDynamicTable) lines.push(`import * as DynamicTableUI from 'antd'`)
   if (hasUpload) {
     lines.push(`import axios from 'axios'`)
   }
@@ -699,6 +708,11 @@ export function buildJSX(schema) {
   })
   add('', '')
 
+  if (importsPlain.includes('DynamicTableUI')) {
+    const helper = `const { FormDynamicTableField } = (${DYNAMIC_TABLE_FACTORY_SOURCE})(React, DynamicTableUI)`
+    helper.split('\n').forEach(line => add(line, esc(line)))
+    add('', '')
+  }
   const blockHelper = buildBlockHelper(fields)
   if (blockHelper) {
     blockHelper.split('\n').forEach(line => add(line, line))
@@ -720,6 +734,7 @@ export function buildJSX(schema) {
   /* ── Component ── */
   add(`const ${componentName} = forwardRef(({`, `${h('punct', 'const')} ${h('tag', componentName)} ${h('punct', '= forwardRef(({')}`)
   add(`  initialValues,`, `  initialValues,`)
+  add(`  readOnly = false,`, `  readOnly = false,`)
   add(`  onSubmit,`, `  onSubmit,`)
   add(`  onSubmitError,`, `  onSubmitError,`)
   add(`  submitSignal,`, `  submitSignal,`)

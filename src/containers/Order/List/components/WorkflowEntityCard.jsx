@@ -1,5 +1,6 @@
 import React from 'react'
 import { Descriptions, Typography } from 'antd'
+import ProductAttributesTooltip from './ProductAttributesTooltip'
 
 const { Text, Title } = Typography
 
@@ -20,6 +21,7 @@ const WorkflowEntityCard = ({ entity, entityLabel = 'Đối tượng' }) => {
         {record.productName ? <Descriptions.Item label="Sản phẩm">{record.productName}</Descriptions.Item> : null}
         {record.assignTo ? <Descriptions.Item label="Phụ trách">{record.assignTo}</Descriptions.Item> : null}
       </Descriptions>
+      <ProductAttributesTooltip detail={record} orderLineTitle="Order line" />
     </section>
   )
 }

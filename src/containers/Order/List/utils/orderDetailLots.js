@@ -9,7 +9,7 @@ const assertSuccess = response => {
 export const buildLotDetailRows = (preview, instanceId) => {
   const latest = new Map()
   ;(preview?.submissions ?? []).forEach(submission => {
-    const key = `${submission.stepCode}-${submission.templateId}`
+    const key = submission.stepCode ?? submission.stepId ?? submission.templateId
     const previous = latest.get(key)
     if (!previous || Number(submission.version ?? 0) >= Number(previous.version ?? 0)) {
       latest.set(key, submission)
@@ -19,6 +19,20 @@ export const buildLotDetailRows = (preview, instanceId) => {
     let values = submission.valuesJson
     if (typeof values === 'string') {
       try { values = JSON.parse(values) } catch { values = {} }
+    }
+    if (values && Object.prototype.hasOwnProperty.call(values, 'nhap_lot')) {
+      const table = values.nhap_lot
+      const criteria = (Array.isArray(table?.columns) ? table.columns : [])
+        .filter(column => column?.key && !['code', 'quantity', 'employe'].includes(column.key))
+        .map(column => ({ id: column.key, name: column.label || column.key, type: column.type }))
+      return (Array.isArray(table?.rows) ? table.rows : []).map((lot, index) => ({
+        code_lot: lot.code,
+        so_luong: lot.quantity,
+        danh_gia: lot,
+        _source: 'nhap_lot',
+        _rowKey: `${instanceId}-${submission.id}-${index}`,
+        _criteria: criteria,
+      }))
     }
     const criteria = Array.isArray(values?.tieu_chi) ? values.tieu_chi : []
     return (Array.isArray(values?.lots) ? values.lots : []).map((lot, index) => ({

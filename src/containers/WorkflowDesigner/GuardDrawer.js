@@ -6,7 +6,7 @@ import {
   DeleteOutlined,
   PlusOutlined,
 } from '@ant-design/icons'
-import { RequestUtils } from '@flast-erp/core/utils'
+import { fetchWorkflowTemplateFields } from '@/utils/workflowTemplateFields'
 import { GUARD_TYPES } from '@/store/workflowConstants'
 import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard'
 import { collectWorkflowValueFields } from '@/utils/workflowFormFields'
@@ -120,10 +120,7 @@ const fetchTemplateFieldOptions = async (forms = []) => {
 
   if (!templateIds.length) return []
 
-  const response = await RequestUtils.Post(
-    '/workflow/forms/template/find-template-field',
-    templateIds
-  )
+  const response = await fetchWorkflowTemplateFields(templateIds)
   const items = getTemplateFieldList(response)
 
   if (items.some((item) => Array.isArray(item?.fields))) {

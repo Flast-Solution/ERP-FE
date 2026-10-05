@@ -35,7 +35,7 @@ const OrderDetailLots = ({ detailId }) => {
   }))
   const columns = [
     { title: 'Mã lot', dataIndex: 'code_lot', width: 130 },
-    { title: 'Tên lot', dataIndex: 'name_lot', width: 160 },
+    ...(rows.some(row => row._source !== 'nhap_lot') ? [{ title: 'Tên lot', dataIndex: 'name_lot', width: 160 }] : []),
     { title: 'Số lượng', dataIndex: 'so_luong', width: 110, align: 'right', render: value => formatQuantity(value) },
     ...Array.from(criteria.values()).map(criterion => ({
       title: criterion.name || criterion.id,

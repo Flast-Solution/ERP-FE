@@ -277,7 +277,7 @@ const OrderPayment = ({ data, readOnly = false, closeModalAfterSubmit }) => {
           {!readOnly && (simplifiedPayment || !isOpportunity) && (
           <>
           <p>Đã thanh toán: {displayAmount(paid)} · Còn lại: {displayAmount(Math.max(total - paid, 0))}</p>
-          <Row gutter={16} style={{ marginTop: 20 }}>
+          {Number(paid) < total && <Row gutter={16} style={{ marginTop: 20 }}>
             <Col md={8} xs={24}>
               <FormSelect
                 required
@@ -323,7 +323,7 @@ const OrderPayment = ({ data, readOnly = false, closeModalAfterSubmit }) => {
             <Col md={24} xs={24}>
               <BtnSubmit text="Hoàn thành" />
             </Col>
-          </Row>
+          </Row>}
           </>
           )}
         </Form>

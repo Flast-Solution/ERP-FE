@@ -16,6 +16,7 @@
  */
 
 import { useEffect } from 'react'
+import DynamicTableConfig from './DynamicTableConfig'
 import {
   Form,
   Input,
@@ -705,6 +706,8 @@ const FieldConfigPanel = () => {
           <SectionDivider />
 
           {/* ── Section: Ràng buộc — dynamic ── */}
+          {field.inputType === 'dynamic_table' && <DynamicTableConfig config={field.config}
+            onChange={handleConfigChange} disabled={isAiLocked} />}
           <ConstraintSection
             field={field}
             onConfigChange={handleConfigChange}

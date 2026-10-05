@@ -1,12 +1,16 @@
 import React from 'react'
 import { parseOrderLine } from '../../orderLine'
+import { normalizeOrderSkuDetails } from '../../orderSku'
 
-const ProductAttributesTooltip = ({ detail }) => {
-  let sku = detail?.skuDetails
-  if (typeof sku === 'string') {
-    try { sku = JSON.parse(sku) } catch (_) { sku = [] }
-  }
-  const attributes = Array.isArray(sku) ? sku : []
+const ProductAttributesTooltip = ({ detail, orderLineTitle = 'Thông tin đơn con' }) => {
+  const attributes = [detail?.mSkuDetails, detail?.skuDetails].reduce((result, candidate) => {
+    if (result.length) return result
+    let sku = candidate
+    if (typeof sku === 'string') {
+      try { sku = JSON.parse(sku) } catch (_) { sku = [] }
+    }
+    return normalizeOrderSkuDetails(sku)
+  }, [])
   const orderLine = Object.entries(parseOrderLine(detail?.orderLine))
   return (
     <div style={{ lineHeight: 1.6, whiteSpace: 'normal', overflowWrap: 'anywhere' }}>
@@ -23,7 +27,7 @@ const ProductAttributesTooltip = ({ detail }) => {
       )}
       {orderLine.length > 0 && (
         <div style={{ marginTop: 8 }}>
-          <strong>Thông tin đơn con</strong>
+          <strong>{orderLineTitle}</strong>
           {orderLine.map(([label, value]) => (
             <div key={label}>
               <strong>{label}: </strong>

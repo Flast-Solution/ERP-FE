@@ -29,6 +29,7 @@ import { SortableContext, rectSortingStrategy, useSortable } from '@dnd-kit/sort
 import { CSS } from '@dnd-kit/utilities'
 import useFormBuilderStore from '@/store/useFormBuilderStore'
 import { FIELD_TYPE_MAP } from '@/utils/fieldTypes'
+import { DynamicTableControl } from '../PreviewModal/DynamicTableField'
 import {
   ItemWrapper,
   DragHandle,
@@ -71,6 +72,8 @@ const renderPreview = (field) => {
   }))
 
   switch (inputType) {
+    case 'dynamic_table':
+      return <DynamicTableControl tableConfig={config} value={{ rows: [{}] }} disabled />
     case 'hidden':
       return null
 

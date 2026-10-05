@@ -1,4 +1,5 @@
 import { Col, Row } from 'antd'
+import { FormDynamicTableField } from './DynamicTableField'
 import { FormOutlined } from '@ant-design/icons'
 import {
   FormAutoComplete,
@@ -59,6 +60,8 @@ const FieldPreview = ({ field }) => {
   }))
 
   switch (inputType) {
+    case 'dynamic_table':
+      return <FormDynamicTableField name={fieldKey} label={label} required={required} tableConfig={config} />
     case 'hidden':
       return <FormHidden name={fieldKey} />
 

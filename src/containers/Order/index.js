@@ -53,7 +53,6 @@ const { Text } = Typography;
 const CURRENCY_VND = 'VND';
 const CURRENCY_USD = 'USD';
 const currencyOptions = [
-  { label: 'VND', value: CURRENCY_VND },
   { label: 'USD', value: CURRENCY_USD }
 ];
 const vatOptions = [0, 8, 10].map(value => ({ label: `${value}%`, value }));
@@ -253,21 +252,30 @@ const BanHangPage = ({
   const [localOrder, setLocalOrder] = useState({ orderId, reload: false });
   const [customerOrder, setCustomerOrder] = useState();
   const [shippingCost, setShippingCost] = useState(0);
-  const [currency, setCurrency] = useState(CURRENCY_VND);
+  const currency = CURRENCY_USD;
   const [exchangeRate, setExchangeRate] = useState(1);
   const [vatRate, setVatRate] = useState(0);
   const [calculationFormula, setCalculationFormula] = useState('');
 
   const data = useMemo(() => lineItems.map(item => {
-    const totalPrice = item.manualSalePrice != null
-      ? Math.round(item.manualSalePrice * Number(item.quantity ?? 0)
+    const rate = getExchangeRate(currency, exchangeRate);
+    const calculatedTotal = calculateConvertedLineTotal({ item, shippingCost, formula: calculationFormula, currency, exchangeRate });
+    const salePriceUsd = item.manualSalePriceUsd ?? (item.manualSalePrice != null
+      ? item.manualSalePrice / rate
+      : Number(item.quantity) > 0
+        ? Math.max(calculatedTotal - Number(item.discountAmount ?? 0) * rate, 0) / Number(item.quantity) / rate
+        : 0);
+    const effectiveManualPrice = item.manualSalePriceVnd ?? (item.manualSalePriceUsd != null ? item.manualSalePriceUsd * rate : item.manualSalePrice);
+    const totalPrice = effectiveManualPrice != null
+      ? Math.round(effectiveManualPrice * Number(item.quantity ?? 0)
         + Number(item.discountAmount ?? 0) * getExchangeRate(currency, exchangeRate))
       : calculateConvertedLineTotal({ item, shippingCost, formula: calculationFormula, currency, exchangeRate });
     return {
       ...item,
+      salePriceUsd,
       currency,
       exchangeRate: getExchangeRate(currency, exchangeRate),
-      price: item.manualSalePrice ?? (Number(item.quantity ?? 0) > 0
+      price: effectiveManualPrice ?? (Number(item.quantity ?? 0) > 0
         ? Math.max(totalPrice - Number(item.discountAmount ?? 0) * getExchangeRate(currency, exchangeRate), 0) / Number(item.quantity)
         : 0),
       totalPrice,
@@ -309,13 +317,18 @@ const BanHangPage = ({
     }
     if (order) {
       setCustomerOrder(order);
-      setShippingCost(Number(order.shippingCost ?? 0));
-      setCurrency(order.currency === CURRENCY_USD ? CURRENCY_USD : CURRENCY_VND);
-      setExchangeRate(order.currency === CURRENCY_USD ? Number(order.exchangeRate ?? 1) : 1);
+      const savedRate = Number(order.exchangeRate) > 0 ? Number(order.exchangeRate) : 1;
+      setShippingCost(Number(order.shippingCost ?? 0) / (order.currency === CURRENCY_USD ? 1 : savedRate));
+      setExchangeRate(savedRate);
       setVatRate(Number(order.vat ?? 0));
     }
     if (arrayNotEmpty(data)) {
       setData(mergeSavedOrderLines(data, localOrder.savedDetails).map(item => {
+        const savedRate = Number(order?.exchangeRate) > 0 ? Number(order.exchangeRate) : 1;
+        if (order?.currency !== CURRENCY_USD) {
+          item = { ...item, productPrice: Number(item.productPrice ?? 0) / savedRate,
+            discountAmount: Number(item.discountAmount ?? 0) / savedRate };
+        }
         if (item.price != null) {
           return { ...item, manualSalePrice: Number(item.price) };
         }
@@ -425,10 +438,12 @@ const BanHangPage = ({
     0,
   ), [currency, exchangeRate]);
   const getSalePrice = useCallback((item) => {
+    if (item?.manualSalePriceVnd != null) return Number(item.manualSalePriceVnd);
+    if (item?.manualSalePriceUsd != null) return Number(item.manualSalePriceUsd) * getExchangeRate(currency, exchangeRate);
     if (item?.manualSalePrice != null) return Number(item.manualSalePrice);
     const quantity = Number(item?.quantity ?? 0);
     return quantity > 0 ? getLineAmount(item) / quantity : 0;
-  }, [getLineAmount]);
+  }, [currency, exchangeRate, getLineAmount]);
   const getLineVat = useCallback(
     (item) => getLineAmount(item) * (vatRate / 100),
     [getLineAmount, vatRate],
@@ -472,7 +487,7 @@ const BanHangPage = ({
       width: 260
     },
     {
-      title: 'Giá mua',
+      title: 'Giá mua (USD)',
       dataIndex: 'productPrice',
       key: 'productPrice',
       width: 140,
@@ -502,7 +517,7 @@ const BanHangPage = ({
       )
     },
     {
-      title: 'Giá bán',
+      title: 'Giá bán (USD)',
       dataIndex: 'salePrice',
       key: 'salePrice',
       width: 140,
@@ -513,11 +528,33 @@ const BanHangPage = ({
           size="small"
           min={0}
           disabled={restrictOrderFields}
-          value={getSalePrice(record) / displayExchangeRate}
-          onChange={value => handleChange(record.key, 'manualSalePrice', Number(value ?? 0) * displayExchangeRate)}
+          value={record.salePriceUsd}
+          onChange={value => handleChange(record.key, 'manualSalePriceUsd', value)}
           formatter={formatterInputNumber}
           parser={parserInputNumber}
           controls={false}
+          style={{ width: '100%', textAlign: 'right' }}
+        />
+      )
+    },
+    {
+      title: 'Giá bán (VND)',
+      dataIndex: 'salePriceVnd',
+      key: 'salePriceVnd',
+      width: 170,
+      align: 'right',
+      render: (_, record) => (
+        <InputNumber
+          onFocus={selectNumberOnFocus}
+          size="small"
+          min={0}
+          disabled={restrictOrderFields}
+          value={getSalePrice(record)}
+          onChange={value => handleChange(record.key, 'manualSalePriceVnd', value)}
+          formatter={formatterInputNumber}
+          parser={parserInputNumber}
+          controls={false}
+          placeholder="Tự tính từ USD × tỷ giá"
           style={{ width: '100%', textAlign: 'right' }}
         />
       )
@@ -531,7 +568,7 @@ const BanHangPage = ({
       align: 'right'
     },
     {
-      title: 'Thành tiền',
+      title: 'Thành tiền (USD)',
       dataIndex: 'lineAmount',
       key: 'lineAmount',
       width: 150,
@@ -541,7 +578,7 @@ const BanHangPage = ({
     {
       title: (
         <Space size={6}>
-          <span>VAT</span>
+          <span>VAT (USD)</span>
           <Select
             size="small"
             value={vatRate}
@@ -558,7 +595,7 @@ const BanHangPage = ({
       render: (_, record) => renderOrderAmount(getLineVat(record))
     },
     {
-      title: 'Tổng tiền',
+      title: 'Tổng tiền (USD)',
       dataIndex: 'grandTotal',
       key: 'grandTotal',
       width: 150,
@@ -658,15 +695,14 @@ const BanHangPage = ({
 
   const clearManualSalePrices = () => setData(items => items.map(({ manualSalePrice, ...item }) => item));
 
-  const handleCurrencyChange = (nextCurrency) => {
-    clearManualSalePrices();
-    setCurrency(nextCurrency);
-    if (nextCurrency === CURRENCY_VND) setExchangeRate(1);
-  };
-
   const handleExchangeRateChange = (value) => {
-    clearManualSalePrices();
     const nextExchangeRate = Number(value ?? 0);
+    if (!Number.isFinite(nextExchangeRate) || nextExchangeRate <= 0) return;
+    // Keep the currently displayed USD price; changing the rate only converts to VND.
+    setData(data.map(({ manualSalePrice, ...item }) => ({
+      ...item,
+      manualSalePriceUsd: item.salePriceUsd,
+    })));
     setExchangeRate(nextExchangeRate);
   };
 
@@ -680,14 +716,16 @@ const BanHangPage = ({
   };
 
   const handleChange = (key, field, value) => {
-    if (restrictOrderFields && ['code', 'profit', 'manualSalePrice'].includes(field)) return;
+    if (restrictOrderFields && ['code', 'profit', 'manualSalePrice', 'manualSalePriceVnd', 'manualSalePriceUsd'].includes(field)) return;
     const newData = data.map(item => ({ ...item }));
     const target = newData.find((item) => item.key === key);
     if (!target) {
       return;
     }
 
-    if (['quantity', 'productPrice', 'discountRate', 'discountAmount', 'profit', 'totalPrice', 'manualSalePrice'].includes(field)) {
+    if (['manualSalePriceVnd', 'manualSalePriceUsd'].includes(field)) {
+      target[field] = value == null || value === '' ? null : Number(value);
+    } else if (['quantity', 'productPrice', 'discountRate', 'discountAmount', 'profit', 'totalPrice', 'manualSalePrice'].includes(field)) {
       target[field] = parseFloat(value || 0);
     } else if (field === 'warehouse') {
       target[field] = target.warehouseOptions.find(option => option.id === value)?.stockName || '';
@@ -699,6 +737,7 @@ const BanHangPage = ({
 
     if (['productPrice', 'profit', 'discountRate', 'discountAmount'].includes(field)) {
       delete target.manualSalePrice;
+      delete target.manualSalePriceUsd;
     }
 
     /* Calculate dependent fields */
@@ -839,9 +878,9 @@ const BanHangPage = ({
     const submit = async (mCustomer) => {
       let params = {
         customer: mCustomer,
-        details: data.map(({ mSkuDetails, manualSalePrice, salePrice, ...detail }) => ({
+        details: data.map(({ mSkuDetails, manualSalePrice, manualSalePriceVnd, manualSalePriceUsd, salePriceUsd, salePrice, salePriceVnd, ...detail }) => ({
           ...detail,
-          price: manualSalePrice ?? getSalePrice(detail),
+          price: manualSalePriceVnd ?? (manualSalePriceUsd != null ? manualSalePriceUsd * displayExchangeRate : manualSalePrice ?? getSalePrice(detail)),
           dayQuote: formatDayQuoteForPayload(detail.dayQuote),
           skuDetails: resolveOrderSkuDetails({ ...detail, mSkuDetails })
         })),
@@ -903,7 +942,7 @@ const BanHangPage = ({
         details: data
       }
     });
-  }, [business, currency, data, dataId, customer, customerOrder, exchangeRate, getSalePrice, onSaveSuccess, shippingCost, vatRate]);
+  }, [business, currency, data, dataId, customer, customerOrder, displayExchangeRate, exchangeRate, getSalePrice, onSaveSuccess, shippingCost, vatRate]);
 
   const onOpenFormPayment = useCallback(() => {
     InAppEvent.emit(HASH_MODAL, {
@@ -944,6 +983,7 @@ const BanHangPage = ({
             'code',
             'profit',
             'salePrice',
+            'salePriceVnd',
             'lineAmount',
             'vatAmount',
             'grandTotal',
@@ -964,7 +1004,6 @@ const BanHangPage = ({
                     size="small"
                     value={currency}
                     options={currencyOptions}
-                    onChange={handleCurrencyChange}
                     style={{ width: 90 }}
                   />
                 </Space>
@@ -988,14 +1027,15 @@ const BanHangPage = ({
             <Table.Summary.Cell index={3}></Table.Summary.Cell>
             <Table.Summary.Cell index={4}></Table.Summary.Cell>
             <Table.Summary.Cell index={5}></Table.Summary.Cell>
-            <Table.Summary.Cell index={6} align="right">{totalQuantity}</Table.Summary.Cell>
-            <Table.Summary.Cell index={7} align="right">{formatDisplayAmount(totalSubOrder)}</Table.Summary.Cell>
-            <Table.Summary.Cell index={8} align="right">{formatDisplayAmount(totalVat)}</Table.Summary.Cell>
-            <Table.Summary.Cell index={9} align="right"><Text strong>{formatDisplayAmount(totalOrder)}</Text></Table.Summary.Cell>
-            <Table.Summary.Cell index={10}></Table.Summary.Cell>
+            <Table.Summary.Cell index={6}></Table.Summary.Cell>
+            <Table.Summary.Cell index={7} align="right">{totalQuantity}</Table.Summary.Cell>
+            <Table.Summary.Cell index={8} align="right">{formatDisplayAmount(totalSubOrder)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={9} align="right">{formatDisplayAmount(totalVat)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={10} align="right"><Text strong>{formatDisplayAmount(totalOrder)}</Text></Table.Summary.Cell>
             <Table.Summary.Cell index={11}></Table.Summary.Cell>
-            <Table.Summary.Cell index={12} align="right">{formatCurrencyAmount(totalDiscount, currency)}</Table.Summary.Cell>
-            <Table.Summary.Cell index={13} colSpan={hideEditColumn ? 4 : 5}></Table.Summary.Cell>
+            <Table.Summary.Cell index={12}></Table.Summary.Cell>
+            <Table.Summary.Cell index={13} align="right">{formatCurrencyAmount(totalDiscount, currency)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={14} colSpan={hideEditColumn ? 4 : 5}></Table.Summary.Cell>
           </Table.Summary.Row>
         )}
       />

@@ -28,6 +28,12 @@
  */
 
 export const FIELD_TYPES = [
+  {
+    type: 'dynamic_table', label: 'Bảng động', icon: 'AppstoreOutlined', component: 'FormDynamicTableField',
+    defaultConfig: { widget: 'dynamic_table', valueType: 'object', allowAddRows: true, allowAddColumns: true,
+      columns: [{ key: 'code', label: 'Mã', type: 'text', required: true }, { key: 'quantity', label: 'Số lượng', type: 'number' }] },
+    configSchema: [],
+  },
   // ─── Block ───────────────────────────────────────────────────────────────
   {
     type        : 'block',

@@ -23,6 +23,7 @@ import useQuotationViewer from './hooks/useQuotationViewer'
 import useWorkflowModal from './hooks/useWorkflowModal'
 import useWorkflowProgressDrawer from './hooks/useWorkflowProgressDrawer'
 import OrderInboundDrawer from './components/OrderInboundDrawer'
+import OrderDeliveryDrawer from './components/OrderDeliveryDrawer'
 import {
   getOrderDetails,
   getShippingHistory,
@@ -114,6 +115,8 @@ const ListOrder = ({
   const [opportunityStatusOptions, setOpportunityStatusOptions] = useState([])
   const [shippingStatusOptions, setShippingStatusOptions] = useState([])
   const [inboundOrder, setInboundOrder] = useState(null)
+  const [deliveryOrder, setDeliveryOrder] = useState(null)
+  const canCreateDelivery = useTrackingOverview && isOrderList && hasPermission('inventory.delivery.create')
 
   useEffect(() => {
     let mounted = true
@@ -242,7 +245,7 @@ const ListOrder = ({
 
   const actionWidth = (
     filter.type === 'cohoi' ? 260 : 220
-  ) + ((extraActions?.length ?? 0) * 44) + (canCreateReceipt ? 44 : 0)
+  ) + ((extraActions?.length ?? 0) * 44) + (canCreateReceipt ? 44 : 0) + (canCreateDelivery ? 44 : 0)
 
   const columnOptions = {
     isOpportunityList,
@@ -274,6 +277,8 @@ const ListOrder = ({
     canViewWorkflow,
     canCreateReceipt,
     openOrderInboundDrawer: setInboundOrder,
+    canCreateDelivery,
+    openOrderDeliveryDrawer: setDeliveryOrder,
   }
 
   const shippingStatusById = useMemo(() => shippingStatusOptions.reduce(
@@ -393,6 +398,8 @@ const ListOrder = ({
         initialOrder={inboundOrder}
         onClose={() => setInboundOrder(null)}
       />
+      <OrderDeliveryDrawer order={deliveryOrder} onClose={() => setDeliveryOrder(null)}
+        onSaved={() => f5List(listApiPath)} />
 
       <GeneratedDocumentViewer
         open={quoteViewerOpen}

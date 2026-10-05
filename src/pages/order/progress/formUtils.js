@@ -1,4 +1,5 @@
 import dayjs from 'dayjs'
+import { projectTableErpValues } from '../../../utils/dynamicTableErp'
 import { toNumberOrNull } from './utils'
 import { coerceGuardValue } from './guards'
 
@@ -149,7 +150,7 @@ export const normalizeSubmissionValues = (values = {}, currentForm) => {
     }
   })
 
-  return payloadValues
+  return projectTableErpValues(payloadValues, formFields)
 }
 
 export const buildWorkflowSubmissionPayload = ({

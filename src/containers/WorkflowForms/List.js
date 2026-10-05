@@ -29,6 +29,8 @@ import { RequestUtils } from '@flast-erp/core/utils'
 import { SUCCESS_CODE } from '@/configs'
 import { getBusinessIdLocal } from '@/utils/dataUtils'
 import { parseJsxToSchema } from '@/containers/PreviewModal/parseJSXSchema'
+import { DynamicTableControl, FormDynamicTableField } from '../PreviewModal/DynamicTableField'
+import { projectTableErpValues } from '../../utils/dynamicTableErp'
 import useGetMe from '@/hooks/useGetMe'
 import dayjs from 'dayjs'
 import Filter from './Filter'
@@ -399,12 +401,12 @@ const normalizeSubmissionValue = (value, inputType) => {
 
 const normalizeSubmissionValues = (values = {}, fields = []) => {
   const fieldTypeByKey = collectFieldTypeByKey(fields)
-  return Object.fromEntries(
+  return projectTableErpValues(Object.fromEntries(
     Object.entries(values).map(([key, value]) => [
       key,
       normalizeSubmissionValue(value, fieldTypeByKey.get(key)),
     ]),
-  )
+  ), fields)
 }
 
 const resolveBizId = (profile) => {
@@ -424,6 +426,8 @@ const renderInputField = (field = {}) => {
   const options = normalizeFieldOptions(config.options ?? [])
 
   switch (field.inputType) {
+    case 'dynamic_table':
+      return <DynamicTableControl tableConfig={config} />
     case 'textarea':
       return <Input.TextArea rows={config.rows ?? 3} placeholder={placeholder} />
     case 'number':
@@ -459,7 +463,14 @@ const renderInputField = (field = {}) => {
 const FormEntryFields = ({ fields = [] }) => (
   <div className="form-entry-grid">
     {fields.map(field => {
-      if (field.inputType === 'block') {
+      if (field.inputType === 'dynamic_table' || field.config?.widget === 'dynamic_table') {
+        return <div key={field.id ?? field.fieldKey} className="form-entry-field"
+          style={{ gridColumn: `span ${field.colSpan ?? 24}` }}>
+          <FormDynamicTableField name={field.fieldKey} label={field.label}
+            required={field.isRequired} tableConfig={field.config} />
+        </div>
+      }
+      if (field.inputType === 'block' && field.config?.widget !== 'dynamic_table') {
         return (
           <div
             key={field.id ?? field.fieldKey}
