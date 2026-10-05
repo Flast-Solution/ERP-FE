@@ -63,6 +63,8 @@ const createOrderTrackingColumns = ({
   canViewWorkflow,
   canCreateReceipt,
   openOrderInboundDrawer,
+  canCreateDelivery,
+  openOrderDeliveryDrawer,
 }) => [
   {
     title: 'Mã đơn',
@@ -380,6 +382,8 @@ const createOrderTrackingColumns = ({
           canViewWorkflow={canViewWorkflow}
           canCreateReceipt={canCreateReceipt}
           openOrderInboundDrawer={openOrderInboundDrawer}
+          canCreateDelivery={canCreateDelivery}
+          openOrderDeliveryDrawer={openOrderDeliveryDrawer}
         />
       </Space>
     ),

@@ -13,6 +13,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { getTableErpFields } from '../../utils/dynamicTableErp'
 import { Button, Checkbox, ColorPicker, Dropdown, Input, message, Popconfirm, Popover, Select } from 'antd'
 import {
   CloseOutlined,
@@ -404,6 +405,16 @@ const FormBuilder = ({
     const saveMeta = saveSchema?.meta ?? templateMeta
     const saveFields = saveSchema?.fields ?? fields
     const allFields = flattenFields(saveFields).filter(field => !isHiddenField(field))
+    const invalidTable = allFields.find(field => field.inputType === 'dynamic_table' && (
+      !Array.isArray(field.config?.columns) || !field.config.columns.length
+      || field.config.columns.some(column => !column.label?.trim() || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(column.key)
+        || !['text', 'number', 'boolean', 'date'].includes(column.type))
+      || new Set(field.config.columns.map(column => column.key)).size !== field.config.columns.length
+    ))
+    if (invalidTable) {
+      message.error(`Bảng "${invalidTable.label}": cần ít nhất một cột, tên/kiểu hợp lệ và mã cột duy nhất.`)
+      return
+    }
 
     const emptyKey = allFields.find(f => !f.fieldKey)
     if (emptyKey) {
@@ -411,7 +422,7 @@ const FormBuilder = ({
       return
     }
 
-    const keys   = allFields.map(f => f.fieldKey)
+    const keys   = allFields.flatMap(field => [field.fieldKey, ...getTableErpFields(field).map(item => item.fieldKey)])
     const hasDup = keys.length !== new Set(keys).size
     if (hasDup) {
       message.error('Có mã field bị trùng trong form. Vui lòng kiểm tra lại.')

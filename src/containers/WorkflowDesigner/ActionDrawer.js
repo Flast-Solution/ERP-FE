@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Checkbox, Form, Input, InputNumber, Select, Switch } from 'antd'
 import { CloseOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
-import { RequestUtils } from '@flast-erp/core/utils'
+import { fetchWorkflowTemplateFields } from '@/utils/workflowTemplateFields'
 import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard'
 import { collectWorkflowValueFields } from '@/utils/workflowFormFields'
 import { PanelBody, SectionLabel } from './styles'
@@ -221,10 +221,7 @@ const fetchStepFieldOptions = async (forms = []) => {
 
   if (!formIds.length) return []
 
-  const response = await RequestUtils.Post(
-    '/workflow/forms/template/find-template-field',
-    formIds
-  )
+  const response = await fetchWorkflowTemplateFields(formIds)
 
   return collectWorkflowValueFields(getTemplateFieldList(response)
     .flatMap((item) => Array.isArray(item?.fields) ? item.fields : [item]))

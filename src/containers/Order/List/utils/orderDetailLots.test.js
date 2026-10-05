@@ -39,3 +39,34 @@ test('keeps latest version per step and template without duplicating lots', () =
   ] }, 113)
   expect(rows.map(row => row.code_lot)).toEqual(['new'])
 })
+
+test('reads nhap_lot rows and typed columns instead of stale lots in the same submission', () => {
+  const rows = buildLotDetailRows({ submissions: [{ id: 57, stepCode: 'start', templateId: 52, version: 8,
+    valuesJson: {
+      lots: [{ code_lot: 'old', so_luong: 1 }],
+      nhap_lot: {
+        rows: [{ code: '1', quantity: 1000, employe: 'Duongtm', quality: true },
+          { code: '2', quantity: 500, quality: false }],
+        columns: [{ key: 'quality', label: 'Chất lượng', type: 'boolean' }],
+      },
+    },
+  }] }, 113)
+  expect(rows.map(row => [row.code_lot, row.so_luong])).toEqual([['1', 1000], ['2', 500]])
+  expect(rows[0]._criteria).toEqual([{ id: 'quality', name: 'Chất lượng', type: 'boolean' }])
+  expect(rows[1].danh_gia.quality).toBe(false)
+  expect(rows[0]._source).toBe('nhap_lot')
+})
+
+test('an empty nhap_lot does not fall back to stale lots', () => {
+  expect(buildLotDetailRows({ submissions: [{ valuesJson: {
+    nhap_lot: { rows: [], columns: [] }, lots: [{ code_lot: 'old' }],
+  } }] }, 113)).toEqual([])
+})
+
+test('a newer template for the same step supersedes the previous template', () => {
+  const rows = buildLotDetailRows({ submissions: [
+    { id: 1, stepCode: 'start', templateId: 50, version: 4, valuesJson: { lots: [{ code_lot: 'old' }] } },
+    { id: 2, stepCode: 'start', templateId: 52, version: 8, valuesJson: { nhap_lot: { rows: [{ code: 'new', quantity: 500 }] } } },
+  ] }, 113)
+  expect(rows.map(row => row.code_lot)).toEqual(['new'])
+})

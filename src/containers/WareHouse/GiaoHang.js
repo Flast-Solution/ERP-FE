@@ -235,6 +235,8 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
 
         const delivery = submittedData.delivery ?? EMPTY_RECORD;
         const lots = Array.isArray(submittedData.lots) ? submittedData.lots : [];
+        if (data.orderDetailId != null && String(submittedData.orderDetailId) !== String(data.orderDetailId)) return;
+        if (data.orderDetailId != null && lots.some(lot => !(data.inStocks ?? []).some(item => String(item.id) === String(lot.historyId)))) return;
         const mode = delivery.mode ?? 'self';
 
         hasSubmittedDataRef.current = true;
@@ -283,7 +285,7 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
     return () => {
       mounted = false;
     };
-  }, [form, initialDeliveryCode, orderCode, productId]);
+  }, [data.inStocks, data.orderDetailId, form, initialDeliveryCode, orderCode, productId]);
 
   useEffect(() => {
     if (Array.isArray(data.inStocks) && data.inStocks.length > 0) {
@@ -446,6 +448,22 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
 
     const selectedLots = lotRows.filter(row => selectedLotKeys.includes(row.id));
     const primaryLot = selectedLots[0];
+    if (selectedLots.length !== selectedLotKeys.length || selectedLots.some(lot => {
+      const quantity = Number(lotQuantities[lot.id]);
+      return !Number.isFinite(quantity) || quantity <= 0 || quantity > lot.quantity;
+    })) {
+      setLotValidationError('Số lượng xuất của mỗi lot phải lớn hơn 0 và không vượt tồn còn.');
+      return;
+    }
+    if (!primaryLot || selectedLots.some(lot => (
+      String(lot.orderId) !== String(primaryLot.orderId)
+      || String(lot.orderDetailId) !== String(primaryLot.orderDetailId)
+      || String(lot.productId) !== String(primaryLot.productId)
+      || String(lot.skuId) !== String(primaryLot.skuId)
+    ))) {
+      setLotValidationError('Chỉ chọn các lot thuộc cùng đơn con và sản phẩm/SKU.');
+      return;
+    }
     const lots = selectedLots.map(row => ({
       historyId: row.id,
       warehouserProductId: row.warehouserProductId,
@@ -503,6 +521,7 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
       }
       message.success(response.message);
       closeModal?.();
+      data.onSaved?.(response.data);
     } catch (error) {
       message.error(error?.response?.data?.message ?? error?.message ?? 'Không thể tạo lệnh xuất kho');
     } finally {

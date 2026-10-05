@@ -1,6 +1,7 @@
 import { nanoid } from 'nanoid'
 
 const COMPONENT_TO_INPUT = {
+  FormDynamicTableField: 'dynamic_table',
   FormBlockPreview: 'block',
   FormHidden: 'hidden',
   FormInput: 'text',
@@ -297,6 +298,12 @@ const normalizeOption = (item = {}) => ({
 const mapComponentToField = (componentName, props, span, constants = new Map()) => {
   let inputType = COMPONENT_TO_INPUT[componentName] ?? 'text'
   const config = {}
+  if (componentName === 'FormDynamicTableField') {
+    const tableConfig = resolveExpressionValue(props.tableConfig?.value, constants)
+    if (tableConfig && typeof tableConfig === 'object') Object.assign(config, tableConfig)
+    config.widget = 'dynamic_table'
+    config.valueType = 'object'
+  }
 
   if (componentName === 'FormInputNumber') {
     const precision = Number(props.precision?.value ?? 0)

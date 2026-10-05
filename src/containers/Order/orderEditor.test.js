@@ -89,19 +89,17 @@ test('keeps row prices and summary in sync as rate, profit and order shipping ch
   expect(mainTable().dataSource[0].totalPrice).toBe(6825000);
   expect(totalsTable().dataSource[1].rightValue).toBe('$272.5');
   const currencySelect = Select.mock.calls.map(call => call[0]).filter(props => props.options?.some(option => option.value === 'USD')).at(-1);
-  await act(async () => currencySelect.onChange('VND'));
-  expect(mainTable().dataSource[0].totalPrice).toBe(263);
-  expect(totalsTable().dataSource[1].rightValue).toBe('273\u00a0₫');
+  expect(currencySelect.options).toEqual([{ label: 'USD', value: 'USD' }]);
   await act(async () => mainTable().columns.find(col => col.key === 'operation').render(null, mainTable().dataSource[0]).props.onEdit());
   await act(async () => mainTable().columns.find(col => col.key === 'quantity').render(2, mainTable().dataSource[0]).props.onChange(3));
   await act(async () => mainTable().columns.find(col => col.key === 'productPrice').render(100, mainTable().dataSource[0]).props.onChange(200));
-  expect(mainTable().dataSource[0].totalPrice).toBe(763);
-  expect(totalsTable().dataSource[1].rightValue).toBe('773\u00a0₫');
+  expect(mainTable().dataSource[0].totalPrice).toBe(19825000);
+  expect(totalsTable().dataSource[1].rightValue).toBe('$772.5');
   const saveButton = Array.from(container.querySelectorAll('button')).find(button => button.textContent === 'Lưu đơn hàng');
   await act(async () => saveButton.click());
   expect(RequestUtils.Post).toHaveBeenCalledWith('/order/save', expect.objectContaining({
-    currency: 'VND', exchangeRate: 1, shippingCost: 10,
-    details: [expect.objectContaining({ productPrice: 200, quantity: 3, totalPrice: 763, total: 763, price: 763 / 3 })],
+    currency: 'USD', exchangeRate: 26000, shippingCost: 10,
+    details: [expect.objectContaining({ productPrice: 200, quantity: 3, totalPrice: 19825000, total: 19825000, price: 19825000 / 3 })],
   }));
 });
 
@@ -170,7 +168,7 @@ test('formats displayed money while preserving editable backend precision', asyn
   const table = mainTable();
   const row = table.dataSource[0];
   const purchase = table.columns.find(col => col.key === 'productPrice');
-  expect(purchase.render(row.productPrice, row)).toBe('100.000\u00a0₫');
+  expect(purchase.render(row.productPrice, row)).toBe('$100,000.22');
   expect(table.columns.find(col => col.key === 'salePrice').render(null, row).props.value).toBe(100.323);
   expect(row.totalPrice).toBe(100);
 });
@@ -211,4 +209,59 @@ test('saves dayQuote as a full timestamp and preserves its time', async () => {
   await act(async () => Array.from(container.querySelectorAll('button')).find(button => button.textContent === 'Lưu đơn hàng').click());
   const payload = RequestUtils.Post.mock.calls.find(([url]) => url === '/order/save')[1];
   expect(payload.details[0].dayQuote).toBe('2026-09-21 08:32:28');
+});
+
+test('prioritizes manual VND price across USD and exchange rate changes, including zero', async () => {
+  await act(async () => root.render(<OrderEditor orderId={2} />));
+  const row = () => mainTable().dataSource[0];
+  const input = key => mainTable().columns.find(column => column.key === key).render(null, row()).props;
+  await act(async () => input('salePrice').onChange(120));
+  expect(input('salePriceVnd').value).toBe(3000000);
+  await act(async () => input('salePriceVnd').onChange(2800000));
+  await act(async () => input('salePrice').onChange(130));
+  const rate = InputNumber.mock.calls.map(call => call[0]).filter(props => props.style?.width === 170).at(-1);
+  await act(async () => rate.onChange(26000));
+  expect(input('salePrice').value).toBe(130);
+  expect(input('salePriceVnd').value).toBe(2800000);
+  expect(row().totalPrice).toBe(5600000);
+  await act(async () => Array.from(container.querySelectorAll('button')).find(button => button.textContent === 'Lưu đơn hàng').click());
+  const payload = RequestUtils.Post.mock.calls.find(([url]) => url === '/order/save')[1];
+  expect(payload.details[0].price).toBe(2800000);
+  expect(payload.details[0]).not.toHaveProperty('manualSalePriceVnd');
+});
+
+test('clearing manual VND returns to USD times rate and manual zero stays zero', async () => {
+  await act(async () => root.render(<OrderEditor orderId={2} />));
+  const input = key => mainTable().columns.find(column => column.key === key).render(null, mainTable().dataSource[0]).props;
+  await act(async () => input('salePrice').onChange(120));
+  await act(async () => input('salePriceVnd').onChange(0));
+  expect(mainTable().dataSource[0].totalPrice).toBe(0);
+  await act(async () => input('salePriceVnd').onChange(null));
+  expect(input('salePriceVnd').value).toBe(3000000);
+  expect(mainTable().dataSource[0].totalPrice).toBe(6000000);
+});
+
+test('converts legacy VND inputs to USD using the saved exchange rate', async () => {
+  OrderService.getOrderOnEdit.mockResolvedValue({
+    customer: { id: 1 }, order: { id: 2, currency: 'VND', exchangeRate: 25000, shippingCost: 50000 },
+    data: [{ key: 'line', quantity: 2, productPrice: 2500000, discountAmount: 25000, price: 3000000 }],
+  });
+  await act(async () => root.render(<OrderEditor orderId={2} />));
+  expect(mainTable().dataSource[0]).toMatchObject({ currency: 'USD', productPrice: 100, discountAmount: 1, price: 3000000 });
+  expect(mainTable().columns.find(column => column.key === 'salePrice').render(null, mainTable().dataSource[0]).props.value).toBe(120);
+});
+
+test('preserves a saved USD sale price when the rate changes from 1 to 20000', async () => {
+  OrderService.getOrderOnEdit.mockResolvedValue({
+    customer: { id: 1 }, order: { id: 2, currency: 'USD', exchangeRate: 1 },
+    data: [{ key: 'line', quantity: 1, productPrice: 1.48, price: 1, discountAmount: 0 }],
+  });
+  await act(async () => root.render(<OrderEditor orderId={2} />));
+  const input = key => mainTable().columns.find(column => column.key === key).render(null, mainTable().dataSource[0]).props;
+  expect(input('salePrice').value).toBe(1);
+  const rate = InputNumber.mock.calls.map(call => call[0]).filter(props => props.style?.width === 170).at(-1);
+  await act(async () => rate.onChange(20000));
+  expect(input('salePrice').value).toBe(1);
+  expect(input('salePriceVnd').value).toBe(20000);
+  expect(mainTable().dataSource[0].totalPrice).toBe(20000);
 });
