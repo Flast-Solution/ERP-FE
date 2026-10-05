@@ -103,21 +103,10 @@ const ensureToken = async () => {
   return session.token;
 };
 
-/* Body trả về dạng JSON { result } hoặc chuỗi DI thô */
+/* Body trả về cùng cấu trúc { errorCode, data } với API của app */
 const readResult = async (response) => {
-  const text = await response.text();
-  try {
-    const json = JSON.parse(text);
-    if (json && typeof json === 'object' && 'result' in json) {
-      return json.result;
-    }
-    if (json && typeof json === 'object' && 'data' in json) {
-      return json.data;
-    }
-    return json;
-  } catch (error) {
-    return text;
-  }
+  const json = await response.json();
+  return unwrap(json);
 };
 
 /* Loại 2: lệnh webrtc_gw dùng fetch + Bearer token vừa xin, không qua axios của app */
