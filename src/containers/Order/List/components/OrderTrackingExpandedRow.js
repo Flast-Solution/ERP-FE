@@ -47,7 +47,7 @@ const belongsToDetail = (item, detail) => {
     && String(item?.entityId) === String(detailId)
 }
 
-const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityList = false }) => {
+const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityList = false, productionOverview = false }) => {
   const [activeDetailRowKey, setActiveDetailRowKey] = useState()
   const [expandedLotRowKey, setExpandedLotRowKey] = useState(null)
   const details = getOrderDetails(record)
@@ -72,7 +72,7 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityLis
       1,
       detailManufactureProducts.length,
       detailReceipts.length,
-      detailShipping.length
+      productionOverview ? 0 : detailShipping.length
     )
 
     return Array.from({ length: rowCount }, (_, rowIndex) => ({
@@ -96,15 +96,22 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityLis
           title: 'Mã đơn con',
           dataIndex: '_detailCode',
           width: 155,
-          onCell: detail => ({ rowSpan: detail?._detailRowSpan }),
+          onCell: detail => ({ rowSpan: expandedLotRowKey == null ? detail?._detailRowSpan : 1 }),
           render: value => <Text strong>{value || '—'}</Text>,
         },
+        ...(productionOverview ? [{
+          title: 'Mã lệnh sản xuất',
+          key: 'productionCode',
+          dataIndex: '_manufactureProduct',
+          width: 185,
+          render: item => item?.manufactureProduct?.code || '—',
+        }] : []),
         {
           title: 'Sản phẩm / SKU',
           key: 'product',
           width: 220,
           ellipsis: true,
-          onCell: detail => ({ rowSpan: detail?._detailRowSpan }),
+          onCell: detail => ({ rowSpan: expandedLotRowKey == null ? detail?._detailRowSpan : 1 }),
           render: (_, detail) => {
             const product = [detail?.productName, detail?.productCode].filter(Boolean).join(' - ') || '—'
             const sku = getSkuText(detail)
@@ -127,7 +134,7 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityLis
           title: 'Ngày tạo',
           dataIndex: 'createdAt',
           width: 125,
-          onCell: detail => ({ rowSpan: detail?._detailRowSpan }),
+          onCell: detail => ({ rowSpan: expandedLotRowKey == null ? detail?._detailRowSpan : 1 }),
           render: value => formatTime(value || record?.createdAt) || '—',
         },
         {
@@ -135,7 +142,7 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityLis
           dataIndex: 'quantity',
           width: 105,
           align: 'right',
-          onCell: detail => ({ rowSpan: detail?._detailRowSpan }),
+          onCell: detail => ({ rowSpan: expandedLotRowKey == null ? detail?._detailRowSpan : 1 }),
           render: (value, detail) => formatQuantity(value, detail?.unit),
         },
         {
@@ -143,14 +150,14 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityLis
           dataIndex: 'price',
           width: 130,
           align: 'right',
-          onCell: detail => ({ rowSpan: detail?._detailRowSpan }),
+          onCell: detail => ({ rowSpan: expandedLotRowKey == null ? detail?._detailRowSpan : 1 }),
           render: (value, detail) => formatMoney(value, detail?.currency || record?.currency),
         },
         {
           title: 'Deadline',
           dataIndex: 'dayQuote',
           width: 125,
-          onCell: detail => ({ rowSpan: detail?._detailRowSpan }),
+          onCell: detail => ({ rowSpan: expandedLotRowKey == null ? detail?._detailRowSpan : 1 }),
           render: value => formatTime(value) || '—',
         },
       ],
@@ -260,7 +267,10 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityLis
         },
       ],
     },
-  ].filter((_, index) => !isOpportunityList || index === 0)
+  ].filter((group, index) => (
+    (!isOpportunityList || index === 0)
+    && (!productionOverview || group.key !== 'outbound')
+  ))
 
   return (
     <div className="order-tracking-master">
@@ -285,7 +295,7 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityLis
           expandedRowRender: detail => <OrderDetailLots detailId={getDetailId(detail)} />,
         }}
         locale={{ emptyText: 'Đơn hàng chưa có đơn con' }}
-        scroll={{ x: isOpportunityList ? columns.flatMap(group => group.children).reduce((total, column) => total + (column.width || 100), 0) : 2160 }}
+        scroll={{ x: columns.flatMap(group => group.children).reduce((total, column) => total + (column.width || 100), 0) }}
         rowClassName={detail => (
           detail?._detailGroupKey === activeDetailRowKey
             ? 'order-tracking-detail-row order-tracking-detail-row--active'

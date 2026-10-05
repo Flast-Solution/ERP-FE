@@ -74,6 +74,7 @@ const OrderProduction = () => {
                 apiPath="erp/manufacture/get-order"
                 initialPage={0}
                 orderMode
+                productionOverview
                 hideQuoteButton={true}
                 disableWorkflowAttach={true}
                 showWorkflowProgressAction

@@ -87,6 +87,7 @@ const ListOrder = ({
   orderMode = false,
   hideEditorEditColumn = false,
   trackingOverview = false,
+  productionOverview = false,
   detailDrawerHash = '#order.tabs',
   detailDrawerTitle,
 }) => {
@@ -99,6 +100,8 @@ const ListOrder = ({
   const isOpportunityList = filter.type === 'cohoi'
   const useTrackingOverview = isHatecoBusiness(user?.bizId)
     && ((trackingOverview && isOrderList) || isOpportunityList)
+  const useProductionOverview = productionOverview && isOrderList && isHatecoBusiness(user?.bizId)
+  const useTrackingLayout = useTrackingOverview || useProductionOverview
   const listApiPath = useTrackingOverview ? ORDER_TRACKING_API : apiPath
   const canViewDetail = hasPermission(isOpportunityList
     ? 'sales.opportunity.detail.view'
@@ -305,8 +308,8 @@ const ListOrder = ({
     {}
   ), [shippingStatusOptions])
 
-  const columns = useTrackingOverview
-    ? createOrderTrackingColumns({ ...columnOptions, shippingStatusById })
+  const columns = useTrackingLayout
+    ? createOrderTrackingColumns({ ...columnOptions, shippingStatusById, productionOverview: useProductionOverview })
     : createOrderColumns(columnOptions)
 
   const orderLotExpandable = enableLotTree
@@ -320,7 +323,7 @@ const ListOrder = ({
     })
     : undefined
 
-  const trackingExpandable = useTrackingOverview
+  const trackingExpandable = useTrackingLayout
     ? {
       showExpandColumn: false,
       expandedRowKeys: activeTrackingRowKey == null ? [] : [activeTrackingRowKey],
@@ -328,6 +331,7 @@ const ListOrder = ({
         <OrderTrackingExpandedRow
           record={record}
           isOpportunityList={isOpportunityList}
+          productionOverview={useProductionOverview}
           shippingStatusById={shippingStatusById}
         />
       ),
@@ -343,12 +347,12 @@ const ListOrder = ({
 
   return (
     <>
-      <div className={useTrackingOverview ? "order-tracking-compact" : undefined}>
+      <div className={useTrackingLayout ? "order-tracking-compact" : undefined}>
       <RestList
         rowKey={useTrackingOverview ? '_trackingRowKey' : 'id'}
         bordered
-        size={useTrackingOverview ? 'small' : undefined}
-        xScroll={useTrackingOverview
+        size={useTrackingLayout ? 'small' : undefined}
+        xScroll={useTrackingLayout
           ? columns.flatMap(column => column.children ?? [column]).reduce((width, column) => width + (Number(column.width) || 100), 0)
           : (isOpportunityList ? 1200 : 1800)}
         expandable={trackingExpandable ?? orderLotExpandable}
@@ -363,21 +367,21 @@ const ListOrder = ({
         apiPath={listApiPath}
         columns={columns}
         rowClassName={record => (
-          useTrackingOverview && record?._trackingRowKey === activeTrackingRowKey
+          useTrackingLayout && (record?._trackingRowKey ?? record?.id) === activeTrackingRowKey
             ? 'order-tracking-row order-tracking-row--active'
-            : (useTrackingOverview ? 'order-tracking-row' : '')
+            : (useTrackingLayout ? 'order-tracking-row' : '')
         )}
-        onRow={record => useTrackingOverview ? ({
+        onRow={record => useTrackingLayout ? ({
           tabIndex: 0,
           onClick: () => setActiveTrackingRowKey(current => (
-            current === record?._trackingRowKey ? null : record?._trackingRowKey
+            current === (record?._trackingRowKey ?? record?.id) ? null : (record?._trackingRowKey ?? record?.id)
           )),
           onKeyDown: event => {
             if (event.target !== event.currentTarget) return
             if (event.key === 'Enter' || event.key === ' ') {
               event.preventDefault()
               setActiveTrackingRowKey(current => (
-                current === record?._trackingRowKey ? null : record?._trackingRowKey
+                current === (record?._trackingRowKey ?? record?.id) ? null : (record?._trackingRowKey ?? record?.id)
               ))
             }
           },

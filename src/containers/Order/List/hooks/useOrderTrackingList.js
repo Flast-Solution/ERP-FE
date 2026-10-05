@@ -6,12 +6,12 @@ import { normalizeTrackingResponse } from '../utils/orderTracking'
 
 const FILTER_CONFIG = {
   code: { field: 'code', operator: 'LIKE' },
-  customerMobile: { source: 'ORDER', field: 'customerMobilePhone', operator: 'CONTAINS' },
-  productName: { source: 'ORDER_DETAIL', field: 'productName', operator: 'CONTAINS' },
-  userCreatedId: { source: 'ORDER', field: 'userCreateId', operator: 'EQUALS' },
-  from: { source: 'ORDER', field: 'createdAt', operator: 'GREATER_THAN_OR_EQUALS' },
-  to: { source: 'ORDER', field: 'createdAt', operator: 'LESS_THAN_OR_EQUALS' },
-  workflowDataKeyword: { source: 'WORKFLOW_DATA', field: 'value', operator: 'CONTAINS' },
+  customerMobile: { field: 'customerMobilePhone', operator: 'CONTAINS' },
+  productName: { field: 'productName', operator: 'CONTAINS' },
+  userCreatedId: { field: 'userCreateId', operator: 'EQUALS' },
+  from: { field: 'createdAt', operator: 'GREATER_THAN_OR_EQUALS' },
+  to: { field: 'createdAt', operator: 'LESS_THAN_OR_EQUALS' },
+  workflowDataKeyword: { field: 'value', operator: 'CONTAINS' },
 }
 
 export const createRequestBody = queryParams => {

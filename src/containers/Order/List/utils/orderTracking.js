@@ -22,7 +22,10 @@ export const getWarehouseProducts = record => asArray(record?.warehouseProducts)
 
 export const getWarehouseParcels = record => asArray(record?.warehouseParcels)
 
-export const getManufactureProducts = record => asArray(record?.manufactureProducts)
+export const getManufactureProducts = record => {
+  const products = record?.manufactureProducts ?? record?.manufactureProduct
+  return Array.isArray(products) ? products : (products && typeof products === 'object' ? [products] : [])
+}
 
 export const getShippingHistory = record => asArray(record?.shippingHistory)
 
