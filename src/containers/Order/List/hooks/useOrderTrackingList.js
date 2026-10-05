@@ -5,7 +5,7 @@ import { RequestUtils } from '@flast-erp/core/utils'
 import { normalizeTrackingResponse } from '../utils/orderTracking'
 
 const FILTER_CONFIG = {
-  code: { source: 'ORDER', field: 'code', operator: 'CONTAINS' },
+  code: { field: 'code', operator: 'LIKE' },
   customerMobile: { source: 'ORDER', field: 'customerMobilePhone', operator: 'CONTAINS' },
   productName: { source: 'ORDER_DETAIL', field: 'productName', operator: 'CONTAINS' },
   userCreatedId: { source: 'ORDER', field: 'userCreateId', operator: 'EQUALS' },

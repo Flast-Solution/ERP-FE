@@ -1,4 +1,5 @@
 import ProductAttributesTooltip from './ProductAttributesTooltip'
+import OrderDetailLots from './OrderDetailLots'
 import { matchesProductionDetail } from '../utils/productionDetailMatch'
 import React, { useState } from 'react'
 import { Table, Tag, Tooltip, Typography } from 'antd'
@@ -48,6 +49,7 @@ const belongsToDetail = (item, detail) => {
 
 const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityList = false }) => {
   const [activeDetailRowKey, setActiveDetailRowKey] = useState()
+  const [expandedLotRowKey, setExpandedLotRowKey] = useState(null)
   const details = getOrderDetails(record)
   const manufactureDetails = getManufactureProducts(record).flatMap(manufactureProduct => {
     const items = Array.isArray(manufactureProduct?.details) ? manufactureProduct.details : []
@@ -276,6 +278,12 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityLis
           })),
         }))}
         dataSource={rows}
+        expandable={isOpportunityList ? undefined : {
+          showExpandColumn: false,
+          expandedRowKeys: expandedLotRowKey == null ? [] : [expandedLotRowKey],
+          rowExpandable: detail => detail._detailRowSpan > 0 && getDetailId(detail) != null,
+          expandedRowRender: detail => <OrderDetailLots detailId={getDetailId(detail)} />,
+        }}
         locale={{ emptyText: 'Đơn hàng chưa có đơn con' }}
         scroll={{ x: isOpportunityList ? columns.flatMap(group => group.children).reduce((total, column) => total + (column.width || 100), 0) : 2160 }}
         rowClassName={detail => (
@@ -283,9 +291,26 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityLis
             ? 'order-tracking-detail-row order-tracking-detail-row--active'
             : 'order-tracking-detail-row'
         )}
-        onRow={detail => ({
-          onClick: () => setActiveDetailRowKey(detail?._detailGroupKey),
-        })}
+        onRow={detail => {
+          const canExpand = !isOpportunityList && getDetailId(detail) != null
+          const lotRowKey = `${detail._detailGroupKey}-0`
+          const toggle = () => {
+            setActiveDetailRowKey(detail._detailGroupKey)
+            if (canExpand) setExpandedLotRowKey(current => current === lotRowKey ? null : lotRowKey)
+          }
+          return {
+            onClick: toggle,
+            style: canExpand ? { cursor: 'pointer' } : undefined,
+            tabIndex: canExpand ? 0 : undefined,
+            'aria-expanded': canExpand ? expandedLotRowKey === lotRowKey : undefined,
+            onKeyDown: canExpand ? event => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                toggle()
+              }
+            } : undefined,
+          }
+        }}
       />
     </div>
   )
