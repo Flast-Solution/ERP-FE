@@ -35,7 +35,7 @@ import { RequestUtils } from '@flast-erp/core/utils'
 import OrderTextTableOnly from './OrderTextTableOnly';
 
 import { SUCCESS_CODE } from '@/configs';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import useGetMe from '@/hooks/useGetMe';
 
 const OptionPrice = [
@@ -46,10 +46,7 @@ const OptionPrice = [
 
 const CURRENCY_VND = 'VND';
 const CURRENCY_USD = 'USD';
-const CURRENCY_OPTIONS = [
-  { name: CURRENCY_VND, title: 'VND - Việt Nam đồng' },
-  { name: CURRENCY_USD, title: 'USD - Đô la Mỹ' }
-];
+
 
 const normalizeCurrency = value => value === CURRENCY_USD ? CURRENCY_USD : CURRENCY_VND;
 const normalizeExchangeRate = (currency, value) => {
@@ -73,7 +70,6 @@ const OrderPayment = ({ data, readOnly = false, closeModalAfterSubmit }) => {
 
   const [form] = Form.useForm();
   const { hasPermission } = useGetMe();
-  const watchedPaymentCurrency = Form.useWatch('currency', form);
 
   const { onSave, details, customer, customerOrder, simplifiedPayment = false } = data;
   const isOpportunity = ['cohoi', 'opportunity'].includes(customerOrder?.type);
@@ -83,10 +79,7 @@ const OrderPayment = ({ data, readOnly = false, closeModalAfterSubmit }) => {
   const canConvertToOrder = hasPermission(['sales.opportunity.save', 'sales.opportunity.update']);
   const orderCurrency = normalizeCurrency(customerOrder?.currency);
   const exchangeRate = normalizeExchangeRate(orderCurrency, customerOrder?.exchangeRate);
-  const displayCurrency = readOnly
-    ? orderCurrency
-    : normalizeCurrency(watchedPaymentCurrency ?? orderCurrency);
-  const paymentCurrencyRef = useRef(orderCurrency);
+  const displayCurrency = orderCurrency;
 
   useEffect(() => {
     setConvertedToOrder(customerOrder?.type === 'order');
@@ -102,12 +95,11 @@ const OrderPayment = ({ data, readOnly = false, closeModalAfterSubmit }) => {
       customerMobilePhone: customerOrder?.customerMobilePhone ?? customer?.mobilePhone ?? '',
       customerAddress: customerOrder?.customerAddress ?? customer?.address ?? '',
     });
-    paymentCurrencyRef.current = orderCurrency;
   }, [form, customerOrder, customer, orderCurrency, readOnly]);
 
   const onSubmitPayment = useCallback(async (values) => {
     const remaining = Math.max(Number(customerOrder?.total ?? 0) - Number(customerOrder?.paid ?? 0), 0);
-    const paymentCurrency = simplifiedPayment ? orderCurrency : normalizeCurrency(values.currency);
+    const paymentCurrency = orderCurrency;
     const originalAmount = simplifiedPayment
       ? roundCurrency(fromVnd(remaining, paymentCurrency, exchangeRate), paymentCurrency)
       : Number(values.amount ?? 0);
@@ -228,20 +220,6 @@ const OrderPayment = ({ data, readOnly = false, closeModalAfterSubmit }) => {
     displayCurrency
   );
 
-  const handlePaymentCurrencyChange = (nextValue) => {
-    const nextCurrency = normalizeCurrency(nextValue);
-    const currentCurrency = paymentCurrencyRef.current;
-    const currentAmount = form.getFieldValue('amount');
-
-    if (currentAmount !== undefined && currentAmount !== null && currentAmount !== '') {
-      const amountVnd = toVnd(currentAmount, currentCurrency, exchangeRate);
-      form.setFieldValue('amount', roundCurrency(
-        fromVnd(amountVnd, nextCurrency, exchangeRate),
-        nextCurrency
-      ));
-    }
-    paymentCurrencyRef.current = nextCurrency;
-  };
 
   return (
     <div style={{ padding: 15 }}>
@@ -313,18 +291,7 @@ const OrderPayment = ({ data, readOnly = false, closeModalAfterSubmit }) => {
             </Col>
             {!simplifiedPayment && (
               <>
-                <Col md={8} xs={24}>
-                  <FormSelect
-                    required
-                    name="currency"
-                    label="Loại tiền thanh toán"
-                    resourceData={CURRENCY_OPTIONS}
-                    valueProp="name"
-                    titleProp="title"
-                    onChange={handlePaymentCurrencyChange}
-                  />
-                </Col>
-                <Col md={8} xs={24}>
+                <Col md={16} xs={24}>
                   <FormInputNumber
                     required
                     label={`Số tiền (${displayCurrency})`}

@@ -47,7 +47,7 @@ const OrderTextTableOnly = ({ details = [], currency = 'VND', orderCurrency = 'V
     },
     { title: 'Số lượng', dataIndex: 'quantity', align: 'right', width: 110 },
     { title: 'Đơn vị', dataIndex: 'unit', width: 85, render: value => value || '—' },
-    { title: 'Đơn giá', dataIndex: 'price', align: 'right', render: value => displayVnd(Number(value ?? 0) * (orderCurrency === 'USD' ? exchangeRate : 1)) },
+    { title: 'Đơn giá', dataIndex: 'price', align: 'right', render: value => displayVnd(Number(value ?? 0)) },
     { title: 'Thành tiền', align: 'right', render: (_, detail) => <strong>{displayVnd(getPaymentLineTotal(detail, orderCurrency, exchangeRate))}</strong> },
   ];
   return <Table size="small" bordered pagination={false} columns={columns} dataSource={details ?? []} rowKey={record => record.id ?? record.detailId ?? record.key} scroll={{ x: 680 }} />;

@@ -667,6 +667,7 @@ const extractListFields = (source) => {
     field.label = field.label || field.fieldKey
     field.isRequired = false
     field.isIndexed = false
+    field.config = { ...field.config, valueType: 'array' }
     fields.push(field)
     content = content.slice(0, start) + content.slice(end)
     pattern.lastIndex = start

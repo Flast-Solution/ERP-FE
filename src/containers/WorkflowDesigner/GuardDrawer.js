@@ -9,6 +9,7 @@ import {
 import { RequestUtils } from '@flast-erp/core/utils'
 import { GUARD_TYPES } from '@/store/workflowConstants'
 import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard'
+import { collectWorkflowValueFields } from '@/utils/workflowFormFields'
 import { PanelBody, SectionLabel } from './styles'
 import {
   CodeChip,
@@ -129,7 +130,7 @@ const fetchTemplateFieldOptions = async (forms = []) => {
     return items.map((item) => {
       const templateId = item.id ?? item.templateId
       const form = formById.get(String(templateId)) ?? item
-      const fields = (item.fields ?? [])
+      const fields = collectWorkflowValueFields(item.fields)
         .map(normalizeFieldOption)
         .filter(Boolean)
 
@@ -143,11 +144,11 @@ const fetchTemplateFieldOptions = async (forms = []) => {
   const groupedByTemplate = items.reduce((map, field) => {
     const templateId = field.templateId ?? field.id
     const key = templateId != null && templateId !== '' ? String(templateId) : '__ungrouped__'
-    const option = normalizeFieldOption(field)
-    if (!option) return map
+    const options = collectWorkflowValueFields([field]).map(normalizeFieldOption).filter(Boolean)
+    if (!options.length) return map
 
     if (!map.has(key)) map.set(key, [])
-    map.get(key).push(option)
+    map.get(key).push(...options)
     return map
   }, new Map())
 

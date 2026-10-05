@@ -3,6 +3,7 @@ import { Button, Checkbox, Form, Input, InputNumber, Select, Switch } from 'antd
 import { CloseOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { RequestUtils } from '@flast-erp/core/utils'
 import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard'
+import { collectWorkflowValueFields } from '@/utils/workflowFormFields'
 import { PanelBody, SectionLabel } from './styles'
 import {
   CodeChip,
@@ -225,8 +226,8 @@ const fetchStepFieldOptions = async (forms = []) => {
     formIds
   )
 
-  return getTemplateFieldList(response)
-    .flatMap((item) => Array.isArray(item?.fields) ? item.fields : [item])
+  return collectWorkflowValueFields(getTemplateFieldList(response)
+    .flatMap((item) => Array.isArray(item?.fields) ? item.fields : [item]))
     .map(normalizeFieldOption)
     .filter(Boolean)
 }

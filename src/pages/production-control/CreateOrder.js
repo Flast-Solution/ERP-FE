@@ -24,6 +24,8 @@ import {
 } from './production-order-list/constants';
 import { mergeManufactureStatuses } from './production-order-list/utils';
 
+import { getOrderProductionProgress } from './production-order-list/orderProductionProgress';
+
 const MANUFACTURE_STATUS_FILTER = { type: 'PRODUCTION' };
 const MANUFACTURE_STATUS_CREATE_DEFAULTS = {
   color: '#64748b',
@@ -147,6 +149,10 @@ const CreateOrder = ({
     });
   }, [createProductionRow, form, initialValues?.salesOrderId, initialValues?.orderDetails, initialValues?.order, initialValues?.productDetails, waitingOrders]);
 
+  const availableDetails = useMemo(() => mode === 'create'
+    ? getOrderProductionProgress(selectedOrder).pendingDetails
+    : selectedOrder?.details ?? [], [mode, selectedOrder]);
+
   const selectedDetailIds = useMemo(() => new Set(
     productionRows.map(row => row.product?.id).filter(id => id != null).map(String),
   ), [productionRows]);
@@ -176,7 +182,7 @@ const CreateOrder = ({
       message.warning('Vui lòng chọn đơn hàng trước.');
       return;
     }
-    if (selectedDetailIds.size >= (selectedOrder.details ?? []).length) {
+    if (selectedDetailIds.size >= availableDetails.length) {
       message.info('Tất cả mã đơn con đã được thêm.');
       return;
     }
@@ -185,7 +191,7 @@ const CreateOrder = ({
   };
 
   const selectProductForRow = (rowKey, detailId) => {
-    const product = (selectedOrder?.details ?? []).find(detail => String(detail.id) === String(detailId));
+    const product = availableDetails.find(detail => String(detail.id) === String(detailId));
     if (!product) return;
     onValuesChange?.();
 
@@ -294,16 +300,19 @@ const CreateOrder = ({
                   <FormSelect
                     required
                     name="salesOrderId"
-                    label="Đơn hàng TO"
+                    label="Đơn hàng to"
                     placeholder="Chọn đơn hàng"
                     resourceData={waitingOrders}
                     valueProp="id"
                     titleProp="code"
                     loading={waitingOrderLoading}
                     showSearch
-                    filterOption={false}
-                    onSearch={onSearchWaitingOrders}
-                    formatText={(code, item) => [code, item?.enterpriseName].filter(Boolean).join(' · ')}
+                    optionFilterProp="label"
+                    filterOption={(input, option) => String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
+                    formatText={(code, item) => {
+                      const { planned, total } = getOrderProductionProgress(item);
+                      return `${code} · Đã lập LSX: ${planned}/${total} đơn con`;
+                    }}
                     onChange={handleOrderChange}
                     onPopupScroll={(event) => {
                       const target = event.currentTarget;
@@ -337,7 +346,7 @@ const CreateOrder = ({
               <div className="production-child-list">
                 {productionRows.map((row, rowIndex) => {
                   const product = row.product;
-                  const options = (selectedOrder?.details ?? [])
+                  const options = availableDetails
                     .filter(detail => String(detail.id) === String(product?.id) || !selectedDetailIds.has(String(detail.id)))
                     .map(detail => ({ value: detail.id, label: getDetailLabel(detail), detail }));
 
@@ -454,7 +463,7 @@ const CreateOrder = ({
                   color="primary"
                   htmlType="button"
                   inRigth={false}
-                  disabled={!selectedOrder || selectedDetailIds.size >= (selectedOrder.details ?? []).length}
+                  disabled={!selectedOrder || selectedDetailIds.size >= availableDetails.length}
                   onClick={addProductionRow}
                 />
               )}

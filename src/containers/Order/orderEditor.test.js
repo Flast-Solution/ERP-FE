@@ -77,14 +77,17 @@ test('keeps row prices and summary in sync as rate, profit and order shipping ch
   const rateInput = InputNumber.mock.calls.map(call => call[0]).filter(props => props.style?.width === 170).at(-1);
   await act(async () => rateInput.onChange(26000));
   expect(mainTable().dataSource[0].totalPrice).toBe(5200000);
-  expect(totalsTable().dataSource[0].leftValue).toBe('5.200.000\u00a0₫');
+  expect(totalsTable().dataSource[0].leftValue).toBe('$200');
+  expect(mainTable().columns.find(col => col.key === 'salePrice').render(null, mainTable().dataSource[0]).props.value).toBe(100);
+  expect(mainTable().columns.find(col => col.key === 'lineAmount').render(null, mainTable().dataSource[0]).props.children).toBe('$200');
+  expect(mainTable().columns.find(col => col.key === 'vatAmount').render(null, mainTable().dataSource[0]).props.children).toBe('$0');
   const profitColumn = mainTable().columns.find(col => col.key === 'profit');
   await act(async () => profitColumn.render(null, mainTable().dataSource[0]).props.onChange(20));
   expect(mainTable().dataSource[0].totalPrice).toBe(6500000);
   const shippingInput = InputNumber.mock.calls.map(call => call[0]).filter(props => props.id === 'order-shipping-cost').at(-1);
   await act(async () => shippingInput.onChange(10));
   expect(mainTable().dataSource[0].totalPrice).toBe(6825000);
-  expect(totalsTable().dataSource[1].rightValue).toBe('7.085.000\u00a0₫');
+  expect(totalsTable().dataSource[1].rightValue).toBe('$272.5');
   const currencySelect = Select.mock.calls.map(call => call[0]).filter(props => props.options?.some(option => option.value === 'USD')).at(-1);
   await act(async () => currencySelect.onChange('VND'));
   expect(mainTable().dataSource[0].totalPrice).toBe(263);
@@ -112,9 +115,9 @@ test('allows opportunity code and sale price edits and recalculates after rate c
   const select = jest.fn();
   saleInput.onFocus({ target: { select } });
   expect(select).toHaveBeenCalledTimes(1);
-  await act(async () => saleInput.onChange(3000000));
+  await act(async () => saleInput.onChange(120));
   expect(mainTable().dataSource[0].totalPrice).toBe(6000000);
-  expect(totalsTable().dataSource[0].leftValue).toBe('6.000.000\u00a0₫');
+  expect(totalsTable().dataSource[0].leftValue).toBe('$240');
   const termsInput = Select.mock.calls.map(call => call[0]).filter(props => props.id === 'order-payment-terms').at(-1);
   const percentInput = InputNumber.mock.calls.map(call => call[0]).filter(props => props.id === 'order-payment-percent').at(-1);
   expect(percentInput.min).toBe(0);
@@ -141,8 +144,8 @@ test('preserves fractional sale price in the controlled input, save payload and 
   await act(async () => root.render(<OrderEditor orderId={2} />));
   const saleInput = () => mainTable().columns.find(col => col.key === 'salePrice')
     .render(null, mainTable().dataSource[0]).props;
-  await act(async () => saleInput().onChange(123451.313));
-  expect(saleInput().value).toBe(123451.313);
+  await act(async () => saleInput().onChange(123451.313 / 25000));
+  expect(saleInput().value).toBeCloseTo(123451.313 / 25000);
   expect(mainTable().dataSource[0].totalPrice).toBe(246903);
   OrderService.getOrderOnEdit.mockResolvedValue({
     customer: { id: 1 },
@@ -152,7 +155,7 @@ test('preserves fractional sale price in the controlled input, save payload and 
   await act(async () => Array.from(container.querySelectorAll('button'))
     .find(button => button.textContent === 'Lưu đơn hàng').click());
   const payload = RequestUtils.Post.mock.calls.find(([url]) => url === '/order/save')[1];
-  expect(payload.details[0].price).toBe(123451.313);
+  expect(payload.details[0].price).toBeCloseTo(123451.313, 8);
   expect(saleInput().value).toBe(123451.313);
 });
 
