@@ -1,10 +1,10 @@
 import { RequestUtils } from '@flast-erp/core/utils';
-import { RTC_URL, GATEWAY, SUCCESS_CODE } from '@/configs';
+import { RTC_URL, SUCCESS_CODE } from '@/configs';
 /*
  * Cầu nối HTTP tới SBC webrtc_gw.
  * Backend ERP proxy mỗi endpoint sang lệnh DI tương ứng (UDP 5040) hoặc API token,
  * trả nguyên chuỗi kết quả DI trong field `result` (vd: "[0, 'incoming', '0987654321']").
- *   POST call-center/token      { ext }              -> { token, expires }
+ *   POST omni/webrtc/register   { ext }              -> { token, expires }
  *   POST api/webrtc/create      {}                   -> DI webrtc_gw create   -> [0, '<id>', '<sdp offer>']
  *   POST api/webrtc/register    { id, ext, token }   -> DI webrtc_gw register
  *   POST api/webrtc/unregister  { id }               -> DI webrtc_gw unregister
@@ -16,7 +16,7 @@ import { RTC_URL, GATEWAY, SUCCESS_CODE } from '@/configs';
  */
 
 const BASE_RTC  = `${RTC_URL}/api/webrtc`;
-const API_TOKEN = `${GATEWAY}/call-center/token`;
+const API_TOKEN = '/omni/webrtc/register';
 
 export const GW_STATE = {
   IDLE: 'idle',

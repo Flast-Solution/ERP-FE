@@ -8,9 +8,10 @@ import InCallDrawer from './InCallDrawer';
 
 /* Lớp overlay của tổng đài: popup cuộc gọi đến hoặc drawer đang gọi */
 const CallCenterLayer = () => {
+  
   const status = useCallCenterStore(state => state.call.status);
   const { user } = useGetMe();
-  useSoftphoneConnection(user?.sipExt || user?.ext);
+  useSoftphoneConnection(user?.sipExt || "amce_1002");
   useCallCenterEvents();
 
   if (status === CALL_STATUS.INCOMING) {
