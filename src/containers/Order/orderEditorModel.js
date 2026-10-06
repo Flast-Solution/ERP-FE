@@ -7,7 +7,7 @@ export const warrantyOptions = [
   { name: '24 Tháng', id: 24 },
 ];
 
-export const getExchangeRate = (currency, rate) => currency === CURRENCY_USD ? Number(rate ?? 0) : 1;
+export const getExchangeRate = (currency, rate) => Number(rate ?? 1);
 
 export const findSkuById = (skus, skuId) => (Array.isArray(skus) ? skus : []).find(
   sku => String(sku.id) === String(skuId)
@@ -19,9 +19,9 @@ export const resolveUnitPrice = ({ skuPrices = [], quantity, product = {} }) => 
 };
 
 const NUMBER_FIELDS = new Set(['quantity', 'productPrice', 'discountRate', 'discountAmount', 'profit', 'totalPrice']);
-const PRICE_FIELDS = new Set(['price', 'priceV']);
-const RECALCULATED_FIELDS = new Set([...NUMBER_FIELDS, 'price']);
-const LOCKED_FIELDS = new Set(['code', 'profit', ...PRICE_FIELDS]);
+const PRICE_FIELDS = new Set(['price', 'priceV', 'productPriceV']);
+const RECALCULATED_FIELDS = new Set([...NUMBER_FIELDS, 'price', 'priceV', 'productPriceV']);
+const LOCKED_FIELDS = new Set(['code', 'profit', 'price', 'priceV']);
 
 const normalizeFieldValue = (line, field, value) => {
   if (PRICE_FIELDS.has(field)) return value == null || value === '' ? null : Number(value);
@@ -32,15 +32,17 @@ const normalizeFieldValue = (line, field, value) => {
 };
 
 export const updateOrderLine = (line, field, value, { restrictOrderFields = false } = {}) => {
-  if (restrictOrderFields && LOCKED_FIELDS.has(field)) return line;
+  if (restrictOrderFields && LOCKED_FIELDS.has(field) && !(line.currency === 'VND' && field === 'priceV')) return line;
   const normalized = normalizeFieldValue(line, field, value);
   if ((NUMBER_FIELDS.has(field) || PRICE_FIELDS.has(field)) && normalized != null && !Number.isFinite(normalized)) return line;
   const next = { ...line, [field]: normalized };
   if (RECALCULATED_FIELDS.has(field)) next._recalculateTotal = true;
+  if (['productPrice', 'quantity', 'profit'].includes(field)) next._recalculateSalePrice = true;
+  if (field === 'price') next._recalculateSalePrice = false;
   if (field === 'quantity' && !restrictOrderFields && line.skuPrices?.length) {
     next.productPrice = resolveUnitPrice({ skuPrices: line.skuPrices, quantity: next.quantity, product: { price: line.productPrice } });
   }
-  const purchaseAmount = Number(next.productPrice || 0) * Number(next.quantity || 0);
+  const purchaseAmount = Number((line.currency === 'VND' ? next.productPriceV : next.productPrice) || 0) * Number(next.quantity || 0);
   if (field === 'discountRate') next.discountAmount = purchaseAmount * next.discountRate / 100;
   if (field === 'discountAmount') next.discountRate = purchaseAmount > 0
     ? Number((next.discountAmount / purchaseAmount * 100).toFixed(2)) : 0;

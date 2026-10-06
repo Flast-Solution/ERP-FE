@@ -42,6 +42,8 @@ import { PRODUCT_WORKFLOW_ENTITY_TYPE } from '@/containers/Order/List/constants'
 import { enrichEntitiesWithWorkflowData } from '@/containers/Order/List/services/workflowApi';
 import useGetMe from '@/hooks/useGetMe';
 
+import { formatCurrency } from '../../utils/formatCurrency';
+
 const PRODUCT_API_PATH = 'erp/product/fetch';
 
 const formatProductPrice = (value, currency = 'VND') => {
@@ -49,9 +51,7 @@ const formatProductPrice = (value, currency = 'VND') => {
   const amount = Number(value);
   if (!Number.isFinite(amount)) return 'Chưa có giá';
 
-  return `${amount.toLocaleString(currency === 'USD' ? 'en-US' : 'vi-VN', {
-    maximumFractionDigits: currency === 'USD' ? 2 : 4
-  })} ${currency}`;
+  return formatCurrency(amount, String(currency || 'VND').trim().toUpperCase());
 };
 
 const getAttributeValues = (record, attributeId) => Array.from(new Set(
@@ -245,7 +245,7 @@ const Index = () => {
                 Tham khảo: {formatProductPrice(record.priceRef, record?.currency)}
               </div>
             ) : null}
-            {hasSkuPrices ? <PriceView skus={skus} /> : null}
+            {hasSkuPrices ? <PriceView skus={skus} currency={record?.currency} /> : null}
           </div>
         );
       }

@@ -77,6 +77,7 @@ export const normalizeOrderDetail = (detail, product, order) => {
     unit: detail?.unit ?? product?.unit ?? '(Chưa có)',
     mSkuDetails: resolveOrderSkuDetails(detail, product),
     price,
+    productPriceV: detail?.productPriceV == null ? null : Number(detail.productPriceV),
     priceV: detail?.priceV == null ? null : Number(detail.priceV),
     quantity,
     discountAmount,

@@ -20,6 +20,7 @@
 /**************************************************************************/
 
 import { arrayEmpty, arrayNotEmpty, formatMoney } from "@flast-erp/core/utils";
+import { formatCurrency } from '../../utils/formatCurrency';
 import { SKUContent } from "./styles";
 import { Typography } from 'antd';
 const { Text } = Typography;
@@ -78,7 +79,7 @@ export const ShowSkuDetail = ({ skuDetails, width = 0 }) => {
   </>
 }
 
-export const PriceView = ({ skus }) => {
+export const PriceView = ({ skus, currency }) => {
   if (arrayEmpty(skus)) {
     return '(No Content)'
   }
@@ -88,7 +89,7 @@ export const PriceView = ({ skus }) => {
       {skus.map((item, key) =>
         <div key={key}>
           <Typography.Paragraph>
-            <Text>{item.skuPrices?.map(d => `SKU(${item.id}), SL: ${d.quantityFrom} - ${d.quantityTo}, đơn gía: ${formatMoney(d.price)}`).join(', ')}</Text>
+            <Text>{item.skuPrices?.map(d => `SKU(${item.id}), SL: ${d.quantityFrom} - ${d.quantityTo}, đơn gía: ${currency ? formatCurrency(d.price, String(currency).trim().toUpperCase()) : formatMoney(d.price)}`).join(', ')}</Text>
           </Typography.Paragraph>
         </div>
       )}

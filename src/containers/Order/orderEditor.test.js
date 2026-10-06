@@ -135,58 +135,43 @@ test('preserves independent backend USD, VND and purchase prices when changing t
     data: [{ key: 'line', quantity: 1000, productPrice: 1.7, price: 2.123456, priceV: 46000.25, totalPrice: 2123.456 }],
   });
   await act(async () => root.render(<OrderEditor orderId={2} />));
+  expect(mainTable().columns.some(column => column.key === 'salePriceVnd')).toBe(false);
   expect(saleInput('salePrice').value).toBe(2.123456);
-  expect(saleInput('salePriceVnd').value).toBe(46000.25);
-  const rate = InputNumber.mock.calls.map(call => call[0]).filter(props => props.style?.width === 170).at(-1);
-  await act(async () => rate.onChange(26000));
+  expect(mainTable().columns.some(column => column.key === 'salePriceVnd')).toBe(false);
   expect(saleInput('salePrice').value).toBe(2.123456);
-  expect(saleInput('salePriceVnd').value).toBe(46000.25);
   expect(mainTable().dataSource[0].totalPrice).toBe(2123.456);
-  expect((await saveOrder()).details[0]).toMatchObject({ price: 2.123456, priceV: 46000.25, productPrice: 1.7 });
+  expect((await saveOrder()).details[0]).toMatchObject({ price: 2.123456, productPrice: 1.7 });
   await act(async () => saleInput('salePrice').onChange(3.123456));
-  expect(saleInput('salePriceVnd').value).toBe(46000.25);
-  await act(async () => saleInput('salePriceVnd').onChange(47000.125));
   expect(saleInput('salePrice').value).toBe(3.123456);
   const payload = (await saveOrder()).details[0];
-  expect(payload).toMatchObject({ price: 3.123456, priceV: 47000.125, productPrice: 1.7 });
+  expect(payload).toMatchObject({ price: 3.123456, productPrice: 1.7 });
   expect(payload).not.toHaveProperty('_recalculateTotal');
+  expect(payload).not.toHaveProperty('priceV');
 });
 
-test('preserves zero prices and falls back to USD when VND is cleared', async () => {
+test('preserves zero USD prices without sending VND', async () => {
   OrderService.getOrderOnEdit.mockResolvedValue({
     customer: { id: 1 }, order: { id: 2, currency: 'USD', exchangeRate: 23000 },
     data: [{ key: 'line', quantity: 1, price: 0, priceV: 0, productPrice: 1.48 }],
   });
   await act(async () => root.render(<OrderEditor orderId={2} />));
   expect(saleInput('salePrice').value).toBe(0);
-  expect(saleInput('salePriceVnd').value).toBe(0);
-  await act(async () => saleInput('salePriceVnd').onChange(null));
-  expect(saleInput('salePriceVnd').value).toBe(0);
-  expect((await saveOrder()).details[0]).toMatchObject({ price: 0, priceV: 0 });
+  expect((await saveOrder()).details[0]).toMatchObject({ price: 0 });
 });
 
-test('derives missing VND from USD and the current rate for display and payload', async () => {
+test('saves edited USD prices without sending derived VND', async () => {
   OrderService.getOrderOnEdit.mockResolvedValue({
     customer: { id: 1 }, order: { id: 2, currency: 'USD', exchangeRate: 23000 },
     data: [{ key: 'line', quantity: 1, price: 2, priceV: null, productPrice: 1.7 }],
   });
   await act(async () => root.render(<OrderEditor orderId={2} />));
-  expect(saleInput('salePriceVnd').value).toBe(46000);
-  const rate = InputNumber.mock.calls.map(call => call[0]).filter(props => props.style?.width === 170).at(-1);
-  await act(async () => rate.onChange(26000));
-  expect(saleInput('salePriceVnd').value).toBe(52000);
   await act(async () => saleInput('salePrice').onChange(3));
-  expect(saleInput('salePriceVnd').value).toBe(78000);
-  expect((await saveOrder()).details[0]).toMatchObject({ price: 3, priceV: 78000 });
-  await act(async () => saleInput('salePriceVnd').onChange(0));
-  expect(saleInput('salePriceVnd').value).toBe(0);
+  expect((await saveOrder()).details[0]).toMatchObject({ price: 3 });
   await act(async () => saleInput('salePrice').onChange(null));
-  await act(async () => saleInput('salePriceVnd').onChange(null));
-  expect(saleInput('salePriceVnd').value).toBeNull();
 });
 
 
-test('opening and closing row editing keeps VND fallback responsive to exchange rate changes', async () => {
+test('opening and closing row editing preserves USD totals after exchange rate changes', async () => {
   OrderService.getOrderOnEdit.mockResolvedValue({
     customer: { id: 1 }, order: { id: 2, currency: 'USD', exchangeRate: 23000 },
     data: [{ key: 'line', price: 2, priceV: null, quantity: 1, totalPrice: 2 }],
@@ -196,10 +181,7 @@ test('opening and closing row editing keeps VND fallback responsive to exchange 
     .render(null, mainTable().dataSource[0]).props;
   await act(async () => editButton().onEdit());
   await act(async () => editButton().onClose());
-  const rate = InputNumber.mock.calls.map(call => call[0]).filter(props => props.style?.width === 170).at(-1);
-  await act(async () => rate.onChange(26000));
-  expect(saleInput('salePriceVnd').value).toBe(52000);
-  expect((await saveOrder()).details[0]).toMatchObject({ price: 2, priceV: 52000, totalPrice: 2 });
+  expect((await saveOrder()).details[0]).toMatchObject({ price: 2, totalPrice: 2 });
 });
 
 test('adds a product through the modal and preserves its SKU, order line and prices in the payload', async () => {
@@ -214,7 +196,7 @@ test('adds a product through the modal and preserves its SKU, order line and pri
   expect(mainTable().dataSource).toHaveLength(2);
   const payload = await saveOrder();
   expect(payload.details[1]).toMatchObject({ code: 'CH-2', productId: 5, skuId: '6', productPrice: 1.7,
-    quantity: 3, price: 0, priceV: 0, orderLine: { Width: '62' } });
+    quantity: 3, price: 0, orderLine: { Width: '62' } });
   expect(payload.details[1].skuDetails).toEqual([{ text: 'Width', values: [{ id: 7, text: '62' }] }]);
   expect(onSaveSuccess).toHaveBeenCalled();
 });
@@ -235,16 +217,45 @@ test('displays CH-DT-1 USD totals directly and keeps VND edits and exchange rate
   expect(lineAmount()).toBe('$200');
   expect(summary()[0].leftValue).toBe('$450');
   expect(summary()[1].rightValue).toBe('$550');
-  const rate = InputNumber.mock.calls.map(call => call[0]).filter(props => props.style?.width === 170).at(-1);
-  await act(async () => rate.onChange(24000));
   expect(lineAmount()).toBe('$200');
   expect(summary()[1].rightValue).toBe('$550');
-  await act(async () => saleInput('salePriceVnd').onChange(99999));
   expect(lineAmount()).toBe('$200');
   await act(async () => mainTable().columns.find(column => column.key === 'operation').render(null, mainTable().dataSource[0]).props.onEdit());
   await act(async () => mainTable().columns.find(column => column.key === 'quantity').render(100, mainTable().dataSource[0]).props.onChange(200));
   expect(lineAmount()).toBe('$400');
   const payload = await saveOrder();
   expect(payload.shippingCost).toBe(100);
-  expect(payload.details[0]).toMatchObject({ price: 2, priceV: 99999, totalPrice: 400, total: 400 });
+  expect(payload.details[0]).toMatchObject({ price: 2, totalPrice: 400, total: 400 });
+});
+
+
+test('loads VND, allows entering VND purchase and sale prices and saves both fields', async () => {
+  OrderService.getOrderOnEdit.mockResolvedValue({ customer: { id: 1 },
+    order: { id: 2, currency: 'VND', exchangeRate: 1 },
+    data: [{ key: 'line', price: 2, productPrice: 1.5, productPriceV: 35000, priceV: 48000, quantity: 2, totalPrice: 96000 }],
+  });
+  await act(async () => root.render(<OrderEditor orderId={2} />));
+  const purchase = mainTable().columns.find(column => column.key === 'productPriceV');
+  expect(purchase.render(null, mainTable().dataSource[0]).props.value).toBe(35000);
+  expect(saleInput('salePriceVnd').value).toBe(48000);
+  await act(async () => purchase.render(null, mainTable().dataSource[0]).props.onChange(36000));
+  await act(async () => saleInput('salePriceVnd').onChange(50000));
+  const rate = InputNumber.mock.calls.map(call => call[0]).filter(props => props.style?.width === 170).at(-1);
+  expect(rate.disabled).not.toBe(true);
+  await act(async () => rate.onChange(25000));
+  const payload = await saveOrder();
+  expect(payload.currency).toBe('VND');
+  expect(payload.exchangeRate).toBe(25000);
+  expect(payload.details[0]).toMatchObject({ productPriceV: 36000, priceV: 50000, totalPrice: 100000 });
+  const columns = mainTable().columns;
+  expect(columns.find(column => column.key === 'lineAmount').title).toBe('Thành tiền (VND)');
+  expect(columns.find(column => column.key === 'grandTotal').title).toBe('Tổng tiền (VND)');
+  expect(columns.find(column => column.key === 'discountAmount').title).toBe('Tiền CK (VND)');
+  expect(columns.find(column => column.key === 'vatAmount').title.props.children[0].props.children).toEqual(['VAT (', 'VND', ')']);
+  expect(container.textContent).toContain('Phí vận chuyển (VND)');
+  const summary = Table.mock.calls.map(call => call[0]).filter(props => props.columns.some(column => column.key === 'left')).at(-1);
+  summary.dataSource.forEach(row => {
+    expect(row.leftValue).toContain('₫');
+    expect(row.rightValue).toContain('₫');
+  });
 });

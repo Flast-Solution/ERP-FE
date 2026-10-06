@@ -112,13 +112,29 @@ const evaluateCalculationFormula = (formula, variables) => {
 
     const result = parseExpression();
     if (cursor !== tokens.length || !Number.isFinite(result)) return null;
-    return Math.round((result + Number.EPSILON) * 100) / 100;
+    return result;
   } catch (_) {
     return null;
   }
 };
 
-const calculateLineTotal = ({ item, shippingCost, formula }) => {
+export const calculateSalePriceUsd = ({ item, shippingCost, orderedQuantity, formula }) => {
+  if (!formula || !(Number(orderedQuantity) > 0)) return null;
+  return evaluateCalculationFormula(formula, {
+    productPrice: Number(item?.productPrice ?? 0),
+    orderedQuantity: Number(orderedQuantity),
+    shippingCost: Number(shippingCost ?? 0),
+    profit: Number(item?.profit ?? 0),
+    price: Number(item?.productPrice ?? 0),
+    quantity: Number(item?.quantity ?? 0),
+  });
+};
+
+const calculateLineTotal = ({ item, shippingCost, orderedQuantity, formula }) => {
+  if (/\b(productPrice|orderedQuantity)\b/.test(formula || '')) {
+    const price = calculateSalePriceUsd({ item, shippingCost, orderedQuantity: orderedQuantity ?? item?.quantity, formula });
+    return price == null ? null : price * Number(item?.quantity ?? 0);
+  }
   if (!formula) {
     return Number(item?.productPrice ?? 0) * Number(item?.quantity ?? 0);
   }
@@ -130,8 +146,8 @@ const calculateLineTotal = ({ item, shippingCost, formula }) => {
   });
 };
 
-export const calculateUsdLineTotal = ({ item, shippingCost, formula }) => {
-  const amount = calculateLineTotal({ item, shippingCost, formula })
+export const calculateUsdLineTotal = ({ item, shippingCost, orderedQuantity, formula }) => {
+  const amount = calculateLineTotal({ item, shippingCost, orderedQuantity, formula })
     ?? (Number(item?.productPrice ?? 0) * Number(item?.quantity ?? 0));
   return roundUsd(amount);
 };
@@ -146,16 +162,23 @@ export const resolveSalePriceVnd = (line, rate) => {
 
 export const calculateEditorLine = (line, context) => {
   const rate = Number(context.exchangeRate);
-  const salePriceVnd = resolveSalePriceVnd(line, rate);
+  const usesUnitFormula = context.currency !== 'VND' && /\b(productPrice|orderedQuantity)\b/.test(context.formula || '');
+  const computedPrice = usesUnitFormula && (line.price == null || line._recalculateSalePrice)
+    ? calculateSalePriceUsd({ ...context, item: line }) : null;
+  const price = computedPrice ?? line.price ?? null;
+  const salePriceVnd = context.currency === 'VND' ? line.priceV ?? null : resolveSalePriceVnd({ ...line, price }, rate);
+  const effectivePrice = context.currency === 'VND' ? line.priceV : price;
   const savedTotal = line.totalPrice ?? line.total;
   let totalPrice;
   if (!line._recalculateTotal && savedTotal != null) {
     totalPrice = Number(savedTotal);
-  } else if (line.price != null) {
-    totalPrice = roundUsd(Number(line.price) * Number(line.quantity ?? 0) + Number(line.discountAmount ?? 0));
+  } else if (effectivePrice != null) {
+    totalPrice = roundUsd(Number(effectivePrice) * Number(line.quantity ?? 0) + Number(line.discountAmount ?? 0));
+  } else if (context.currency === 'VND') {
+    totalPrice = 0;
   } else {
     totalPrice = calculateUsdLineTotal({ ...context, item: line });
   }
-  return { ...line, salePriceUsd: line.price ?? null, salePriceVnd,
+  return { ...line, price, salePriceUsd: price, salePriceVnd,
     currency: context.currency, exchangeRate: rate, totalPrice, total: totalPrice };
 };

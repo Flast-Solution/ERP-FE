@@ -72,14 +72,15 @@ const useOrderEditor = ({ orderId, dataId, business, onSaveSuccess, restrictOrde
   const [localOrder, setLocalOrder] = useState({ orderId, reload: false });
   const [customerOrder, setCustomerOrder] = useState();
   const [shippingCost, setShippingCost] = useState(0);
-  const currency = CURRENCY_USD;
+  const [currency, setCurrency] = useState(CURRENCY_USD);
   const [exchangeRate, setExchangeRate] = useState(1);
   const [vatRate, setVatRate] = useState(0);
   const [calculationFormula, setCalculationFormula] = useState('');
 
+  const orderedQuantity = lineItems.reduce((sum, line) => sum + Number(line.quantity || 0), 0);
   const data = useMemo(() => lineItems.map(line => calculateEditorLine(line, {
-    currency, exchangeRate, shippingCost, formula: calculationFormula,
-  })), [lineItems, calculationFormula, currency, exchangeRate, shippingCost]);
+    currency, exchangeRate, shippingCost, orderedQuantity, formula: calculationFormula,
+  })), [lineItems, calculationFormula, currency, exchangeRate, shippingCost, orderedQuantity]);
 
   useEffectAsync(async () => {
     const { data: configs, errorCode } = await RequestUtils.Get('/erp/config/fetch', {
@@ -101,6 +102,7 @@ const useOrderEditor = ({ orderId, dataId, business, onSaveSuccess, restrictOrde
     }
     if (order) {
       setCustomerOrder(order);
+      setCurrency(order.currency === 'VND' ? 'VND' : CURRENCY_USD);
       const savedRate = Number(order.exchangeRate) > 0 ? Number(order.exchangeRate) : 1;
       setShippingCost(Number(order.shippingCost ?? 0));
       setExchangeRate(savedRate);
@@ -175,7 +177,9 @@ const useOrderEditor = ({ orderId, dataId, business, onSaveSuccess, restrictOrde
         currency,
         exchangeRate
       });
-      setData(datas => ([...datas, order]));
+      order._recalculateTotal = true;
+      setData(datas => ([...datas, order].map(line => /\b(productPrice|orderedQuantity)\b/.test(calculationFormula)
+        ? { ...line, _recalculateSalePrice: true, _recalculateTotal: true } : line)));
     };
 
     InAppEvent.emit(HASH_MODAL, {
@@ -226,12 +230,18 @@ const useOrderEditor = ({ orderId, dataId, business, onSaveSuccess, restrictOrde
 
   const editRow = key => setData(lines => lines.map(line => ({ ...line, editable: line.key === key })));
   const closeEdit = () => setData(lines => lines.map(line => ({ ...line, editable: false })));
-  const handleChange = (key, field, value) => setData(lines => lines.map(line => (
-    line.key === key ? updateOrderLine(line, field, value, { restrictOrderFields }) : line
-  )));
+  const handleChange = (key, field, value) => setData(lines => {
+    const updated = lines.map(line => (
+      line.key === key ? updateOrderLine({ ...line, currency }, field, value, { restrictOrderFields }) : line
+    ));
+    const quantityChanged = field === 'quantity' && updated.some((line, index) => line.quantity !== lines[index].quantity);
+    return quantityChanged && /\b(productPrice|orderedQuantity)\b/.test(calculationFormula)
+      ? updated.map(line => ({ ...line, _recalculateSalePrice: true, _recalculateTotal: true })) : updated;
+  });
 
   const deleteRow = (key) => {
-    setData(lines => lines.filter(line => line.key !== key));
+    setData(lines => lines.filter(line => line.key !== key).map(line => /\b(productPrice|orderedQuantity)\b/.test(calculationFormula)
+      ? { ...line, _recalculateSalePrice: true, _recalculateTotal: true } : line));
   };
 
   const onSubmitOrder = useCallback(async () => {
@@ -297,8 +307,18 @@ const useOrderEditor = ({ orderId, dataId, business, onSaveSuccess, restrictOrde
     });
   }, [customerOrder, customer, data]);
 
-  return { data, customer, customerOrder, setCustomerOrder, shippingCost, setShippingCost,
-    currency, exchangeRate, vatRate, setVatRate, isOrder,
+  const changeShippingCost = value => {
+    setShippingCost(value);
+    if (/\b(productPrice|orderedQuantity)\b/.test(calculationFormula)) {
+      setData(lines => lines.map(line => ({ ...line, _recalculateSalePrice: true, _recalculateTotal: true })));
+    }
+  };
+
+  return { data, customer, customerOrder, setCustomerOrder, shippingCost, setShippingCost: changeShippingCost,
+    currency, setCurrency: value => {
+      setCurrency(value);
+      setData(lines => lines.map(line => ({ ...line, _recalculateTotal: true })));
+    }, exchangeRate, vatRate, setVatRate, isOrder,
     totalQuantity, totalDiscount, totalSubOrder, totalVat, totalOrder, getLineAmount, getSalePrice,
     getLineVat, formatDisplayAmount, handleExchangeRateChange, editRow, closeEdit, handleChange,
     deleteRow, onSubmitOrder, onAddProduct, onAddStock, onOpenFormPayment, onOpenInvoice };

@@ -38,6 +38,7 @@ import { DeleteOutlined } from '@ant-design/icons';
 import { SUCCESS_CODE } from '@/configs';
 import useGetMe from '@/hooks/useGetMe';
 
+const MATERIAL_FETCH_API = 'erp/material/fetch';
 const PROVIDER_FETCH_API = '/provider/fetch';
 const PROVIDER_PAGE_SIZE = 10;
 
@@ -209,7 +210,7 @@ const MaterialPage = () => {
 
 	const onClickViewDetail = (material) => {
 		const onAfterSubmit = (values) => {
-			f5List("/erp/material/fetch");
+			f5List(MATERIAL_FETCH_API);
 		};
 		InAppEvent.emit(HASH_POPUP, {
 			hash: "material.add",
@@ -225,7 +226,7 @@ const MaterialPage = () => {
 			const { message: MSG, errorCode } = await RequestUtils.Post('/inventory/save', body);
 			message.success(MSG);
 			if(errorCode === SUCCESS_CODE) {
-				f5List("/erp/material/fetch");
+				f5List(MATERIAL_FETCH_API);
 			}
 		} catch (error) {
 			console.error('Error during import:', error);
@@ -237,7 +238,7 @@ const MaterialPage = () => {
 		const { message: MSG, errorCode } = await RequestUtils.Post('/material/delete/' + id, {});
 		message.success(MSG);
 		if(errorCode === SUCCESS_CODE) {
-			f5List("/erp/material/fetch");
+			f5List(MATERIAL_FETCH_API);
 		}
 	};
 
@@ -346,7 +347,7 @@ const MaterialPage = () => {
 				useGetAllQuery={useGetList}
 				hasCreate={canCreate}
 				customClickCreate={() => onClickViewDetail({})}
-				apiPath={'/erp/material/fetch'}
+				apiPath={MATERIAL_FETCH_API}
 				columns={CUSTOM_ACTION}
 			/>
 		</div>
