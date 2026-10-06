@@ -110,3 +110,41 @@ test('production workflow belongs to the child once across multiple commands', (
   const emptyColumn = emptyProps.columns.find(group => group.key === 'productionActions').children.find(item => item.key === 'productionWorkflow')
   expect(emptyColumn.render(null, emptyProps.dataSource[0])).toBe('—')
 })
+
+
+test.each([
+  [{ currency: 'USD' }, {}, '$2.63'],
+  [{ currency: 'VND' }, {}, '100.000'],
+  [{ order: { currency: 'USD' } }, {}, '$2.63'],
+  [{ currency: 'USD' }, { currency: 'VND' }, '100.000'],
+])('opportunity sale price follows child or parent currency', (parent, child, expected) => {
+  renderToStaticMarkup(<OrderTrackingExpandedRow isOpportunityList record={{ ...record, ...parent,
+    details: [{ id: 2, price: 2.6333333333333337, priceV: 100000, ...child }] }} />)
+  const props = Table.mock.calls.at(-1)[0]
+  const column = props.columns[0].children.find(item => item.title === 'Giá bán')
+  const view = column.render(null, props.dataSource[0])
+  expect(view).toContain(expected)
+  expect(view.includes('₫')).toBe(expected !== '$2.63')
+})
+
+
+test.each([['USD', '$2.63'], ['VND', '100.000']])('overview sale price uses %s currency', (currency, expected) => {
+  renderToStaticMarkup(<OrderTrackingExpandedRow trackingOverview record={{ ...record, currency,
+    details: [{ id: 2, price: 2.6333333333333337, priceV: 100000 }] }} />)
+  const props = Table.mock.calls.at(-1)[0]
+  const column = props.columns[0].children.find(item => item.title === 'Giá bán')
+  const view = column.render(null, props.dataSource[0])
+  expect(view).toContain(expected)
+  expect(view.includes('₫')).toBe(currency === 'VND')
+})
+
+
+test.each([['USD', '$2.63'], ['VND', '100.000']])('production sale price uses %s currency', (currency, expected) => {
+  renderToStaticMarkup(<OrderTrackingExpandedRow productionOverview record={{ ...record, currency,
+    details: [{ id: 2, price: 2.6333333333333337, priceV: 100000 }] }} />)
+  const props = Table.mock.calls.at(-1)[0]
+  const column = props.columns[0].children.find(item => item.title === 'Giá bán')
+  const view = column.render(null, props.dataSource[0])
+  expect(view).toContain(expected)
+  expect(view.includes('₫')).toBe(currency === 'VND')
+})

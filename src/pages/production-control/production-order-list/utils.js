@@ -165,7 +165,7 @@ export const mapManufactureOrder = (record, manufactureStatuses = MANUFACTURE_SY
     productionOrderCode: record?.code,
     salesOrderCode: record?.orderCode,
     salesOrderId: order?.id,
-    customerName: order?.customerReceiverName,
+    customerName: order?.enterpriseName?.trim() || order?.customerReceiverName,
     createdAt: record?.createdDate,
     dateStart: record?.dateStart && dayjs(record.dateStart).isValid() ? dayjs(record.dateStart) : undefined,
     dateEnd: editDeadline,

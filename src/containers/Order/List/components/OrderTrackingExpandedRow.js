@@ -154,7 +154,14 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityLis
           width: 130,
           align: 'right',
           onCell: detail => ({ rowSpan: expandedLotRowKey == null ? detail?._detailRowSpan : 1 }),
-          render: (value, detail) => formatMoney(value, showVndSalePrice ? 'VND' : (detail?.currency || record?.currency)),
+          render: (value, detail) => {
+            if (isOpportunityList || trackingOverview || productionOverview) {
+              const currency = String(detail?.currency || record?.currency || record?.order?.currency || 'VND').trim().toUpperCase()
+              const price = currency === 'USD' ? detail.price : detail.priceV
+              return price == null ? '—' : formatMoney(price, currency)
+            }
+            return formatMoney(value, showVndSalePrice ? 'VND' : (detail?.currency || record?.currency))
+          },
         },
         {
           title: 'Deadline',

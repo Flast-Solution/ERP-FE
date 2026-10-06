@@ -27,6 +27,7 @@ import styled from 'styled-components';
 import useOrderEditor from './useOrderEditor';
 import OrderItemsTable from './OrderItemsTable';
 import OrderEditorSummary from './OrderEditorSummary';
+import { formatUsdInput, parseUsdInput } from './orderFormatting';
 const { Text } = Typography;
 const selectNumberOnFocus = event => event.target.select();
 const OrderEditorShell = styled.div`
@@ -129,8 +130,9 @@ const BanHangPage = ({
                 onChange={value => {
                   setShippingCost(Number(value ?? 0));
                 }}
-                formatter={formatterInputNumber}
-                parser={parserInputNumber}
+                precision={currency === 'USD' ? 2 : undefined}
+                formatter={currency === 'USD' ? formatUsdInput : formatterInputNumber}
+                parser={currency === 'USD' ? parseUsdInput : parserInputNumber}
                 controls={false}
                 style={{ width: '100%' }}
               />

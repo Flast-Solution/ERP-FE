@@ -4,14 +4,14 @@ import { CheckOutlined, DeleteOutlined } from '@ant-design/icons';
 import { arrayEmpty, formatterInputNumber, parserInputNumber } from '@flast-erp/core/utils';
 import { ShowSkuDetail } from '@/containers/Product/SkuView';
 import styled from 'styled-components';
-import { formatOrderCurrency as formatCurrencyAmount } from './orderFormatting';
+import { formatOrderCurrency as formatCurrencyAmount, formatUsdInput, parseUsdInput } from './orderFormatting';
 import { resolveOrderSkuDetails } from './orderSku';
 import { parseOrderLine } from './orderLine';
 import { parseDayQuote } from './orderEditorDates';
 import { CURRENCY_USD, CURRENCY_VND, warrantyOptions } from './orderEditorModel';
 const { Text } = Typography;
 const selectNumberOnFocus = event => event.target.select();
-const currencyOptions = [{ label: 'USD', value: CURRENCY_USD }];
+const currencyOptions = [{ label: 'USD', value: CURRENCY_USD }, { label: 'VND', value: CURRENCY_VND }];
 const vatOptions = [0, 8, 10].map(value => ({ label: `${value}%`, value }));
 const SkuOrderLineTooltip = ({ skuDetails, orderLine }) => {
   const details = Array.isArray(skuDetails) ? skuDetails : [];
@@ -83,7 +83,7 @@ const EditButton = ({
   </div>
 );
 
-const OrderItemsTable = ({ data, customerOrder, currency, exchangeRate, vatRate, setVatRate,
+const OrderItemsTable = ({ data, customerOrder, currency, setCurrency, exchangeRate, vatRate, setVatRate,
   restrictOrderFields, hideEditColumn, handleChange, editRow, closeEdit, deleteRow,
   getLineAmount, getSalePrice, getLineVat, renderOrderAmount, formatDisplayAmount,
   handleExchangeRateChange, totalQuantity, totalSubOrder, totalVat, totalOrder, totalDiscount }) => {
@@ -125,6 +125,12 @@ const OrderItemsTable = ({ data, customerOrder, currency, exchangeRate, vatRate,
       align: 'right',
       editable: true
     },
+    ...(currency === CURRENCY_VND ? [{
+      title: 'Giá mua (VND)', dataIndex: 'productPriceV', key: 'productPriceV', width: 170, align: 'right',
+      render: (_, record) => <InputNumber size="small" min={0} value={record.productPriceV}
+        onFocus={selectNumberOnFocus} onChange={value => handleChange(record.key, 'productPriceV', value)}
+        formatter={formatterInputNumber} parser={parserInputNumber} controls={false} style={{ width: '100%' }} />,
+    }] : []),
     {
       title: 'Lợi nhuận (%)',
       dataIndex: 'profit',
@@ -161,8 +167,9 @@ const OrderItemsTable = ({ data, customerOrder, currency, exchangeRate, vatRate,
           disabled={restrictOrderFields}
           value={record.salePriceUsd}
           onChange={value => handleChange(record.key, 'price', value)}
-          formatter={formatterInputNumber}
-          parser={parserInputNumber}
+          precision={2}
+          formatter={formatUsdInput}
+          parser={parseUsdInput}
           controls={false}
           style={{ width: '100%', textAlign: 'right' }}
         />
@@ -179,8 +186,7 @@ const OrderItemsTable = ({ data, customerOrder, currency, exchangeRate, vatRate,
           onFocus={selectNumberOnFocus}
           size="small"
           min={0}
-          disabled={restrictOrderFields}
-          value={getSalePrice(record)}
+          value={record.priceV}
           onChange={value => handleChange(record.key, 'priceV', value)}
           formatter={formatterInputNumber}
           parser={parserInputNumber}
@@ -199,7 +205,7 @@ const OrderItemsTable = ({ data, customerOrder, currency, exchangeRate, vatRate,
       align: 'right'
     },
     {
-      title: 'Thành tiền (USD)',
+      title: `Thành tiền (${currency})`,
       dataIndex: 'lineAmount',
       key: 'lineAmount',
       width: 150,
@@ -209,7 +215,7 @@ const OrderItemsTable = ({ data, customerOrder, currency, exchangeRate, vatRate,
     {
       title: (
         <Space size={6}>
-          <span>VAT (USD)</span>
+          <span>VAT ({currency})</span>
           <Select
             size="small"
             value={vatRate}
@@ -226,7 +232,7 @@ const OrderItemsTable = ({ data, customerOrder, currency, exchangeRate, vatRate,
       render: (_, record) => renderOrderAmount(getLineVat(record))
     },
     {
-      title: 'Tổng tiền (USD)',
+      title: `Tổng tiền (${currency})`,
       dataIndex: 'grandTotal',
       key: 'grandTotal',
       width: 150,
@@ -372,12 +378,13 @@ const OrderItemsTable = ({ data, customerOrder, currency, exchangeRate, vatRate,
           size="small"
           min={0}
           max={column.dataIndex === 'profit' ? 99.99 : undefined}
+          precision={currency === CURRENCY_USD && ['productPrice', 'discountAmount', 'totalPrice'].includes(column.dataIndex) ? 2 : undefined}
           value={text}
           onChange={value => handleChange(record.key, column.dataIndex, value)}
           controls={false}
           style={{ width: '100%', textAlign: 'right' }}
-          formatter={formatterInputNumber}
-          parser={parserInputNumber}
+          formatter={currency === CURRENCY_USD && ['productPrice', 'discountAmount', 'totalPrice'].includes(column.dataIndex) ? formatUsdInput : formatterInputNumber}
+          parser={currency === CURRENCY_USD && ['productPrice', 'discountAmount', 'totalPrice'].includes(column.dataIndex) ? parseUsdInput : parserInputNumber}
         />
       );
     }
@@ -412,16 +419,17 @@ const OrderItemsTable = ({ data, customerOrder, currency, exchangeRate, vatRate,
         return `${Number(text ?? 0)}%`;
       }
       return isFormatted
-        ? (column.dataIndex === 'totalPrice' ? formatDisplayAmount(text) : formatCurrencyAmount(text, currency))
+        ? (column.dataIndex === 'totalPrice' ? formatDisplayAmount(text) : formatCurrencyAmount(text, column.dataIndex === 'productPrice' ? CURRENCY_USD : currency))
         : text;
   };
 
+  const visibleColumns = columns.filter(col => (currency !== CURRENCY_USD || col.key !== 'salePriceVnd') && (!hideEditColumn || col.key !== 'operation'));
   return (
       <OpportunityTable
         bordered
         scroll={{ x: 2560 }}
         dataSource={data}
-        columns={columns.filter(col => !hideEditColumn || col.key !== 'operation').map(col => ({
+        columns={visibleColumns.map(col => ({
           ...col,
           onHeaderCell: () => ({
             style: { whiteSpace: 'nowrap' }
@@ -435,6 +443,7 @@ const OrderItemsTable = ({ data, customerOrder, currency, exchangeRate, vatRate,
             'profit',
             'salePrice',
             'salePriceVnd',
+            'productPriceV',
             'lineAmount',
             'vatAmount',
             'grandTotal',
@@ -454,39 +463,38 @@ const OrderItemsTable = ({ data, customerOrder, currency, exchangeRate, vatRate,
                   <Select
                     size="small"
                     value={currency}
+                    onChange={setCurrency}
                     options={currencyOptions}
                     style={{ width: 90 }}
                   />
                 </Space>
+                {currency !== CURRENCY_USD && (
                 <Space size={6}>
-                  <Text>Tỷ giá</Text>
+                  <Text>Tỷ giá USD/VND</Text>
                   <InputNumber
                     onFocus={selectNumberOnFocus}
                     size="small"
-                    min={currency === CURRENCY_USD ? 0.01 : 1}
+                    min={0.01}
                     value={exchangeRate}
                     controls={false}
-                    disabled={currency === CURRENCY_VND}
                     onChange={handleExchangeRateChange}
                     formatter={formatterInputNumber}
                     parser={parserInputNumber}
                     style={{ width: 170 }}
                   />
                 </Space>
+                )}
               </Space>
             </Table.Summary.Cell>
-            <Table.Summary.Cell index={3}></Table.Summary.Cell>
-            <Table.Summary.Cell index={4}></Table.Summary.Cell>
-            <Table.Summary.Cell index={5}></Table.Summary.Cell>
-            <Table.Summary.Cell index={6}></Table.Summary.Cell>
-            <Table.Summary.Cell index={7} align="right">{totalQuantity}</Table.Summary.Cell>
-            <Table.Summary.Cell index={8} align="right">{formatDisplayAmount(totalSubOrder)}</Table.Summary.Cell>
-            <Table.Summary.Cell index={9} align="right">{formatDisplayAmount(totalVat)}</Table.Summary.Cell>
-            <Table.Summary.Cell index={10} align="right"><Text strong>{formatDisplayAmount(totalOrder)}</Text></Table.Summary.Cell>
-            <Table.Summary.Cell index={11}></Table.Summary.Cell>
-            <Table.Summary.Cell index={12}></Table.Summary.Cell>
-            <Table.Summary.Cell index={13} align="right">{formatCurrencyAmount(totalDiscount, currency)}</Table.Summary.Cell>
-            <Table.Summary.Cell index={14} colSpan={hideEditColumn ? 4 : 5}></Table.Summary.Cell>
+            {visibleColumns.slice(3).map((column, index) => (
+              <Table.Summary.Cell key={column.key} index={index + 3} align={column.align}>
+                {column.key === 'quantity' ? totalQuantity
+                  : column.key === 'lineAmount' ? formatDisplayAmount(totalSubOrder)
+                    : column.key === 'vatAmount' ? formatDisplayAmount(totalVat)
+                      : column.key === 'grandTotal' ? <Text strong>{formatDisplayAmount(totalOrder)}</Text>
+                        : column.key === 'discountAmount' ? formatCurrencyAmount(totalDiscount, currency) : null}
+              </Table.Summary.Cell>
+            ))}
           </Table.Summary.Row>
         )}
       />
