@@ -1,16 +1,16 @@
+import { fetchWorkflowPreviewList } from './workflowPreviewApi'
+import { attachOrderProductionMetrics } from '../utils/orderProductionMetrics'
 import { RequestUtils } from '@flast-erp/core/utils'
 import {
   WORKFLOW_FILTER_API,
   WORKFLOW_INSTANCE_BY_ENTITY_API,
   WORKFLOW_PROCESS_FIND_API,
-  WORKFLOW_PREVIEW_API,
   ORDER_WORKFLOW_ENTITY_TYPE,
 } from '../constants'
 import {
   resolveWorkflowList,
   resolveWorkflowInstances,
   resolveWorkflowProcessDetail,
-  resolveWorkflowPreview,
 } from '../utils/responseResolvers'
 import {
   getWorkflowInstanceEntityId,
@@ -76,9 +76,11 @@ export const fetchWorkflowProcessDetail = async (processId) => {
   return resolveWorkflowProcessDetail(detailResponse)
 }
 
-export const fetchWorkflowPreview = async (instanceId) => {
-  const previewResponse = await RequestUtils.Get(WORKFLOW_PREVIEW_API, { instanceId })
-  return resolveWorkflowPreview(previewResponse)
+export const fetchWorkflowPreview = async instanceId => {
+  const previews = await fetchWorkflowPreviewList([instanceId])
+  const preview = previews.get(String(instanceId))
+  if (!preview) throw new Error('API không trả về preview của workflow.')
+  return preview
 }
 
 /**
@@ -144,16 +146,16 @@ export const enrichEntitiesWithWorkflowData = async (tableData, entityType) => {
 
 /**
  * Enrich order table rows with workflow instance, process detail, and preview.
- * Preserves existing N+1 fetch behavior; extract-only refactor.
+ * Fetches previews in one batch for the displayed page.
  */
-export const enrichOrdersWithWorkflowData = async (tableData) => {
+export const enrichOrdersWithWorkflowData = async (tableData, { includeProductionLots = false } = {}) => {
   const orders = tableData?.embedded ?? []
   const parentEntityIds = orders
     .map(item => item?.id)
     .filter(Boolean)
   const detailEntityIds = orders.flatMap(item => (
     Array.isArray(item?.details)
-      ? item.details.map(detail => detail?.id).filter(Boolean)
+      ? item.details.map(detail => detail?.id ?? detail?.detailId).filter(Boolean)
       : []
   ))
   const entityIds = Array.from(new Set([...parentEntityIds, ...detailEntityIds]))
@@ -163,10 +165,17 @@ export const enrichOrdersWithWorkflowData = async (tableData) => {
   }
 
   try {
-    const instances = await fetchWorkflowInstancesByEntity({
-      entityName: ORDER_WORKFLOW_ENTITY_TYPE,
-      entityIds,
-    })
+    const [orderResult, productionResult] = await Promise.allSettled([
+      fetchWorkflowInstancesByEntity({ entityName: ORDER_WORKFLOW_ENTITY_TYPE, entityIds }),
+      includeProductionLots && detailEntityIds.length
+        ? fetchWorkflowInstancesByEntity({ entityName: 'PRODUCTION', entityIds: [...new Set(detailEntityIds)] })
+        : Promise.resolve([]),
+    ])
+    if (orderResult.status === 'rejected') throw orderResult.reason
+    const instances = orderResult.value
+    const productionInstances = productionResult.status === 'fulfilled' ? productionResult.value : []
+    const productionError = productionResult.status === 'rejected'
+      ? productionResult.reason?.message || 'Không tải được workflow sản xuất.' : ''
 
     const instancesByEntityId = instances.reduce((result, item) => {
       const entityId = getWorkflowInstanceEntityId(item)
@@ -207,54 +216,33 @@ export const enrichOrdersWithWorkflowData = async (tableData) => {
       })
     }
 
-    const workflowPreviewsByInstanceId = new Map()
-    const previewableInstances = parentEntityIds
-      .flatMap(entityId => instancesByEntityId.get(String(entityId)) ?? [])
-      .filter(instance => instance?.id)
-
-    if (previewableInstances.length > 0) {
-      const workflowPreviews = await Promise.all(
-        previewableInstances.map(async (instance) => {
-          try {
-            const preview = await fetchWorkflowPreview(instance.id)
-            return {
-              instanceId: Number(instance.id),
-              preview,
-            }
-          } catch (error) {
-            return {
-              instanceId: Number(instance.id),
-              preview: null,
-            }
-          }
-        })
-      )
-
-      workflowPreviews.forEach(({ instanceId, preview }) => {
-        if (instanceId && preview) {
-          workflowPreviewsByInstanceId.set(Number(instanceId), preview)
-        }
-      })
+    let workflowPreviewsByInstanceId = new Map()
+    let previewError = ''
+    try {
+      workflowPreviewsByInstanceId = await fetchWorkflowPreviewList([...instances, ...productionInstances].map(instance => instance.id))
+    } catch (error) {
+      previewError = error.message || 'Không tải được dữ liệu workflow.'
     }
 
     tableData.embedded = orders.map((item) => {
       const parentInstances = instancesByEntityId.get(String(item.id)) ?? []
       const enrichedParentInstances = parentInstances.map(instance => ({
         ...instance,
-        preview: workflowPreviewsByInstanceId.get(Number(instance?.id)) ?? null,
+        preview: workflowPreviewsByInstanceId.get(String(instance?.id)) ?? null,
         process: workflowProcessesById.get(Number(instance.processId)) ?? instance.process,
       }))
       const firstParentInstance = enrichedParentInstances[0] ?? null
 
-      return {
+      const enrichedOrder = {
         ...item,
         details: Array.isArray(item?.details)
           ? item.details.map((detail) => {
-            const detailInstances = instancesByEntityId.get(String(detail?.id)) ?? []
+            const detailInstances = instancesByEntityId.get(String(detail?.id ?? detail?.detailId)) ?? []
             return {
               ...detail,
               workflowInstances: detailInstances.map(instance => ({
                 ...instance,
+                preview: workflowPreviewsByInstanceId.get(String(instance.id)) ?? null,
                 process: workflowProcessesById.get(Number(instance.processId)) ?? instance.process,
               })),
             }
@@ -264,18 +252,20 @@ export const enrichOrdersWithWorkflowData = async (tableData) => {
         workflowInstance: firstParentInstance,
         workflowProcess: firstParentInstance?.process ?? null,
       }
+      return includeProductionLots
+        ? attachOrderProductionMetrics(enrichedOrder, productionInstances, workflowPreviewsByInstanceId, productionError || previewError)
+        : enrichedOrder
     })
   } catch (error) {
-    tableData.embedded = tableData.embedded.map(item => ({
-      ...item,
-      details: Array.isArray(item?.details)
-        ? item.details.map(detail => ({ ...detail, workflowInstances: [] }))
-        : item?.details,
-      workflowInstances: [],
-      workflowInstance: null,
-      workflowProcess: null,
-    }))
+    tableData.embedded = orders.map(item => {
+      const failedOrder = { ...item,
+        details: Array.isArray(item.details) ? item.details.map(detail => ({ ...detail, workflowInstances: [] })) : item.details,
+        workflowInstances: [], workflowInstance: null, workflowProcess: null }
+      return includeProductionLots ? attachOrderProductionMetrics(failedOrder, [], new Map(),
+        error.message || 'Không tải được dữ liệu workflow sản xuất.') : failedOrder
+    })
   }
+
 
   return tableData
 }

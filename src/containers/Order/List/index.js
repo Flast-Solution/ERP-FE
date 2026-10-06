@@ -227,7 +227,8 @@ const ListOrder = ({
   } = useQuotationViewer({ approvalEnabled: isOpportunityList && !isOrderList, currentUserId: user?.id })
 
   const { onData } = useOrderWorkflowData(
-    isOrderList || isOpportunityList
+    isOrderList || isOpportunityList,
+    useTrackingLayout && isOrderList
   )
 
   const handleOpenWorkflowModal = useCallback((record, entityType) => {
@@ -309,7 +310,7 @@ const ListOrder = ({
   ), [shippingStatusOptions])
 
   const columns = useTrackingLayout
-    ? createOrderTrackingColumns({ ...columnOptions, shippingStatusById, productionOverview: useProductionOverview })
+    ? createOrderTrackingColumns({ ...columnOptions, shippingStatusById, productionOverview: useProductionOverview, trackingOverview: useTrackingOverview && isOrderList })
     : createOrderColumns(columnOptions)
 
   const orderLotExpandable = enableLotTree
@@ -332,6 +333,10 @@ const ListOrder = ({
           record={record}
           isOpportunityList={isOpportunityList}
           productionOverview={useProductionOverview}
+          canAttachProductionWorkflow={canAttachWorkflow}
+          canViewProductionWorkflow={canViewWorkflow}
+          onProductionWorkflowRefresh={() => f5List(listApiPath)}
+          trackingOverview={useTrackingOverview && isOrderList}
           shippingStatusById={shippingStatusById}
         />
       ),

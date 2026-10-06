@@ -11,22 +11,15 @@ import {
   Radio,
   Row,
   Table,
-  Tag,
-  Upload
+  Tag
 } from 'antd';
-import { ArrowRightOutlined, SaveOutlined, UploadOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import { ArrowRightOutlined, SaveOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { RequestUtils } from '@flast-erp/core/utils';
 import { FormSelectAPI } from '@flast-erp/core/components';
 import { SUCCESS_CODE } from '@/configs';
-import {
-  extractUploadItems,
-  normalizeUploadFileName,
-  resolveUploadFilename,
-  toUploadFile
-} from '@/containers/PreviewModal/uploadUtils';
 import './GiaoHang.less';
+import WarehouseDocumentsUpload from './WarehouseDocumentsUpload';
 
 const DOCUMENT_OPTIONS = [
   { label: 'Phiếu xuất kho', value: 'warehouseSlip' },
@@ -105,71 +98,6 @@ const ReadonlyField = ({ label, value, mono = false }) => (
   </div>
 );
 
-const OutboundDocumentsUpload = () => {
-  const form = Form.useFormInstance();
-  const attachments = Form.useWatch('attachments', form) ?? [];
-  const [uploading, setUploading] = useState(false);
-  const fileList = attachments.map(toUploadFile).filter(Boolean);
-
-  const uploadBatch = async files => {
-    const selectedFiles = Array.from(files).filter(Boolean);
-    if (selectedFiles.length === 0) return;
-
-    const formData = new FormData();
-    selectedFiles.forEach(file => {
-      formData.append(
-        'files',
-        file,
-        normalizeUploadFileName(file?.name) || file?.name
-      );
-    });
-    formData.append('folder', 'warehouse/outbound');
-
-    setUploading(true);
-    try {
-      const response = await axios.post('/erp/folder/multiple', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      const uploaded = extractUploadItems(response.data);
-      if (uploaded.length === 0) throw new Error('API upload không trả về tệp');
-      form.setFieldValue('attachments', [...attachments, ...uploaded]);
-      message.success(`Đã tải lên ${uploaded.length} tệp`);
-    } catch (error) {
-      message.error(error?.message || 'Upload chứng từ thất bại');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  return (
-    <Form.Item label="Tải giấy tờ">
-      <Upload.Dragger
-        multiple
-        fileList={fileList}
-        disabled={uploading}
-        beforeUpload={(file, selectedFiles) => {
-          if (file === selectedFiles[0]) uploadBatch(selectedFiles);
-          return Upload.LIST_IGNORE;
-        }}
-        onRemove={file => {
-          const removed = resolveUploadFilename(file);
-          form.setFieldValue(
-            'attachments',
-            attachments.filter(item => resolveUploadFilename(item) !== removed)
-          );
-        }}
-      >
-        <p className="ant-upload-drag-icon"><UploadOutlined /></p>
-        <p className="ant-upload-text">
-          {uploading ? 'Đang tải chứng từ...' : 'Kéo file vào đây hoặc bấm để chọn'}
-        </p>
-        <p className="ant-upload-hint">Có thể chọn và tải nhiều file trong một lần</p>
-      </Upload.Dragger>
-      <Form.Item name="attachments" hidden><input type="hidden" /></Form.Item>
-    </Form.Item>
-  );
-};
-
 const GiaoHangForm = ({ data = {}, closeModal }) => {
   const [form] = Form.useForm();
   const submitTypeRef = useRef('confirm');
@@ -182,7 +110,6 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
   const product = itemInStock.product ?? EMPTY_RECORD;
   const unit = product.unit ?? '';
   const initialDeliveryCode = useMemo(createDeliveryCode, []);
-  const [deliveryCode, setDeliveryCode] = useState(initialDeliveryCode);
   const [deliveryMode, setDeliveryMode] = useState('self');
   const [selectedLotKeys, setSelectedLotKeys] = useState([]);
   const [lotQuantities, setLotQuantities] = useState({});
@@ -243,7 +170,6 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
         draftIdRef.current = submittedData.submitType === 'draft'
           ? submittedData.id ?? null
           : null;
-        setDeliveryCode(submittedData.deliveryCode || initialDeliveryCode);
         setDeliveryMode(mode);
         setSelectedLotKeys(lots.map(lot => lot.historyId).filter(id => id != null));
         setLotQuantities(lots.reduce((quantities, lot) => {
@@ -252,6 +178,7 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
         }, {}));
         form.setFieldsValue({
           outboundType: submittedData.outboundType,
+          deliveryCode: submittedData.deliveryCode || initialDeliveryCode,
           outboundDate: toDayjs(submittedData.outboundDate),
           deliveryMode: mode,
           selfMethod: delivery.method,
@@ -481,7 +408,7 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
         ? { id: draftIdRef.current }
         : {}),
       submitType: submitTypeRef.current,
-      deliveryCode,
+      deliveryCode: values.deliveryCode.trim(),
       outboundType: values.outboundType,
       outboundDate: values.outboundDate?.format('YYYY-MM-DD HH:mm:ss') ?? null,
       orderId: primaryLot.orderId,
@@ -535,6 +462,7 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
       form={form}
       layout="vertical"
       initialValues={{
+        deliveryCode: initialDeliveryCode,
         outboundDate: dayjs(),
         deliveryMode: 'self',
         selfMethod: 'company_vehicle',
@@ -547,7 +475,13 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
       <DeliverySection number="1" title="Thông tin lệnh xuất">
         <Row gutter={[16, 4]}>
           <Col md={8} xs={24}>
-            <ReadonlyField label="Mã phiếu xuất" value={deliveryCode} mono />
+            <Form.Item
+              label="Mã phiếu xuất"
+              name="deliveryCode"
+              rules={[{ required: true, whitespace: true, message: 'Vui lòng nhập mã phiếu xuất' }]}
+            >
+              <Input placeholder="Nhập mã phiếu xuất" />
+            </Form.Item>
           </Col>
           <Col md={8} xs={24}>
             <Form.Item
@@ -743,7 +677,7 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
         >
           <Checkbox.Group options={DOCUMENT_OPTIONS} />
         </Form.Item>
-        <OutboundDocumentsUpload />
+        <WarehouseDocumentsUpload />
       </DeliverySection>
 
       <footer className="warehouse-delivery__footer">

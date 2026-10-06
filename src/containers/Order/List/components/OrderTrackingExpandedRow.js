@@ -1,5 +1,6 @@
 import ProductAttributesTooltip from './ProductAttributesTooltip'
 import OrderDetailLots from './OrderDetailLots'
+import ProductionWorkflowActions from './ProductionWorkflowActions'
 import { matchesProductionDetail } from '../utils/productionDetailMatch'
 import React, { useState } from 'react'
 import { Table, Tag, Tooltip, Typography } from 'antd'
@@ -47,10 +48,11 @@ const belongsToDetail = (item, detail) => {
     && String(item?.entityId) === String(detailId)
 }
 
-const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityList = false, productionOverview = false }) => {
+const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityList = false, productionOverview = false, trackingOverview = false, canAttachProductionWorkflow = false, canViewProductionWorkflow = false, onProductionWorkflowRefresh }) => {
   const [activeDetailRowKey, setActiveDetailRowKey] = useState()
   const [expandedLotRowKey, setExpandedLotRowKey] = useState(null)
   const details = getOrderDetails(record)
+  const showVndSalePrice = isOpportunityList || productionOverview || trackingOverview
   const manufactureDetails = getManufactureProducts(record).flatMap(manufactureProduct => {
     const items = Array.isArray(manufactureProduct?.details) ? manufactureProduct.details : []
     return items.map(manufactureDetail => ({
@@ -82,6 +84,7 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityLis
       _detailCode: getDetailCode(detail),
       _detailRowSpan: rowIndex === 0 ? rowCount : 0,
       _manufactureProduct: detailManufactureProducts[rowIndex],
+      _productionIndex: rowIndex + 1,
       _receipt: detailReceipts[rowIndex],
       _shippingItem: detailShipping[rowIndex],
     }))
@@ -147,11 +150,11 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityLis
         },
         {
           title: 'Giá bán',
-          dataIndex: 'price',
+          dataIndex: showVndSalePrice ? 'priceV' : 'price',
           width: 130,
           align: 'right',
           onCell: detail => ({ rowSpan: expandedLotRowKey == null ? detail?._detailRowSpan : 1 }),
-          render: (value, detail) => formatMoney(value, detail?.currency || record?.currency),
+          render: (value, detail) => formatMoney(value, showVndSalePrice ? 'VND' : (detail?.currency || record?.currency)),
         },
         {
           title: 'Deadline',
@@ -181,6 +184,18 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityLis
             ? formatQuantity(item?.manufactureDetail?.target, detail?.unit)
             : '',
         },
+        ...[
+          { title: 'SL đã sản xuất', key: 'producedQuantity' },
+          { title: 'SL sản xuất còn lại', key: 'remainingProductionQuantity' },
+        ].map(metric => ({
+          title: metric.title, key: metric.key, width: 140, align: 'right',
+          onCell: detail => ({ rowSpan: expandedLotRowKey == null ? detail?._detailRowSpan : 1 }),
+          render: (_, detail) => {
+            const value = detail?._productionMetrics?.[metric.key]
+            return value == null ? <Tooltip title={detail?._productionMetrics?.error || 'Chưa tải được dữ liệu sản xuất'}>—</Tooltip>
+              : formatQuantity(value, detail.unit)
+          },
+        })),
         {
           title: 'Deadline',
           dataIndex: '_manufactureProduct',
@@ -192,7 +207,7 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityLis
           dataIndex: '_manufactureProduct',
           width: 90,
           align: 'center',
-          render: () => '',
+          render: (item, detail) => item ? detail._productionIndex : '',
         },
       ],
     },
@@ -267,6 +282,23 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityLis
         },
       ],
     },
+    ...(productionOverview ? [{
+      title: 'Action', key: 'productionActions',
+      children: [{
+        title: null, key: 'productionWorkflow', width: 260,
+        onCell: detail => ({ rowSpan: expandedLotRowKey == null ? detail._detailRowSpan : 1 }),
+        render: (_, detail) => {
+          if (!detail._detailRowSpan) return null
+          const commands = manufactureDetails.filter(item => matchesProductionDetail(item.manufactureDetail, detail, details))
+          if (!commands.length || getDetailId(detail) == null) return '—'
+          const codes = [...new Set(commands.map(item => item.manufactureProduct?.code).filter(Boolean))]
+          return <ProductionWorkflowActions order={record} detail={detail} manufactureCodes={codes}
+            canAttach={canAttachProductionWorkflow} canView={canViewProductionWorkflow}
+            onRefresh={onProductionWorkflowRefresh} />
+        },
+
+      }],
+    }] : []),
   ].filter((group, index) => (
     (!isOpportunityList || index === 0)
     && (!productionOverview || group.key !== 'outbound')
@@ -292,7 +324,7 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityLis
           showExpandColumn: false,
           expandedRowKeys: expandedLotRowKey == null ? [] : [expandedLotRowKey],
           rowExpandable: detail => detail._detailRowSpan > 0 && getDetailId(detail) != null,
-          expandedRowRender: detail => <OrderDetailLots detailId={getDetailId(detail)} />,
+          expandedRowRender: detail => <OrderDetailLots detailId={getDetailId(detail)} lots={detail._productionLots} />,
         }}
         locale={{ emptyText: 'Đơn hàng chưa có đơn con' }}
         scroll={{ x: columns.flatMap(group => group.children).reduce((total, column) => total + (column.width || 100), 0) }}

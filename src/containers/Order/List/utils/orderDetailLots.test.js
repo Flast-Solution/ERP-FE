@@ -5,17 +5,17 @@ jest.mock('@flast-erp/core/utils', () => ({ RequestUtils: { Post: jest.fn(), Get
 beforeEach(() => jest.clearAllMocks())
 
 test('loads instances using order detail ID, then previews using instance ID', async () => {
-  RequestUtils.Post.mockResolvedValue({ success: true, data: [{ id: 113, entityId: 34169 }, { id: 114, entityId: 34172 }] })
-  RequestUtils.Get.mockResolvedValue({ success: true, data: { submissions: [{
-    id: 57, stepCode: 'start', version: 4, valuesJson: {
-      lots: [{ code_lot: '1', so_luong: 1, danh_gia: { quality: true } }],
-      tieu_chi: [{ id: 'quality', name: 'Chất lượng', type: 'boolean' }],
-    },
-  }] } })
+  RequestUtils.Post.mockResolvedValueOnce({ success: true, data: [{ id: 113, entityId: 34169 }, { id: 114, entityId: 34172 }] })
+    .mockResolvedValueOnce({ success: true, data: [{ processInstance: { id: 113 }, submissions: [{
+      id: 57, stepCode: 'start', version: 4, valuesJson: {
+        lots: [{ code_lot: '1', so_luong: 1, danh_gia: { quality: true } }],
+        tieu_chi: [{ id: 'quality', name: 'Chất lượng', type: 'boolean' }],
+      },
+    }] }] })
   const rows = await fetchOrderDetailLots(34169)
   expect(RequestUtils.Post).toHaveBeenCalledWith('/workflow/process/instance/get-entity', { entityName: 'PRODUCTION', entityIds: [34169] })
-  expect(RequestUtils.Get).toHaveBeenCalledTimes(1)
-  expect(RequestUtils.Get).toHaveBeenCalledWith('/workflow/process/preview', { instanceId: 113 })
+  expect(RequestUtils.Get).not.toHaveBeenCalled()
+  expect(RequestUtils.Post).toHaveBeenCalledWith('/workflow/process/preview-list', [113])
   expect(rows[0]).toMatchObject({ code_lot: '1', so_luong: 1, danh_gia: { quality: true }, _criteria: [{ id: 'quality', name: 'Chất lượng', type: 'boolean' }] })
 })
 

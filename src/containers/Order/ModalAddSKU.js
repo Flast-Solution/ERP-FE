@@ -319,9 +319,9 @@ const AddSKU = (props) => {
         </Col>
         <Col span={12}>
           <FormInput
-            label='Số đơn'
+            label='Mã đơn hàng'
             name='code'
-            placeholder={'Nhập số đơn nếu có'}
+            placeholder={'Nhập mã đơn hàng nếu có'}
           />
         </Col>
         <Col span={24}>

@@ -264,8 +264,8 @@ const OrderPayment = ({ data, readOnly = false, closeModalAfterSubmit }) => {
             </Row>
           </div>
           <Descriptions bordered size="small" column={1} style={{ marginBottom: 24 }} items={[
-            { key: 'terms', label: 'Điều kiện thanh toán', children: ({ PREPAID: 'Trả trước', POSTPAID: 'Trả sau', DEPOSIT: 'Đặt cọc' })[customerOrder?.paymentTerms] || customerOrder?.paymentTerms || '—' },
-            { key: 'percent', label: 'Mức thanh toán (%)', children: customerOrder?.paymentPercent == null ? '—' : `${customerOrder.paymentPercent}%` },
+            { key: 'terms', label: 'Điều kiện thanh toán', children: ({ PREPAID: 'Trả trước', POSTPAID: 'Trả sau', DEPOSIT: 'Đặt cọc' })[customerOrder?.payOptions?.paymentTerms] || customerOrder?.payOptions?.paymentTerms || '—' },
+            { key: 'percent', label: 'Mức thanh toán (%)', children: customerOrder?.payOptions?.paymentPercent == null ? '—' : `${customerOrder.payOptions.paymentPercent}%` },
           ]} />
           <h3>Thông tin giao hàng</h3>
           <Row gutter={16}>

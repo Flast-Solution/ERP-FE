@@ -21,7 +21,7 @@
 
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Button, Col, Empty, Form, message, Row, Table, Tag } from 'antd';
-import { ExportOutlined, PrinterOutlined } from '@ant-design/icons';
+import { ExportOutlined, PrinterOutlined, FileOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useReactToPrint } from 'react-to-print';
 import {
@@ -44,6 +44,8 @@ import { useEffectAsync } from '@flast-erp/core/hooks';
 import { HASH_MODAL } from '@/configs';
 import useGetMe from '@/hooks/useGetMe';
 import './ModalNhapKho.less';
+import UploadedFilePreview from '../../components/UploadedFilePreview';
+import { toUploadFile } from '../PreviewModal/uploadUtils';
 
 const displayValue = value => (
   value === undefined || value === null || value === '' ? '—' : value
@@ -145,6 +147,7 @@ const ModalNhapKho = ({
   const canCreateDelivery = hasPermission('inventory.delivery.create');
   const [ inStocks, setInStocks ] = useState([]);
   const [ selectedInStockId, setSelectedInStockId ] = useState(null);
+  const [previewFile, setPreviewFile] = useState(null);
   const [ evaluationCriteria, setEvaluationCriteria ] = useState([]);
   const [ businessUsers, setBusinessUsers ] = useState([]);
   const [ skus, setSkus ] = useState([]);
@@ -327,7 +330,7 @@ const ModalNhapKho = ({
       .filter(Boolean)
       .join(' · ');
     const criteria = parseCriteria(receiptDetail?.criteria);
-    const attachments = parseCriteria(receiptDetail?.attachments);
+    const attachments = parseCriteria(receiptDetail?.attachments).map(toUploadFile).filter(Boolean);
     const passedCriteria = criteria.filter(item => item?.passed === true).length;
     const criteriaColumns = [
       {
@@ -424,17 +427,26 @@ const ModalNhapKho = ({
           {receiptDetail?.inspectionNote ? (
             <div className="warehouse-receipt-detail__note">{receiptDetail.inspectionNote}</div>
           ) : null}
-          {attachments.length > 0 ? (
-            <div className="warehouse-receipt-detail__attachments">
-              {attachments.map(file => (
-                <span key={file}>{String(file).split('/').pop()}</span>
-              ))}
-            </div>
-          ) : null}
         </section>
 
         <section className="warehouse-receipt-detail__section">
-          <SectionHeader number="3" title="Tồn kho hiện tại" />
+          <SectionHeader number="3" title="Chứng từ kèm theo" />
+          {attachments.length > 0 ? (
+            <div className="warehouse-receipt-detail__attachments">
+              {attachments.map(file => (
+                <Button key={file.uid} icon={<FileOutlined />} onClick={() => setPreviewFile(file)} title={`Xem ${file.name}`}>
+                  {file.name}
+                </Button>
+              ))}
+            </div>
+          ) : (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có chứng từ kèm theo" />
+          )}
+        </section>
+        <UploadedFilePreview file={previewFile} onClose={() => setPreviewFile(null)} />
+
+        <section className="warehouse-receipt-detail__section">
+          <SectionHeader number="4" title="Tồn kho hiện tại" />
           <div className="warehouse-receipt-detail__grid">
             <DetailItem label="Kho nhận" value={receiptDetail?.stockName} />
             <DetailItem label="Vị trí lưu" value={receiptDetail?.binLocation} mono />
@@ -459,7 +471,7 @@ const ModalNhapKho = ({
         </section>
 
         <section className="warehouse-receipt-detail__section">
-          <SectionHeader number="4" title="Lịch sử nhập kho" />
+          <SectionHeader number="5" title="Lịch sử nhập kho" />
           <InStockTable
             data={inStocks}
             showWhenEmpty

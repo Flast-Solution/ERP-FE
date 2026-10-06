@@ -12,12 +12,18 @@ const displayValue = (value, type) => {
   return String(value)
 }
 
-const OrderDetailLots = ({ detailId }) => {
+const OrderDetailLots = ({ detailId, lots }) => {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [retry, setRetry] = useState(0)
   useEffect(() => {
+    if (Array.isArray(lots) && retry === 0) {
+      setRows(lots)
+      setLoading(false)
+      setError('')
+      return undefined
+    }
     let active = true
     setLoading(true)
     setError('')
@@ -27,7 +33,7 @@ const OrderDetailLots = ({ detailId }) => {
       .catch(failure => { if (active) setError(failure?.message || 'Không tải được chi tiết lot.') })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [detailId, retry])
+  }, [detailId, lots, retry])
 
   const criteria = new Map()
   rows.forEach(row => row._criteria.forEach(criterion => {
