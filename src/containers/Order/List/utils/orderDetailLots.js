@@ -1,4 +1,5 @@
 import { RequestUtils } from '@flast-erp/core/utils'
+import { fetchWorkflowPreviewList } from '../services/workflowPreviewApi'
 
 const assertSuccess = response => {
   if (response?.success !== true && response?.errorCode !== 200) {
@@ -30,6 +31,9 @@ export const buildLotDetailRows = (preview, instanceId) => {
         so_luong: lot.quantity,
         danh_gia: lot,
         _source: 'nhap_lot',
+        _instanceId: instanceId,
+        _submittedAt: submission.submittedAt,
+        _submissionId: submission.id,
         _rowKey: `${instanceId}-${submission.id}-${index}`,
         _criteria: criteria,
       }))
@@ -38,6 +42,9 @@ export const buildLotDetailRows = (preview, instanceId) => {
     return (Array.isArray(values?.lots) ? values.lots : []).map((lot, index) => ({
       ...lot,
       _rowKey: `${instanceId}-${submission.id}-${index}`,
+      _instanceId: instanceId,
+      _submittedAt: submission.submittedAt,
+      _submissionId: submission.id,
       _stepName: preview?.stepProcessList?.find(step => step.stepCode === submission.stepCode)?.name || submission.stepCode,
       _criteria: criteria,
     }))
@@ -54,10 +61,10 @@ export const fetchOrderDetailLots = async detailId => {
   const instances = response.data.filter(instance => (
     instance?.id != null && String(instance.entityId) === String(detailId)
   ))
-  const groups = await Promise.all(instances.map(async instance => {
-    const preview = await RequestUtils.Get('/workflow/process/preview', { instanceId: instance.id })
-    assertSuccess(preview)
-    return buildLotDetailRows(preview.data, instance.id)
-  }))
-  return groups.flat()
+  const previews = await fetchWorkflowPreviewList(instances.map(instance => instance.id))
+  return instances.flatMap(instance => {
+    const preview = previews.get(String(instance.id))
+    if (!preview) throw new Error('API không trả về preview của workflow sản xuất.')
+    return buildLotDetailRows(preview, instance.id)
+  })
 }

@@ -1,22 +1,18 @@
-import React, { useCallback, useMemo } from 'react'
-import { Button, Dropdown, Select, Space, Table, Tooltip } from 'antd'
-import { EditOutlined, EyeOutlined, ApartmentOutlined } from '@ant-design/icons'
+import React, { useMemo } from 'react'
+import { Button, Select, Space, Table, Tooltip } from 'antd'
+import { EditOutlined, EyeOutlined } from '@ant-design/icons'
 import {
   formatListDate,
-  getBomVersions,
   getProductLabel,
   getProductionDeadline,
   getProductionQuantity,
 } from '../utils'
 
-import { useWorkflowDrawer } from '@/contexts/WorkflowDrawerContext'
-import { PRODUCTION_WORKFLOW_ENTITY_TYPE } from '../constants'
 
 const getProductionOrderColumns = ({
   onView,
   onEdit,
   onStatusChange,
-  onWorkflow,
   statusOptions,
   updatingStatusId,
 }) => [
@@ -50,21 +46,6 @@ const getProductionOrderColumns = ({
     key: 'products',
     width: 265,
     render: (_, record) => getProductLabel(record),
-  },
-  {
-    title: 'BOM',
-    key: 'bomVersions',
-    width: 145,
-    render: (_, record) => {
-      const versions = getBomVersions(record)
-      return versions.length > 0 ? (
-        <div className="production-bom-list">
-          {versions.map(version => (
-            <span className="production-bom-code" key={version}>{version}</span>
-          ))}
-        </div>
-      ) : '-'
-    },
   },
   {
     title: 'SL',
@@ -129,31 +110,6 @@ const getProductionOrderColumns = ({
             }}
           />
         </Tooltip>
-        <Dropdown
-          trigger={['click']}
-          menu={{
-            items: (record.orderDetails ?? []).map(detail => ({
-              key: String(detail.id),
-              label: detail.code || detail.productName || `Đơn con #${detail.id}`,
-              disabled: !(detail.orderDetailId ?? (!String(detail.id).startsWith('manufacture-') && detail.id)),
-              onClick: ({ domEvent }) => {
-                domEvent.stopPropagation()
-                onWorkflow(record, detail)
-              },
-            })),
-          }}
-          disabled={!(record.orderDetails ?? []).length}
-        >
-          <Tooltip title="Xem tiến trình workflow theo đơn con">
-            <Button
-              type="text"
-              icon={<ApartmentOutlined />}
-              aria-label="Xem tiến trình workflow"
-              style={{ color: record.orderDetails?.some(detail => detail.workflowInstances?.length) ? '#52c41a' : undefined }}
-              onClick={event => event.stopPropagation()}
-            />
-          </Tooltip>
-        </Dropdown>
         <Tooltip title="Chỉnh sửa">
           <Button
             type="text"
@@ -179,26 +135,15 @@ const ProductionOrderTable = ({
   statusOptions = [],
   updatingStatusId,
 }) => {
-  const { openWorkflowDrawer } = useWorkflowDrawer()
-  const onWorkflow = useCallback((record, detail) => {
-    openWorkflowDrawer(record.order ?? record, { ...detail, id: detail.orderDetailId ?? detail.id }, {
-      entityName: PRODUCTION_WORKFLOW_ENTITY_TYPE,
-      entityType: PRODUCTION_WORKFLOW_ENTITY_TYPE,
-      entityLabel: 'Đơn con',
-      workflowInstances: detail.workflowInstances ?? [],
-      includeAllInstances: true,
-    })
-  }, [openWorkflowDrawer])
   const columns = useMemo(
     () => getProductionOrderColumns({
       onView,
       onEdit,
       onStatusChange,
-      onWorkflow,
-      statusOptions,
+          statusOptions,
       updatingStatusId,
     }),
-    [onView, onEdit, onStatusChange, onWorkflow, statusOptions, updatingStatusId],
+    [onView, onEdit, onStatusChange, statusOptions, updatingStatusId],
   )
 
   return (
@@ -211,7 +156,7 @@ const ProductionOrderTable = ({
         pagination={false}
         bordered
         locale={{ emptyText: 'Chưa có lệnh sản xuất' }}
-        scroll={{ x: 1635 }}
+        scroll={{ x: 1490 }}
       />
     </div>
   )

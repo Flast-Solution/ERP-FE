@@ -1,4 +1,4 @@
-const getExchangeRate = (currency, exchangeRate) => currency === 'USD' ? Number(exchangeRate ?? 0) : 1;
+const roundUsd = value => Math.round((value + Number.EPSILON) * 100) / 100;
 
 const tokenizeFormula = (formula = '') => {
   const tokens = [];
@@ -130,9 +130,32 @@ const calculateLineTotal = ({ item, shippingCost, formula }) => {
   });
 };
 
-export const calculateConvertedLineTotal = ({ item, shippingCost, formula, currency, exchangeRate }) => {
+export const calculateUsdLineTotal = ({ item, shippingCost, formula }) => {
   const amount = calculateLineTotal({ item, shippingCost, formula })
     ?? (Number(item?.productPrice ?? 0) * Number(item?.quantity ?? 0));
-  return Math.round(amount * getExchangeRate(currency, exchangeRate));
+  return roundUsd(amount);
 };
 
+
+// Keep the backend VND price, including zero; only missing VND uses USD × rate.
+export const resolveSalePriceVnd = (line, rate) => {
+  if (line.priceV != null) return Number(line.priceV);
+  if (line.price == null) return null;
+  return Number(line.price) * rate;
+};
+
+export const calculateEditorLine = (line, context) => {
+  const rate = Number(context.exchangeRate);
+  const salePriceVnd = resolveSalePriceVnd(line, rate);
+  const savedTotal = line.totalPrice ?? line.total;
+  let totalPrice;
+  if (!line._recalculateTotal && savedTotal != null) {
+    totalPrice = Number(savedTotal);
+  } else if (line.price != null) {
+    totalPrice = roundUsd(Number(line.price) * Number(line.quantity ?? 0) + Number(line.discountAmount ?? 0));
+  } else {
+    totalPrice = calculateUsdLineTotal({ ...context, item: line });
+  }
+  return { ...line, salePriceUsd: line.price ?? null, salePriceVnd,
+    currency: context.currency, exchangeRate: rate, totalPrice, total: totalPrice };
+};

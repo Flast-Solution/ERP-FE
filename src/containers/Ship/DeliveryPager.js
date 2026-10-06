@@ -10,13 +10,15 @@ import {
   Tag,
   Tooltip
 } from 'antd';
-import { PrinterOutlined, SaveOutlined } from '@ant-design/icons';
+import { PrinterOutlined, SaveOutlined, FileOutlined } from '@ant-design/icons';
 import { FormSelectAPI } from '@flast-erp/core/components';
 import { RequestUtils, f5List } from '@flast-erp/core/utils';
 import { useReactToPrint } from 'react-to-print';
 import dayjs from 'dayjs';
 import useGetMe from '@/hooks/useGetMe';
 import '@/containers/WareHouse/GiaoHang.less';
+import UploadedFilePreview from '../../components/UploadedFilePreview';
+import { toUploadFile } from '../PreviewModal/uploadUtils';
 
 const DOCUMENT_OPTIONS = [
   { label: 'Phiếu xuất kho', value: 'warehouseSlip' },
@@ -55,7 +57,15 @@ const formatCurrency = value => {
   return Number.isFinite(number) ? `${number.toLocaleString('vi-VN')} ₫` : '—';
 };
 
-const getFileName = path => String(path || '').split('/').filter(Boolean).pop() || 'Tệp đính kèm';
+const parseAttachments = value => {
+  if (Array.isArray(value)) return value;
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
 
 const Section = ({ number, title, children }) => (
   <section className="warehouse-delivery__section">
@@ -82,10 +92,11 @@ const DeliveryPager = ({ data = {} }) => {
   const [form] = Form.useForm();
   const savingRef = useRef(false);
   const [saving, setSaving] = useState(false);
+  const [previewFile, setPreviewFile] = useState(null);
   const delivery = data?.delivery ?? {};
   const lots = Array.isArray(data?.lots) ? data.lots : [];
   const requiredDocuments = Array.isArray(data?.requiredDocuments) ? data.requiredDocuments : [];
-  const attachments = Array.isArray(data?.attachments) ? data.attachments : [];
+  const attachments = parseAttachments(data?.attachments).map(toUploadFile).filter(Boolean);
   const printReceipt = useReactToPrint({
     contentRef,
     documentTitle: `phieu-xuat-kho-${data?.deliveryCode ?? data?.id ?? ''}`
@@ -244,14 +255,19 @@ const DeliveryPager = ({ data = {} }) => {
             <Checkbox.Group options={DOCUMENT_OPTIONS} value={requiredDocuments} disabled />
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-            {attachments.length > 0 ? attachments.map(path => (
-              <Tooltip key={path} title={path}>
-                <Tag>{getFileName(path)}</Tag>
+            {attachments.length > 0 ? attachments.map(file => (
+              <Tooltip key={file.uid} title={`Xem ${file.name}`}>
+                <Button icon={<FileOutlined />} onClick={() => setPreviewFile(file)}
+                  style={{ maxWidth: '100%', height: 'auto', whiteSpace: 'normal', overflowWrap: 'anywhere', textAlign: 'left' }}>
+                  {file.name}
+                </Button>
               </Tooltip>
             )) : <span style={{ color: '#6b7280' }}>Không có tệp đính kèm</span>}
           </div>
         </Section>
       </div>
+
+      <UploadedFilePreview file={previewFile} onClose={() => setPreviewFile(null)} />
 
       <Form form={form} layout="vertical" onFinish={onFinish} disabled={saving}>
         <footer className="warehouse-delivery__footer">

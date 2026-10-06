@@ -3,8 +3,6 @@ import { message } from 'antd'
 import { RequestUtils } from '@flast-erp/core/utils'
 import { MANUFACTURE_SAVE_API } from '../constants'
 import { buildManufacturePayload } from '../utils'
-import { attachSelectedWorkflows } from '@/containers/Order/List/services/workflowApi'
-import { PRODUCTION_WORKFLOW_ENTITY_TYPE } from '../constants'
 
 export const useProductionOrderFlow = ({
   resetWaitingOrders,
@@ -65,22 +63,9 @@ export const useProductionOrderFlow = ({
         return
       }
 
-      const workflowFailures = []
-      for (const detail of payload.manufactureProduct.details) {
-        const failures = await attachSelectedWorkflows({
-          processIds: detail.workflowProcessIds,
-          entityType: PRODUCTION_WORKFLOW_ENTITY_TYPE,
-          entityId: detail.orderDetailId,
-        })
-        workflowFailures.push(...failures.map(failure => ({ ...failure, orderDetailId: detail.orderDetailId })))
-      }
-      if (workflowFailures.length) {
-        message.warning(`Đã lưu lệnh sản xuất nhưng chưa gắn được một số workflow (${workflowFailures.map(item => `${item.orderDetailId ?? '?'}: #${item.processId}`).join(', ')}). Mở chỉnh sửa lệnh để thử lại.`)
-      } else {
-        message.success(response?.message || (isEdit
-          ? 'Đã cập nhật lệnh sản xuất.'
-          : 'Đã tạo lệnh sản xuất.'))
-      }
+      message.success(response?.message || (isEdit
+        ? 'Đã cập nhật lệnh sản xuất.'
+        : 'Đã tạo lệnh sản xuất.'))
       closeFlow()
       await onSaved?.()
     } catch (error) {

@@ -68,7 +68,7 @@ const FormFileUpload = ({
 
     try {
       // Dùng Blob URL để bỏ qua Content-Disposition: attachment của API.
-      const response = await axios.get(sourceUrl, { responseType: 'blob' })
+      const response = await axios.get(sourceUrl, { baseURL: '', responseType: 'blob' })
       let blob = response.data
       const extension = filename.split('.').pop()?.toLowerCase()
       const mimeByExtension = {

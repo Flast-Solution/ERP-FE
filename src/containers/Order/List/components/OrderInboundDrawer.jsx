@@ -20,7 +20,7 @@ import {
   SaveOutlined,
 } from '@ant-design/icons'
 import { RequestUtils } from '@flast-erp/core/utils'
-import FormFileUpload from '@/containers/PreviewModal/FormFileUpload'
+import WarehouseDocumentsUpload from '../../../WareHouse/WarehouseDocumentsUpload'
 import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard'
 import './OrderInboundDrawer.less'
 
@@ -182,6 +182,7 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
   const [savingEvaluation, setSavingEvaluation] = useState(false)
   const [savingDefaultCriteria, setSavingDefaultCriteria] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [uploadingDocuments, setUploadingDocuments] = useState(false)
   const [warehouseHistory, setWarehouseHistory] = useState([])
   const [loadingWarehouseHistory, setLoadingWarehouseHistory] = useState(false)
   const [selectedHistoryId, setSelectedHistoryId] = useState(null)
@@ -365,6 +366,10 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
   }
 
   const handleSubmit = async values => {
+    if (uploadingDocuments) {
+      message.warning('Vui lòng đợi tải chứng từ hoàn tất')
+      return
+    }
     setSubmitting(true)
     try {
       const historyResponse = await RequestUtils.Get(WAREHOUSE_HISTORY_API, {
@@ -503,6 +508,7 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
           orderCode: initialOrder?.code,
           providerId: initialOrder?.providerId ?? initialOrder?.provider?.id,
           criteria: [],
+          attachments: [],
         }}
         onValuesChange={handleValuesChange}
         onFinish={handleSubmit}
@@ -725,21 +731,20 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
                   />
                 </Form.Item>
               </Col>
-              <Col md={12} xs={24}>
-                <FormFileUpload
-                  name="attachments"
-                  label="Ảnh kèm theo"
-                  accept="image/*"
-                  folder="warehouse/inbound"
-                  image
-                  maxSizeMB={8}
-                />
-              </Col>
             </Row>
           </section>
 
           <section className="order-inbound-section">
-            <div className="order-inbound-section__head"><span>4</span><h2>Nhập kho</h2></div>
+            <div className="order-inbound-section__head"><span>4</span><h2>Chứng từ kèm theo</h2></div>
+            <WarehouseDocumentsUpload
+              onChange={markDirty}
+              onUploadingChange={setUploadingDocuments}
+              disabled={submitting}
+            />
+          </section>
+
+          <section className="order-inbound-section">
+            <div className="order-inbound-section__head"><span>5</span><h2>Nhập kho</h2></div>
             <Row gutter={16}>
               <Col lg={8} md={12} xs={24}>
                 <Form.Item name="warehouseId" label={<span>Kho nhận <b>*</b></span>}>
@@ -780,7 +785,7 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
           </section>
 
           <section className="order-inbound-section">
-            <div className="order-inbound-section__head"><span>5</span><h2>Lịch sử chuyển kho</h2></div>
+            <div className="order-inbound-section__head"><span>6</span><h2>Lịch sử chuyển kho</h2></div>
             <Table
               className="order-inbound-history"
               rowKey={item => item.id ?? `${item.receiptCode}-${item.createdDate}`}
@@ -809,7 +814,7 @@ const OrderInboundDrawer = ({ open, initialOrder, onClose }) => {
               icon={<SaveOutlined />}
               htmlType="submit"
               loading={submitting}
-              disabled={loadingWarehouseHistory
+              disabled={uploadingDocuments || loadingWarehouseHistory
                 || Boolean(selectedDetail && quantitySummary.remainingQuantity <= 0)}
             >
               Xác nhận & nhập kho

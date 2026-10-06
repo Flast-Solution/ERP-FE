@@ -20,6 +20,7 @@ const WorkflowAttachModal = ({
   selectedWorkflowEntityType,
   canSubmit,
   entityLabel,
+  contextDescription,
 }) => {
   const isLotTarget = selectedWorkflowEntityType === LOT_WORKFLOW_ENTITY_TYPE
   const orderCode = selectedOrder?.code || selectedOrder?.name
@@ -58,6 +59,7 @@ const WorkflowAttachModal = ({
     >
       <Spin spinning={workflowLoading}>
         <div className="workflow-attach-modal__content">
+          {contextDescription && <p><Text type="secondary">{contextDescription}</Text></p>}
           {workflowTargets.length === 0 ? (
             <Empty description={`${resolvedEntityLabel} chưa có đối tượng để gắn workflow`} />
           ) : workflowTargets.map((target, index) => {

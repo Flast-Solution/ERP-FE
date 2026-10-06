@@ -16,7 +16,6 @@ import { RequestUtils } from '@flast-erp/core/utils';
 import { formatCurrency as formatMoney } from '../../utils/formatCurrency';
 import ProductionPage from './styles';
 import { parseOrderLine } from '@/containers/Order/orderLine';
-import { useProductionWorkflows } from './production-order-list/hooks/useProductionWorkflows';
 import { createSnowflakeId } from '@/utils/snowflake';
 import {
   MANUFACTURE_STATUS_LIST_API,
@@ -99,7 +98,6 @@ const CreateOrder = ({
 }) => {
   const readOnly = mode === 'view';
   const [form] = Form.useForm();
-  const { workflows, loading: workflowLoading, loadMore: loadMoreWorkflows } = useProductionWorkflows();
   const rowSequenceRef = useRef(0);
   const initializedEditRef = useRef(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -202,7 +200,6 @@ const CreateOrder = ({
     if (!currentProductDetails[String(product.id)]) {
       form.setFieldValue(['productDetails', String(product.id)], {
         target: product.target,
-        workflowProcessIds: product.workflowProcessIds ?? [],
         deadline: undefined,
         providerId: product.providerId ?? product.provider?.id,
       });
@@ -408,32 +405,6 @@ const CreateOrder = ({
                             initialValue={product.providerId ?? product.provider?.id}
                             style={{ width: '100%' }}
                           />
-                          <Form.Item
-                            name={['productDetails', String(product.id), 'workflowProcessIds']}
-                            label="Gắn workflow"
-                          >
-                            <Select
-                              mode="multiple"
-                              allowClear
-                              showSearch
-                              optionFilterProp="label"
-                              placeholder="Chọn một hoặc nhiều workflow"
-                              loading={workflowLoading}
-                              options={[...new Map([
-                                ...(watchedProductDetails?.[String(product.id)]?.workflowProcessIds ?? [])
-                                  .map(id => [String(id), { value: id, label: `Workflow #${id}` }]),
-                                ...workflows.map(workflow => [String(workflow.id), {
-                                  value: workflow.id,
-                                  label: workflow.name || workflow.code || `Workflow #${workflow.id}`,
-                                }]),
-                              ]).values()]}
-                              onOpenChange={open => { if (open && !workflows.length) loadMoreWorkflows(); }}
-                              onPopupScroll={event => {
-                                const target = event.currentTarget;
-                                if (target.scrollTop + target.clientHeight >= target.scrollHeight - 24) loadMoreWorkflows();
-                              }}
-                            />
-                          </Form.Item>
                           <FormTextArea
                             name={['productDetails', String(product.id), 'description']}
                             label="Ghi chú đơn con"

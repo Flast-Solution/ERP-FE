@@ -43,6 +43,7 @@ const ProductTooltip = ({ record }) => (
 const createOrderTrackingColumns = ({
   isOpportunityList = false,
   productionOverview = false,
+  trackingOverview = false,
   canUpdateOpportunity,
   cancelOpportunity,
   cancellingOpportunityId,
@@ -177,6 +178,17 @@ const createOrderTrackingColumns = ({
           return renderMetric(metrics.plannedProductionQuantity, getOrderUnit(record), '#722ed1')
         },
       },
+      ...[
+        { title: 'SL đã sản xuất', key: 'producedQuantity', color: '#389e0d' },
+        { title: 'SL sản xuất còn lại', key: 'remainingProductionQuantity', color: '#d46b08' },
+      ].map(metric => ({
+        title: metric.title, key: metric.key, width: 140, align: 'right',
+        render: (_, record) => {
+          const value = getOrderTrackingMetrics(record)[metric.key]
+          if (value == null) return <Tooltip title={record?._productionMetrics?.error || 'Chưa tải được dữ liệu sản xuất'}>—</Tooltip>
+          return renderMetric(value, getOrderUnit(record), metric.color)
+        },
+      })),
       {
         title: 'Dư / thiếu KH',
         key: 'productionVariance',
@@ -336,7 +348,7 @@ const createOrderTrackingColumns = ({
         key: 'total',
         width: 120,
         align: 'right',
-        render: value => formatMoney(value),
+        render: value => formatMoney(value, 'USD'),
       },
       {
         title: 'Đã thanh toán',
@@ -344,7 +356,7 @@ const createOrderTrackingColumns = ({
         key: 'paid',
         width: 120,
         align: 'right',
-        render: value => formatMoney(value),
+        render: value => formatMoney(value, 'USD'),
       },
       {
         title: 'Còn lại',
@@ -353,7 +365,7 @@ const createOrderTrackingColumns = ({
         align: 'right',
         render: (_, record) => (
           <Text type={Number(record?.total ?? 0) - Number(record?.paid ?? 0) > 0 ? 'danger' : undefined}>
-            {formatMoney(Number(record?.total ?? 0) - Number(record?.paid ?? 0))}
+            {formatMoney(Number(record?.total ?? 0) - Number(record?.paid ?? 0), 'USD')}
           </Text>
         ),
       },
@@ -362,12 +374,12 @@ const createOrderTrackingColumns = ({
   {
     title: 'Action',
     key: 'action',
-    width: productionOverview ? 180 : (isOpportunityList ? Math.max(180, actionWidth - 80) : actionWidth),
+    width: productionOverview || trackingOverview ? 200 : (isOpportunityList ? Math.max(200, actionWidth - 80) : actionWidth),
     render: (_, record) => (
       <Space size={4}>
         <OrderActions
           record={record}
-          compact={productionOverview}
+          compact={productionOverview || trackingOverview}
           isOpportunityList={isOpportunityList}
           hideQuoteButton={hideQuoteButton}
           disableWorkflowAttach={disableWorkflowAttach}

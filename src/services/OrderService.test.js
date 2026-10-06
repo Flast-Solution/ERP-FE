@@ -1,15 +1,20 @@
 import { normalizeOrderDetail } from './OrderService';
-import OrderTextTableOnly from '../containers/Order/OrderTextTableOnly';
 
 jest.mock('@/configs', () => ({ SUCCESS_CODE: 200 }), { virtual: true });
 jest.mock('@flast-erp/core/utils', () => ({ RequestUtils: {}, arrayEmpty: value => !value?.length }), { virtual: true });
 
-test.each([[1300, 50024000, '1,924'], [1700, 65416000, '2,516']])(
-  'displays view-on-edit VND totalPrice in USD once for %s meters', (quantity, totalPrice, expected) => {
-    const order = { currency: 'USD', exchangeRate: 26000 };
-    const detail = normalizeOrderDetail({ id: 1, price: 38480, quantity, totalPrice }, {}, order);
-    expect(detail.totalPrice).toBe(totalPrice);
-    const table = OrderTextTableOnly({ details: [detail], currency: 'USD', orderCurrency: 'USD', exchangeRate: 26000 });
-    expect(table.props.columns.find(column => column.title === 'Thành tiền').render(null, detail).props.children).toBe(expected);
-  },
-);
+test('preserves backend USD totals and falls back to USD sale price times quantity', () => {
+  const order = { currency: 'USD', exchangeRate: 23000 };
+  expect(normalizeOrderDetail({ price: 2, priceV: 46000, quantity: 100, totalPrice: 200 }, {}, order).totalPrice).toBe(200);
+  expect(normalizeOrderDetail({ price: 2, priceV: 46000, quantity: 100 }, {}, order).totalPrice).toBe(200);
+});
+
+test('normalizes independent sale prices without currency conversion or inventing missing values', () => {
+  const order = { currency: 'USD', exchangeRate: 23000 };
+  expect(normalizeOrderDetail({ price: 2, priceV: 46000, productPrice: 1.7, quantity: 1000, totalPrice: 2000 }, {}, order))
+    .toMatchObject({ price: 2, priceV: 46000, productPrice: 1.7, totalPrice: 2000 });
+  expect(normalizeOrderDetail({ price: 0, priceV: 0 }, {}, order))
+    .toMatchObject({ price: 0, priceV: 0 });
+  expect(normalizeOrderDetail({ price: 2 }, {}, order).priceV).toBeNull();
+  expect(normalizeOrderDetail({ priceV: 46000 }, {}, order).price).toBeNull();
+});

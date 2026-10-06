@@ -55,10 +55,10 @@ export const normalizeOrderDetail = (detail, product, order) => {
   const selectedSku = (product?.skus ?? []).find(
     sku => String(sku?.id) === String(detail?.skuId)
   );
-  const price = Number(detail?.price ?? 0);
+  const price = detail?.price == null ? null : Number(detail.price);
   const quantity = Number(detail?.quantity ?? 0);
   const discountAmount = Number(detail?.priceOff ?? detail?.discountAmount ?? 0);
-  const originalAmount = price * quantity;
+  const originalAmount = Number(price ?? 0) * quantity;
   const currency = detail?.currency ?? order?.currency ?? 'VND';
   const exchangeRate = Number(detail?.exchangeRate ?? order?.exchangeRate ?? 1);
   const responseTotal = detail?.total ?? detail?.totalPrice ?? originalAmount;
@@ -77,13 +77,13 @@ export const normalizeOrderDetail = (detail, product, order) => {
     unit: detail?.unit ?? product?.unit ?? '(Chưa có)',
     mSkuDetails: resolveOrderSkuDetails(detail, product),
     price,
+    priceV: detail?.priceV == null ? null : Number(detail.priceV),
     quantity,
     discountAmount,
     discountRate: Number(detail?.discountRate ?? (
       originalAmount > 0 ? (discountAmount / originalAmount) * 100 : 0
     )),
-    // API line totals and sale price are already VND, including USD orders.
-    // Convert only for display; do not apply the exchange rate again.
+    // Editor amounts and price are USD; only priceV is VND.
     totalPrice: convertedTotal,
     productPrice: Number(detail?.productPrice ?? product?.price ?? product?.priceRef ?? 0),
     skuPrices: selectedSku?.skuPrices ?? [],

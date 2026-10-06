@@ -75,8 +75,6 @@ export const buildManufacturePayload = ({ productionOrder = {}, materialConfirma
     return {
       ...(isEdit && product.manufactureDetailId != null ? { id: product.manufactureDetailId } : {}),
       orderDetailId: product.orderDetailId ?? (Number.isFinite(Number(product.id)) ? product.id : null),
-      workflowProcessIds: [...new Set((detailValues.workflowProcessIds ?? product.workflowProcessIds ?? []).map(String))]
-        .map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0),
       description: detailValues.description ?? null,
       productId: product.productId,
       providerId: detailValues.providerId
@@ -141,8 +139,6 @@ export const mapManufactureOrder = (record, manufactureStatuses = MANUFACTURE_SY
       description: detail.description ?? null,
       manufactureDetailId: detail.id,
       orderDetailId: detail.orderDetailId ?? orderDetail?.id,
-      workflowProcessIds: detail.workflowProcessIds ?? orderDetail?.workflowProcessIds ?? [],
-      workflowInstances: orderDetail?.workflowInstances ?? detail.workflowInstances ?? [],
       productId: detail.productId,
       productName: orderDetail?.productName ?? `Sản phẩm #${detail.productId}`,
       skuId: detail.skuId ?? orderDetail?.skuId ?? null,
@@ -180,7 +176,6 @@ export const mapManufactureOrder = (record, manufactureStatuses = MANUFACTURE_SY
       {
         description: detail?.description ?? null,
         target: detail?.target ?? 0,
-        workflowProcessIds: detail?.workflowProcessIds ?? [],
         deadline: editDeadline,
         providerId: detail?.providerId ?? detail?.provider?.id ?? null,
       },

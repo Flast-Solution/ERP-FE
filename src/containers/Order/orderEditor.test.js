@@ -3,8 +3,8 @@ import dayjs from 'dayjs';
 /* eslint-disable testing-library/no-render-in-setup, testing-library/no-unnecessary-act */
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Table, Input, InputNumber, Select } from 'antd';
-import { RequestUtils } from '@flast-erp/core/utils';
+import { Table, Input, InputNumber } from 'antd';
+import { InAppEvent, RequestUtils } from '@flast-erp/core/utils';
 import OrderService from '@/services/OrderService';
 import OrderEditor from './index';
 
@@ -33,7 +33,7 @@ jest.mock('@flast-erp/core/utils', () => ({
 }), { virtual: true });
 jest.mock('@flast-erp/core/hooks', () => ({
   useEffectAsync: (callback, dependencies) => {
-    require('react').useEffect(() => { callback(() => true); }, dependencies);
+    require('react').useEffect(() => { callback(true); }, dependencies);
   },
 }), { virtual: true });
 jest.mock('@/configs', () => ({ SUCCESS_CODE: 200, HASH_MODAL: 'modal' }), { virtual: true });
@@ -46,7 +46,6 @@ jest.mock('@/services/OrderService', () => ({
 let root;
 let container;
 const mainTable = () => Table.mock.calls.map(call => call[0]).filter(props => props.columns.some(col => col.key === 'quantity')).at(-1);
-const totalsTable = () => Table.mock.calls.map(call => call[0]).filter(props => props.showHeader === false).at(-1);
 beforeEach(() => {
   global.IS_REACT_ACT_ENVIRONMENT = true;
   jest.clearAllMocks();
@@ -62,101 +61,13 @@ beforeEach(() => {
   RequestUtils.Get.mockResolvedValue({ errorCode: 200, data: [{ key: 'CACULATOR_TOTAL', value: '(price * quantity + shippingCost) / (1 - profit%)' }] });
   OrderService.getOrderOnEdit.mockResolvedValue({
     customer: { id: 1 }, order: { id: 2, type: 'opportunity', currency: 'USD', exchangeRate: 25000, vat: 0, shippingCost: 0, paid: 100 },
-    data: [{ key: 'line', productId: 3, productPrice: 100, price: 2500000, quantity: 2, profit: 0, discountAmount: 0, totalPrice: 5000000 }],
+    data: [{ key: 'line', productId: 3, productPrice: 100, price: 100, priceV: 2500000, quantity: 2, profit: 0, discountAmount: 0, totalPrice: 200 }],
   });
 });
 afterEach(async () => {
   await act(async () => root.unmount());
   delete global.IS_REACT_ACT_ENVIRONMENT;
 });
-
-test('keeps row prices and summary in sync as rate, profit and order shipping change', async () => {
-  await act(async () => root.render(<OrderEditor orderId={2} />));
-  expect(mainTable().columns.find(col => col.key === 'dayQuote').title).toBe('Ngày D.kiến');
-  expect(mainTable().columns.some(col => col.key === 'shippingCost')).toBe(false);
-  const rateInput = InputNumber.mock.calls.map(call => call[0]).filter(props => props.style?.width === 170).at(-1);
-  await act(async () => rateInput.onChange(26000));
-  expect(mainTable().dataSource[0].totalPrice).toBe(5200000);
-  expect(totalsTable().dataSource[0].leftValue).toBe('$200');
-  expect(mainTable().columns.find(col => col.key === 'salePrice').render(null, mainTable().dataSource[0]).props.value).toBe(100);
-  expect(mainTable().columns.find(col => col.key === 'lineAmount').render(null, mainTable().dataSource[0]).props.children).toBe('$200');
-  expect(mainTable().columns.find(col => col.key === 'vatAmount').render(null, mainTable().dataSource[0]).props.children).toBe('$0');
-  const profitColumn = mainTable().columns.find(col => col.key === 'profit');
-  await act(async () => profitColumn.render(null, mainTable().dataSource[0]).props.onChange(20));
-  expect(mainTable().dataSource[0].totalPrice).toBe(6500000);
-  const shippingInput = InputNumber.mock.calls.map(call => call[0]).filter(props => props.id === 'order-shipping-cost').at(-1);
-  await act(async () => shippingInput.onChange(10));
-  expect(mainTable().dataSource[0].totalPrice).toBe(6825000);
-  expect(totalsTable().dataSource[1].rightValue).toBe('$272.5');
-  const currencySelect = Select.mock.calls.map(call => call[0]).filter(props => props.options?.some(option => option.value === 'USD')).at(-1);
-  expect(currencySelect.options).toEqual([{ label: 'USD', value: 'USD' }]);
-  await act(async () => mainTable().columns.find(col => col.key === 'operation').render(null, mainTable().dataSource[0]).props.onEdit());
-  await act(async () => mainTable().columns.find(col => col.key === 'quantity').render(2, mainTable().dataSource[0]).props.onChange(3));
-  await act(async () => mainTable().columns.find(col => col.key === 'productPrice').render(100, mainTable().dataSource[0]).props.onChange(200));
-  expect(mainTable().dataSource[0].totalPrice).toBe(19825000);
-  expect(totalsTable().dataSource[1].rightValue).toBe('$772.5');
-  const saveButton = Array.from(container.querySelectorAll('button')).find(button => button.textContent === 'Lưu đơn hàng');
-  await act(async () => saveButton.click());
-  expect(RequestUtils.Post).toHaveBeenCalledWith('/order/save', expect.objectContaining({
-    currency: 'USD', exchangeRate: 26000, shippingCost: 10,
-    details: [expect.objectContaining({ productPrice: 200, quantity: 3, totalPrice: 19825000, total: 19825000, price: 19825000 / 3 })],
-  }));
-});
-
-
-test('allows opportunity code and sale price edits and recalculates after rate changes', async () => {
-  await act(async () => root.render(<OrderEditor orderId={2} />));
-  const codeInput = Input.mock.calls.map(call => call[0]).filter(props => props.id === 'order-code').at(-1);
-  expect(codeInput.disabled).toBeFalsy();
-  await act(async () => codeInput.onChange({ target: { value: 'CH-123' } }));
-  const saleInput = mainTable().columns.find(col => col.key === 'salePrice').render(null, mainTable().dataSource[0]).props;
-  const select = jest.fn();
-  saleInput.onFocus({ target: { select } });
-  expect(select).toHaveBeenCalledTimes(1);
-  await act(async () => saleInput.onChange(120));
-  expect(mainTable().dataSource[0].totalPrice).toBe(6000000);
-  expect(totalsTable().dataSource[0].leftValue).toBe('$240');
-  const termsInput = Select.mock.calls.map(call => call[0]).filter(props => props.id === 'order-payment-terms').at(-1);
-  const percentInput = InputNumber.mock.calls.map(call => call[0]).filter(props => props.id === 'order-payment-percent').at(-1);
-  expect(percentInput.min).toBe(0);
-  expect(percentInput.max).toBe(100);
-  await act(async () => termsInput.onChange('DEPOSIT'));
-  await act(async () => percentInput.onChange(30));
-  await act(async () => Array.from(container.querySelectorAll('button')).find(button => button.textContent === 'Lưu đơn hàng').click());
-  const payload = RequestUtils.Post.mock.calls.find(([url]) => url === '/order/save')[1];
-  expect(payload.code).toBe('CH-123');
-  expect(payload.paymentTerms).toBe('DEPOSIT');
-  expect(payload.paymentPercent).toBe(30);
-  expect(payload.details[0].totalPrice).toBe(6000000);
-  expect(payload.details[0].price).toBe(3000000);
-  expect(payload.details[0]).not.toHaveProperty('manualSalePrice');
-  expect(payload.details[0]).not.toHaveProperty('salePrice');
-  expect(payload.details[0].productPrice).toBe(100);
-  const rateInput = InputNumber.mock.calls.map(call => call[0]).filter(props => props.style?.width === 170).at(-1);
-  await act(async () => rateInput.onChange(26000));
-  expect(mainTable().dataSource[0].totalPrice).toBe(5200000);
-});
-
-
-test('preserves fractional sale price in the controlled input, save payload and reload', async () => {
-  await act(async () => root.render(<OrderEditor orderId={2} />));
-  const saleInput = () => mainTable().columns.find(col => col.key === 'salePrice')
-    .render(null, mainTable().dataSource[0]).props;
-  await act(async () => saleInput().onChange(123451.313 / 25000));
-  expect(saleInput().value).toBeCloseTo(123451.313 / 25000);
-  expect(mainTable().dataSource[0].totalPrice).toBe(246903);
-  OrderService.getOrderOnEdit.mockResolvedValue({
-    customer: { id: 1 },
-    order: { id: 2, type: 'opportunity', currency: 'VND', exchangeRate: 1 },
-    data: [{ key: 'line', productPrice: 100, quantity: 2, price: 123451.313, totalPrice: 246903 }],
-  });
-  await act(async () => Array.from(container.querySelectorAll('button'))
-    .find(button => button.textContent === 'Lưu đơn hàng').click());
-  const payload = RequestUtils.Post.mock.calls.find(([url]) => url === '/order/save')[1];
-  expect(payload.details[0].price).toBeCloseTo(123451.313, 8);
-  expect(saleInput().value).toBe(123451.313);
-});
-
 
 test('formats displayed money while preserving editable backend precision', async () => {
   OrderService.getOrderOnEdit.mockResolvedValue({
@@ -197,10 +108,9 @@ test('locks overview order identifiers and prices while allowing quantity and da
   expect(cell('dayQuote').props.disabled).toBeUndefined();
   await act(async () => cell('quantity').props.onChange(3));
   expect(row().quantity).toBe(3);
-  expect(row().price).toBe(2500000);
-  expect(row().totalPrice).toBe(7500000);
+  expect(row().price).toBe(100);
+  expect(row().totalPrice).toBe(300);
 });
-
 
 test('saves dayQuote as a full timestamp and preserves its time', async () => {
   await act(async () => root.render(<OrderEditor orderId={2} />));
@@ -211,57 +121,130 @@ test('saves dayQuote as a full timestamp and preserves its time', async () => {
   expect(payload.details[0].dayQuote).toBe('2026-09-21 08:32:28');
 });
 
-test('prioritizes manual VND price across USD and exchange rate changes, including zero', async () => {
+const saleInput = key => mainTable().columns.find(column => column.key === key)
+  .render(null, mainTable().dataSource[0]).props;
+const saveOrder = async () => {
+  await act(async () => Array.from(container.querySelectorAll('button'))
+    .find(button => button.textContent === 'Lưu đơn hàng').click());
+  return RequestUtils.Post.mock.calls.filter(([url]) => url === '/order/save').at(-1)[1];
+};
+
+test('preserves independent backend USD, VND and purchase prices when changing the exchange rate and saving', async () => {
+  OrderService.getOrderOnEdit.mockResolvedValue({
+    customer: { id: 1 }, order: { id: 2, currency: 'USD', exchangeRate: 23000 },
+    data: [{ key: 'line', quantity: 1000, productPrice: 1.7, price: 2.123456, priceV: 46000.25, totalPrice: 2123.456 }],
+  });
   await act(async () => root.render(<OrderEditor orderId={2} />));
-  const row = () => mainTable().dataSource[0];
-  const input = key => mainTable().columns.find(column => column.key === key).render(null, row()).props;
-  await act(async () => input('salePrice').onChange(120));
-  expect(input('salePriceVnd').value).toBe(3000000);
-  await act(async () => input('salePriceVnd').onChange(2800000));
-  await act(async () => input('salePrice').onChange(130));
+  expect(saleInput('salePrice').value).toBe(2.123456);
+  expect(saleInput('salePriceVnd').value).toBe(46000.25);
   const rate = InputNumber.mock.calls.map(call => call[0]).filter(props => props.style?.width === 170).at(-1);
   await act(async () => rate.onChange(26000));
-  expect(input('salePrice').value).toBe(130);
-  expect(input('salePriceVnd').value).toBe(2800000);
-  expect(row().totalPrice).toBe(5600000);
-  await act(async () => Array.from(container.querySelectorAll('button')).find(button => button.textContent === 'Lưu đơn hàng').click());
-  const payload = RequestUtils.Post.mock.calls.find(([url]) => url === '/order/save')[1];
-  expect(payload.details[0].price).toBe(2800000);
-  expect(payload.details[0]).not.toHaveProperty('manualSalePriceVnd');
+  expect(saleInput('salePrice').value).toBe(2.123456);
+  expect(saleInput('salePriceVnd').value).toBe(46000.25);
+  expect(mainTable().dataSource[0].totalPrice).toBe(2123.456);
+  expect((await saveOrder()).details[0]).toMatchObject({ price: 2.123456, priceV: 46000.25, productPrice: 1.7 });
+  await act(async () => saleInput('salePrice').onChange(3.123456));
+  expect(saleInput('salePriceVnd').value).toBe(46000.25);
+  await act(async () => saleInput('salePriceVnd').onChange(47000.125));
+  expect(saleInput('salePrice').value).toBe(3.123456);
+  const payload = (await saveOrder()).details[0];
+  expect(payload).toMatchObject({ price: 3.123456, priceV: 47000.125, productPrice: 1.7 });
+  expect(payload).not.toHaveProperty('_recalculateTotal');
 });
 
-test('clearing manual VND returns to USD times rate and manual zero stays zero', async () => {
-  await act(async () => root.render(<OrderEditor orderId={2} />));
-  const input = key => mainTable().columns.find(column => column.key === key).render(null, mainTable().dataSource[0]).props;
-  await act(async () => input('salePrice').onChange(120));
-  await act(async () => input('salePriceVnd').onChange(0));
-  expect(mainTable().dataSource[0].totalPrice).toBe(0);
-  await act(async () => input('salePriceVnd').onChange(null));
-  expect(input('salePriceVnd').value).toBe(3000000);
-  expect(mainTable().dataSource[0].totalPrice).toBe(6000000);
-});
-
-test('converts legacy VND inputs to USD using the saved exchange rate', async () => {
+test('preserves zero prices and falls back to USD when VND is cleared', async () => {
   OrderService.getOrderOnEdit.mockResolvedValue({
-    customer: { id: 1 }, order: { id: 2, currency: 'VND', exchangeRate: 25000, shippingCost: 50000 },
-    data: [{ key: 'line', quantity: 2, productPrice: 2500000, discountAmount: 25000, price: 3000000 }],
+    customer: { id: 1 }, order: { id: 2, currency: 'USD', exchangeRate: 23000 },
+    data: [{ key: 'line', quantity: 1, price: 0, priceV: 0, productPrice: 1.48 }],
   });
   await act(async () => root.render(<OrderEditor orderId={2} />));
-  expect(mainTable().dataSource[0]).toMatchObject({ currency: 'USD', productPrice: 100, discountAmount: 1, price: 3000000 });
-  expect(mainTable().columns.find(column => column.key === 'salePrice').render(null, mainTable().dataSource[0]).props.value).toBe(120);
+  expect(saleInput('salePrice').value).toBe(0);
+  expect(saleInput('salePriceVnd').value).toBe(0);
+  await act(async () => saleInput('salePriceVnd').onChange(null));
+  expect(saleInput('salePriceVnd').value).toBe(0);
+  expect((await saveOrder()).details[0]).toMatchObject({ price: 0, priceV: 0 });
 });
 
-test('preserves a saved USD sale price when the rate changes from 1 to 20000', async () => {
+test('derives missing VND from USD and the current rate for display and payload', async () => {
   OrderService.getOrderOnEdit.mockResolvedValue({
-    customer: { id: 1 }, order: { id: 2, currency: 'USD', exchangeRate: 1 },
-    data: [{ key: 'line', quantity: 1, productPrice: 1.48, price: 1, discountAmount: 0 }],
+    customer: { id: 1 }, order: { id: 2, currency: 'USD', exchangeRate: 23000 },
+    data: [{ key: 'line', quantity: 1, price: 2, priceV: null, productPrice: 1.7 }],
   });
   await act(async () => root.render(<OrderEditor orderId={2} />));
-  const input = key => mainTable().columns.find(column => column.key === key).render(null, mainTable().dataSource[0]).props;
-  expect(input('salePrice').value).toBe(1);
+  expect(saleInput('salePriceVnd').value).toBe(46000);
   const rate = InputNumber.mock.calls.map(call => call[0]).filter(props => props.style?.width === 170).at(-1);
-  await act(async () => rate.onChange(20000));
-  expect(input('salePrice').value).toBe(1);
-  expect(input('salePriceVnd').value).toBe(20000);
-  expect(mainTable().dataSource[0].totalPrice).toBe(20000);
+  await act(async () => rate.onChange(26000));
+  expect(saleInput('salePriceVnd').value).toBe(52000);
+  await act(async () => saleInput('salePrice').onChange(3));
+  expect(saleInput('salePriceVnd').value).toBe(78000);
+  expect((await saveOrder()).details[0]).toMatchObject({ price: 3, priceV: 78000 });
+  await act(async () => saleInput('salePriceVnd').onChange(0));
+  expect(saleInput('salePriceVnd').value).toBe(0);
+  await act(async () => saleInput('salePrice').onChange(null));
+  await act(async () => saleInput('salePriceVnd').onChange(null));
+  expect(saleInput('salePriceVnd').value).toBeNull();
+});
+
+
+test('opening and closing row editing keeps VND fallback responsive to exchange rate changes', async () => {
+  OrderService.getOrderOnEdit.mockResolvedValue({
+    customer: { id: 1 }, order: { id: 2, currency: 'USD', exchangeRate: 23000 },
+    data: [{ key: 'line', price: 2, priceV: null, quantity: 1, totalPrice: 2 }],
+  });
+  await act(async () => root.render(<OrderEditor orderId={2} />));
+  const editButton = () => mainTable().columns.find(column => column.key === 'operation')
+    .render(null, mainTable().dataSource[0]).props;
+  await act(async () => editButton().onEdit());
+  await act(async () => editButton().onClose());
+  const rate = InputNumber.mock.calls.map(call => call[0]).filter(props => props.style?.width === 170).at(-1);
+  await act(async () => rate.onChange(26000));
+  expect(saleInput('salePriceVnd').value).toBe(52000);
+  expect((await saveOrder()).details[0]).toMatchObject({ price: 2, priceV: 52000, totalPrice: 2 });
+});
+
+test('adds a product through the modal and preserves its SKU, order line and prices in the payload', async () => {
+  const onSaveSuccess = jest.fn();
+  await act(async () => root.render(<OrderEditor orderId={2} onSaveSuccess={onSaveSuccess} />));
+  await act(async () => Array.from(container.querySelectorAll('button')).find(button => button.textContent === 'Thêm sản phẩm').click());
+  const modal = InAppEvent.emit.mock.calls.find(([, value]) => value.hash === '#sku.add')[1];
+  await act(async () => modal.data.onSave({ quantity: 3, productId: 5, skuId: 6, code: 'CH-2',
+    mProduct: { id: 5, name: 'Fabric', unit: 'm', price: 1.7, skus: [] },
+    mSkuDetails: [{ text: 'Width', values: [{ id: 7, text: '62' }] }], orderLine: { Width: '62' },
+  }));
+  expect(mainTable().dataSource).toHaveLength(2);
+  const payload = await saveOrder();
+  expect(payload.details[1]).toMatchObject({ code: 'CH-2', productId: 5, skuId: '6', productPrice: 1.7,
+    quantity: 3, price: 0, priceV: 0, orderLine: { Width: '62' } });
+  expect(payload.details[1].skuDetails).toEqual([{ text: 'Width', values: [{ id: 7, text: '62' }] }]);
+  expect(onSaveSuccess).toHaveBeenCalled();
+});
+
+test('displays CH-DT-1 USD totals directly and keeps VND edits and exchange rate out of the totals', async () => {
+  OrderService.getOrderOnEdit.mockResolvedValue({
+    customer: { id: 1 }, order: { id: 34068, code: 'CH-DT-1', currency: 'USD', exchangeRate: 23000,
+      shippingCost: 100, vat: 0, total: 550, subtotal: 450, paid: 0 },
+    data: [
+      { key: 'CH-DT-1-1', price: 2, productPrice: 1.48, priceV: null, quantity: 100, totalPrice: 200, discountAmount: 0 },
+      { key: 'CH-DT-1-2', price: 2.5, productPrice: 1.7, priceV: null, quantity: 100, totalPrice: 250, discountAmount: 0 },
+    ],
+  });
+  const lineAmount = () => mainTable().columns.find(column => column.key === 'lineAmount')
+    .render(null, mainTable().dataSource[0]).props.children;
+  const summary = () => Table.mock.calls.map(call => call[0]).filter(props => props.showHeader === false).at(-1).dataSource;
+  await act(async () => root.render(<OrderEditor orderId={34068} />));
+  expect(lineAmount()).toBe('$200');
+  expect(summary()[0].leftValue).toBe('$450');
+  expect(summary()[1].rightValue).toBe('$550');
+  const rate = InputNumber.mock.calls.map(call => call[0]).filter(props => props.style?.width === 170).at(-1);
+  await act(async () => rate.onChange(24000));
+  expect(lineAmount()).toBe('$200');
+  expect(summary()[1].rightValue).toBe('$550');
+  await act(async () => saleInput('salePriceVnd').onChange(99999));
+  expect(lineAmount()).toBe('$200');
+  await act(async () => mainTable().columns.find(column => column.key === 'operation').render(null, mainTable().dataSource[0]).props.onEdit());
+  await act(async () => mainTable().columns.find(column => column.key === 'quantity').render(100, mainTable().dataSource[0]).props.onChange(200));
+  expect(lineAmount()).toBe('$400');
+  const payload = await saveOrder();
+  expect(payload.shippingCost).toBe(100);
+  expect(payload.details[0]).toMatchObject({ price: 2, priceV: 99999, totalPrice: 400, total: 400 });
 });
