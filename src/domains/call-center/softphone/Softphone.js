@@ -1,7 +1,23 @@
 import { clearGatewayToken, gatewayApi, GW_STATE } from './gatewayApi';
 
 const POLL_INTERVAL = 500;
-const CONNECT_TIMEOUT = 5000;
+const CONNECT_TIMEOUT = 10000;
+
+/* Địa chỉ media trong SDP offer (c= và a=candidate) */
+const getOfferHosts = (sdp = '') => {
+  const hosts = new Set();
+  sdp.split(/\r?\n/).forEach(line => {
+    const conn = line.match(/^c=IN IP[46] (\S+)/);
+    if (conn) {
+      hosts.add(conn[1]);
+    }
+    const cand = line.match(/^a=candidate:\S+ \d+ \S+ \d+ (\S+) (\d+)/);
+    if (cand) {
+      hosts.add(`${cand[1]}:${cand[2]}`);
+    }
+  });
+  return [...hosts];
+};
 
 const AUDIO_UNAVAILABLE = 'Thiết bị audio trên máy không khả dụng';
 
@@ -67,13 +83,46 @@ export default class Softphone {
     this.stream.getTracks().forEach(track => pc.addTrack(track, this.stream));
     await pc.setLocalDescription(await pc.createAnswer());
 
-    const startedAt = Date.now();
-    while (pc.connectionState !== 'connected' && Date.now() - startedAt < CONNECT_TIMEOUT) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    if (pc.connectionState !== 'connected') {
-      throw new Error('Kết nối media tới SBC thất bại');
-    }
+    await this.waitConnected(pc, offer);
+  }
+
+  /* Chờ ICE + DTLS tới SBC; lỗi kèm trạng thái ICE và địa chỉ media SBC đưa ra */
+  waitConnected(pc, offer) {
+    return new Promise((resolve, reject) => {
+      const done = (error) => {
+        clearTimeout(timer);
+        pc.removeEventListener('connectionstatechange', onChange);
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      };
+      const fail = () => {
+        const hosts = getOfferHosts(offer);
+        console.warn('[call-center] media SBC', {
+          connectionState: pc.connectionState,
+          iceConnectionState: pc.iceConnectionState,
+          hosts,
+          offer,
+        });
+        done(new Error(
+          `Kết nối media tới SBC thất bại (ICE ${pc.iceConnectionState}, SBC ${hosts.join(', ') || '?'})`
+        ));
+      };
+      const onChange = () => {
+        if (pc.connectionState === 'connected') {
+          done();
+          return;
+        }
+        if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+          fail();
+        }
+      };
+      const timer = setTimeout(fail, CONNECT_TIMEOUT);
+      pc.addEventListener('connectionstatechange', onChange);
+      onChange();
+    });
   }
 
   startPolling() {
