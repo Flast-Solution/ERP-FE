@@ -32,11 +32,10 @@ import {
   startAccessTokenExpiryMonitor,
 } from '@/utils/sessionExpiry';
 
-// RequestUtils (@flast-erp/core) builds url as baseURL + path, then calls axios.get(url).
-// With a relative baseURL like '/api', axios combines baseURL again → /api/api/...
-// Absolute baseURL avoids the second merge (same as the old http://host:9080/api setup).
 const resolveApiBaseUrl = (gateway) => {
-  if (/^https?:\/\//i.test(gateway)) return gateway;
+  if (/^https?:\/\//i.test(gateway)) {
+    return gateway;
+  }
   return `${window.location.origin}${gateway}`;
 };
 
