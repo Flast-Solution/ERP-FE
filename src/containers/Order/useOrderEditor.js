@@ -8,9 +8,10 @@ import { HASH_POPUP } from '@/configs/constant';
 import OrderService, { getWarehouseByProduct } from '@/services/OrderService';
 import { mergeSavedOrderLines } from './orderLine';
 import { resolveOrderSkuDetails } from './orderSku';
-import { calculateUsdLineTotal, calculateEditorLine } from './orderPricing';
-import { CURRENCY_USD, getExchangeRate, findSkuById, resolveUnitPrice, updateOrderLine } from './orderEditorModel';
+import { calculateEditorLine } from './orderPricing';
+import { CURRENCY_USD, findSkuById, resolveUnitPrice, updateOrderLine } from './orderEditorModel';
 import { buildOrderEditorPayload } from './orderEditorPayload';
+import { buildFormulaSnapshot, calculateFormulaLine, calculateEnteredPriceLine, configToFormula, readFormulaSnapshot } from './orderFormula';
 import { formatOrderCurrency as formatCurrencyAmount } from './orderFormatting';
 const ORDER_TEMPLATE = {
   key: "1",
@@ -73,26 +74,29 @@ const useOrderEditor = ({ orderId, dataId, business, onSaveSuccess, restrictOrde
   const [customerOrder, setCustomerOrder] = useState();
   const [shippingCost, setShippingCost] = useState(0);
   const [currency, setCurrency] = useState(CURRENCY_USD);
-  const [exchangeRate, setExchangeRate] = useState(1);
   const [vatRate, setVatRate] = useState(0);
-  const [calculationFormula, setCalculationFormula] = useState('');
+  const [defaultFormula, setDefaultFormula] = useState(null);
+  const [pricingFormula, setPricingFormula] = useState(null);
 
   const orderedQuantity = lineItems.reduce((sum, line) => sum + Number(line.quantity || 0), 0);
-  const data = useMemo(() => lineItems.map(line => calculateEditorLine(line, {
-    currency, exchangeRate, shippingCost, orderedQuantity, formula: calculationFormula,
-  })), [lineItems, calculationFormula, currency, exchangeRate, shippingCost, orderedQuantity]);
+  const data = useMemo(() => lineItems.map(line => pricingFormula
+    ? calculateEnteredPriceLine(line, currency)
+    : calculateEditorLine(line, { currency, shippingCost, orderedQuantity, formula: '' })),
+  [lineItems, pricingFormula, currency, shippingCost, orderedQuantity]);
+  const chargedShippingCost = pricingFormula?.shippingMode === 'included' ? 0 : Number(shippingCost || 0);
 
   useEffectAsync(async () => {
     const { data: configs, errorCode } = await RequestUtils.Get('/erp/config/fetch', {
-      limit: 10,
+      limit: 100,
       page: 1,
       key: 'CACULATOR_TOTAL'
     });
-    if (errorCode !== SUCCESS_CODE || !Array.isArray(configs)) {
+    if (errorCode !== SUCCESS_CODE) {
       return;
     }
-    const config = configs.find(item => item?.key === 'CACULATOR_TOTAL');
-    setCalculationFormula(typeof config?.value === 'string' ? config.value.trim() : '');
+    const configItems = Array.isArray(configs) ? configs : configs?.embedded ?? [];
+    const config = configItems.find(item => item?.key === 'CACULATOR_TOTAL');
+    setDefaultFormula(configToFormula(config));
   }, []);
 
   useEffectAsync(async () => {
@@ -103,10 +107,11 @@ const useOrderEditor = ({ orderId, dataId, business, onSaveSuccess, restrictOrde
     if (order) {
       setCustomerOrder(order);
       setCurrency(order.currency === 'VND' ? 'VND' : CURRENCY_USD);
-      const savedRate = Number(order.exchangeRate) > 0 ? Number(order.exchangeRate) : 1;
       setShippingCost(Number(order.shippingCost ?? 0));
-      setExchangeRate(savedRate);
       setVatRate(Number(order.vat ?? 0));
+      const snapshot = readFormulaSnapshot(order);
+      setPricingFormula(snapshot);
+      if (snapshot) setShippingCost(Number(order.payOptions.pricingFormula.shippingCost ?? order.shippingCost ?? 0));
     }
     if (arrayNotEmpty(data)) {
       setData(mergeSavedOrderLines(data, localOrder.savedDetails));
@@ -157,7 +162,6 @@ const useOrderEditor = ({ orderId, dataId, business, onSaveSuccess, restrictOrde
       order.skuPrices = skuPrices;
       order.productPrice = Number(mProduct?.price ?? mProduct?.priceRef ?? 0);
       order.currency = currency;
-      order.exchangeRate = getExchangeRate(currency, exchangeRate);
 
       if (arrayNotEmpty(order.warehouseOptions)) {
         let warehouse = _.first(order.warehouseOptions);
@@ -170,16 +174,8 @@ const useOrderEditor = ({ orderId, dataId, business, onSaveSuccess, restrictOrde
         quantity: order.quantity,
         product: mProduct
       });
-      order.totalPrice = calculateUsdLineTotal({
-        item: order,
-        shippingCost,
-        formula: calculationFormula,
-        currency,
-        exchangeRate
-      });
       order._recalculateTotal = true;
-      setData(datas => ([...datas, order].map(line => /\b(productPrice|orderedQuantity)\b/.test(calculationFormula)
-        ? { ...line, _recalculateSalePrice: true, _recalculateTotal: true } : line)));
+      setData(datas => [...datas, order]);
     };
 
     InAppEvent.emit(HASH_MODAL, {
@@ -191,7 +187,7 @@ const useOrderEditor = ({ orderId, dataId, business, onSaveSuccess, restrictOrde
         leadProducts: suggestedProducts,
       }
     });
-  }, [calculationFormula, currency, exchangeRate, leadProducts, shippingCost]);
+  }, [currency, leadProducts]);
 
   const onAddStock = useCallback(() => {
     const onAfterSubmit = (values) => {
@@ -222,33 +218,19 @@ const useOrderEditor = ({ orderId, dataId, business, onSaveSuccess, restrictOrde
   const totalVat = totalSubOrder * (vatRate / 100);
   const totalOrder = totalSubOrder + totalVat;
 
-  const handleExchangeRateChange = (value) => {
-    const nextExchangeRate = Number(value ?? 0);
-    if (!Number.isFinite(nextExchangeRate) || nextExchangeRate <= 0) return;
-    setExchangeRate(nextExchangeRate);
-  };
-
   const editRow = key => setData(lines => lines.map(line => ({ ...line, editable: line.key === key })));
   const closeEdit = () => setData(lines => lines.map(line => ({ ...line, editable: false })));
-  const handleChange = (key, field, value) => setData(lines => {
-    const updated = lines.map(line => (
-      line.key === key ? updateOrderLine({ ...line, currency }, field, value, { restrictOrderFields }) : line
-    ));
-    const quantityChanged = field === 'quantity' && updated.some((line, index) => line.quantity !== lines[index].quantity);
-    return quantityChanged && /\b(productPrice|orderedQuantity)\b/.test(calculationFormula)
-      ? updated.map(line => ({ ...line, _recalculateSalePrice: true, _recalculateTotal: true })) : updated;
-  });
-
-  const deleteRow = (key) => {
-    setData(lines => lines.filter(line => line.key !== key).map(line => /\b(productPrice|orderedQuantity)\b/.test(calculationFormula)
-      ? { ...line, _recalculateSalePrice: true, _recalculateTotal: true } : line));
-  };
+  const handleChange = (key, field, value) => setData(lines => lines.map(line => (
+    line.key === key ? updateOrderLine({ ...line, currency }, field, value, { restrictOrderFields }) : line
+  )));
+  const deleteRow = key => setData(lines => lines.filter(line => line.key !== key));
 
   const onSubmitOrder = useCallback(async () => {
 
     const submit = async (mCustomer) => {
       const params = buildOrderEditorPayload({ customer: mCustomer, business, customerOrder,
-        dataId, lines: data, shippingCost, vatRate, currency, exchangeRate });
+        dataId, lines: data, shippingCost: chargedShippingCost, vatRate, currency,
+        pricingFormula: pricingFormula ? { ...buildFormulaSnapshot(pricingFormula), shippingCost: Number(shippingCost || 0) } : undefined });
       const { message: eMsg, data: order, errorCode } = await RequestUtils.Post("/order/save", params);
       message.info(eMsg);
       if (errorCode === SUCCESS_CODE) {
@@ -285,7 +267,7 @@ const useOrderEditor = ({ orderId, dataId, business, onSaveSuccess, restrictOrde
         details: data
       }
     });
-  }, [business, currency, data, dataId, customer, customerOrder, exchangeRate, onSaveSuccess, shippingCost, vatRate]);
+  }, [business, currency, data, dataId, customer, customerOrder, onSaveSuccess, pricingFormula, chargedShippingCost, shippingCost, vatRate]);
 
   const onOpenFormPayment = useCallback(() => {
     InAppEvent.emit(HASH_MODAL, {
@@ -307,20 +289,28 @@ const useOrderEditor = ({ orderId, dataId, business, onSaveSuccess, restrictOrde
     });
   }, [customerOrder, customer, data]);
 
-  const changeShippingCost = value => {
-    setShippingCost(value);
-    if (/\b(productPrice|orderedQuantity)\b/.test(calculationFormula)) {
-      setData(lines => lines.map(line => ({ ...line, _recalculateSalePrice: true, _recalculateTotal: true })));
+  const applyPricingFormula = formula => {
+    if (restrictOrderFields || !formula?.expression?.trim()) return false;
+    const nextLines = data.map(line => calculateFormulaLine(line, formula, { currency, shippingCost, orderedQuantity }));
+    const invalid = nextLines.find(line => line.formulaError);
+    if (invalid) {
+      message.error(`${invalid.productName || invalid.key}: ${invalid.formulaError}`);
+      return false;
     }
+    // Apply once. Subsequent input edits and reloads use the saved prices, not the formula.
+    setData(nextLines.map(line => ({ ...line, _recalculateTotal: false, _recalculateSalePrice: false })));
+    setPricingFormula(buildFormulaSnapshot(formula));
+    return true;
   };
 
-  return { data, customer, customerOrder, setCustomerOrder, shippingCost, setShippingCost: changeShippingCost,
+  return { pricingFormula, defaultFormula, applyPricingFormula, orderedQuantity, chargedShippingCost,
+    data, customer, customerOrder, setCustomerOrder, shippingCost, setShippingCost,
     currency, setCurrency: value => {
       setCurrency(value);
       setData(lines => lines.map(line => ({ ...line, _recalculateTotal: true })));
-    }, exchangeRate, vatRate, setVatRate, isOrder,
+    }, vatRate, setVatRate, isOrder,
     totalQuantity, totalDiscount, totalSubOrder, totalVat, totalOrder, getLineAmount, getSalePrice,
-    getLineVat, formatDisplayAmount, handleExchangeRateChange, editRow, closeEdit, handleChange,
+    getLineVat, formatDisplayAmount, editRow, closeEdit, handleChange,
     deleteRow, onSubmitOrder, onAddProduct, onAddStock, onOpenFormPayment, onOpenInvoice };
 };
 

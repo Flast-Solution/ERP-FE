@@ -29,7 +29,7 @@ export const useProductionOrderFlow = ({
     setDrawerMode(mode)
     setPendingOrder(record)
     setStep(1)
-    resetWaitingOrders(record?.order ? [record.order] : [])
+    resetWaitingOrders(record?.orders?.length ? record.orders : record?.order ? [record.order] : [])
     setOpen(true)
 
     if (mode === 'edit') {

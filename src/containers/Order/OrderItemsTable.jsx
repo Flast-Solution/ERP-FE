@@ -83,10 +83,10 @@ const EditButton = ({
   </div>
 );
 
-const OrderItemsTable = ({ data, customerOrder, currency, setCurrency, exchangeRate, vatRate, setVatRate,
+const OrderItemsTable = ({ data, customerOrder, currency, setCurrency, vatRate, setVatRate,
   restrictOrderFields, hideEditColumn, handleChange, editRow, closeEdit, deleteRow,
   getLineAmount, getSalePrice, getLineVat, renderOrderAmount, formatDisplayAmount,
-  handleExchangeRateChange, totalQuantity, totalSubOrder, totalVat, totalOrder, totalDiscount }) => {
+  totalQuantity, totalSubOrder, totalVat, totalOrder, totalDiscount }) => {
   const columns = [
     {
       title: 'Mã đơn hàng',
@@ -423,7 +423,11 @@ const OrderItemsTable = ({ data, customerOrder, currency, setCurrency, exchangeR
         : text;
   };
 
-  const visibleColumns = columns.filter(col => (currency !== CURRENCY_USD || col.key !== 'salePriceVnd') && (!hideEditColumn || col.key !== 'operation'));
+  const visibleColumns = columns.filter(col => (
+    (currency !== CURRENCY_USD || col.key !== 'salePriceVnd')
+    && (currency !== CURRENCY_VND || !['productPrice', 'salePrice'].includes(col.key))
+    && (!hideEditColumn || col.key !== 'operation')
+  ));
   return (
       <OpportunityTable
         bordered
@@ -468,22 +472,7 @@ const OrderItemsTable = ({ data, customerOrder, currency, setCurrency, exchangeR
                     style={{ width: 90 }}
                   />
                 </Space>
-                {currency !== CURRENCY_USD && (
-                <Space size={6}>
-                  <Text>Tỷ giá USD/VND</Text>
-                  <InputNumber
-                    onFocus={selectNumberOnFocus}
-                    size="small"
-                    min={0.01}
-                    value={exchangeRate}
-                    controls={false}
-                    onChange={handleExchangeRateChange}
-                    formatter={formatterInputNumber}
-                    parser={parserInputNumber}
-                    style={{ width: 170 }}
-                  />
-                </Space>
-                )}
+
               </Space>
             </Table.Summary.Cell>
             {visibleColumns.slice(3).map((column, index) => (

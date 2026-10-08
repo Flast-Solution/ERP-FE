@@ -148,3 +148,27 @@ test.each([['USD', '$2.63'], ['VND', '100.000']])('production sale price uses %s
   expect(view).toContain(expected)
   expect(view.includes('₫')).toBe(currency === 'VND')
 })
+
+test('shows production workflow actions for a uniquely matched legacy command without orderDetailId', () => {
+  const legacyRecord = {
+    id: 1, details: [{ id: 2, productId: 7, skuId: 8, quantity: 10 }],
+    manufactureProduct: [{ id: 3, code: 'LSX-3', details: [{ productId: 7, skuId: 8, target: 10 }] }],
+  }
+  renderToStaticMarkup(<OrderTrackingExpandedRow record={legacyRecord} productionOverview canAttachProductionWorkflow canViewProductionWorkflow />)
+  const props = Table.mock.calls.at(-1)[0]
+  const action = props.columns.find(column => column.key === 'productionActions').children[0]
+  const { props: actionProps } = action.render(null, props.dataSource[0])
+  expect(actionProps).toMatchObject({ manufactureCodes: ['LSX-3'], canAttach: true, canView: true })
+  expect(actionProps.detail.id).toBe(2)
+})
+
+test('does not attach a legacy command to an ambiguous child with the same product', () => {
+  const ambiguousRecord = {
+    id: 1, details: [{ id: 2, productId: 7 }, { id: 4, productId: 7 }],
+    manufactureProduct: [{ id: 3, code: 'LSX-3', details: [{ productId: 7, target: 10 }] }],
+  }
+  renderToStaticMarkup(<OrderTrackingExpandedRow record={ambiguousRecord} productionOverview canAttachProductionWorkflow />)
+  const props = Table.mock.calls.at(-1)[0]
+  const action = props.columns.find(column => column.key === 'productionActions').children[0]
+  props.dataSource.forEach(row => expect(action.render(null, row)).toBe('—'))
+})

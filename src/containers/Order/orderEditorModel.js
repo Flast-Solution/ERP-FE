@@ -7,8 +7,6 @@ export const warrantyOptions = [
   { name: '24 Tháng', id: 24 },
 ];
 
-export const getExchangeRate = (currency, rate) => Number(rate ?? 1);
-
 export const findSkuById = (skus, skuId) => (Array.isArray(skus) ? skus : []).find(
   sku => String(sku.id) === String(skuId)
 );
