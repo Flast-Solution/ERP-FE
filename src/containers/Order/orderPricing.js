@@ -34,7 +34,7 @@ const tokenizeFormula = (formula = '') => {
   return tokens;
 };
 
-const evaluateCalculationFormula = (formula, variables) => {
+export const evaluateCalculationFormula = (formula, variables, { strict = false } = {}) => {
   if (!formula?.trim()) return null;
 
   try {
@@ -111,9 +111,11 @@ const evaluateCalculationFormula = (formula, variables) => {
     }
 
     const result = parseExpression();
-    if (cursor !== tokens.length || !Number.isFinite(result)) return null;
+    if (cursor !== tokens.length) throw new Error('Công thức chưa hoàn chỉnh');
+    if (!Number.isFinite(result)) throw new Error('Không thể chia cho 0 hoặc tính ra giá không hữu hạn');
     return result;
-  } catch (_) {
+  } catch (error) {
+    if (strict) throw error;
     return null;
   }
 };
@@ -153,20 +155,12 @@ export const calculateUsdLineTotal = ({ item, shippingCost, orderedQuantity, for
 };
 
 
-// Keep the backend VND price, including zero; only missing VND uses USD × rate.
-export const resolveSalePriceVnd = (line, rate) => {
-  if (line.priceV != null) return Number(line.priceV);
-  if (line.price == null) return null;
-  return Number(line.price) * rate;
-};
-
 export const calculateEditorLine = (line, context) => {
-  const rate = Number(context.exchangeRate);
   const usesUnitFormula = context.currency !== 'VND' && /\b(productPrice|orderedQuantity)\b/.test(context.formula || '');
   const computedPrice = usesUnitFormula && (line.price == null || line._recalculateSalePrice)
     ? calculateSalePriceUsd({ ...context, item: line }) : null;
   const price = computedPrice ?? line.price ?? null;
-  const salePriceVnd = context.currency === 'VND' ? line.priceV ?? null : resolveSalePriceVnd({ ...line, price }, rate);
+  const salePriceVnd = line.priceV ?? null;
   const effectivePrice = context.currency === 'VND' ? line.priceV : price;
   const savedTotal = line.totalPrice ?? line.total;
   let totalPrice;
@@ -180,5 +174,5 @@ export const calculateEditorLine = (line, context) => {
     totalPrice = calculateUsdLineTotal({ ...context, item: line });
   }
   return { ...line, price, salePriceUsd: price, salePriceVnd,
-    currency: context.currency, exchangeRate: rate, totalPrice, total: totalPrice };
+    currency: context.currency, totalPrice, total: totalPrice };
 };

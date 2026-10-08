@@ -6,13 +6,13 @@ const context = { currency: 'USD', exchangeRate: 23000, shippingCost: 0, formula
 const line = { key: 'line', detailId: 3, price: 2, priceV: null, productPrice: 1.7,
   quantity: 1000, discountAmount: 0, totalPrice: 2000, orderLine: { Width: '62' } };
 
-test('derives prices without mutating backend values or freezing fallback after an unrelated edit', () => {
+test('keeps USD and VND prices independent after edits', () => {
   const displayed = calculateEditorLine(line, context);
-  expect(displayed.salePriceVnd).toBe(46000);
+  expect(displayed.salePriceVnd).toBeNull();
   expect(line.priceV).toBeNull();
   const edited = updateOrderLine(line, 'note', 'Edited');
   expect(calculateEditorLine(edited, { ...context, exchangeRate: 26000 }))
-    .toMatchObject({ price: 2, priceV: null, salePriceVnd: 52000, totalPrice: 2000 });
+    .toMatchObject({ price: 2, priceV: null, salePriceVnd: null, totalPrice: 2000 });
   const quantityEdit = updateOrderLine(edited, 'quantity', 2);
   expect(calculateEditorLine(quantityEdit, context).totalPrice).toBe(4);
   expect(line.quantity).toBe(1000);
@@ -60,6 +60,8 @@ test('VND payload sends independently entered purchase and sale prices including
     lines: [{ productPrice: 1.5, price: 2, productPriceV: 0, priceV: 48000, quantity: 2 }],
     shippingCost: 0, vatRate: 0, currency: 'VND', exchangeRate: 23000 });
   expect(payload.currency).toBe('VND');
+  expect(payload).not.toHaveProperty('exchangeRate');
+  expect(payload.details[0]).not.toHaveProperty('exchangeRate');
   expect(payload.details[0]).toMatchObject({ productPriceV: 0, priceV: 48000 });
   const usd = buildOrderEditorPayload({ customerOrder: {}, lines: [{ productPriceV: 35000, priceV: 48000 }], currency: 'USD' });
   expect(usd.details[0]).not.toHaveProperty('priceV');

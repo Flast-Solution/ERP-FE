@@ -23,8 +23,24 @@ export const buildLotDetailRows = (preview, instanceId) => {
     }
     if (values && Object.prototype.hasOwnProperty.call(values, 'nhap_lot')) {
       const table = values.nhap_lot
-      const criteria = (Array.isArray(table?.columns) ? table.columns : [])
-        .filter(column => column?.key && !['code', 'quantity', 'employe'].includes(column.key))
+      const steps = [preview?.stepProcesses, ...(preview?.stepProcessList ?? [])].filter(Boolean)
+      const step = steps.find(item => String(item.id) === String(submission.stepId)
+        || (submission.stepCode && item.stepCode === submission.stepCode))
+      const findLotField = fields => {
+        for (const field of fields ?? []) {
+          if (field.fieldKey === 'nhap_lot') return field
+          const nested = findLotField(field.children)
+          if (nested) return nested
+        }
+        return null
+      }
+      const field = findLotField(step?.formTemplate?.fields)
+      const columns = [...new Map([
+        ...(Array.isArray(field?.config?.columns) ? field.config.columns : []),
+        ...(Array.isArray(table?.columns) ? table.columns : []),
+      ].filter(column => column?.key).map(column => [column.key, column])).values()]
+      const criteria = columns
+        .filter(column => !['code', 'quantity'].includes(column.key))
         .map(column => ({ id: column.key, name: column.label || column.key, type: column.type }))
       return (Array.isArray(table?.rows) ? table.rows : []).map((lot, index) => ({
         code_lot: lot.code,
@@ -34,7 +50,13 @@ export const buildLotDetailRows = (preview, instanceId) => {
         _instanceId: instanceId,
         _submittedAt: submission.submittedAt,
         _submissionId: submission.id,
-        _rowKey: `${instanceId}-${submission.id}-${index}`,
+        _rowKey: `${instanceId}-${submission.id}-${lot.id ?? index}`,
+        _lotId: lot.id,
+        _stepName: step?.name || submission.stepCode,
+        // Preserve the whole submitted table: test results are keyed by stable LOT IDs.
+        _lotTable: table?.tests && typeof table.tests === 'object' ? {
+          rows: table.rows, columns, tests: table.tests,
+        } : null,
         _criteria: criteria,
       }))
     }

@@ -89,8 +89,11 @@ export const buildManufacturePayload = ({ productionOrder = {}, materialConfirma
   })
 
   return {
+    id: productionOrder.id ?? null,
+    orderIds: [...new Map((productionOrder.orderIds ?? (productionOrder.salesOrderId != null ? [productionOrder.salesOrderId] : []))
+      .filter(id => id != null && id !== '')
+      .map(id => [String(id), id])).values()],
     manufactureProduct: {
-      ...(isEdit ? { id: productionOrder.id } : {}),
       code,
       orderCode: productionOrder.salesOrderCode ?? productionOrder.orderCode,
       typeOrder: productionOrder.typeOrder ?? 'PRODUCTION',
@@ -119,7 +122,10 @@ export const buildManufacturePayload = ({ productionOrder = {}, materialConfirma
 
 export const mapManufactureOrder = (record, manufactureStatuses = MANUFACTURE_SYSTEM_STATUSES) => {
   const order = record?.order
-  const orderDetails = Array.isArray(order?.details) ? order.details : []
+  const orders = Array.isArray(record?.orders) && record.orders.length > 0 ? record.orders : order ? [order] : []
+  const orderDetails = orders.flatMap(parent => (parent.details ?? []).map(detail => ({
+    ...detail, salesOrderId: parent.id, salesOrderCode: parent.code,
+  })))
   const manufactureDetails = Array.isArray(record?.details) ? record.details : []
   const usedOrderDetailIds = new Set()
   const editingOrderDetails = manufactureDetails.map((detail, index) => {
@@ -140,6 +146,7 @@ export const mapManufactureOrder = (record, manufactureStatuses = MANUFACTURE_SY
       manufactureDetailId: detail.id,
       orderDetailId: detail.orderDetailId ?? orderDetail?.id,
       productId: detail.productId,
+      unit: detail.unit ?? orderDetail?.unit ?? null,
       productName: orderDetail?.productName ?? `Sản phẩm #${detail.productId}`,
       skuId: detail.skuId ?? orderDetail?.skuId ?? null,
       skuDetails: detail.skuDetails ?? orderDetail?.skuDetails ?? [],
@@ -163,9 +170,12 @@ export const mapManufactureOrder = (record, manufactureStatuses = MANUFACTURE_SY
   return {
     ...record,
     productionOrderCode: record?.code,
-    salesOrderCode: record?.orderCode,
+    orders,
+    currency: record?.currency ?? orders[0]?.currency,
+    orderIds: record?.orderIds ?? orders.map(parent => parent.id),
+    salesOrderCode: orders.map(parent => parent.code).filter(Boolean).join(', ') || record?.orderCode,
     salesOrderId: order?.id,
-    customerName: order?.enterpriseName?.trim() || order?.customerReceiverName,
+    customerName: [...new Set(orders.map(parent => parent.enterpriseName?.trim() || parent.customerReceiverName).filter(Boolean))].join(', '),
     createdAt: record?.createdDate,
     dateStart: record?.dateStart && dayjs(record.dateStart).isValid() ? dayjs(record.dateStart) : undefined,
     dateEnd: editDeadline,

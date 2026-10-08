@@ -26,6 +26,7 @@ import { SaveOutlined, TagOutlined, ShoppingCartOutlined, PlusOutlined, FilePptO
 import styled from 'styled-components';
 import useOrderEditor from './useOrderEditor';
 import OrderItemsTable from './OrderItemsTable';
+import OrderFormulaBuilder from './OrderFormulaBuilder';
 import OrderEditorSummary from './OrderEditorSummary';
 import { formatUsdInput, parseUsdInput } from './orderFormatting';
 const { Text } = Typography;
@@ -59,6 +60,9 @@ const BanHangPage = ({
 
   return (
     <OrderEditorShell>
+      <OrderFormulaBuilder formula={editor.pricingFormula} defaultFormula={editor.defaultFormula}
+        lines={data} currency={currency} shippingCost={shippingCost} orderedQuantity={editor.orderedQuantity}
+        onApply={editor.applyPricingFormula} disabled={restrictOrderFields} />
       <OrderItemsTable {...editor} hideEditColumn={hideEditColumn}
         restrictOrderFields={restrictOrderFields} renderOrderAmount={renderOrderAmount} />
       <div style={{ marginTop: 25, display: 'flex', flexWrap: 'wrap', gap: 24, justifyContent: 'space-between' }}>
@@ -177,7 +181,7 @@ const BanHangPage = ({
             ...customerOrder,
             subtotal: totalSubOrder,
             vat: vatRate,
-            total: totalOrder + Number(shippingCost),
+            total: totalOrder + editor.chargedShippingCost,
             paid: customerOrder?.paid ?? 0,
             priceOff: customerOrder?.priceOff ?? 0,
           }} />

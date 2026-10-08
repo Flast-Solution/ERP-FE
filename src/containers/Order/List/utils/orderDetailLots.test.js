@@ -70,3 +70,17 @@ test('a newer template for the same step supersedes the previous template', () =
   ] }, 113)
   expect(rows.map(row => row.code_lot)).toEqual(['new'])
 })
+
+test('reads fixed fields from preview template when columns are null and retains linked source tests', () => {
+  const table = { rows: [{ id: 'lot-a', code: '1', quantity: 10, lotTest: true, quality: 'OK' }], columns: null,
+    tests: { house: { rows: [{ id: 'h', name: 'Độ ẩm', standard: '≤ 5%', results: { 'lot-a': '4.2%' } }], excludedLotIds: null },
+      thirdParty: { rows: [{ id: 't', name: 'Karl Fischer', standard: '≤ 5%', houseRowId: 'h', results: { 'lot-a': '5.6%' } }], excludedLotIds: null } } }
+  const rows = buildLotDetailRows({ stepProcesses: { id: 220, stepCode: 'start', name: 'Nhập', formTemplate: { fields: [
+    { fieldKey: 'nhap_lot', config: { columns: [{ key: 'code', label: 'Mã LOT', type: 'text' },
+      { key: 'quality', label: 'Chất lượng', type: 'text' }, { key: 'lotTest', label: 'LOT test', type: 'boolean' }] } },
+  ] } }, submissions: [{ id: 61, stepId: 220, version: 2, valuesJson: { nhap_lot: table } }] }, 120)
+  expect(rows[0]).toMatchObject({ _lotId: 'lot-a', _stepName: 'Nhập', _rowKey: '120-61-lot-a',
+    _criteria: [{ id: 'quality', name: 'Chất lượng', type: 'text' }, { id: 'lotTest', name: 'LOT test', type: 'boolean' }] })
+  expect(rows[0]._lotTable.tests.thirdParty.rows[0].houseRowId).toBe('h')
+  expect(rows[0]._lotTable.tests.house.rows[0].results['lot-a']).toBe('4.2%')
+})

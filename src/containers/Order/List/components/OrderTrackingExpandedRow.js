@@ -296,7 +296,10 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityLis
         onCell: detail => ({ rowSpan: expandedLotRowKey == null ? detail._detailRowSpan : 1 }),
         render: (_, detail) => {
           if (!detail._detailRowSpan) return null
-          const commands = manufactureDetails.filter(item => matchesProductionDetail(item.manufactureDetail, detail, details))
+          // Legacy matching uses the original detail identity; table rows are copies.
+          const sourceDetail = details.find(item => getDetailId(item) != null
+            && String(getDetailId(item)) === String(getDetailId(detail)))
+          const commands = sourceDetail ? manufactureDetails.filter(item => matchesProductionDetail(item.manufactureDetail, sourceDetail, details)) : []
           if (!commands.length || getDetailId(detail) == null) return '—'
           const codes = [...new Set(commands.map(item => item.manufactureProduct?.code).filter(Boolean))]
           return <ProductionWorkflowActions order={record} detail={detail} manufactureCodes={codes}
@@ -331,7 +334,7 @@ const OrderTrackingExpandedRow = ({ record, shippingStatusById, isOpportunityLis
           showExpandColumn: false,
           expandedRowKeys: expandedLotRowKey == null ? [] : [expandedLotRowKey],
           rowExpandable: detail => detail._detailRowSpan > 0 && getDetailId(detail) != null,
-          expandedRowRender: detail => <OrderDetailLots detailId={getDetailId(detail)} lots={detail._productionLots} />,
+          expandedRowRender: detail => <OrderDetailLots detailId={getDetailId(detail)} lots={detail._productionLots} unit={detail.unit} />,
         }}
         locale={{ emptyText: 'Đơn hàng chưa có đơn con' }}
         scroll={{ x: columns.flatMap(group => group.children).reduce((total, column) => total + (column.width || 100), 0) }}

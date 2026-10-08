@@ -12,7 +12,7 @@ const displayValue = (value, type) => {
   return String(value)
 }
 
-const OrderDetailLots = ({ detailId, lots }) => {
+const OrderDetailLots = ({ detailId, lots, unit }) => {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -36,17 +36,18 @@ const OrderDetailLots = ({ detailId, lots }) => {
   }, [detailId, lots, retry])
 
   const criteria = new Map()
-  rows.forEach(row => row._criteria.forEach(criterion => {
+  rows.forEach(row => (row._criteria ?? []).forEach(criterion => {
     if (criterion?.id != null) criteria.set(String(criterion.id), criterion)
   }))
   const columns = [
-    { title: 'Mã lot', dataIndex: 'code_lot', width: 130 },
+    { title: 'Mã LOT', dataIndex: 'code_lot', width: 130, render: value => value || '(chưa có mã)' },
     ...(rows.some(row => row._source !== 'nhap_lot') ? [{ title: 'Tên lot', dataIndex: 'name_lot', width: 160 }] : []),
-    { title: 'Số lượng', dataIndex: 'so_luong', width: 110, align: 'right', render: value => formatQuantity(value) },
-    ...Array.from(criteria.values()).map(criterion => ({
+    { title: 'Số lượng', dataIndex: 'so_luong', width: 110, align: 'right', render: value => formatQuantity(value, unit) },
+    ...Array.from(criteria.values()).sort((left, right) => Number(left.id === 'lotTest') - Number(right.id === 'lotTest')).map(criterion => ({
       title: criterion.name || criterion.id,
       key: `criterion-${criterion.id}`,
       width: 160,
+      ...(criterion.id === 'lotTest' ? { fixed: 'right' } : {}),
       render: (_, row) => displayValue(row.danh_gia?.[criterion.id], criterion.type),
     })),
   ]

@@ -39,7 +39,7 @@ test('backend formula calculates a unit USD sale price using total order quantit
   const computed = calculateEditorLine({ productPrice: 1.5, profit: 20, quantity: 100 },
     { ...context, exchangeRate: 23000, currency: 'USD' });
   expect(computed.price).toBe(2.5);
-  expect(computed.salePriceVnd).toBe(57500);
+  expect(computed.salePriceVnd).toBeNull();
   expect(computed.totalPrice).toBe(250);
 });
 

@@ -24,6 +24,7 @@ import {
 import { mergeManufactureStatuses } from './production-order-list/utils';
 
 import { getOrderProductionProgress } from './production-order-list/orderProductionProgress';
+import { formatProductQuantity, formatProductionQuantities, getCurrencySelectionError, getOrderCurrency, getProductUnit, getProductionQuantityError, getProductionQuantityLimit } from './production-order-list/orderDisplay';
 
 const MANUFACTURE_STATUS_FILTER = { type: 'PRODUCTION' };
 const MANUFACTURE_STATUS_CREATE_DEFAULTS = {
@@ -57,13 +58,14 @@ const getOrderLineSummary = detail => Object.entries(parseOrderLine(detail?.orde
   .join(' · ');
 
 const getDetailLabel = (detail = {}) => (
-  [detail.code ?? `#${detail.id}`, getSkuSummary(detail), getOrderLineSummary(detail)].filter(Boolean).join(' · ')
+  [detail.salesOrderCode, detail.code ?? `#${detail.id}`, getSkuSummary(detail), getOrderLineSummary(detail)].filter(Boolean).join(' · ')
 );
 
 const OrderDetailInfo = ({ detail, showCode = false }) => (
   <div style={{ whiteSpace: 'normal', overflowWrap: 'anywhere', lineHeight: 1.6 }}>
+    {detail.salesOrderCode && <div><strong>Đơn hàng to:</strong> {detail.salesOrderCode}</div>}
     {showCode && <div><strong>{detail.code ?? `#${detail.id}`}</strong></div>}
-    <div><strong>Số lượng:</strong> {detail.quantity == null ? '-' : new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 20 }).format(detail.quantity)}</div>
+    <div><strong>Số lượng:</strong> {formatProductQuantity(detail.quantity, detail.unit)}</div>
     {(detail.skuDetails ?? []).map((attribute, index) => (
       <div key={attribute.id ?? index}>
         <strong>{attribute.text || 'SKU'}:</strong> {(attribute.values ?? []).map(value => value.text).filter(Boolean).join(', ')}
@@ -100,7 +102,7 @@ const CreateOrder = ({
   const [form] = Form.useForm();
   const rowSequenceRef = useRef(0);
   const initializedEditRef = useRef(false);
-  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedOrders, setSelectedOrders] = useState([]);
   const [productionRows, setProductionRows] = useState([]);
   const [providers, setProviders] = useState([]);
   const [providerLoading, setProviderLoading] = useState(false);
@@ -134,31 +136,52 @@ const CreateOrder = ({
   }, []);
 
   useEffect(() => {
-    if (!initialValues?.salesOrderId || initializedEditRef.current) return;
-    const order = waitingOrders.find(item => String(item.id) === String(initialValues.salesOrderId))
-      ?? initialValues?.order;
-    if (!order) return;
-
+    if (!initialValues || initializedEditRef.current) return;
+    const ids = initialValues.orderIds ?? (initialValues.salesOrderId != null ? [initialValues.salesOrderId] : []);
+    if (!ids.length && !initialValues.orderDetails?.length) return;
+    const savedOrders = initialValues.orders ?? (initialValues.order ? [initialValues.order] : []);
+    const orders = ids.map(id => savedOrders.find(item => String(item.id) === String(id))
+      ?? waitingOrders.find(item => String(item.id) === String(id))
+      ?? { id, code: `#${id}`, details: [], currency: initialValues.currency, placeholder: true });
     initializedEditRef.current = true;
-    setSelectedOrder(order);
-    setProductionRows((initialValues?.orderDetails ?? []).map(createProductionRow));
-    form.setFieldsValue({
-      productDetails: initialValues?.productDetails ?? {},
-    });
-  }, [createProductionRow, form, initialValues?.salesOrderId, initialValues?.orderDetails, initialValues?.order, initialValues?.productDetails, waitingOrders]);
+    setSelectedOrders(orders);
+    setProductionRows((initialValues.orderDetails ?? []).map(createProductionRow));
+    form.setFieldsValue({ orderIds: ids, productDetails: initialValues.productDetails ?? {} });
+  }, [createProductionRow, form, initialValues, waitingOrders]);
 
-  const availableDetails = useMemo(() => mode === 'create'
-    ? getOrderProductionProgress(selectedOrder).pendingDetails
-    : selectedOrder?.details ?? [], [mode, selectedOrder]);
+  useEffect(() => {
+    setSelectedOrders(current => {
+      const refreshed = current.map(order => order.placeholder
+        ? waitingOrders.find(item => String(item.id) === String(order.id)) ?? order : order);
+      return refreshed.some((order, index) => order !== current[index]) ? refreshed : current;
+    });
+  }, [waitingOrders]);
+
+  const selectableOrders = useMemo(() => [...new Map([...waitingOrders, ...selectedOrders]
+    .map(order => [String(order.id), order])).values()], [waitingOrders, selectedOrders]);
+
+  const availableDetails = useMemo(() => {
+    const details = selectedOrders.flatMap(order => (mode === 'create'
+      ? getOrderProductionProgress(order).pendingDetails : order.details ?? []).map(detail => ({
+      ...detail, salesOrderId: order.id, salesOrderCode: order.code,
+    })));
+    if (mode !== 'create') {
+      const orderIds = new Set(selectedOrders.map(order => String(order.id)));
+      (initialValues?.orderDetails ?? []).forEach(detail => {
+        if ((detail.salesOrderId == null || orderIds.has(String(detail.salesOrderId)))
+          && !details.some(item => String(item.id) === String(detail.id))) details.push(detail);
+      });
+    }
+    return details;
+  }, [mode, selectedOrders, initialValues?.orderDetails]);
 
   const selectedDetailIds = useMemo(() => new Set(
     productionRows.map(row => row.product?.id).filter(id => id != null).map(String),
   ), [productionRows]);
 
-  const totalProductionQuantity = productionRows.reduce((total, row) => {
-    if (!row.product?.id) return total;
-    return total + Number(watchedProductDetails?.[String(row.product.id)]?.target ?? 0);
-  }, 0);
+  const selectedCurrency = selectedOrders.length ? getOrderCurrency(selectedOrders[0]) : null;
+  const currencySelectionError = getCurrencySelectionError(selectedOrders);
+  const totalProductionQuantity = formatProductionQuantities(productionRows, watchedProductDetails, availableDetails);
 
   const selectedProductsHaveProvider = productionRows.length > 0
     && productionRows.every((row) => {
@@ -167,16 +190,25 @@ const CreateOrder = ({
       return providerId !== undefined && providerId !== null && providerId !== '';
     });
 
-  const handleOrderChange = (value) => {
+  const handleOrderChange = (values) => {
+    const orders = values.map(id => selectableOrders.find(item => String(item.id) === String(id))).filter(Boolean);
+    const error = getCurrencySelectionError(orders);
+    if (error) {
+      form.setFieldValue('orderIds', selectedOrders.map(order => order.id));
+      message.error(error);
+      return;
+    }
     onValuesChange?.();
-    const order = waitingOrders.find(item => String(item.id) === String(value)) ?? null;
-    setSelectedOrder(order);
-    setProductionRows([]);
-    form.setFieldsValue({ productDetails: undefined });
+    const detailIds = new Set(orders.flatMap(order => (mode === 'create'
+      ? getOrderProductionProgress(order).pendingDetails : order.details ?? []).map(detail => String(detail.id))));
+    setSelectedOrders(orders);
+    setProductionRows(current => current.filter(row => !row.product || detailIds.has(String(row.product.id))));
+    const currentDetails = form.getFieldValue('productDetails') ?? {};
+    form.setFieldValue('productDetails', Object.fromEntries(Object.entries(currentDetails).filter(([id]) => detailIds.has(id))));
   };
 
   const addProductionRow = () => {
-    if (!selectedOrder) {
+    if (!selectedOrders.length) {
       message.warning('Vui lòng chọn đơn hàng trước.');
       return;
     }
@@ -216,6 +248,10 @@ const CreateOrder = ({
   };
 
   const handleSubmit = (values) => {
+    if (currencySelectionError) {
+      message.error(currencySelectionError);
+      return;
+    }
     const selectedProducts = productionRows.map(row => row.product).filter(Boolean);
     if (selectedProducts.length === 0 || selectedProducts.length !== productionRows.length) {
       message.error('Vui lòng chọn đầy đủ mã đơn con cần sản xuất.');
@@ -227,13 +263,24 @@ const CreateOrder = ({
       values.productDetails?.[String(product.id)] ?? {},
     ]));
 
+    const invalidProduct = selectedProducts.find(product => getProductionQuantityError(product, productDetails[String(product.id)]?.target));
+    if (invalidProduct) {
+      const error = getProductionQuantityError(invalidProduct, productDetails[String(invalidProduct.id)]?.target);
+      form.setFields([{ name: ['productDetails', String(invalidProduct.id), 'target'], errors: [error] }]);
+      message.error(`${invalidProduct.code || invalidProduct.productName || invalidProduct.id}: ${error}`);
+      return;
+    }
+
     if (onNext) {
       onNext({
         ...initialValues,
         ...values,
         productionOrderCode: values.productionOrderCode,
-        salesOrderCode: selectedOrder?.code,
-        customerName: selectedOrder?.enterpriseName,
+        orderIds: selectedOrders.map(order => order.id),
+        currency: selectedCurrency,
+        orders: selectedOrders,
+        salesOrderCode: selectedOrders.map(order => order.code).filter(Boolean).join(', '),
+        customerName: [...new Set(selectedOrders.map(order => order.enterpriseName).filter(Boolean))].join(', '),
         orderDetails: selectedProducts,
         productDetails,
       });
@@ -242,9 +289,7 @@ const CreateOrder = ({
     message.success('Đã tạo lệnh sản xuất');
   };
 
-  const contact = [selectedOrder?.customerReceiverName, selectedOrder?.customerMobilePhone]
-    .filter(Boolean)
-    .join(' · ');
+  const contact = selectedOrders.map(order => [order.customerReceiverName, order.customerMobilePhone].filter(Boolean).join(' · ')).filter(Boolean).join('; ');
 
   return (
     <ProductionPage>
@@ -255,6 +300,7 @@ const CreateOrder = ({
           layout="vertical"
           initialValues={{
             ...initialValues,
+            orderIds: initialValues?.orderIds ?? (initialValues?.salesOrderId != null ? [initialValues.salesOrderId] : []),
             productionOrderCode,
             manufactureStatus: initialValues?.manufactureStatus ?? 0,
           }}
@@ -294,37 +340,39 @@ const CreateOrder = ({
                   />
                 </div>
                 <div className="production-info-field">
-                  <FormSelect
-                    required
-                    name="salesOrderId"
-                    label="Đơn hàng to"
-                    placeholder="Chọn đơn hàng"
-                    resourceData={waitingOrders}
-                    valueProp="id"
-                    titleProp="code"
-                    loading={waitingOrderLoading}
-                    showSearch
-                    optionFilterProp="label"
-                    filterOption={(input, option) => String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
-                    formatText={(code, item) => {
-                      const { planned, total } = getOrderProductionProgress(item);
-                      return `${code} · Đã lập LSX: ${planned}/${total} đơn con`;
-                    }}
-                    onChange={handleOrderChange}
-                    onPopupScroll={(event) => {
-                      const target = event.currentTarget;
-                      if (target.scrollTop + target.clientHeight >= target.scrollHeight - 24) {
-                        onLoadMoreWaitingOrders?.();
-                      }
-                    }}
-                  />
+                  <Form.Item name="orderIds" label="Đơn hàng to" rules={[
+                    { required: true, type: 'array', min: 1, message: 'Vui lòng chọn ít nhất một đơn hàng.' },
+                    { validator: (_, ids = []) => {
+                      const error = getCurrencySelectionError(ids.map(id => selectableOrders.find(order => String(order.id) === String(id))).filter(Boolean));
+                      return error ? Promise.reject(new Error(error)) : Promise.resolve();
+                    } },
+                  ]}>
+                    <Select
+                      mode="multiple"
+                      placeholder="Chọn một hoặc nhiều đơn hàng"
+                      loading={waitingOrderLoading}
+                      showSearch
+                      optionFilterProp="label"
+                      options={selectableOrders.map(order => {
+                        const { planned, total } = getOrderProductionProgress(order);
+                        return { value: order.id, label: `${order.code} · ${getOrderCurrency(order)} · Đã lập LSX: ${planned}/${total} đơn con` };
+                      })}
+                      onChange={handleOrderChange}
+                      onPopupScroll={event => {
+                        const target = event.currentTarget;
+                        if (target.scrollTop + target.clientHeight >= target.scrollHeight - 24) onLoadMoreWaitingOrders?.();
+                      }}
+                    />
+                  </Form.Item>
+                  {currencySelectionError && <div role="alert" style={{ color: '#ff4d4f' }}>{currencySelectionError}</div>}
                 </div>
-                <ReadonlyField label="Khách hàng" value={selectedOrder?.enterpriseName} />
+                <ReadonlyField label="Khách hàng" value={[...new Set(selectedOrders.map(order => order.enterpriseName).filter(Boolean))].join(', ')} />
                 <ReadonlyField label="Người liên hệ" value={contact} />
-                <ReadonlyField label="Ngày đặt hàng" value={formatOrderDate(selectedOrder?.createdAt)} mono />
+                <ReadonlyField label="Ngày đặt hàng" value={selectedOrders.map(order => `${order.code}: ${formatOrderDate(order.createdAt)}`).join('; ')} mono />
                 <ReadonlyField
-                  label="Tổng giá trị đơn hàng"
-                  value={selectedOrder ? formatMoney(selectedOrder.total ?? 0) : '-'}
+                  label={`Tổng giá trị đơn hàng${selectedCurrency ? ` (${selectedCurrency})` : ''}`}
+                  value={selectedOrders.length && !currencySelectionError
+                    ? formatMoney(selectedOrders.reduce((sum, order) => sum + Number(order.total ?? 0), 0), selectedCurrency) : '-'}
                   mono
                 />
               </div>
@@ -337,7 +385,7 @@ const CreateOrder = ({
                 <h2>Chọn mã đơn con cần sản xuất</h2>
               </div>
               <div className="production-child-hint">
-                Thêm các mã đơn con thuộc đơn TO đã chọn. Với mỗi mã, nhập số lượng sản xuất và ngày dự kiến hoàn thành.
+                Thêm các mã đơn con thuộc các đơn TO đã chọn. Với mỗi mã, nhập số lượng sản xuất và ngày dự kiến hoàn thành.
               </div>
 
               <div className="production-child-list">
@@ -375,9 +423,16 @@ const CreateOrder = ({
                           <FormInputNumber
                             required
                             name={['productDetails', String(product.id), 'target']}
-                            label="Số lượng sản xuất"
+                            label={`Số lượng sản xuất${getProductUnit(product) ? ` (${getProductUnit(product)})` : ''}`}
                             placeholder="Nhập số lượng sản xuất"
                             min={0.000001}
+                            max={getProductionQuantityLimit(product)}
+                            rules={[{ validator: (_, value) => {
+                              const error = getProductionQuantityError(product, value);
+                              return error ? Promise.reject(new Error(error)) : Promise.resolve();
+                            } }]}
+                            formItemProps={{ extra: getProductionQuantityLimit(product) !== undefined
+                              ? `Tối đa ${formatProductQuantity(getProductionQuantityLimit(product), getProductUnit(product))}` : undefined }}
                             style={{ width: '100%' }}
                           />
                           <FormDatePicker
@@ -434,7 +489,7 @@ const CreateOrder = ({
                   color="primary"
                   htmlType="button"
                   inRigth={false}
-                  disabled={!selectedOrder || selectedDetailIds.size >= availableDetails.length}
+                  disabled={!selectedOrders.length || selectedDetailIds.size >= availableDetails.length}
                   onClick={addProductionRow}
                 />
               )}
@@ -446,7 +501,7 @@ const CreateOrder = ({
                 </div>
                 <div className="production-create-metric">
                   <span>Tổng SL sản xuất</span>
-                  <strong>{totalProductionQuantity.toLocaleString('vi-VN')} sản phẩm</strong>
+                  <strong>{totalProductionQuantity}</strong>
                 </div>
               </div>
             </section>
@@ -468,7 +523,7 @@ const CreateOrder = ({
                   icon={<SaveOutlined />}
                   inRigth={false}
                   loading={submitting}
-                  disabled={submitting}
+                  disabled={submitting || Boolean(currencySelectionError)}
                 />
               )}
             </div>
