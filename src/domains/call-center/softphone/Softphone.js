@@ -3,6 +3,8 @@ import { clearGatewayToken, gatewayApi, GW_STATE } from './gatewayApi';
 const POLL_INTERVAL = 500;
 const CONNECT_TIMEOUT = 5000;
 
+const AUDIO_UNAVAILABLE = 'Thiết bị audio trên máy không khả dụng';
+
 /*
  * Trình duyệt làm máy nhánh của SBC (http_api /api/webrtc/sessions):
  * token -> tạo session (SBC tạo WebRTC + đăng ký máy nhánh, trả SDP offer)
@@ -31,7 +33,13 @@ export default class Softphone {
     }
     this.id = created.id;
     this.ext = created.ext || ext;
-    await this.setupPeer(created.sdp);
+    try {
+      await this.setupPeer(created.sdp);
+    } catch (error) {
+      /* gỡ session đã tạo trên SBC để không treo máy nhánh */
+      await this.disconnect();
+      throw error;
+    }
     this.startPolling();
   }
 
@@ -50,7 +58,12 @@ export default class Softphone {
     };
 
     await pc.setRemoteDescription({ type: 'offer', sdp: offer });
-    this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (error) {
+      /* NotFoundError / NotAllowedError / NotReadableError, hoặc trang không chạy HTTPS */
+      throw new Error(AUDIO_UNAVAILABLE);
+    }
     this.stream.getTracks().forEach(track => pc.addTrack(track, this.stream));
     await pc.setLocalDescription(await pc.createAnswer());
 
