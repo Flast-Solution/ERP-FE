@@ -36,6 +36,7 @@ export default class Softphone {
   }
 
   async setupPeer(offer) {
+
     const pc = new RTCPeerConnection();
     this.pc = pc;
     pc.ontrack = (event) => {
@@ -47,6 +48,7 @@ export default class Softphone {
       }
       this.audio.srcObject = event.streams[0] || new MediaStream([event.track]);
     };
+
     await pc.setRemoteDescription({ type: 'offer', sdp: offer });
     this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     this.stream.getTracks().forEach(track => pc.addTrack(track, this.stream));

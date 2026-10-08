@@ -1,5 +1,5 @@
 import { RequestUtils } from '@flast-erp/core/utils';
-import { RTC_URL, SUCCESS_CODE } from '@/configs';
+import { SUCCESS_CODE } from '@/configs';
 
 /*
  * Trình duyệt làm máy nhánh (webrtc_gw của http_api), gọi thẳng từ trình duyệt.
@@ -16,7 +16,7 @@ import { RTC_URL, SUCCESS_CODE } from '@/configs';
  *   POST /api/webrtc/sessions/{id}/answer|reject|hangup|unregister -> { id }
  */
 
-const BASE_RTC = `${RTC_URL}/api/webrtc/sessions`;
+const BASE_RTC = `https://ws.flast.vn/webrtc/sessions`;
 const API_TOKEN = '/omni/webrtc/register';
 
 export const GW_STATE = {
@@ -117,7 +117,7 @@ const request = async (method, path = '', query) => {
   }
   const data = unwrap(body);
   if (!response.ok || data === null) {
-    const message = body?.message || body?.data?.error || body?.error || `HTTP ${response.status}`;
+    const message = body?.message || `HTTP ${response.status}`;
     throw new GatewayError(`webrtc_gw: ${message}`, response.status);
   }
   return data;
