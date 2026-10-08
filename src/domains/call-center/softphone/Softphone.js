@@ -3,7 +3,6 @@ import { clearGatewayToken, gatewayApi, GW_STATE } from './gatewayApi';
 const POLL_INTERVAL = 500;
 const CONNECT_TIMEOUT = 5000;
 
-
 const AUDIO_UNAVAILABLE = 'Thiết bị audio trên máy không khả dụng';
 
 /*
