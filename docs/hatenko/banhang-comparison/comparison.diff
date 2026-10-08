@@ -1,0 +1,957 @@
+diff --git a/docs/hatenko/banhang-comparison/original/src/pages/banhang/index.js b/apps/erp-host/src/pages/banhang/index.js
+index d17f17b..39582dd 100644
+--- a/docs/hatenko/banhang-comparison/original/src/pages/banhang/index.js
++++ b/apps/erp-host/src/pages/banhang/index.js
+@@ -22,27 +22,39 @@
+ import Order from 'containers/Order';
+ import { Helmet } from 'react-helmet';
+ import { BreadcrumbCustom } from '@flast-erp/core/components';
+-import { useParams } from "react-router-dom";
++import { useLocation, useNavigate, useParams } from "react-router-dom";
+ import { useQueryParams } from '@flast-erp/core/hooks';
+ 
+ const title = 'Tạo cơ hội bán hàng';
+ const BanHangPage = (props) => {
++	const navigate = useNavigate();
+ 	const { orderId } = useParams();
++	const { state } = useLocation();
+ 	const { get } = useQueryParams();
++	const isOrder = get('type') === 'order';
++	const pageTitle = isOrder
++		? 'Chỉnh sửa đơn hàng'
++		: orderId
++			? 'Chỉnh sửa cơ hội bán hàng'
++			: title;
+ 
+ 	return <>
+ 		<Helmet>
+-			<title>{title}</title>
++			<title>{pageTitle}</title>
+ 		</Helmet>
+ 		<BreadcrumbCustom
+-			data={[{ title: 'Trang chủ' }, { title: title }]}
++			data={[{ title: 'Trang chủ' }, { title: pageTitle }]}
+ 		/>
+ 		<Order
+ 			orderId={orderId}
+ 			dataId={get("dataId")}
++			business={state?.business ?? null}
++			onSaveSuccess={() => navigate(-1)}
++			hideEditColumn={state?.hideEditColumn === true}
++			restrictOrderFields={state?.restrictOrderFields === true}
+ 			{...props}
+ 		/>
+ 	</>;
+ }
+ 
+-export default BanHangPage;
+\ No newline at end of file
++export default BanHangPage;
+diff --git a/docs/hatenko/banhang-comparison/original/src/containers/Order/index.js b/apps/erp-host/src/containers/Order/index.js
+index 3c1241e..2f8e898 100644
+--- a/docs/hatenko/banhang-comparison/original/src/containers/Order/index.js
++++ b/apps/erp-host/src/containers/Order/index.js
+@@ -19,470 +19,53 @@
+ /* có trách nghiệm                                                        */
+ /**************************************************************************/
+ 
+-import React, { useCallback, useState } from 'react';
+-import { Table, Button, InputNumber, Select, Typography, message } from 'antd';
+-import { ShowSkuDetail } from '@/containers/Product/SkuView';
+-import { arrayEmpty, arrayNotEmpty, formatMoney } from '@flast-erp/core/utils';
+-import { formatterInputNumber, parserInputNumber } from '@flast-erp/core/utils';
+-import { HASH_POPUP } from '@/configs/constant';
+-import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
+-import {
+-  SaveOutlined,
+-  TagOutlined,
+-  ShoppingCartOutlined,
+-  PlusOutlined,
+-  DeleteOutlined,
+-  CheckOutlined,
+-  FilePptOutlined
+-} from '@ant-design/icons';
+-import _ from 'lodash';
+-import { HASH_MODAL, SUCCESS_CODE } from '@/configs';
+-import OrderService, { getWarehouseByProduct } from '@/services/OrderService';
+-import { useEffectAsync } from '@flast-erp/core/hooks';
+-
++import React from 'react';
++import { Button, Input, InputNumber, Select, Typography } from 'antd';
++import { arrayEmpty, formatterInputNumber, parserInputNumber } from '@flast-erp/core/utils';
++import { SaveOutlined, TagOutlined, ShoppingCartOutlined, PlusOutlined, FilePptOutlined } from '@ant-design/icons';
++import styled from 'styled-components';
++import useOrderEditor from './useOrderEditor';
++import OrderItemsTable from './OrderItemsTable';
++import OrderFormulaBuilder from './OrderFormulaBuilder';
++import OrderEditorSummary from './OrderEditorSummary';
++import { formatUsdInput, parseUsdInput } from './orderFormatting';
+ const { Text } = Typography;
+-const warrantyOptions = [
+-  { name: '(Chưa có)', id: 1 },
+-  { name: '6 Tháng', id: 6 },
+-  { name: '12 Tháng', id: 12 },
+-  { name: '24 Tháng', id: 24 }
+-];
+-
+-const ORDER_TEMPLATE = {
+-  key: "1",
+-  note: "",
+-  detailId: null,
+-  orderName: "",
+-  productId: null,
+-  productName: "",
+-  skuDetailCode: "",
+-  unit: "(Chưa có)",
+-  warrantyPeriod: "(Chưa có)",
+-  quantity: 1,
+-  price: 0,
+-  totalPrice: 0,
+-  warehouse: "",
+-  stock: 0,
+-  discountRate: 0,
+-  discountAmount: 0,
+-  editable: false,
+-  mSkuDetails: []
+-}
+-
+-function randomString(length = 8) {
+-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+-  let result = '';
+-  for (let i = 0; i < length; i++) {
+-    result += chars.charAt(Math.floor(Math.random() * chars.length));
++const selectNumberOnFocus = event => event.target.select();
++const OrderEditorShell = styled.div`
++  .ant-input-disabled,
++  .ant-input[disabled],
++  .ant-input-number-disabled .ant-input-number-input {
++    color: #374151;
++    -webkit-text-fill-color: #374151;
++    opacity: 1;
+   }
+-  return result;
+-}
+-
+-function findByQuantity(arr, quantity) {
+-  return arrayNotEmpty(arr) ? arr.find(
+-    item => quantity >= item.quantityFrom && quantity <= item.quantityTo
+-  ) || {} : {};
+-}
+-
+-const EditButton = ({
+-  editable,
+-  onEdit,
+-  onClose,
+-  onDelete
+-}) => (
+-  <div style={{ display: 'flex', alignItems: 'center' }}>
+-    <Button size="small" onClick={editable ? onClose : onEdit}>
+-      {editable ? <CheckOutlined /> : 'Sửa'}
+-    </Button>
+-    <Button
+-      size="small"
+-      danger
+-      icon={<DeleteOutlined />}
+-      style={{ marginLeft: 6 }}
+-      onClick={onDelete}
+-    />
+-  </div>
+-);
++`;
+ 
+ const BanHangPage = ({
+   orderId,
+-  dataId
++  dataId,
++  business,
++  onSaveSuccess,
++  hideEditColumn = false,
++  restrictOrderFields = false,
+ }) => {
+ 
+-  const [data, setData] = useState([]);
+-  const [customer, setCustomer] = useState();
+-
+-  const [localOrder, setLocalOrder] = useState({ orderId, reload: false });
+-  const [customerOrder, setCustomerOrder] = useState();
+-
+-  useEffectAsync(async (isMounted) => {
+-    const { customer, order, data } = await OrderService.getOrderOnEdit(localOrder.orderId);
+-    if (customer) {
+-      setCustomer(customer);
+-    }
+-    if (order) {
+-      setCustomerOrder(order);
+-    }
+-    if (arrayNotEmpty(data)) {
+-      setData(data);
+-    }
+-  }, [localOrder]);
+-
+-  useEffectAsync(async (isMounted) => {
+-    if (!dataId) {
+-      return;
+-    }
+-    const { data: response, errorCode } = await RequestUtils.Get("/data/get-customer", { dataId });
+-    if (errorCode === SUCCESS_CODE) {
+-      setCustomer(response.customer);
+-      onAddProduct(response.lead);
+-    }
+-  }, [dataId]);
+-
+-  const onAddProduct = useCallback((lead = null) => {
+-    const onAfterChoiseProduct = (values) => {
+-      let order = _.cloneDeep(ORDER_TEMPLATE);
+-      const { mSkuDetails, mProduct, quantity, productId, skuId } = values;
+-      /* Tạo Item trong list sản phẩm */
+-      order.key = randomString();
+-      order.note = values?.note ?? "";
+-      order.orderName = values?.orderName ?? "";
+-      order.productId = productId;
+-      order.productName = mProduct.name;
+-      order.unit = mProduct.unit ?? "N/A";
+-      order.mSkuDetails = mSkuDetails;
+-      order.skuDetailCode = String(skuId);
+-      order.quantity = quantity;
+-      order.warehouseOptions = getWarehouseByProduct(skuId, mProduct);
+-
+-      const skus = mProduct?.skus ?? [];
+-      let skuPrices = [];
+-      if (arrayNotEmpty(order.warehouseOptions)) {
+-        let warehouse = _.first(order.warehouseOptions);
+-        order.warehouse = warehouse?.stockName ?? '';
+-        order.stock = warehouse?.quantity ?? 0;
+-        skuPrices = skus.find(s => s.id === warehouse?.skuId)?.skuPrices ?? [];
+-      }
+-
+-      const dataPrice = findByQuantity(skuPrices, order.quantity);
+-      if (dataPrice?.priceRef) {
+-        order.price = dataPrice.priceRef;
+-        order.totalPrice = order.price * order.quantity;
+-      }
+-      setData(datas => ([...datas, order]));
+-    };
+-
+-    InAppEvent.emit(HASH_POPUP, {
+-      hash: "sku.add",
+-      title: "Thêm sản phẩm",
+-      data: {
+-        onSave: onAfterChoiseProduct,
+-        ...(lead ? { productId: lead.productId } : {})
+-      }
+-    });
+-  }, []);
+-
+-  const onAddStock = useCallback(() => {
+-    const onAfterSubmit = (values) => {
+-      console.log('Save stock', values);
+-    };
+-    InAppEvent.emit(HASH_POPUP, {
+-      hash: "stock.add",
+-      title: "Nhập kho",
+-      data: { onSave: onAfterSubmit }
+-    });
+-  }, []);
+-
+-  const columns = [
+-    {
+-      title: 'Mã',
+-      dataIndex: 'skuDetailCode',
+-      key: 'skuDetailCode',
+-      width: 80
+-    },
+-    {
+-      title: 'Diễn giải',
+-      dataIndex: 'mSkuDetails',
+-      render: (mSkuDetails) => (<span />),
+-      width: 260,
+-      ellipsis: true
+-    },
+-    {
+-      title: 'Bảo hành',
+-      dataIndex: 'warrantyPeriod',
+-      key: 'warrantyPeriod',
+-      width: 110,
+-      editable: true
+-    },
+-    {
+-      title: 'Số lượng',
+-      dataIndex: 'quantity',
+-      key: 'quantity',
+-      editable: true,
+-      width: 90
+-    },
+-    {
+-      title: 'Đơn giá',
+-      dataIndex: 'price',
+-      key: 'price',
+-      width: 120,
+-      editable: true
+-    },
+-    {
+-      title: 'CK (%)',
+-      dataIndex: 'discountRate',
+-      key: 'discountRate',
+-      width: 90,
+-      editable: true
+-    },
+-    {
+-      title: 'Tiền CK',
+-      dataIndex: 'discountAmount',
+-      key: 'discountAmount',
+-      width: 120,
+-      editable: true
+-    },
+-    {
+-      title: 'Thành tiền',
+-      dataIndex: 'totalPrice',
+-      key: 'totalPrice',
+-      width: 150
+-    },
+-    {
+-      title: 'Kho',
+-      dataIndex: 'warehouse',
+-      key: 'warehouse',
+-      editable: true,
+-      width: 130
+-    },
+-    {
+-      title: 'Tồn kho',
+-      dataIndex: 'stock',
+-      key: 'stock',
+-      width: 100
+-    },
+-    {
+-      title: 'Đơn vị',
+-      dataIndex: 'unit',
+-      key: 'unit',
+-      width: 90
+-    },
+-    {
+-      title: 'Sửa',
+-      dataIndex: 'operation',
+-      key: 'operation',
+-      fixed: 'right',
+-      width: 110,
+-      render: (_, record) => (
+-        <EditButton
+-          editable={record.editable}
+-          onEdit={() => editRow(record.key)}
+-          onClose={closeEdit}
+-          onDelete={() => deleteRow(record.key)}
+-        />
+-      )
+-    }
+-  ];
+-
+-  let isOrder = (customerOrder?.id || 0) !== 0;
+-  const totalQuantity = data.reduce((sum, item) => sum + item.quantity, 0);
+-  const totalDiscount = data.reduce((sum, item) => sum + item.discountAmount, 0);
+-  const totalSubOrder = data.reduce((sum, item) => sum + item.totalPrice - item.discountAmount, 0);
+-
+-  const editRow = (key) => {
+-    const newData = data.map(item => ({ ...item, editable: item.key === key }));
+-    setData(newData);
+-  };
+-
+-  const closeEdit = () => {
+-    setData(data.map(item => ({ ...item, editable: false })));
+-  };
+-
+-  const handleChange = (key, field, value) => {
+-    const newData = [...data];
+-    const target = newData.find((item) => item.key === key);
+-    if (!target) {
+-      return;
+-    }
+-
+-    if (['quantity', 'price', 'discountRate', 'discountAmount'].includes(field)) {
+-      target[field] = parseFloat(value || 0);
+-    } else if (field === 'warehouse') {
+-      target[field] = target.warehouseOptions.find(option => option.id === value)?.stockName || '';
+-    } else if (field === 'warrantyPeriod') {
+-      target[field] = warrantyOptions.find(option => option.id === value)?.name || '';
+-    }
+-
+-    /* Calculate dependent fields */
+-    if (field === 'quantity' || field === 'price') {
+-      target.totalPrice = target.quantity * target.price;
+-    }
+-    if (field === 'discountRate') {
+-      target.discountAmount = (target.price * target.quantity * target.discountRate) / 100;
+-    }
+-    if (field === 'discountAmount') {
+-      target.discountRate = ((target.discountAmount / (target.price * target.quantity)) * 100).toFixed(2);
+-    }
+-    setData(newData);
+-  };
+-
+-  const renderCell = (text, record, index, column) => {
+-    if (record.editable && column.editable) {
+-      if (column.dataIndex === 'warehouse') {
+-        return (
+-          <Select
+-            placeholder="Chọn kho"
+-            disabled={arrayEmpty(record?.warehouseOptions)}
+-            value={text}
+-            options={(record?.warehouseOptions ?? []).map(opt => ({
+-              label: opt.stockName,
+-              value: opt.id
+-            }))}
+-            onChange={value => handleChange(record.key, column.dataIndex, value)}
+-            style={{ width: '100%' }}
+-          />
+-        );
+-      }
+-      if (column.dataIndex === 'warrantyPeriod') {
+-        return (
+-          <Select
+-            placeholder="Chọn bảo hành"
+-            disabled={!record.editable}
+-            value={text}
+-            options={warrantyOptions.map(opt => ({
+-              label: opt.name,
+-              value: opt.id
+-            }))}
+-            onChange={value => handleChange(record.key, column.dataIndex, value)}
+-            style={{ width: '100%' }}
+-          />
+-        );
+-      }
+-      if (column.dataIndex === 'quantity') {
+-        return (
+-          <InputNumber
+-            min={1}
+-            value={text}
+-            onChange={value => handleChange(record.key, column.dataIndex, value)}
+-            style={{ width: '100%' }}
+-            formatter={formatterInputNumber}
+-            parser={parserInputNumber}
+-          />
+-        );
+-      }
+-      return (
+-        <InputNumber
+-          min={0}
+-          value={text}
+-          onChange={value => handleChange(record.key, column.dataIndex, value)}
+-          style={{ width: '100%' }}
+-          formatter={formatterInputNumber}
+-          parser={parserInputNumber}
+-        />
+-      );
+-    } else {
+-      if (column.dataIndex === 'warehouse') {
+-        return <Text style={{ width: 120 }} ellipsis> {text || '(Chưa nhập)'} </Text>;
+-      }
+-      if (column.dataIndex === 'mSkuDetails') {
+-        return <ShowSkuDetail skuDetails={record.mSkuDetails} width={260} />
+-      }
+-      const isFormatted = ['price', 'discountAmount', 'totalPrice'].includes(column.dataIndex);
+-      return isFormatted ? formatMoney(text) : text;
+-    }
+-  };
+-
+-  const deleteRow = (key) => {
+-    setData(data.filter(item => item.key !== key));
+-  };
+-
+-  const onSubmitOrder = useCallback(async () => {
+-
+-    const submit = async (mCustomer) => {
+-      let params = { customer: mCustomer, details: data };
+-      if (customerOrder?.id) {
+-        params.id = customerOrder.id;
+-      }
+-      if (dataId) {
+-        params.dataId = dataId;
+-      }
+-      const { message: eMsg, data: order, errorCode } = await RequestUtils.Post("/order/save", params);
+-      message.info(eMsg);
+-      if (errorCode === SUCCESS_CODE) {
+-        setLocalOrder(pre => ({ orderId: order.id, reload: !pre.reload }));
+-      }
+-    }
+-
+-    const onAfterSaveCustomer = (values) => {
+-      submit(values);
+-      setCustomer(values);
+-    }
+-
+-    /* Tạo mới chưa có thông tin khách hàng */
+-    if ((customer?.id || 0) !== 0) {
+-      submit(customer);
+-      return;
+-    }
+-
+-    /* Tạo Lead và Customer */
+-    InAppEvent.emit(HASH_POPUP, {
+-      hash: "customer.add",
+-      title: "Thêm / Chọn khách hàng ",
+-      data: {
+-        onSave: onAfterSaveCustomer,
+-        customer,
+-        details: data
+-      }
+-    });
+-  }, [data, dataId, customer, customerOrder]);
+-
+-  const onOpenFormPayment = useCallback(() => {
+-    InAppEvent.emit(HASH_MODAL, {
+-      hash: "#order.payment",
+-      title: "Thêm thanh toán đơn hàng",
+-      data: {
+-        customerOrder,
+-        details: data,
+-        onSave: (_) => setLocalOrder(pre => ({ ...pre, reload: !pre.reload }))
+-      }
+-    });
+-  }, [customerOrder, data]);
+-
+-  const onOpenInvoice = useCallback(() => {
+-    InAppEvent.emit(HASH_MODAL, {
+-      hash: "#order.invoice",
+-      title: "Hóa đơn thanh toán",
+-      data: { customerOrder, customer, details: data }
+-    });
+-  }, [customerOrder, customer, data]);
++  const editor = useOrderEditor({ orderId, dataId, business, onSaveSuccess, restrictOrderFields });
++  const { data, customerOrder, setCustomerOrder, shippingCost, setShippingCost, currency,
++    vatRate, isOrder, totalSubOrder, totalOrder,
++    formatDisplayAmount, onSubmitOrder, onAddProduct, onAddStock, onOpenFormPayment, onOpenInvoice } = editor;
++  const renderOrderAmount = value => <Text style={{ display: 'block', textAlign: 'right', whiteSpace: 'nowrap' }}>
++    {formatDisplayAmount(value)}
++  </Text>;
+ 
+   return (
+-    <>
+-      <Table
+-        bordered
+-        scroll={{ x: 1500 }}
+-        dataSource={data}
+-        columns={columns.map(col => ({
+-          ...col,
+-          onCell: () => ({ editable: col.editable?.toString() }),
+-          render: col.dataIndex !== 'operation'
+-            ? (text, record, index) => renderCell(text, record, index, col)
+-            : col.render
+-        }))}
+-        pagination={false}
+-        summary={() => (
+-          <Table.Summary.Row>
+-            <Table.Summary.Cell index={0} colSpan={3}>Tổng cộng</Table.Summary.Cell>
+-            <Table.Summary.Cell index={3}>{totalQuantity}</Table.Summary.Cell>
+-            <Table.Summary.Cell index={4}></Table.Summary.Cell>
+-            <Table.Summary.Cell index={5}></Table.Summary.Cell>
+-            <Table.Summary.Cell index={7}>{formatMoney(totalDiscount)}</Table.Summary.Cell>
+-            <Table.Summary.Cell index={8}>{formatMoney(totalSubOrder)}</Table.Summary.Cell>
+-            <Table.Summary.Cell index={9}></Table.Summary.Cell>
+-          </Table.Summary.Row>
+-        )}
+-      />
+-      <div style={{ marginTop: 25, display: 'flex', justifyContent: 'space-between' }}>
++    <OrderEditorShell>
++      <OrderFormulaBuilder formula={editor.pricingFormula} defaultFormula={editor.defaultFormula}
++        lines={data} currency={currency} shippingCost={shippingCost} orderedQuantity={editor.orderedQuantity}
++        onApply={editor.applyPricingFormula} disabled={restrictOrderFields} />
++      <OrderItemsTable {...editor} hideEditColumn={hideEditColumn}
++        restrictOrderFields={restrictOrderFields} renderOrderAmount={renderOrderAmount} />
++      <div style={{ marginTop: 25, display: 'flex', flexWrap: 'wrap', gap: 24, justifyContent: 'space-between' }}>
+         <div>
+           <Button
+             disabled={arrayEmpty(data)}
+@@ -522,73 +105,90 @@ const BanHangPage = ({
+             In hóa đơn
+           </Button>
+         </div>
+-        <div>
+-          {isOrder &&
+-            <InvoiceTable
+-              order={customerOrder}
+-            />
+-          }
++        <div style={{ width: 480, maxWidth: '100%', marginLeft: 'auto' }}>
++          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16, marginBottom: 12 }}>
++            <div>
++              <label htmlFor="order-code" style={{ display: 'block', fontWeight: 600, marginBottom: 8 }}>
++                {customerOrder?.type === 'order' ? 'Mã đơn hàng' : 'Mã cơ hội'}
++              </label>
++              <Input
++                id="order-code"
++                disabled={restrictOrderFields}
++                size="small"
++                value={customerOrder?.code ?? ''}
++                maxLength={100}
++                placeholder="Nhập mã (để trống để tự tạo)"
++                onChange={event => setCustomerOrder(current => ({ ...current, code: event.target.value }))}
++              />
++            </div>
++            <div>
++              <label htmlFor="order-shipping-cost" style={{ display: 'block', fontWeight: 600, marginBottom: 8 }}>
++                Phí vận chuyển ({currency})
++              </label>
++              <InputNumber
++                onFocus={selectNumberOnFocus}
++                id="order-shipping-cost"
++                size="small"
++                min={0}
++                value={shippingCost}
++                onChange={value => {
++                  setShippingCost(Number(value ?? 0));
++                }}
++                precision={currency === 'USD' ? 2 : undefined}
++                formatter={currency === 'USD' ? formatUsdInput : formatterInputNumber}
++                parser={currency === 'USD' ? parseUsdInput : parserInputNumber}
++                controls={false}
++                style={{ width: '100%' }}
++              />
++            </div>
++          </div>
++          {['cohoi', 'opportunity'].includes(customerOrder?.type) && (
++            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16, marginBottom: 12 }}>
++              <div>
++                <label htmlFor="order-payment-terms" style={{ display: 'block', fontWeight: 600, marginBottom: 8 }}>Điều kiện thanh toán</label>
++                <Select
++                  id="order-payment-terms"
++                  size="small"
++                  allowClear
++                  placeholder="Chọn điều kiện thanh toán"
++                  style={{ width: '100%' }}
++                  value={customerOrder.payOptions?.paymentTerms ?? undefined}
++                  options={[
++                    { value: 'PREPAID', label: 'Trả trước' },
++                    { value: 'POSTPAID', label: 'Trả sau' },
++                    { value: 'DEPOSIT', label: 'Đặt cọc' },
++                  ]}
++                  onChange={value => setCustomerOrder(current => ({ ...current, payOptions: { ...current.payOptions, paymentTerms: value ?? null } }))}
++                />
++              </div>
++              <div>
++                <label htmlFor="order-payment-percent" style={{ display: 'block', fontWeight: 600, marginBottom: 8 }}>Thanh toán (%)</label>
++                <InputNumber
++                  id="order-payment-percent"
++                  size="small"
++                  min={0}
++                  max={100}
++                  addonAfter="%"
++                  style={{ width: '100%' }}
++                  value={customerOrder.payOptions?.paymentPercent}
++                  onFocus={selectNumberOnFocus}
++                  onChange={value => setCustomerOrder(current => ({ ...current, payOptions: { ...current.payOptions, paymentPercent: value ?? null } }))}
++                />
++              </div>
++            </div>
++          )}
++          <OrderEditorSummary currency={currency} order={{
++            ...customerOrder,
++            subtotal: totalSubOrder,
++            vat: vatRate,
++            total: totalOrder + editor.chargedShippingCost,
++            paid: customerOrder?.paid ?? 0,
++            priceOff: customerOrder?.priceOff ?? 0,
++          }} />
+         </div>
+       </div>
+-    </>
++    </OrderEditorShell>
+   );
+ }
+ 
+-const InvoiceTable = ({
+-  order
+-}) => {
+-  const { subtotal, vat, priceOff, total, paid } = order;
+-  const data = [
+-    {
+-      key: '1',
+-      leftLabel: 'Tổng chưa VAT',
+-      leftValue: formatMoney(subtotal),
+-      rightLabel: 'VAT',
+-      rightValue: formatMoney(subtotal * (vat / 100))
+-    },
+-    {
+-      key: '2',
+-      leftLabel: 'C.Khấu | Voucher',
+-      leftValue: formatMoney(priceOff),
+-      rightLabel: 'Tổng tiền',
+-      rightValue: formatMoney(total)
+-    },
+-    {
+-      key: '3',
+-      leftLabel: 'Đã thanh toán',
+-      leftValue: formatMoney(paid),
+-      rightLabel: 'Còn lại',
+-      rightValue: formatMoney(total - paid)
+-    }
+-  ];
+-
+-  const columns = [
+-    {
+-      dataIndex: 'leftLabel',
+-      key: 'left',
+-      render: (_, record) => (
+-        <div style={{ fontWeight: 'bold' }}>{record.leftLabel}: <span style={{ fontWeight: 'normal' }}>{record.leftValue}</span></div>
+-      )
+-    },
+-    {
+-      dataIndex: 'rightLabel',
+-      key: 'right',
+-      render: (_, record) => (
+-        <div style={{ fontWeight: 'bold' }}>{record.rightLabel}: <span style={{ fontWeight: 'normal' }}>{record.rightValue}</span></div>
+-      )
+-    }
+-  ];
+-
+-  return (
+-    <Table
+-      dataSource={data}
+-      columns={columns}
+-      pagination={false}
+-      bordered
+-      showHeader={false}
+-      style={{ width: '100%' }}
+-    />
+-  )
+-};
+-
+-export default BanHangPage;
+\ No newline at end of file
++export default BanHangPage;
+diff --git a/docs/hatenko/banhang-comparison/original/src/services/OrderService.js b/apps/erp-host/src/services/OrderService.js
+index 5c67f7d..c3356de 100644
+--- a/docs/hatenko/banhang-comparison/original/src/services/OrderService.js
++++ b/apps/erp-host/src/services/OrderService.js
+@@ -22,6 +22,8 @@
+ import { SUCCESS_CODE } from "@/configs";
+ import { RequestUtils, arrayEmpty } from '@flast-erp/core/utils';
+ 
++import { resolveOrderSkuDetails } from '../containers/Order/orderSku';
++
+ export const getWarehouseByProduct = (skuId, mProduct) => {
+   if (arrayEmpty(mProduct?.warehouses)) {
+     return []
+@@ -35,6 +37,67 @@ export const getWarehouseByProduct = (skuId, mProduct) => {
+   return warehouseOptions;
+ }
+ 
++const normalizeOrderCustomer = (order, customer) => {
++  if (customer && typeof customer === 'object') return customer;
++  if (!order?.customerId) return null;
++  return {
++    id: order.customerId,
++    fullName: order.customerReceiverName,
++    name: order.customerReceiverName,
++    mobilePhone: order.customerMobilePhone,
++    email: order.customerEmail,
++    address: order.customerAddress,
++    note: order.customerNote
++  };
++}
++
++export const normalizeOrderDetail = (detail, product, order) => {
++  const selectedSku = (product?.skus ?? []).find(
++    sku => String(sku?.id) === String(detail?.skuId)
++  );
++  const price = detail?.price == null ? null : Number(detail.price);
++  const quantity = Number(detail?.quantity ?? 0);
++  const discountAmount = Number(detail?.priceOff ?? detail?.discountAmount ?? 0);
++  const originalAmount = Number(price ?? 0) * quantity;
++  const currency = detail?.currency ?? order?.currency ?? 'VND';
++  const exchangeRate = Number(detail?.exchangeRate ?? order?.exchangeRate ?? 1);
++  const responseTotal = detail?.total ?? detail?.totalPrice ?? originalAmount;
++  const convertedTotal = Number(responseTotal);
++
++  const normalizedDetail = {
++    ...detail,
++    key: detail?.key ?? detail?.code ?? String(detail?.id),
++    detailId: detail?.detailId ?? detail?.id,
++    // API view-on-edit có thể trả mã dòng ở `data[].key` thay vì `code`.
++    // Không dùng orderName (ví dụ "Bán lẻ") hoặc orderCode làm giá trị thay thế.
++    code: detail?.code ?? detail?.key ?? '',
++    dayQuote: detail?.dayQuote ?? null,
++    productCode: detail?.productCode ?? product?.code ?? null,
++    productName: detail?.productName ?? product?.name ?? '',
++    unit: detail?.unit ?? product?.unit ?? '(Chưa có)',
++    mSkuDetails: resolveOrderSkuDetails(detail, product),
++    price,
++    productPriceV: detail?.productPriceV == null ? null : Number(detail.productPriceV),
++    priceV: detail?.priceV == null ? null : Number(detail.priceV),
++    quantity,
++    discountAmount,
++    discountRate: Number(detail?.discountRate ?? (
++      originalAmount > 0 ? (discountAmount / originalAmount) * 100 : 0
++    )),
++    // Editor amounts and price are USD; only priceV is VND.
++    totalPrice: convertedTotal,
++    productPrice: Number(detail?.productPrice ?? product?.price ?? product?.priceRef ?? 0),
++    skuPrices: selectedSku?.skuPrices ?? [],
++    currency,
++    exchangeRate,
++    editable: false,
++    warehouseOptions: getWarehouseByProduct(detail?.skuId, product)
++  };
++  delete normalizedDetail.orderName;
++  delete normalizedDetail.orderCode;
++  return normalizedDetail;
++}
++
+ const OrderService = {
+   allStatus: [],
+   allService: [],
+@@ -67,12 +130,19 @@ const OrderService = {
+ 
+     const listStatus = await this.fetchStatus();
+     const getColorMeta = (item) => {
+-      return listStatus.find(i => i.id === item.status) ?? {};
++      if (Number(item?.status) === 0) {
++        return { name: 'Tạo mới' };
++      }
++      return listStatus.find(i => String(i.id) === String(item?.status)) ?? {};
+     }
+ 
+     for (let item of response.embedded) {
+       const { details } = item;
+-      item.products = details.map((detail, id) => ({ id: id + 1, name: detail.productName }));
++      item.products = details.map((detail, id) => ({
++        id: id + 1,
++        code: detail?.code,
++        name: detail?.productName,
++      }));
+       item.detailstatus = details.map((detail, id) => ({ ...getColorMeta(detail), id: id + 1 }));
+       // Keep details for creating batch inspection
+       // delete item.details;
+@@ -80,31 +150,110 @@ const OrderService = {
+     return { embedded: response.embedded, page: response.page };
+   },
+   async getOrderOnEdit(orderId) {
+-    let response = { customer: null, order: null, data: [] };
++    const response = { customer: null, order: null, data: [] };
+     if (!orderId) {
+       return response;
+     }
+-    let { data, errorCode } = await RequestUtils.Get("/erp/order/view-on-edit", { orderId });
+-    if (errorCode !== SUCCESS_CODE || arrayEmpty(data.data)) {
++    const { data: payload, errorCode } = await RequestUtils.Get("/erp/order/view-on-edit", { orderId });
++    if (errorCode !== SUCCESS_CODE || !payload) {
+       return response;
+     }
+-    let details = data.data;
+-    const pIds = details.map(i => i.productId).join(",");
+-    const { data: products, errorCode: eCode } = await RequestUtils.Get("/erp/product/fetch", { ids: pIds });
+-    if (eCode !== SUCCESS_CODE || arrayEmpty(products.embedded)) {
+-      return response;
++
++    const order = payload?.order && typeof payload.order === 'object'
++      ? payload.order
++      : payload;
++    const orderDetails = Array.isArray(order?.details) ? order.details : [];
++    const editableDetails = Array.isArray(payload?.data) ? payload.data : [];
++    const details = editableDetails.length > 0
++      ? editableDetails.map((detail, index) => {
++        const sourceDetail = orderDetails.find(item => (
++          String(item?.id) === String(detail?.id ?? detail?.detailId)
++        )) ?? orderDetails[index];
++
++        return sourceDetail
++          ? {
++            ...sourceDetail,
++            ...detail,
++            code: detail?.code ?? sourceDetail?.code,
++          }
++          : detail;
++      })
++      : orderDetails;
++    const customer = normalizeOrderCustomer(order, payload?.customer);
++
++    console.log('[OpportunityEdit][1. API response]', {
++      orderId,
++      currency: order?.currency,
++      exchangeRate: order?.exchangeRate,
++      subtotal: order?.subtotal,
++      total: order?.total,
++      details: details.map(detail => ({
++        id: detail?.id,
++        detailId: detail?.detailId,
++        code: detail?.code,
++        name: detail?.name,
++        orderName: detail?.orderName,
++        price: detail?.price,
++        quantity: detail?.quantity,
++        priceOff: detail?.priceOff,
++        discountAmount: detail?.discountAmount,
++        total: detail?.total,
++        totalPrice: detail?.totalPrice
++      }))
++    });
++
++    if (arrayEmpty(details)) {
++      return { customer, order, data: [] };
+     }
+-    for (let detail of details) {
+-      let mProduct = (products.embedded ?? []).find(item => item.id === detail.productId);
+-      detail.warehouseOptions = getWarehouseByProduct(detail.skuId, mProduct);
+-      if (arrayEmpty(detail.warehouseOptions)) {
+-        continue;
++
++    const pIds = details.map(item => item?.productId).filter(Boolean).join(",");
++    let productItems = [];
++    if (pIds) {
++      try {
++        const { data: products, errorCode: productErrorCode } = await RequestUtils.Get(
++          "/erp/product/fetch",
++          { ids: pIds }
++        );
++        if (productErrorCode === SUCCESS_CODE) {
++          productItems = products?.embedded ?? [];
++        }
++      } catch (_) {
++        productItems = [];
+       }
+-      let [warehouse] = detail.warehouseOptions;
+-      detail.warehouse = warehouse?.stockName ?? '';
+-      detail.stock = warehouse?.quantity ?? 0;
+     }
+-    return data;
++
++    const normalizedDetails = details.map(detail => {
++      const product = productItems.find(
++        item => String(item?.id) === String(detail?.productId)
++      );
++      const normalizedDetail = normalizeOrderDetail(detail, product, order);
++      if (!arrayEmpty(normalizedDetail.warehouseOptions)) {
++        const [warehouse] = normalizedDetail.warehouseOptions;
++        normalizedDetail.warehouse = warehouse?.stockName ?? '';
++        normalizedDetail.stock = warehouse?.quantity ?? 0;
++      }
++      return normalizedDetail;
++    });
++
++    console.log('[OpportunityEdit][2. Normalized]', {
++      orderId,
++      currency: order?.currency,
++      exchangeRate: order?.exchangeRate,
++      details: normalizedDetails.map(detail => ({
++        id: detail?.id,
++        detailId: detail?.detailId,
++        code: detail?.code,
++        price: detail?.price,
++        quantity: detail?.quantity,
++        discountAmount: detail?.discountAmount,
++        total: detail?.total,
++        totalPrice: detail?.totalPrice,
++        currency: detail?.currency,
++        exchangeRate: detail?.exchangeRate
++      }))
++    });
++
++    return { customer, order, data: normalizedDetails };
+   },
+   statusName(sId) {
+     return this.allStatus.find(i => i.id === sId)?.name ?? '';
+@@ -114,4 +263,4 @@ const OrderService = {
+   }
+ }
+ 
+-export default OrderService;
+\ No newline at end of file
++export default OrderService;

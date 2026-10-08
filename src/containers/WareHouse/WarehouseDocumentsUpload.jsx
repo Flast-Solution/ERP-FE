@@ -8,7 +8,7 @@ import {
   resolveUploadFilename,
   toUploadFile,
 } from '../PreviewModal/uploadUtils';
-import UploadedFilePreview from '../../components/UploadedFilePreview';
+import UploadedFilePreview from "@erp/shared-ui/components/UploadedFilePreview/index";
 
 const WarehouseDocumentsUpload = ({ onChange, onUploadingChange, disabled = false }) => {
   const form = Form.useFormInstance();

@@ -20,10 +20,16 @@
 /**************************************************************************/
 
 import React from 'react';
+import TenantPage from '@/components/TenantPage';
+
+const tenantOrderComponent = (page, loader) => {
+  const Local = React.lazy(loader);
+  return props => <TenantPage {...props} page={page} local={Local} />;
+};
 const ChoiseSKU = [
   {
     path: 'order.add.status',
-    Component: React.lazy(() => import('@/containers/Order/ModalEditStatus')),
+    Component: tenantOrderComponent('OrderStatus', () => import('@/containers/Order/ModalEditStatus')),
     modalOptions: { title: '', width: 750 }
   }
 ];

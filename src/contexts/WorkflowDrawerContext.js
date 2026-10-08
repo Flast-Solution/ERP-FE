@@ -1,7 +1,9 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react'
 
-import WorkflowProgressDrawer from '@/containers/Order/List/components/WorkflowProgressDrawer'
+import TenantPage from '@/components/TenantPage'
 import useWorkflowProgressDrawer from '@/containers/Order/List/hooks/useWorkflowProgressDrawer'
+
+const LocalWorkflowProgressDrawer = React.lazy(() => import('@/containers/Order/List/components/WorkflowProgressDrawer'))
 
 const WorkflowDrawerContext = createContext(null)
 
@@ -31,7 +33,7 @@ export const WorkflowDrawerProvider = ({ children }) => {
   return (
     <WorkflowDrawerContext.Provider value={value}>
       {children}
-      <WorkflowProgressDrawer
+      {drawer.workflowProgressDrawerOpen && <TenantPage page="WorkflowDrawer" local={LocalWorkflowProgressDrawer}
         open={drawer.workflowProgressDrawerOpen}
         loading={drawer.workflowProgressDrawerLoading}
         order={drawer.workflowProgressOrder}
@@ -42,7 +44,7 @@ export const WorkflowDrawerProvider = ({ children }) => {
         entityType={options.entityType}
         formOnly={options.formOnly}
         leadMode={options.leadMode}
-      />
+      />}
     </WorkflowDrawerContext.Provider>
   )
 }

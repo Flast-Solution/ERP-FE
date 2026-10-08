@@ -66,11 +66,18 @@
     "tui-time-picker": "^2.1.6",
     "vn-num2words": "^1.0.4",
     "xlsx": "0.18.5",
-    "zustand": "^5.0.13"
+    "zustand": "^5.0.13",
+    "@erp/tenant-runtime": "file:vendor/erp-tenant-runtime-1.0.0.tgz",
+    "@erp/shared-ui": "file:vendor/erp-shared-ui-1.0.0-009448e7.tgz",
+    "canvg": "3.0.11",
+    "path2d-polyfill": "2.1.1"
   },
   "scripts": {
     "start": "craco start",
-    "build": "cross-env GENERATE_SOURCEMAP=false craco build"
+    "start:host": "craco start",
+    "build:host": "cross-env GENERATE_SOURCEMAP=false craco build",
+    "build": "cross-env GENERATE_SOURCEMAP=false craco build",
+    "test:host": "craco test --watch=false"
   },
   "resolutions": {
     "strip-ansi": "6.0.0"

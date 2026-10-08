@@ -10,6 +10,8 @@
 
 # production
 /build
+/dist/hatenko
+/public/remotes/hatenko
 
 # misc
 .DS_Store

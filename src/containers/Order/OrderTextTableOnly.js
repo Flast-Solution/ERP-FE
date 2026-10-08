@@ -1,9 +1,3 @@
-import React from 'react';
-import { Table } from 'antd';
-import { formatMoneyAmount } from '../../utils/formatCurrency';
-import { getPaymentLineTotal } from './paymentAmounts';
-import { parseOrderLine } from './orderLine';
-
 /**************************************************************************/
 /*  OrderTextTableOnly.js                                                 */
 /**************************************************************************/
@@ -25,32 +19,133 @@ import { parseOrderLine } from './orderLine';
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
+import React, { useCallback, useEffect, useState } from 'react';
+import { Table, Typography } from "antd";
+import styled from "styled-components";
+import { arrayEmpty, formatMoney } from '@flast-erp/core/utils';
+import { ShowSkuDetail } from '@/containers/Product/SkuView';
 
-const OrderTextTableOnly = ({ details = [], currency = 'VND', orderCurrency = 'VND', exchangeRate = 1 }) => {
-  const displayVnd = value => formatMoneyAmount(currency === 'USD' ? value / exchangeRate : value, currency);
-  const columns = [
-    { title: 'STT', width: 60, align: 'center', render: (_, record, index) => index + 1 },
-    {
-      title: 'Nội dung',
-      dataIndex: 'productName',
-      render: (name, detail) => (
-        <div style={{ overflowWrap: 'anywhere' }}>
-          <div>{name}</div>
-          {Object.entries(parseOrderLine(detail.orderLine)).map(([label, value]) => (
-            <div key={label} style={{ marginTop: 4 }}>
-              <strong>{label}: </strong>
-              {value !== null && typeof value === 'object' ? JSON.stringify(value) : String(value ?? '')}
-            </div>
-          ))}
-        </div>
-      ),
-    },
-    { title: 'Số lượng', dataIndex: 'quantity', align: 'right', width: 110 },
-    { title: 'Đơn vị', dataIndex: 'unit', width: 85, render: value => value || '—' },
-    { title: 'Đơn giá', dataIndex: 'price', align: 'right', render: value => displayVnd(Number(value ?? 0)) },
-    { title: 'Thành tiền', align: 'right', render: (_, detail) => <strong>{displayVnd(getPaymentLineTotal(detail, orderCurrency, exchangeRate))}</strong> },
-  ];
-  return <Table size="small" bordered pagination={false} columns={columns} dataSource={details ?? []} rowKey={record => record.id ?? record.detailId ?? record.key} scroll={{ x: 680 }} />;
+const { Text } = Typography;
+const COL_SPAN_0 = { props: { colSpan: 0 } };
+const COL_SPAN_4 = { props: { colSpan: 4 } };
+
+const StyledTable = styled.div`
+	.main-row td:first-child {
+		position: relative;
+	}
+
+	/* Đường viền nằm dưới cùng của ô STT (dưới dòng phụ) */
+	.main-row td:first-child::after {
+		content: "";
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		width: 100%;
+		border-bottom: 1px solid #d9d9d9;
+	}
+`;
+
+const OrderTextTableOnly = ({ details }) => {
+
+	const [rawData, setRawData] = useState([]);
+	const generateRaws = useCallback((datas) => {
+		let raws = [];
+		if (arrayEmpty(datas)) {
+			return []
+		}
+		let key = 0;
+		for (let detail of datas) {
+			key++;
+			let raw = { ...detail, isNoiDungMoRong: false, key: `${key}-main` }
+			raws.push(raw);
+			raws.push({
+				isNoiDungMoRong: true,
+				key: `${key}-sub`,
+				mSkuDetails: detail.mSkuDetails
+			});
+		}
+		return raws;
+	}, []);
+
+	useEffect(() => {
+		let raws = generateRaws(details);
+		setRawData(raws);
+		/* eslint-disable-next-line */
+	}, [details]);
+
+	const columns = [
+		{
+			title: "STT",
+			dataIndex: "key",
+			width: 60,
+			align: "center",
+			render: (_, record, index) => {
+				if (record.isNoiDungMoRong) {
+					return { ...COL_SPAN_0 };
+				}
+				return {
+					children: Math.floor(index / 2) + 1,
+					props: { rowSpan: 2 }
+				};
+			}
+		},
+		{
+			title: "Nội dung",
+			key: "noidung",
+			render: (_, record) => {
+				if (record.isNoiDungMoRong) {
+					return {
+						children: <ShowSkuDetail skuDetails={record.mSkuDetails} />,
+						...COL_SPAN_4
+					};
+				}
+				return <Text>{record.productName}</Text>
+			}
+		},
+		{
+			title: "Số lượng",
+			dataIndex: "quantity",
+			align: "center",
+			render: (text, record) =>
+				record.isNoiDungMoRong ? COL_SPAN_0 : text
+		},
+		{
+			title: "Đơn giá",
+			dataIndex: "price",
+			align: "center",
+			render: (price, record) => record.isNoiDungMoRong ? COL_SPAN_0 : (
+				<>
+					{formatMoney(price)}
+					{record.discountAmount > 0 &&
+						<strong><br />Giảm: ({formatMoney(record.discountAmount)}) </strong>
+					}
+				</>
+			)
+		},
+		{
+			title: "Thành tiền",
+			dataIndex: "totalPrice",
+			align: "center",
+			render: (totalPrice, record) => record.isNoiDungMoRong ? COL_SPAN_0 : (
+				<Text strong>{record.discountAmount > 0
+					? formatMoney(totalPrice - record.discountAmount)
+					: formatMoney(totalPrice)}
+				</Text>
+			)
+		}
+	];
+
+	return (
+		<StyledTable>
+			<Table
+				columns={columns}
+				dataSource={rawData}
+				pagination={false}
+				bordered
+				rowClassName={(record) => (record.isNoiDungMoRong ? "sub-row" : "main-row")}
+			/>
+		</StyledTable>
+	)
 };
 
 export default OrderTextTableOnly;

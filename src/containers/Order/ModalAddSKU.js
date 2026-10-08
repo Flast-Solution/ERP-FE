@@ -19,218 +19,79 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useState, useCallback, useMemo, useRef } from 'react';
-import { Button, Col, Form, Input, Row, Space, Tag, Typography, message } from 'antd';
-import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
+import React, { useState, useCallback } from 'react';
+import { Col, Form, Row } from 'antd';
 
 import {
   FormSelectInfiniteProduct,
   FormSelect,
-  FormInput,
   FormInputNumber,
   BtnSubmit,
+  FormAutoComplete,
   FormTextArea
 } from '@flast-erp/core/components';
 
-import _ from 'lodash';
+import _, { isEmpty } from 'lodash';
 import InStockTable from '@/containers/WareHouse/InStockTable'
-import useGetMe from '@/hooks/useGetMe'
-import { isHatecoBusiness } from '@/configs/business'
+import OrderService from '@/services/GenericOrderService';
 import { useEffectAsync } from '@flast-erp/core/hooks';
-import {
-  arrayNotEmpty,
-  RequestUtils
+import { ShowSkuDetail } from '@/containers/Product/SkuView';
+import { 
+  arrayNotEmpty, 
+  RequestUtils, 
+  createMSkuDetails 
 } from '@flast-erp/core/utils';
-import {
-  buildOrderLine,
-  getDuplicateOrderLineKeys,
-  hasIncompleteOrderLineEntries,
-} from './orderLine';
 
-import { resolveOrderSkuDetails } from './orderSku';
-
-const AddSKU = (props) => {
-  const { user } = useGetMe();
-  const hideSkuStockTable = isHatecoBusiness(user?.bizId);
-  const {
-    onSave,
-    productId,
-    leadProducts = [],
-  } = props.data ?? props;
-  const { closeModal } = props;
+const AddSKU = ({ data, onSave: directOnSave, productId: directProductId, closeModal, closeModalAfterSubmit }) => {
+  const { onSave = directOnSave, productId = directProductId } = data ?? {};
 
   const [ form ] = Form.useForm();
   const [ inStocks, setInStocks ] = useState([]);
   const [ skus, setSkus ] = useState([]);
   const [ mProduct, setProduct ] = useState({});
-  const [ selectedProductId, setSelectedProductId ] = useState(productId ?? leadProducts[0]?.id);
-  const [ configuredProductIds, setConfiguredProductIds ] = useState([]);
-  const selectedProductIdRef = useRef(productId ?? leadProducts[0]?.id);
-  const skuRef = useRef([]);
-  const productRef = useRef({});
-  const productDraftsRef = useRef({});
+  const [ sku, setSkuDetail ] = useState([]);
 
-  const suggestedProducts = useMemo(
-    () => (Array.isArray(leadProducts) ? leadProducts : [])
-      .filter(item => item?.id != null),
-    [leadProducts],
-  );
-
-  const saveCurrentProductDraft = useCallback(() => {
-    const currentProductId = selectedProductIdRef.current;
-    if (currentProductId == null) {
+  useEffectAsync(async () => {
+    if (!productId) {
       return;
     }
-    productDraftsRef.current[String(currentProductId)] = {
-      values: {
-        ...form.getFieldsValue(),
-        productId: currentProductId,
-        productCode: productRef.current?.code ?? null,
-      },
-      sku: skuRef.current,
-      product: productRef.current,
-    };
-    const values = productDraftsRef.current[String(currentProductId)].values;
-    setConfiguredProductIds(current => (
-      values?.skuId != null && Number(values?.quantity) > 0
-        ? Array.from(new Set([...current, currentProductId]))
-        : current.filter(id => String(id) !== String(currentProductId))
-    ));
-  }, [form]);
-
-  const onChangeSelectedProductItem = useCallback((value, item, preserveCurrent = true) => {
-    if (preserveCurrent && String(selectedProductIdRef.current) !== String(value)) {
-      saveCurrentProductDraft();
+    form.setFieldValue("productId", productId);
+    const { data, errorCode } = await RequestUtils.Get("/product/find-by-id", { id: productId });
+    if (errorCode === 200) {
+      onChangeSelectedProductItem(errorCode, data);
     }
-    selectedProductIdRef.current = value;
-    setSelectedProductId(value);
-    const nextProduct = _.cloneDeep(item);
-    const { warehouses } = nextProduct;
+  }, [productId, form]);
+
+  const onFinish = useCallback((values) => {
+    const mSkuDetails = createMSkuDetails(sku?.skuDetails ?? []);
+    onSave({ ...values, mProduct, mSkuDetails });
+    (closeModalAfterSubmit || closeModal)?.();
+  }, [ onSave, sku, mProduct, closeModal, closeModalAfterSubmit ]);
+
+  const onChangeSelectedProductItem = (value, item) => {
+    let nProduct = _.cloneDeep(item);
+    let { warehouses } = nProduct;
     if (arrayNotEmpty(warehouses)) {
       setInStocks(warehouses);
     } else {
       setInStocks([]);
     }
-    setSkus(nextProduct?.skus || []);
-    setProduct(nextProduct);
-    productRef.current = nextProduct;
-    const draft = productDraftsRef.current[String(value)];
-    if (draft) {
-      form.setFieldsValue(draft.values);
-      const restoredSku = (nextProduct?.skus || []).find(
-        itemSku => String(itemSku?.id) === String(draft.values?.skuId),
-      ) || draft.sku || [];
-      skuRef.current = restoredSku;
-    } else {
-      form.resetFields(['skuId', 'quantity', 'code', 'note', 'orderLineEntries']);
-      form.setFieldsValue({
-        productId: value,
-        productCode: nextProduct?.code ?? null,
-        quantity: 1,
-      });
-      skuRef.current = [];
-    }
-  }, [form, saveCurrentProductDraft]);
-
-  const loadProduct = useCallback(async (nextProductId, preserveCurrent = true) => {
-    if (!nextProductId) {
-      return;
-    }
-    const { data, errorCode } = await RequestUtils.Get('/product/find-by-id', { id: nextProductId });
-    if (errorCode === 200) {
-      let resolvedProduct = data;
-      if (!resolvedProduct?.code) {
-        const productListResponse = await RequestUtils.Get('/erp/product/fetch', { ids: nextProductId });
-        const productSummary = productListResponse?.data?.embedded?.find(
-          item => String(item?.id) === String(nextProductId),
-        );
-        if (productSummary) {
-          resolvedProduct = {
-            ...productSummary,
-            ...resolvedProduct,
-            code: resolvedProduct?.code || productSummary.code || null,
-          };
-        }
-      }
-      onChangeSelectedProductItem(nextProductId, resolvedProduct, preserveCurrent);
-    }
-  }, [onChangeSelectedProductItem]);
-
-  useEffectAsync(async () => {
-    const initialProductId = productId ?? suggestedProducts[0]?.id;
-    if (!initialProductId) {
-      return;
-    }
-    await loadProduct(initialProductId);
-  }, [productId, suggestedProducts, loadProduct]);
-
-  const onFinish = useCallback((values) => {
-    const currentProductId = values.productId;
-    const currentDraft = {
-      values: {
-        ...values,
-        productCode: productRef.current?.code ?? null,
-      },
-      sku: skuRef.current,
-      product: productRef.current || mProduct,
-    };
-    productDraftsRef.current[String(currentProductId)] = currentDraft;
-
-    const selectedProductIds = Object.entries(productDraftsRef.current)
-      .filter(([, draft]) => (
-        draft?.values?.productId != null
-        && draft?.values?.skuId != null
-        && Number(draft?.values?.quantity) > 0
-      ))
-      .map(([itemId, draft]) => draft.values.productId ?? itemId);
-    const invalidOrderLineProductId = selectedProductIds.find(itemId => {
-      const entries = productDraftsRef.current[String(itemId)]?.values?.orderLineEntries;
-      return hasIncompleteOrderLineEntries(entries) || getDuplicateOrderLineKeys(entries).length > 0;
-    });
-
-    if (invalidOrderLineProductId != null) {
-      const invalidDraft = productDraftsRef.current[String(invalidOrderLineProductId)];
-      const duplicateKeys = getDuplicateOrderLineKeys(invalidDraft?.values?.orderLineEntries);
-      const invalidProduct = suggestedProducts.find(
-        item => String(item.id) === String(invalidOrderLineProductId),
-      );
-      const invalidProductName = invalidDraft?.product?.name || invalidProduct?.name || 'sản phẩm';
-      message.warning(
-        duplicateKeys.length > 0
-          ? `Thông tin bổ sung của ${invalidProductName} bị trùng key: ${duplicateKeys.join(', ')}`
-          : `Vui lòng nhập đủ key và value cho ${invalidProductName}.`,
-      );
-      loadProduct(invalidOrderLineProductId, false);
-      return;
-    }
-
-    selectedProductIds.forEach(itemId => {
-      const draft = productDraftsRef.current[String(itemId)];
-      const { orderLineEntries, ...draftValues } = draft.values;
-      onSave({
-        ...draftValues,
-        orderLine: buildOrderLine(orderLineEntries),
-        status: draft.values?.status ?? 0,
-        mProduct: draft.product,
-        mSkuDetails: resolveOrderSkuDetails({ ...draftValues, skuDetails: draft.sku?.skuDetails }, draft.product),
-      });
-    });
-    message.success(`Đã thêm ${selectedProductIds.length} sản phẩm vào cơ hội bán hàng.`);
-    if (typeof closeModal === 'function') {
-      closeModal();
-    }
-  }, [
-    closeModal,
-    loadProduct,
-    mProduct,
-    onSave,
-    suggestedProducts,
-  ]);
+    setSkus(nProduct?.skus || []);
+    setProduct(nProduct);
+    form.resetFields(['skuId']);
+  };
 
   const onChangeGetSelectedSku = (value, item) => {
-    const selectedSku = skus.find(candidate => String(candidate.id) === String(value)) ?? item;
-    skuRef.current = selectedSku;
+    setSkuDetail(item);
   };
+
+  const memoSkuDetail = React.useMemo(() => {
+    if(isEmpty(sku)) {
+      return <span />;
+    }
+    const mSkuDetails = createMSkuDetails(sku.skuDetails ?? []);
+    return <ShowSkuDetail skuDetails={mSkuDetails} />
+  }, [ sku ]);
 
   const onSelectedStock = useCallback((item) => {
     console.log('Selected stock: ', item);
@@ -238,50 +99,13 @@ const AddSKU = (props) => {
 
   return (
     <Form form={form} layout="vertical" onFinish={onFinish}>
-      {suggestedProducts.length > 0 && (
-        <div
-          style={{
-            padding: 16,
-            marginBottom: 20,
-            border: '1px solid #e6eaf0',
-            borderRadius: 8,
-            background: '#f8fafc',
-          }}
-        >
-          <Typography.Text strong>
-            Sản phẩm từ Lead ({suggestedProducts.length})
-          </Typography.Text>
-          <Typography.Paragraph type="secondary" style={{ margin: '4px 0 12px' }}>
-            Chọn từng sản phẩm để cấu hình SKU và số lượng cho cơ hội bán hàng.
-          </Typography.Paragraph>
-          <Space size={[8, 8]} wrap>
-            {suggestedProducts.map(item => {
-              const isSelected = String(selectedProductId) === String(item.id);
-              const isConfigured = configuredProductIds.some(id => String(id) === String(item.id));
-              return (
-                <Button
-                  key={item.id}
-                  type={isSelected ? 'primary' : 'default'}
-                  onClick={() => loadProduct(item.id)}
-                >
-                  {item.name}
-                  {isConfigured && <Tag color="success" style={{ marginLeft: 8, marginRight: 0 }}>Đã cấu hình</Tag>}
-                </Button>
-              );
-            })}
-          </Space>
-        </div>
-      )}
       <Row gutter={16}>
         <Col span={12}>
           <FormSelectInfiniteProduct
             label='Chọn sản phẩm'
             placeholder='Chọn sản phẩm'
             name='productId'
-            customValue={selectedProductId}
-            formatText={(name, item) => (
-              [name, item?.code].filter(Boolean).join(' - ')
-            )}
+            customValue={productId}
             required
             onChangeGetSelectedItem={onChangeSelectedProductItem}
           />
@@ -298,18 +122,19 @@ const AddSKU = (props) => {
             onChangeGetSelectedItem={onChangeGetSelectedSku}
           />
         </Col>
-        {!hideSkuStockTable && <Col span={24}>
+        <Col span={24} style={{marginBottom: 20}}>
+          {memoSkuDetail}
+        </Col>
+        <Col span={24}>
           <InStockTable
-            showSku={false}
             data={inStocks}
             onChangeSelected={onSelectedStock}
           />
-        </Col>}
+        </Col>
         <Col span={12}>
           <FormInputNumber
             label='Số lượng'
             name='quantity'
-            addonAfter={mProduct?.unit || undefined}
             required
             placeholder={'Nhập số lượng'}
             style={{ width: '100%' }}
@@ -318,10 +143,13 @@ const AddSKU = (props) => {
           />
         </Col>
         <Col span={12}>
-          <FormInput
-            label='Mã đơn hàng'
-            name='code'
-            placeholder={'Nhập mã đơn hàng nếu có'}
+          <FormAutoComplete
+            resourceData={OrderService.getListOrderName()}
+            valueProp='name'
+            titleProp='name'
+            label='Tên đơn'
+            name='orderName'
+            placeholder={'Nhập tên đơn nếu có'}
           />
         </Col>
         <Col span={24}>
@@ -333,58 +161,7 @@ const AddSKU = (props) => {
           />
         </Col>
         <Col span={24}>
-          <Typography.Title level={5}>Thông tin bổ sung</Typography.Title>
-          <Typography.Paragraph type="secondary">
-            Thêm các cặp key/value riêng cho dòng sản phẩm này.
-          </Typography.Paragraph>
-          <Form.List name="orderLineEntries">
-            {(fields, { add, remove }) => (
-              <Space direction="vertical" size={12} style={{ width: '100%' }}>
-                {fields.map(field => (
-                  <Row key={field.key} gutter={12} align="top">
-                    <Col flex="1 1 240px">
-                      <Form.Item
-                        name={[field.name, 'key']}
-                        rules={[
-                          { required: true, whitespace: true, message: 'Vui lòng nhập key' },
-                        ]}
-                      >
-                        <Input placeholder="Key, ví dụ: color" />
-                      </Form.Item>
-                    </Col>
-                    <Col flex="1 1 320px">
-                      <Form.Item
-                        name={[field.name, 'value']}
-                        rules={[
-                          { required: true, whitespace: true, message: 'Vui lòng nhập value' },
-                        ]}
-                      >
-                        <Input placeholder="Value, ví dụ: Đỏ" />
-                      </Form.Item>
-                    </Col>
-                    <Col flex="40px">
-                      <Button
-                        danger
-                        type="text"
-                        aria-label="Xóa thông tin bổ sung"
-                        icon={<MinusCircleOutlined />}
-                        onClick={() => remove(field.name)}
-                      />
-                    </Col>
-                  </Row>
-                ))}
-                <Button type="dashed" icon={<PlusOutlined />} onClick={() => add()} block>
-                  Thêm thông tin
-                </Button>
-              </Space>
-            )}
-          </Form.List>
-        </Col>
-        <Col span={24}>
-          <BtnSubmit
-            marginTop={24}
-            text="Hoàn thành"
-          />
+          <BtnSubmit marginTop={0} text='Hoàn thành' />
         </Col>
       </Row>
     </Form>

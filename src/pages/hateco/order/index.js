@@ -2,7 +2,7 @@ import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { Helmet } from 'react-helmet'
 import { BreadcrumbCustom, Loading } from '@flast-erp/core/components'
-import HatecoOrderOverview from '@/containers/Hateco/OrderOverview'
+import HatenkoRemotePage from '@/components/HatenkoRemotePage'
 import useGetMe from '@/hooks/useGetMe'
 import { isHatecoBusiness } from '@/configs/business'
 
@@ -33,7 +33,7 @@ const HatecoOrderPage = () => {
           { title: 'Tổng quan đơn hàng' },
         ]}
       />
-      <HatecoOrderOverview filter={filter} />
+      <HatenkoRemotePage page="OrderOverview" filter={filter} />
     </div>
   )
 }

@@ -1,0 +1,80 @@
+998083d 2026-06-26 duongtmfs màn hinh en usser:
+a65e26d 2026-06-29 duongtmfs fix bug
+47cf05e 2026-07-02 duongtmfs update endusser
+1fdc322 2026-07-06 duongtmfs new: ui profile
+eff486c 2026-07-07 duongtmfs tạo lô hàng
+9d1fcfb 2026-07-08 duongtmfs update ui lô hàng
+4d7a02a 2026-07-09 duongtmfs update set field
+3b71370 2026-07-10 duongtmfs  update ui tiến trình
+01fac31 2026-07-15 duongtmfs Refactor manufacturing lot management UI and logic, including new components for lot configuration and existing lots, improved data handling, and added constants and helpers for better maintainability
+bb11501 2026-07-16 duongtmfs Enhance Order List and Workflow UI with new features and optimizations, including improved clipboard functionality, dynamic API paths, and refined history display components. Update styles for better visual consistency and user experience
+c570073 2026-07-20 duongtmfs update ui noti
+69dec4b 2026-07-21 duongtmfs rèactor oder list
+eb715d7 2026-07-22 duongtmfs ghép api noti
+54891d5 2026-07-28 duongtmfs update workflow 28/07
+d34d12c 2026-07-28 duongtmfs mock ui Trao đỏi báo giá
+65a2747 2026-07-28 duongtmfs update ui
+12a13a7 2026-07-29 duongtmfs update config step work flow
+c694137 2026-07-30 duongtmfs update workflow oder
+00b2f0e 2026-08-03 duongtmfs fix bug
+a985b39 2026-08-03 duongtmfs update filter tim theo wf
+844fdf2 2026-08-04 duongtmfs fix bug
+1a33cd3 2026-08-10 duongtmfs update work-flow
+3d5b724 2026-08-11 duongtmfs update editer invoid
+7aa9896 2026-08-12 duongtmfs update wworkflow
+16092da 2026-08-12 duongtmfs update lead wf
+c29bbdb 2026-08-13 duongtmfs update Lead
+16f5845 2026-08-18 duongtmfs Enhance Lead Workflow Management with New Features and UI Improvements
+a623c8a 2026-08-18 duongtmfs Refactor Order List and User Options; add new routes for Production Overview
+766b940 2026-08-19 duongtmfs update kpi
+78408be 2026-08-21 duongtmfs update ui
+d170d58 2026-08-24 duongtmfs Refactor Lead and Order components to improve data handling and UI; integrate lead status options and enhance filtering capabilities in LeadList and LeadFilter components.
+ce8173f 2026-08-24 duongtmfs Refactor Order List component to update API endpoint for fetching order statuses; streamline column creation by removing unnecessary parameters and logic related to workflow steps.
+7c6b6ea 2026-08-24 duongtmfs Refactor CoHoi7DayForm and Lead3DayForm components to improve data mapping and submission handling; integrate normalization of issues and enhance form record management using useMemo and useEffect hooks.
+5739be3 2026-08-25 duongtmfs Enhance Document Template Editor with new rich text binding capabilities; implement manual input and list features in FieldInspector, and improve data handling in GeneratedDocumentViewer for better document management.
+e7cbb22 2026-08-26 duongtmfs Refactor Order component to standardize SKU handling by renaming skuDetailCode to skuId; enhance quotation viewer functionality with new utility functions for data mapping and payload building, and implement comprehensive tests for quotation mappers.
+d3d3afa 2026-08-26 duongtmfs Enhance Document Template Editor and Quotation Viewer with runtime asset URL resolution; implement approval workflow for quotations, including approval and rejection actions, and improve data handling in quotation payloads. Update styles for better UI responsiveness.
+e46d93d 2026-08-26 duongtmfs Refactor Document Template Editor and Quotation Viewer to standardize document type handling; update `documentType` values to lowercase for consistency, enhance binding resolution in templates, and improve data fetching for templates. Integrate new utility functions for better data management and ensure compatibility with existing records.
+1d561b3 2026-08-26 duongtmfs Enhance Document Template Editor with HTML template support; add functionality for importing and exporting HTML + JSON templates, improve dynamic table header handling, and implement new styling options for headers. Introduce tests for HTML template interactions and validation to ensure robust functionality.
+a46e3e0 2026-08-27 duongtmfs Add environment configuration for production and enhance DocumentTemplateEditor with manual input placeholders
+7d6f39e 2026-08-27 duongtmfs Enhance Document Template Editor with improved HTML binding and repeat row handling
+d88a8f0 2026-08-27 duongtmfs Add XLSX support and enhance Document Template Editor with sheet import functionality
+9cb4dd6 2026-08-27 duongtmfs Refactor PDF export functionality in GeneratedDocumentViewer and Invoice components
+7601c0a 2026-09-09 duongtmfs Remove FormInfiniteQcProduct component and related quality control logic from ProductForm
+c4fdcf1 2026-09-09 duongtmfs Implement order line management features in Order component
+195e216 2026-09-14 duongtmfs Enhance user permission handling and improve component functionality
+9bafde1 2026-09-15 duongtmfs Enhance Order and Product components with new features and improvements
+a6215fe 2026-09-16 duongtmfs Enhance Order component with new features and improvements
+1ae798d 2026-09-16 duongtmfs Refactor Order component to standardize order identifier and enhance date handling
+f8477a1 2026-09-16 duongtmfs Enhance order management functionality with edit permissions and UI updates
+d74952a 2026-09-17 duongtmfs Enhance order and production management with new provider handling and UI improvements
+fd0d2e0 2026-09-17 duongtmfs Update WorkflowInstanceContent and WorkflowProgressDrawer for improved UI and functionality
+c2074b2 2026-09-17 duongtmfs Refactor WorkflowInstanceContent and LeadDetailDrawer to use Ant Design icons
+eb9f872 2026-09-18 duongtmfs Refactor API response handling for improved consistency and clarity
+353b8b2 2026-09-18 duongtmfs Refactor API response handling for improved consistency in data retrieval
+aaac076 2026-09-21 duongtmfs Update environment configuration and enhance Order component
+30d13c9 2026-09-21 duongtmfs Refactor Sidebar logo URL resolution and enhance Order components
+63e31fc 2026-09-21 duongtmfs Enhance OrderInboundDrawer with evaluation criteria management
+e17fc92 2026-09-22 duongtmfs Enhance OrderInboundDrawer with provider and warehouse history management
+d356312 2026-09-22 duongtmfs Enhance OrderInboundDrawer with history selection and improved UI interactions
+beef567 2026-09-24 duongtmfs Update environment configuration and enhance OrderPayment component
+1277d14 2026-09-24 duongtmfs Enhance Order and Warehouse components with tooltips and improved data handling
+7c6f04f 2026-09-25 duongtmfs Update environment configuration, enhance Order component, and improve product filtering
+55854bd 2026-09-25 duongtmfs Enhance Order List component with order tracking features and improved UI
+32c68b7 2026-09-25 duongtmfs Enhance Order List and SideBar components for improved navigation and tracking
+dc6f468 2026-09-25 duongtmfs Enhance Order List with new tracking features and UI improvements
+df63465 2026-09-28 duongtmfs Refactor Order components for improved data handling and UI enhancements
+60b0313 2026-09-29 duongtmfs Enhance Order and Delivery components with workflow integration and UI improvements
+8badb20 2026-09-30 duongtmfs Update dependencies and enhance LeadForm with enterprise search functionality
+d94b84c 2026-09-30 duongtmfs Enhance Order Tracking components with new tooltip and utility features
+2fffecc 2026-09-30 duongtmfs Enhance Order and Production components with new features and styling improvements
+7ffb476 2026-10-02 duongtmfs fpt: req hatenko 1-10
+5cf323d 2026-10-02 duongtmfs Enhance Order component with payment terms and percentage fields
+ee71353 2026-10-05 duongtmfs Refactor Order components for currency handling and display improvements
+5a7b597 2026-10-05 duongtmfs Enhance Order components with improved expandable row functionality and filter adjustments
+c9db368 2026-10-05 duongtmfs Implement dynamic table support in FormBuilder and Order components
+3e3b074 2026-10-05 duongtmfs Enhance Order List components with opportunity cancellation functionality
+f72e5d4 2026-10-05 duongtmfs Enhance Order List with production overview functionality
+60fa0a8 2026-10-06 duongtmfs Add Docx and Spreadsheet preview functionality to UploadedFilePreview component
+3734f78 2026-10-07 duongtmfs Enhance Order component with improved currency handling and formatting
+636441b 2026-10-08 duongtmfs Add Order Formula Builder for dynamic pricing calculations

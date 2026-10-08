@@ -44,7 +44,7 @@ import { useEffectAsync } from '@flast-erp/core/hooks';
 import { HASH_MODAL } from '@/configs';
 import useGetMe from '@/hooks/useGetMe';
 import './ModalNhapKho.less';
-import UploadedFilePreview from '../../components/UploadedFilePreview';
+import UploadedFilePreview from "@erp/shared-ui/components/UploadedFilePreview/index";
 import { toUploadFile } from '../PreviewModal/uploadUtils';
 
 const displayValue = value => (

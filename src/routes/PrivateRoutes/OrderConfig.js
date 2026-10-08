@@ -21,12 +21,17 @@
 
 import React from 'react';
 import { authRoles } from '@/auth';
+import TenantPage from '@/components/TenantPage';
 
-const OrderPage = React.lazy(() => import('@/pages/order'));
+const LocalOrderPage = React.lazy(() => import('@/pages/order'));
 const HatecoOrderPage = React.lazy(() => import('@/pages/hateco/order'));
-const OrderProductionPage = React.lazy(() => import('@/pages/order/OrderProduction'));
-const OrderProgressPage = React.lazy(() => import('@/pages/order/Progress'));
-const ManufacturingLot = React.lazy(() => import('@/pages/order/ManufacturingLotCreate'));
+const LocalOrderProductionPage = React.lazy(() => import('@/pages/order/OrderProduction'));
+const LocalOrderProgressPage = React.lazy(() => import('@/pages/order/Progress'));
+const LocalManufacturingLot = React.lazy(() => import('@/pages/order/ManufacturingLotCreate'));
+const OrderPage = () => <TenantPage page="OrderList" local={LocalOrderPage} />;
+const OrderProductionPage = () => <TenantPage page="ProductionTracking" local={LocalOrderProductionPage} />;
+const OrderProgressPage = () => <TenantPage page="WorkflowProgress" local={LocalOrderProgressPage} />;
+const ManufacturingLot = () => <TenantPage page="ManufacturingLotCreate" local={LocalManufacturingLot} />;
 
 export const OrderConfig = {
     auth: authRoles.user,
