@@ -7,19 +7,16 @@ Hai file test gốc đã chạy được với SBC, giữ lại làm tài liệu
 
 Chạy trên máy có SBC: `cd e2e && node webrtc_gw.e2e.js` (không thuộc bộ test Jest của FE).
 
-## Ánh xạ sang FE
+## Ánh xạ sang FE (`softphone/gatewayApi.js`)
 
-| Lệnh DI (UDP 5040)              | Endpoint backend ERP cần proxy       | Dùng ở                     |
-|---------------------------------|--------------------------------------|----------------------------|
-| POST :8090/api/webrtc/token     | `POST call-center/webrtc/token`      | `Softphone.connect`        |
-| `webrtc_gw create <ip> <port>`  | `POST call-center/webrtc/create`     | `Softphone.connect`        |
-| `webrtc_gw register id ext tok` | `POST call-center/webrtc/register`   | `Softphone.connect`        |
-| `webrtc_gw status id`           | `POST call-center/webrtc/status`     | poll 500ms                 |
-| `webrtc_gw answer id`           | `POST call-center/webrtc/answer`     | nút Nghe                   |
-| `webrtc_gw dial id number`      | `POST call-center/webrtc/dial`       | nút Gọi                    |
-| `webrtc_gw dtmf id digits`      | `POST call-center/webrtc/dtmf`       | bàn phím trong cuộc gọi    |
-| `webrtc_gw hangup id`           | `POST call-center/webrtc/hangup`     | Từ chối / Kết thúc         |
-| `webrtc_gw unregister id`       | `POST call-center/webrtc/unregister` | Tạm nghỉ / rời trang       |
-
-Backend trả `{ result: "<chuỗi DI nguyên bản>" }` (token trả `{ token, expires }`).
-Bearer của API token là bí mật phía server, không đưa xuống trình duyệt.
+| http_api (Bearer token webrtc)                    | Hàm FE                    | Dùng ở                        |
+|---------------------------------------------------|---------------------------|-------------------------------|
+| `POST omni/webrtc/register?ext=` (API app)        | `gatewayApi.token`        | `Softphone.connect`           |
+| `POST /api/webrtc/sessions` -> `{id, sdp, ext}`   | `gatewayApi.createSession`| `Softphone.connect`           |
+| `GET /api/webrtc/sessions/{id}`                   | `gatewayApi.status`       | poll 500ms                    |
+| `POST .../{id}/dial?to=&caller=`                  | `gatewayApi.dial`         | nút Gọi                       |
+| `POST .../{id}/dtmf?digits=`                      | `gatewayApi.dtmf`         | bàn phím trong cuộc gọi       |
+| `POST .../{id}/answer`                            | `gatewayApi.answer`       | nút Nghe                      |
+| `POST .../{id}/reject`                            | `gatewayApi.reject`       | nút Từ chối                   |
+| `POST .../{id}/hangup`                            | `gatewayApi.hangup`       | nút Kết thúc                  |
+| `POST .../{id}/unregister`                        | `gatewayApi.unregister`   | Tạm nghỉ / rời trang          |

@@ -1,18 +1,19 @@
-import { clearGatewayToken, gatewayApi, GW_STATE, parseCode, parseCreate, parseStatus } from './gatewayApi';
+import { clearGatewayToken, gatewayApi, GW_STATE } from './gatewayApi';
 
 const POLL_INTERVAL = 500;
 const CONNECT_TIMEOUT = 5000;
 
 /*
- * Trình duyệt làm máy nhánh của SBC (theo e2e/webrtc_gw.test.js):
- * token -> create -> nhận SDP offer -> RTCPeerConnection trả lời -> register
- * -> poll status để biết incoming / early / connected / ended.
+ * Trình duyệt làm máy nhánh của SBC (http_api /api/webrtc/sessions):
+ * token -> tạo session (SBC tạo WebRTC + đăng ký máy nhánh, trả SDP offer)
+ * -> RTCPeerConnection trả lời -> poll status để biết incoming / early / connected / ended.
  */
 export default class Softphone {
   constructor({ onState, onError } = {}) {
     this.onState = onState || (() => {});
     this.onError = onError || (() => {});
     this.id = null;
+    this.ext = null;
     this.pc = null;
     this.stream = null;
     this.audio = null;
@@ -24,17 +25,13 @@ export default class Softphone {
     await this.disconnect();
     /* Xin token trước, các lệnh sau dùng Bearer token này */
     await gatewayApi.token(ext);
-    const created = parseCreate(await gatewayApi.create());
-    if (!created) {
+    const created = await gatewayApi.createSession();
+    if (!created?.id || !created?.sdp) {
       throw new Error('Không tạo được phiên WebRTC trên SBC');
     }
     this.id = created.id;
-    await this.setupPeer(created.offer);
-
-    const code = parseCode(await gatewayApi.register(this.id, ext));
-    if (code !== 0) {
-      throw new Error(`Đăng ký máy nhánh thất bại (${code})`);
-    }
+    this.ext = created.ext || ext;
+    await this.setupPeer(created.sdp);
     this.startPolling();
   }
 
@@ -71,12 +68,20 @@ export default class Softphone {
         return;
       }
       try {
-        const status = parseStatus(await gatewayApi.status(this.id));
-        if (status.state && status.state !== this.lastState) {
-          this.lastState = status.state;
-          this.onState(status);
+        const status = await gatewayApi.status(this.id);
+        const state = String(status?.state || '').toLowerCase();
+        if (state && state !== this.lastState) {
+          this.lastState = state;
+          this.onState({ ...status, state, peer: status.caller || '' });
         }
       } catch (error) {
+        /* 404: phiên không còn trên SBC, dừng poll */
+        if (error.status === 404) {
+          this.id = null;
+          this.onState({ state: GW_STATE.ENDED, peer: '' });
+          this.onError(new Error('Mất phiên WebRTC trên SBC, cần kết nối lại'));
+          return;
+        }
         this.onError(error);
       }
       if (this.id) {
@@ -93,40 +98,40 @@ export default class Softphone {
     }
   }
 
-  async command(promise) {
-    const code = parseCode(await promise);
-    if (code !== 0) {
-      throw new Error(`SBC từ chối lệnh (${code})`);
-    }
-  }
-
   ensureSession() {
     if (!this.id) {
       throw new Error('Chưa kết nối tổng đài');
     }
   }
 
-  async dial(number) {
+  async dial(number, caller) {
     this.ensureSession();
     this.lastState = null;
-    await this.command(gatewayApi.dial(this.id, number));
+    await gatewayApi.dial(this.id, number, caller);
   }
 
   async answer() {
     this.ensureSession();
-    await this.command(gatewayApi.answer(this.id));
+    await gatewayApi.answer(this.id);
   }
 
   async hangup() {
     if (!this.id) {
       return;
     }
-    await this.command(gatewayApi.hangup(this.id));
+    await gatewayApi.hangup(this.id);
+  }
+
+  async reject() {
+    if (!this.id) {
+      return;
+    }
+    await gatewayApi.reject(this.id);
   }
 
   async dtmf(digits) {
     this.ensureSession();
-    await this.command(gatewayApi.dtmf(this.id, digits));
+    await gatewayApi.dtmf(this.id, digits);
   }
 
   setMuted(muted) {

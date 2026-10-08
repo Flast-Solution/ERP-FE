@@ -180,7 +180,7 @@ export const useCallCenterStore = create((set, get) => {
       if (get().call.status !== CALL_STATUS.INCOMING) {
         return;
       }
-      await runCommand(sp => sp.hangup());
+      await runCommand(sp => sp.reject());
       get().finishCall();
     },
 

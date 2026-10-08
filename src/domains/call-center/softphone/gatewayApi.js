@@ -1,21 +1,22 @@
 import { RequestUtils } from '@flast-erp/core/utils';
 import { RTC_URL, SUCCESS_CODE } from '@/configs';
+
 /*
- * Cầu nối HTTP tới SBC webrtc_gw.
- * Backend ERP proxy mỗi endpoint sang lệnh DI tương ứng (UDP 5040) hoặc API token,
- * trả nguyên chuỗi kết quả DI trong field `result` (vd: "[0, 'incoming', '0987654321']").
- *   POST omni/webrtc/register            { ext }              -> { token, expires }
- *   POST api/webrtc/sessions             {}                   -> DI webrtc_gw create   -> [0, '<id>', '<sdp offer>']
- *   POST api/webrtc/sessions/register    { id, ext, token }   -> DI webrtc_gw register
- *   POST api/webrtc/sessions/unregister  { id }               -> DI webrtc_gw unregister
- *   POST api/webrtc/sessions/status      { id }               -> DI webrtc_gw status
- *   POST api/webrtc/sessions/answer      { id }               -> DI webrtc_gw answer
- *   POST api/webrtc/sessions/dial        { id, number }       -> DI webrtc_gw dial
- *   POST api/webrtc/sessions/dtmf        { id, digits }       -> DI webrtc_gw dtmf
- *   POST api/webrtc/sessions/hangup      { id }               -> DI webrtc_gw hangup
+ * Trình duyệt làm máy nhánh (webrtc_gw của http_api), gọi thẳng từ trình duyệt.
+ *
+ * Loại 1 - xin token qua API của app (RequestUtils kèm token đăng nhập):
+ *   POST omni/webrtc/register?ext=                -> { errorCode, data: { token, expires } }
+ *
+ * Loại 2 - fetch tới http_api với "Authorization: Bearer <token>", trả JSON thuần,
+ * lỗi trả mã HTTP != 200 kèm body lỗi:
+ *   POST /api/webrtc/sessions                       tạo WebRTC + đăng ký máy nhánh -> { id, sdp, ext }
+ *   GET  /api/webrtc/sessions/{id}                  -> { id, ext, state, sip_code, sip_reason, caller, direction }
+ *   POST /api/webrtc/sessions/{id}/dial?to=&caller= -> { id, call_id }
+ *   POST /api/webrtc/sessions/{id}/dtmf?digits=     -> { id }
+ *   POST /api/webrtc/sessions/{id}/answer|reject|hangup|unregister -> { id }
  */
 
-const BASE_RTC  = `${RTC_URL}/api/webrtc/sessions`;
+const BASE_RTC = `${RTC_URL}/api/webrtc/sessions`;
 const API_TOKEN = '/omni/webrtc/register';
 
 export const GW_STATE = {
@@ -26,7 +27,13 @@ export const GW_STATE = {
   ENDED: 'ended'
 };
 
-const KNOWN_STATES = Object.values(GW_STATE);
+/* Lỗi từ http_api, giữ mã HTTP để nơi gọi xử lý (401 hết token, 404 mất phiên) */
+export class GatewayError extends Error {
+  constructor(message, status) {
+    super(message);
+    this.status = status;
+  }
+}
 
 const unwrap = (response) => {
   const { errorCode, data } = response || {};
@@ -34,33 +41,6 @@ const unwrap = (response) => {
     return data;
   }
   return null;
-};
-
-/* Mã kết quả đầu chuỗi DI: "[403, ...]" -> 403 */
-export const parseCode = (result) => {
-  const match = String(result ?? '').match(/^\[(\d+)/);
-  return match ? parseInt(match[1], 10) : NaN;
-};
-
-/* "[0, 'id', 'v=0...']" -> { id, offer } */
-export const parseCreate = (result) => {
-  const match = String(result ?? '').match(/^\[0, '([^']+)', '([\s\S]*)'\]$/);
-  if (!match) {
-    return null;
-  }
-  return {
-    id: match[1],
-    offer: match[2].replace(/\\r/g, '\r').replace(/\\n/g, '\n'),
-  };
-};
-
-/* Trạng thái và số đối phương trong kết quả status */
-export const parseStatus = (result) => {
-  const text = String(result ?? '');
-  const quoted = [...text.matchAll(/'([^']*)'/g)].map(item => item[1]);
-  const state = quoted.find(item => KNOWN_STATES.includes(item)) || null;
-  const peer = quoted.find(item => /^\+?\d{6,}$/.test(item)) || '';
-  return { state, peer, raw: text };
 };
 
 /* Token webrtc_gw đang dùng, tách khỏi token đăng nhập của app */
@@ -75,9 +55,11 @@ const isTokenValid = () => (
   !!session.token && session.expires - TOKEN_REFRESH_MARGIN > Date.now() / 1000
 );
 
-/* Xin token qua API của app (RequestUtils kèm token đăng nhập) */
 const requestToken = async (ext) => {
-  const response = await RequestUtils.Post(`${API_TOKEN}?ext=${ext}`, {ext});
+  const response = await RequestUtils.Post(
+    `${API_TOKEN}?ext=${encodeURIComponent(ext)}`,
+    { ext }
+  );
   const data = unwrap(response);
   if (!data?.token) {
     throw new Error(`Không lấy được token cho máy nhánh ${ext}`);
@@ -99,31 +81,48 @@ const ensureToken = async () => {
   return session.token;
 };
 
-/* Body trả về cùng cấu trúc { errorCode, data } với API của app */
-const readResult = async (response) => {
-  const json = await response.json();
-  return unwrap(json);
+const readJson = async (response) => {
+  const text = await response.text();
+  if (!text) {
+    return {};
+  }
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return { error: text };
+  }
 };
 
-/* Loại 2: lệnh webrtc_gw dùng fetch + Bearer token vừa xin, không qua axios của app */
-const post = async (action, body = {}) => {
-  const token = await ensureToken();
-  const response = await fetch(`${BASE_RTC}/${action}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify(body)
+const buildUrl = (path, query) => {
+  const params = new URLSearchParams();
+  Object.entries(query || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      params.append(key, value);
+    }
   });
+  const search = params.toString();
+  return `${BASE_RTC}${path}${search ? `?${search}` : ''}`;
+};
+
+/* fetch + Bearer token webrtc, không qua axios của app */
+const request = async (method, path = '', query) => {
+  const token = await ensureToken();
+  const response = await fetch(buildUrl(path, query), {
+    method,
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const body = await readJson(response);
   if (response.status === 401) {
     session.token = null;
   }
   if (!response.ok) {
-    throw new Error(`webrtc_gw ${action} lỗi HTTP ${response.status}`);
+    const message = body?.error || body?.message || `HTTP ${response.status}`;
+    throw new GatewayError(`webrtc_gw: ${message}`, response.status);
   }
-  return readResult(response);
+  return body;
 };
+
+const sessionPath = (id, cmd) => `/${encodeURIComponent(id)}${cmd ? `/${cmd}` : ''}`;
 
 export const clearGatewayToken = () => {
   session.ext = null;
@@ -133,12 +132,20 @@ export const clearGatewayToken = () => {
 
 export const gatewayApi = {
   token: (ext) => requestToken(ext),
-  create: () => post('create'),
-  register: (id, ext) => post('register', { id, ext, token: session.token }),
-  unregister: (id) => post('unregister', { id }),
-  status: (id) => post('status', { id }),
-  answer: (id) => post('answer', { id }),
-  dial: (id, number) => post('dial', { id, number }),
-  dtmf: (id, digits) => post('dtmf', { id, digits }),
-  hangup: (id) => post('hangup', { id }),
+  createSession: () => request('POST'),
+  status: (id) => request('GET', sessionPath(id)),
+  dial: (id, to, caller) => request(
+    'POST',
+    sessionPath(id, 'dial'),
+    { to, caller }
+  ),
+  dtmf: (id, digits) => request(
+    'POST',
+    sessionPath(id, 'dtmf'),
+    { digits }
+  ),
+  answer: (id) => request('POST', sessionPath(id, 'answer')),
+  reject: (id) => request('POST', sessionPath(id, 'reject')),
+  hangup: (id) => request('POST', sessionPath(id, 'hangup')),
+  unregister: (id) => request('POST', sessionPath(id, 'unregister')),
 };
