@@ -62,10 +62,17 @@ export const useCallCenterStore = create((set, get) => {
         set({ error: 'Tài khoản chưa được gán máy nhánh' });
         return;
       }
+      const { connection, ext: currentExt } = get();
+      /* tránh tạo nhiều session khi effect/StrictMode gọi connect lặp lại */
+      if (currentExt === target && [CONNECTION.CONNECTING, CONNECTION.ONLINE].includes(connection)) {
+        return;
+      }
       set({ ext: target, connection: CONNECTION.CONNECTING, error: null });
       try {
-        await getSoftphone().connect(target);
-        set({ connection: CONNECTION.ONLINE, isReady: true });
+        const isActive = await getSoftphone().connect(target);
+        if (isActive) {
+          set({ connection: CONNECTION.ONLINE, isReady: true });
+        }
       } catch (error) {
         set({ connection: CONNECTION.ERROR, isReady: false, error: error.message });
       }

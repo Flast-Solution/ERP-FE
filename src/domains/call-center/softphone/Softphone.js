@@ -1,6 +1,10 @@
 import { clearGatewayToken, gatewayApi, GW_STATE } from './gatewayApi';
 
-const POLL_INTERVAL = 500;
+/* Poll trạng thái: thưa khi rảnh, dày khi đang có cuộc gọi, giãn dần khi lỗi */
+const POLL_IDLE = 3000;
+const POLL_ACTIVE = 1000;
+const POLL_MAX_BACKOFF = 30000;
+const ACTIVE_STATES = [GW_STATE.INCOMING, GW_STATE.EARLY, GW_STATE.CONNECTED];
 const CONNECT_TIMEOUT = 10000;
 
 /* Địa chỉ media trong SDP offer (c= và a=candidate) */
@@ -37,15 +41,31 @@ export default class Softphone {
     this.audio = null;
     this.pollTimer = null;
     this.lastState = null;
+    /* tăng mỗi lần connect/disconnect để huỷ các tác vụ cũ còn đang chạy */
+    this.generation = 0;
   }
 
+  /* true nếu kết nối này còn hiệu lực, false nếu đã bị connect/disconnect khác thay thế */
   async connect(ext) {
-    await this.disconnect();
+    /* disconnect tăng generation ngay (đồng bộ), lấy giá trị trước khi await */
+    const pending = this.disconnect();
+    const generation = this.generation;
+    await pending;
+    const isStale = () => generation !== this.generation;
+
     /* Xin token trước, các lệnh sau dùng Bearer token này */
     await gatewayApi.token(ext);
+    if (isStale()) {
+      return false;
+    }
     const created = await gatewayApi.createSession();
     if (!created?.id || !created?.sdp) {
       throw new Error('Không tạo được phiên WebRTC trên SBC');
+    }
+    if (isStale()) {
+      /* đã có connect/disconnect khác chen vào: bỏ session thừa */
+      await gatewayApi.unregister(created.id).catch(() => {});
+      return false;
     }
     this.id = created.id;
     this.ext = created.ext || ext;
@@ -56,7 +76,11 @@ export default class Softphone {
       await this.disconnect();
       throw error;
     }
+    if (isStale()) {
+      return false;
+    }
     this.startPolling();
+    return true;
   }
 
   async setupPeer(offer) {
@@ -127,18 +151,26 @@ export default class Softphone {
 
   startPolling() {
     this.stopPolling();
+    const generation = this.generation;
+    let failures = 0;
+
     const tick = async () => {
-      if (!this.id) {
+      this.pollTimer = null;
+      if (!this.id || generation !== this.generation) {
         return;
       }
       try {
         const status = await gatewayApi.status(this.id);
+        failures = 0;
         const state = String(status?.state || '').toLowerCase();
-        if (state && state !== this.lastState) {
+        if (generation === this.generation && state && state !== this.lastState) {
           this.lastState = state;
           this.onState({ ...status, state, peer: status.caller || '' });
         }
       } catch (error) {
+        if (generation !== this.generation) {
+          return;
+        }
         /* 404: phiên không còn trên SBC, dừng poll */
         if (error.status === 404) {
           this.id = null;
@@ -146,13 +178,30 @@ export default class Softphone {
           this.onError(new Error('Mất phiên WebRTC trên SBC, cần kết nối lại'));
           return;
         }
+        failures += 1;
         this.onError(error);
       }
-      if (this.id) {
-        this.pollTimer = setTimeout(tick, POLL_INTERVAL);
+      if (this.id && generation === this.generation && !this.pollTimer) {
+        this.pollTimer = setTimeout(tick, this.nextPollDelay(failures));
       }
     };
     tick();
+  }
+
+  nextPollDelay(failures) {
+    if (failures > 0) {
+      return Math.min(POLL_IDLE * 2 ** (failures - 1), POLL_MAX_BACKOFF);
+    }
+    return ACTIVE_STATES.includes(this.lastState) ? POLL_ACTIVE : POLL_IDLE;
+  }
+
+  /* Gọi sau mỗi lệnh để cập nhật trạng thái ngay, không chờ hết chu kỳ */
+  pollSoon() {
+    if (!this.id || !this.pollTimer) {
+      return;
+    }
+    clearTimeout(this.pollTimer);
+    this.pollTimer = setTimeout(() => this.startPolling(), 200);
   }
 
   stopPolling() {
@@ -172,11 +221,13 @@ export default class Softphone {
     this.ensureSession();
     this.lastState = null;
     await gatewayApi.dial(this.id, number, caller);
+    this.pollSoon();
   }
 
   async answer() {
     this.ensureSession();
     await gatewayApi.answer(this.id);
+    this.pollSoon();
   }
 
   async hangup() {
@@ -184,6 +235,7 @@ export default class Softphone {
       return;
     }
     await gatewayApi.hangup(this.id);
+    this.pollSoon();
   }
 
   async reject() {
@@ -191,11 +243,13 @@ export default class Softphone {
       return;
     }
     await gatewayApi.reject(this.id);
+    this.pollSoon();
   }
 
   async dtmf(digits) {
     this.ensureSession();
     await gatewayApi.dtmf(this.id, digits);
+    this.pollSoon();
   }
 
   setMuted(muted) {
@@ -205,6 +259,7 @@ export default class Softphone {
   }
 
   async disconnect() {
+    this.generation += 1;
     this.stopPolling();
     const id = this.id;
     this.id = null;
