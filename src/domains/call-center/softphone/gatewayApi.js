@@ -7,8 +7,8 @@ import { RTC_URL, SUCCESS_CODE } from '@/configs';
  * Loại 1 - xin token qua API của app (RequestUtils kèm token đăng nhập):
  *   POST omni/webrtc/register?ext=                -> { errorCode, data: { token, expires } }
  *
- * Loại 2 - fetch tới http_api với "Authorization: Bearer <token>", trả JSON thuần,
- * lỗi trả mã HTTP != 200 kèm body lỗi:
+ * Loại 2 - fetch tới http_api với "Authorization: Bearer <token>",
+ * reply bọc { errorCode, data } như API của app (các shape dưới là `data`):
  *   POST /api/webrtc/sessions                       tạo WebRTC + đăng ký máy nhánh -> { id, sdp, ext }
  *   GET  /api/webrtc/sessions/{id}                  -> { id, ext, state, sip_code, sip_reason, caller, direction }
  *   POST /api/webrtc/sessions/{id}/dial?to=&caller= -> { id, call_id }
@@ -115,11 +115,12 @@ const request = async (method, path = '', query) => {
   if (response.status === 401) {
     session.token = null;
   }
-  if (!response.ok) {
-    const message = body?.error || body?.message || `HTTP ${response.status}`;
+  const data = unwrap(body);
+  if (!response.ok || data === null) {
+    const message = body?.message || body?.data?.error || body?.error || `HTTP ${response.status}`;
     throw new GatewayError(`webrtc_gw: ${message}`, response.status);
   }
-  return body;
+  return data;
 };
 
 const sessionPath = (id, cmd) => `/${encodeURIComponent(id)}${cmd ? `/${cmd}` : ''}`;
