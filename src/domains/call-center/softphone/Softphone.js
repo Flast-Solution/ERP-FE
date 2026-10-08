@@ -3,11 +3,8 @@ import { clearGatewayToken, gatewayApi, GW_STATE } from './gatewayApi';
 const POLL_INTERVAL = 500;
 const CONNECT_TIMEOUT = 5000;
 
-const MIC_ERRORS = {
-  NotFoundError: 'Không tìm thấy micro, chỉ nghe được. Cắm micro rồi bật lại Sẵn sàng để nói.',
-  NotAllowedError: 'Chưa cấp quyền micro cho trang, chỉ nghe được.',
-  NotReadableError: 'Micro đang bị ứng dụng khác sử dụng, chỉ nghe được.',
-};
+
+const AUDIO_UNAVAILABLE = 'Thiết bị audio trên máy không khả dụng';
 
 /*
  * Trình duyệt làm máy nhánh của SBC (http_api /api/webrtc/sessions):
@@ -60,15 +57,13 @@ export default class Softphone {
       this.audio.srcObject = event.streams[0] || new MediaStream([event.track]);
     };
     await pc.setRemoteDescription({ type: 'offer', sdp: offer });
-    this.stream = await this.getMicrophone();
-    if (this.stream) {
-      this.stream.getTracks().forEach(track => pc.addTrack(track, this.stream));
-    } else {
-      /* không có micro: vẫn nhận tiếng để đổ chuông / nghe khách */
-      pc.getTransceivers().forEach(transceiver => {
-        transceiver.direction = 'recvonly';
-      });
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (error) {
+      /* NotFoundError / NotAllowedError / NotReadableError, hoặc trang không chạy HTTPS */
+      throw new Error(AUDIO_UNAVAILABLE);
     }
+    this.stream.getTracks().forEach(track => pc.addTrack(track, this.stream));
     await pc.setLocalDescription(await pc.createAnswer());
 
     const startedAt = Date.now();
@@ -77,20 +72,6 @@ export default class Softphone {
     }
     if (pc.connectionState !== 'connected') {
       throw new Error('Kết nối media tới SBC thất bại');
-    }
-  }
-
-  /* Micro của máy; null nếu không có thiết bị hoặc bị chặn quyền */
-  async getMicrophone() {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      this.onError(new Error('Trình duyệt không hỗ trợ micro (cần HTTPS hoặc localhost)'));
-      return null;
-    }
-    try {
-      return await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch (error) {
-      this.onError(new Error(MIC_ERRORS[error?.name] || `Không mở được micro: ${error?.message}`));
-      return null;
     }
   }
 
