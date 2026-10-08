@@ -11,7 +11,7 @@ const CallCenterLayer = () => {
   
   const status = useCallCenterStore(state => state.call.status);
   const { user } = useGetMe();
-  useSoftphoneConnection(user?.sipExt || "amce_1002");
+  useSoftphoneConnection(user?.sipExt || "acme_1002");
   useCallCenterEvents();
 
   if (status === CALL_STATUS.INCOMING) {

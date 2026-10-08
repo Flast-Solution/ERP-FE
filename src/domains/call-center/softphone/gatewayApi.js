@@ -4,18 +4,18 @@ import { RTC_URL, SUCCESS_CODE } from '@/configs';
  * Cầu nối HTTP tới SBC webrtc_gw.
  * Backend ERP proxy mỗi endpoint sang lệnh DI tương ứng (UDP 5040) hoặc API token,
  * trả nguyên chuỗi kết quả DI trong field `result` (vd: "[0, 'incoming', '0987654321']").
- *   POST omni/webrtc/register   { ext }              -> { token, expires }
- *   POST api/webrtc/create      {}                   -> DI webrtc_gw create   -> [0, '<id>', '<sdp offer>']
- *   POST api/webrtc/register    { id, ext, token }   -> DI webrtc_gw register
- *   POST api/webrtc/unregister  { id }               -> DI webrtc_gw unregister
- *   POST api/webrtc/status      { id }               -> DI webrtc_gw status
- *   POST api/webrtc/answer      { id }               -> DI webrtc_gw answer
- *   POST api/webrtc/dial        { id, number }       -> DI webrtc_gw dial
- *   POST api/webrtc/dtmf        { id, digits }       -> DI webrtc_gw dtmf
- *   POST api/webrtc/hangup      { id }               -> DI webrtc_gw hangup
+ *   POST omni/webrtc/register            { ext }              -> { token, expires }
+ *   POST api/webrtc/sessions             {}                   -> DI webrtc_gw create   -> [0, '<id>', '<sdp offer>']
+ *   POST api/webrtc/sessions/register    { id, ext, token }   -> DI webrtc_gw register
+ *   POST api/webrtc/sessions/unregister  { id }               -> DI webrtc_gw unregister
+ *   POST api/webrtc/sessions/status      { id }               -> DI webrtc_gw status
+ *   POST api/webrtc/sessions/answer      { id }               -> DI webrtc_gw answer
+ *   POST api/webrtc/sessions/dial        { id, number }       -> DI webrtc_gw dial
+ *   POST api/webrtc/sessions/dtmf        { id, digits }       -> DI webrtc_gw dtmf
+ *   POST api/webrtc/sessions/hangup      { id }               -> DI webrtc_gw hangup
  */
 
-const BASE_RTC  = `${RTC_URL}/api/webrtc`;
+const BASE_RTC  = `${RTC_URL}/api/webrtc/sessions`;
 const API_TOKEN = '/omni/webrtc/register';
 
 export const GW_STATE = {
@@ -77,7 +77,7 @@ const isTokenValid = () => (
 
 /* Xin token qua API của app (RequestUtils kèm token đăng nhập) */
 const requestToken = async (ext) => {
-  const response = await RequestUtils.Post(API_TOKEN, { ext });
+  const response = await RequestUtils.Post(`${API_TOKEN}?ext=${ext}`, {ext});
   const data = unwrap(response);
   if (!data?.token) {
     throw new Error(`Không lấy được token cho máy nhánh ${ext}`);
