@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Alert, message, Spin } from 'antd'
 import { Helmet } from 'react-helmet'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import DocumentTemplateEditor, { createEmptyTemplate } from '@/components/DocumentTemplateEditor'
+import DocumentTemplateEditor, { createEmptyTemplate } from "@erp/shared-ui/components/DocumentTemplateEditor/index"
 import { SUCCESS_CODE } from '@/configs'
 import DocumentTemplateService, {
   buildDocumentSchemaFromEntityFields,

@@ -34,18 +34,21 @@ import MainLayout from '@/layouts/MainLayout';
 import MyPopup from '@/routes/PopupRoute';
 import ModalRoutes from '@/routes/ModalRoutes';
 import routes from '@/routes/PrivateRoutes';
+import { WorkflowDrawerProvider } from '@/contexts/WorkflowDrawerContext';
 
 const ThemeRender = () => (
   <ThemeProvider theme={theme}>
-    <Auth>
-      <Authorization>
-        <MainLayout />
-      </Authorization>
-    </Auth>
-    <Suspense fallback={<Loading />}>
-      <ModalRoutes />
-      <MyPopup />
-    </Suspense>
+    <WorkflowDrawerProvider>
+      <Auth>
+        <Authorization>
+          <MainLayout />
+        </Authorization>
+      </Auth>
+      <Suspense fallback={<Loading />}>
+        <ModalRoutes />
+        <MyPopup />
+      </Suspense>
+    </WorkflowDrawerProvider>
   </ThemeProvider>
 );
 

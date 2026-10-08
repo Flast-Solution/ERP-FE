@@ -21,9 +21,12 @@
 
 import React from 'react';
 import { authRoles } from '@/auth';
+import TenantPage from '@/components/TenantPage';
 
-const CohoiPage = React.lazy(() => import('@/pages/cohoi'));
-const BanHangPage = React.lazy(() => import('@/pages/banhang'));
+const LocalCohoiPage = React.lazy(() => import('@/pages/cohoi'));
+const LocalBanHangPage = React.lazy(() => import('@/pages/banhang'));
+const CohoiPage = () => <TenantPage page="Opportunities" local={LocalCohoiPage} />;
+const BanHangPage = () => <TenantPage page="SalesEditor" local={LocalBanHangPage} />;
 
 export const CohoiConfig = {
     auth: authRoles.user,

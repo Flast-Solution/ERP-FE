@@ -2,7 +2,7 @@ import cloneDeep from 'lodash/cloneDeep'
 import get from 'lodash/get'
 import set from 'lodash/set'
 import { QUOTATION_APPROVAL_STATUS } from '../constants'
-import { getHtmlManualDefaults, getHtmlManualPaths } from '../../../../components/DocumentTemplateEditor/html/model'
+import { getHtmlManualDefaults, getHtmlManualPaths } from "@erp/shared-ui/components/DocumentTemplateEditor/html/model"
 
 const hasOwn = (object, key) => Object.prototype.hasOwnProperty.call(object, key)
 const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value)

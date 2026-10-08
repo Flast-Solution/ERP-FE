@@ -1,0 +1,42 @@
+[
+  {
+    "host": "pages/banhang/index.js",
+    "remote": "pages/SalesEditor/index.jsx",
+    "sameBusinessCode": true
+  },
+  {
+    "host": "containers/Order/index.js",
+    "remote": "features/Order/index.js",
+    "sameBusinessCode": true
+  },
+  {
+    "host": "containers/Order/useOrderEditor.js",
+    "remote": "features/Order/useOrderEditor.js",
+    "sameBusinessCode": true
+  },
+  {
+    "host": "containers/Order/OrderItemsTable.jsx",
+    "remote": "features/Order/OrderItemsTable.jsx",
+    "sameBusinessCode": true
+  },
+  {
+    "host": "containers/Order/orderPricing.js",
+    "remote": "features/Order/orderPricing.js",
+    "sameBusinessCode": true
+  },
+  {
+    "host": "containers/Order/orderEditorPayload.js",
+    "remote": "features/Order/orderEditorPayload.js",
+    "sameBusinessCode": true
+  },
+  {
+    "host": "containers/Order/orderFormula.js",
+    "remote": "features/Order/orderFormula.js",
+    "sameBusinessCode": true
+  },
+  {
+    "host": "services/OrderService.js",
+    "remote": "services/OrderService.js",
+    "sameBusinessCode": true
+  }
+]

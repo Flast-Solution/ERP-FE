@@ -19,45 +19,33 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Tabs } from 'antd';
 import { arrayNotEmpty, f5List } from '@flast-erp/core/utils';
-import OrderService from '@/services/OrderService';
+import OrderService from '@/services/GenericOrderService';
 import { useEffectAsync } from '@flast-erp/core/hooks';
 import OrderPayment from './OrderPayment';
 import { DollarOutlined, FileTextOutlined, BankOutlined } from '@ant-design/icons';
 import Invoice from './Invoice';
 import EnterpriseForm from './EnterpriseForm';
 
-const OrderTabs = ({ data, title, closeModalAfterSubmit }) => {
+const OrderTabs = ({ data, title }) => {
 
-  const { customerOrder, hideInvoiceTab = false, simplifiedPayment = false } = data;
-  const [details, setDetails] = useState(() => (
-    Array.isArray(customerOrder?.details) ? customerOrder.details : []
-  ));
+  const { customerOrder } = data;
+  const [details, setDetails] = useState([]);
   const [customer, setCustomer] = useState();
-  const [order, setOrder] = useState(customerOrder);
-
-  useEffect(() => {
-    setOrder(customerOrder);
-    setDetails(Array.isArray(customerOrder?.details) ? customerOrder.details : []);
-  }, [customerOrder]);
 
   useEffectAsync(async (isMounted) => {
-    const { customer, order, data } = await OrderService.getOrderOnEdit(customerOrder.id);
+    const { customer, data } = await OrderService.getOrderOnEdit(customerOrder.id);
     if (customer) {
       setCustomer(customer);
     }
-    if (order) {
-      setOrder(order);
+    if (arrayNotEmpty(data)) {
+      setDetails(data);
     }
-    const resolvedDetails = arrayNotEmpty(data)
-      ? data
-      : order?.details ?? customerOrder?.details;
-    setDetails(Array.isArray(resolvedDetails) ? resolvedDetails : []);
   }, [customerOrder]);
 
-  const dataInTabs = { details, customer, customerOrder: order ?? customerOrder }
+  const dataInTabs = { details, customer, customerOrder }
   const tabData = [
     {
       key: 'pay',
@@ -65,12 +53,8 @@ const OrderTabs = ({ data, title, closeModalAfterSubmit }) => {
       icon: <DollarOutlined />,
       component: <OrderPayment data={{
         ...dataInTabs,
-        simplifiedPayment,
-        onSave: (values) => {
-          if (values?.id) setOrder(current => ({ ...current, ...values }));
-          f5List("erp/order/fetch");
-        }
-      }} closeModalAfterSubmit={closeModalAfterSubmit} />
+        onSave: (values) => f5List("erp/order/fetch")
+      }} />
     },
     {
       key: 'invoice',
@@ -86,7 +70,7 @@ const OrderTabs = ({ data, title, closeModalAfterSubmit }) => {
     }
   ];
 
-  const items = tabData.filter(tab => !hideInvoiceTab || tab.key !== 'invoice').map(({ key, icon, label, component }) => ({
+  const items = tabData.map(({ key, icon, label, component }) => ({
     key,
     label: (
       <span> {icon} {label} </span>

@@ -6,7 +6,7 @@ import useGetMe from '@/hooks/useGetMe'
 import { RestList } from '@flast-erp/core/components'
 import { useGetList } from '@flast-erp/core/hooks'
 import { dateFormatOnSubmit, f5List, InAppEvent, RequestUtils } from '@flast-erp/core/utils'
-import GeneratedDocumentViewer from '@/components/GeneratedDocumentViewer'
+import GeneratedDocumentViewer from "@erp/shared-ui/components/GeneratedDocumentViewer/index"
 import QuotationApproverSelect from './components/QuotationApproverSelect'
 import { HASH_MODAL } from '@/configs'
 import Filter from '../Filter'

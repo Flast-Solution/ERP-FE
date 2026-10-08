@@ -4,11 +4,11 @@ import { createRoot } from 'react-dom/client'
 import axios from 'axios'
 import { Form, Upload, message } from 'antd'
 import WarehouseDocumentsUpload from './WarehouseDocumentsUpload'
-import UploadedFilePreview from '../../components/UploadedFilePreview'
+import UploadedFilePreview from "@erp/shared-ui/components/UploadedFilePreview/index"
 
 jest.mock('axios', () => ({ __esModule: true, default: { post: jest.fn(), defaults: {} } }))
 jest.mock('@ant-design/icons', () => ({ UploadOutlined: () => null }))
-jest.mock('../../components/UploadedFilePreview', () => jest.fn(() => null))
+jest.mock("@erp/shared-ui/components/UploadedFilePreview/index", () => jest.fn(() => null))
 jest.mock('antd', () => ({
   Form: { useFormInstance: jest.fn(), useWatch: jest.fn(), Item: ({ children }) => <div>{children}</div> },
   Upload: { Dragger: jest.fn(() => null), LIST_IGNORE: 'ignore' },

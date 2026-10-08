@@ -1,5 +1,17 @@
 # Open-Cdp-Client
 
+ERP-FE giữ cấu trúc `src/`, `public/` tại root. Chạy `npm start` và `npm run build`;
+artifact deploy nằm ở `build/`.
+
+Source Hatenko đã chuyển sang `../fs-hatenko`; source thư viện dùng chung ở
+`../fs-erp-packages`. ERP chỉ cài `@erp/tenant-runtime` và `@erp/shared-ui`
+từ tarball trong `vendor/`, đồng thời tải màn Hatenko qua remoteEntry.
+
+Local: chạy `npm run dev` trong `fs-hatenko`, sau đó `npm start` ở ERP-FE.
+URL remote có thể cấu hình bằng `REACT_APP_HATENKO_REMOTE_ENTRY` trước khi start/build.
+Khi deploy, dùng URL public HTTPS của remote. Đổi URL cần build lại host;
+sửa Hatenko với cùng URL và hợp đồng shared chỉ cần deploy remote.
+
 <img src="https://img.shields.io/badge/Version-7.0-blue" alt="Version"> <img src="https://img.shields.io/badge/License-MIT-005530" alt="Version">
 
 Dự án Open-Cdp được phát triển và duy trì bởi đội ngũ: Công ty Cổ Phần Flast-Solution 

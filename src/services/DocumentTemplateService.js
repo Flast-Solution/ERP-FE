@@ -1,5 +1,5 @@
 import { RequestUtils } from '@flast-erp/core/utils'
-import { normalizeHtmlDefinition } from '../components/DocumentTemplateEditor/html/model'
+import { normalizeHtmlDefinition } from "@erp/shared-ui/components/DocumentTemplateEditor/html/model"
 
 const TEMPLATE_PATH = '/erp/template'
 

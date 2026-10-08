@@ -19,53 +19,470 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React from 'react';
-import { Button, Input, InputNumber, Select, Typography } from 'antd';
-import { arrayEmpty, formatterInputNumber, parserInputNumber } from '@flast-erp/core/utils';
-import { SaveOutlined, TagOutlined, ShoppingCartOutlined, PlusOutlined, FilePptOutlined } from '@ant-design/icons';
-import styled from 'styled-components';
-import useOrderEditor from './useOrderEditor';
-import OrderItemsTable from './OrderItemsTable';
-import OrderFormulaBuilder from './OrderFormulaBuilder';
-import OrderEditorSummary from './OrderEditorSummary';
-import { formatUsdInput, parseUsdInput } from './orderFormatting';
+import React, { useCallback, useState } from 'react';
+import { Table, Button, InputNumber, Select, Typography, message } from 'antd';
+import { ShowSkuDetail } from '@/containers/Product/SkuView';
+import { arrayEmpty, arrayNotEmpty, formatMoney } from '@flast-erp/core/utils';
+import { formatterInputNumber, parserInputNumber } from '@flast-erp/core/utils';
+import { HASH_POPUP } from '@/configs/constant';
+import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
+import {
+  SaveOutlined,
+  TagOutlined,
+  ShoppingCartOutlined,
+  PlusOutlined,
+  DeleteOutlined,
+  CheckOutlined,
+  FilePptOutlined
+} from '@ant-design/icons';
+import _ from 'lodash';
+import { HASH_MODAL, SUCCESS_CODE } from '@/configs';
+import OrderService, { getWarehouseByProduct } from '@/services/GenericOrderService';
+import { useEffectAsync } from '@flast-erp/core/hooks';
+
 const { Text } = Typography;
-const selectNumberOnFocus = event => event.target.select();
-const OrderEditorShell = styled.div`
-  .ant-input-disabled,
-  .ant-input[disabled],
-  .ant-input-number-disabled .ant-input-number-input {
-    color: #374151;
-    -webkit-text-fill-color: #374151;
-    opacity: 1;
+const warrantyOptions = [
+  { name: '(Chưa có)', id: 1 },
+  { name: '6 Tháng', id: 6 },
+  { name: '12 Tháng', id: 12 },
+  { name: '24 Tháng', id: 24 }
+];
+
+const ORDER_TEMPLATE = {
+  key: "1",
+  note: "",
+  detailId: null,
+  orderName: "",
+  productId: null,
+  productName: "",
+  skuDetailCode: "",
+  unit: "(Chưa có)",
+  warrantyPeriod: "(Chưa có)",
+  quantity: 1,
+  price: 0,
+  totalPrice: 0,
+  warehouse: "",
+  stock: 0,
+  discountRate: 0,
+  discountAmount: 0,
+  editable: false,
+  mSkuDetails: []
+}
+
+function randomString(length = 8) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-`;
+  return result;
+}
+
+function findByQuantity(arr, quantity) {
+  return arrayNotEmpty(arr) ? arr.find(
+    item => quantity >= item.quantityFrom && quantity <= item.quantityTo
+  ) || {} : {};
+}
+
+const EditButton = ({
+  editable,
+  onEdit,
+  onClose,
+  onDelete
+}) => (
+  <div style={{ display: 'flex', alignItems: 'center' }}>
+    <Button size="small" onClick={editable ? onClose : onEdit}>
+      {editable ? <CheckOutlined /> : 'Sửa'}
+    </Button>
+    <Button
+      size="small"
+      danger
+      icon={<DeleteOutlined />}
+      style={{ marginLeft: 6 }}
+      onClick={onDelete}
+    />
+  </div>
+);
 
 const BanHangPage = ({
   orderId,
-  dataId,
-  business,
-  onSaveSuccess,
-  hideEditColumn = false,
-  restrictOrderFields = false,
+  dataId
 }) => {
 
-  const editor = useOrderEditor({ orderId, dataId, business, onSaveSuccess, restrictOrderFields });
-  const { data, customerOrder, setCustomerOrder, shippingCost, setShippingCost, currency,
-    vatRate, isOrder, totalSubOrder, totalOrder,
-    formatDisplayAmount, onSubmitOrder, onAddProduct, onAddStock, onOpenFormPayment, onOpenInvoice } = editor;
-  const renderOrderAmount = value => <Text style={{ display: 'block', textAlign: 'right', whiteSpace: 'nowrap' }}>
-    {formatDisplayAmount(value)}
-  </Text>;
+  const [data, setData] = useState([]);
+  const [customer, setCustomer] = useState();
+
+  const [localOrder, setLocalOrder] = useState({ orderId, reload: false });
+  const [customerOrder, setCustomerOrder] = useState();
+
+  useEffectAsync(async (isMounted) => {
+    const { customer, order, data } = await OrderService.getOrderOnEdit(localOrder.orderId);
+    if (customer) {
+      setCustomer(customer);
+    }
+    if (order) {
+      setCustomerOrder(order);
+    }
+    if (arrayNotEmpty(data)) {
+      setData(data);
+    }
+  }, [localOrder]);
+
+  useEffectAsync(async (isMounted) => {
+    if (!dataId) {
+      return;
+    }
+    const { data: response, errorCode } = await RequestUtils.Get("/data/get-customer", { dataId });
+    if (errorCode === SUCCESS_CODE) {
+      setCustomer(response.customer);
+      onAddProduct(response.lead);
+    }
+  }, [dataId]);
+
+  const onAddProduct = useCallback((lead = null) => {
+    const onAfterChoiseProduct = (values) => {
+      let order = _.cloneDeep(ORDER_TEMPLATE);
+      const { mSkuDetails, mProduct, quantity, productId, skuId } = values;
+      /* Tạo Item trong list sản phẩm */
+      order.key = randomString();
+      order.note = values?.note ?? "";
+      order.orderName = values?.orderName ?? "";
+      order.productId = productId;
+      order.productName = mProduct.name;
+      order.unit = mProduct.unit ?? "N/A";
+      order.mSkuDetails = mSkuDetails;
+      order.skuDetailCode = String(skuId);
+      order.quantity = quantity;
+      order.warehouseOptions = getWarehouseByProduct(skuId, mProduct);
+
+      const skus = mProduct?.skus ?? [];
+      let skuPrices = [];
+      if (arrayNotEmpty(order.warehouseOptions)) {
+        let warehouse = _.first(order.warehouseOptions);
+        order.warehouse = warehouse?.stockName ?? '';
+        order.stock = warehouse?.quantity ?? 0;
+        skuPrices = skus.find(s => s.id === warehouse?.skuId)?.skuPrices ?? [];
+      }
+
+      const dataPrice = findByQuantity(skuPrices, order.quantity);
+      if (dataPrice?.priceRef) {
+        order.price = dataPrice.priceRef;
+        order.totalPrice = order.price * order.quantity;
+      }
+      setData(datas => ([...datas, order]));
+    };
+
+    InAppEvent.emit(HASH_MODAL, {
+      hash: "sku.add",
+      title: "Thêm sản phẩm",
+      data: {
+        onSave: onAfterChoiseProduct,
+        ...(lead ? { productId: lead.productId } : {})
+      }
+    });
+  }, []);
+
+  const onAddStock = useCallback(() => {
+    const onAfterSubmit = (values) => {
+      console.log('Save stock', values);
+    };
+    InAppEvent.emit(HASH_POPUP, {
+      hash: "stock.add",
+      title: "Nhập kho",
+      data: { onSave: onAfterSubmit }
+    });
+  }, []);
+
+  const columns = [
+    {
+      title: 'Mã',
+      dataIndex: 'skuDetailCode',
+      key: 'skuDetailCode',
+      width: 80
+    },
+    {
+      title: 'Diễn giải',
+      dataIndex: 'mSkuDetails',
+      render: (mSkuDetails) => (<span />),
+      width: 260,
+      ellipsis: true
+    },
+    {
+      title: 'Bảo hành',
+      dataIndex: 'warrantyPeriod',
+      key: 'warrantyPeriod',
+      width: 110,
+      editable: true
+    },
+    {
+      title: 'Số lượng',
+      dataIndex: 'quantity',
+      key: 'quantity',
+      editable: true,
+      width: 90
+    },
+    {
+      title: 'Đơn giá',
+      dataIndex: 'price',
+      key: 'price',
+      width: 120,
+      editable: true
+    },
+    {
+      title: 'CK (%)',
+      dataIndex: 'discountRate',
+      key: 'discountRate',
+      width: 90,
+      editable: true
+    },
+    {
+      title: 'Tiền CK',
+      dataIndex: 'discountAmount',
+      key: 'discountAmount',
+      width: 120,
+      editable: true
+    },
+    {
+      title: 'Thành tiền',
+      dataIndex: 'totalPrice',
+      key: 'totalPrice',
+      width: 150
+    },
+    {
+      title: 'Kho',
+      dataIndex: 'warehouse',
+      key: 'warehouse',
+      editable: true,
+      width: 130
+    },
+    {
+      title: 'Tồn kho',
+      dataIndex: 'stock',
+      key: 'stock',
+      width: 100
+    },
+    {
+      title: 'Đơn vị',
+      dataIndex: 'unit',
+      key: 'unit',
+      width: 90
+    },
+    {
+      title: 'Sửa',
+      dataIndex: 'operation',
+      key: 'operation',
+      fixed: 'right',
+      width: 110,
+      render: (_, record) => (
+        <EditButton
+          editable={record.editable}
+          onEdit={() => editRow(record.key)}
+          onClose={closeEdit}
+          onDelete={() => deleteRow(record.key)}
+        />
+      )
+    }
+  ];
+
+  let isOrder = (customerOrder?.id || 0) !== 0;
+  const totalQuantity = data.reduce((sum, item) => sum + item.quantity, 0);
+  const totalDiscount = data.reduce((sum, item) => sum + item.discountAmount, 0);
+  const totalSubOrder = data.reduce((sum, item) => sum + item.totalPrice - item.discountAmount, 0);
+
+  const editRow = (key) => {
+    const newData = data.map(item => ({ ...item, editable: item.key === key }));
+    setData(newData);
+  };
+
+  const closeEdit = () => {
+    setData(data.map(item => ({ ...item, editable: false })));
+  };
+
+  const handleChange = (key, field, value) => {
+    const newData = [...data];
+    const target = newData.find((item) => item.key === key);
+    if (!target) {
+      return;
+    }
+
+    if (['quantity', 'price', 'discountRate', 'discountAmount'].includes(field)) {
+      target[field] = parseFloat(value || 0);
+    } else if (field === 'warehouse') {
+      target[field] = target.warehouseOptions.find(option => option.id === value)?.stockName || '';
+    } else if (field === 'warrantyPeriod') {
+      target[field] = warrantyOptions.find(option => option.id === value)?.name || '';
+    }
+
+    /* Calculate dependent fields */
+    if (field === 'quantity' || field === 'price') {
+      target.totalPrice = target.quantity * target.price;
+    }
+    if (field === 'discountRate') {
+      target.discountAmount = (target.price * target.quantity * target.discountRate) / 100;
+    }
+    if (field === 'discountAmount') {
+      target.discountRate = ((target.discountAmount / (target.price * target.quantity)) * 100).toFixed(2);
+    }
+    setData(newData);
+  };
+
+  const renderCell = (text, record, index, column) => {
+    if (record.editable && column.editable) {
+      if (column.dataIndex === 'warehouse') {
+        return (
+          <Select
+            placeholder="Chọn kho"
+            disabled={arrayEmpty(record?.warehouseOptions)}
+            value={text}
+            options={(record?.warehouseOptions ?? []).map(opt => ({
+              label: opt.stockName,
+              value: opt.id
+            }))}
+            onChange={value => handleChange(record.key, column.dataIndex, value)}
+            style={{ width: '100%' }}
+          />
+        );
+      }
+      if (column.dataIndex === 'warrantyPeriod') {
+        return (
+          <Select
+            placeholder="Chọn bảo hành"
+            disabled={!record.editable}
+            value={text}
+            options={warrantyOptions.map(opt => ({
+              label: opt.name,
+              value: opt.id
+            }))}
+            onChange={value => handleChange(record.key, column.dataIndex, value)}
+            style={{ width: '100%' }}
+          />
+        );
+      }
+      if (column.dataIndex === 'quantity') {
+        return (
+          <InputNumber
+            min={1}
+            value={text}
+            onChange={value => handleChange(record.key, column.dataIndex, value)}
+            style={{ width: '100%' }}
+            formatter={formatterInputNumber}
+            parser={parserInputNumber}
+          />
+        );
+      }
+      return (
+        <InputNumber
+          min={0}
+          value={text}
+          onChange={value => handleChange(record.key, column.dataIndex, value)}
+          style={{ width: '100%' }}
+          formatter={formatterInputNumber}
+          parser={parserInputNumber}
+        />
+      );
+    } else {
+      if (column.dataIndex === 'warehouse') {
+        return <Text style={{ width: 120 }} ellipsis> {text || '(Chưa nhập)'} </Text>;
+      }
+      if (column.dataIndex === 'mSkuDetails') {
+        return <ShowSkuDetail skuDetails={record.mSkuDetails} width={260} />
+      }
+      const isFormatted = ['price', 'discountAmount', 'totalPrice'].includes(column.dataIndex);
+      return isFormatted ? formatMoney(text) : text;
+    }
+  };
+
+  const deleteRow = (key) => {
+    setData(data.filter(item => item.key !== key));
+  };
+
+  const onSubmitOrder = useCallback(async () => {
+
+    const submit = async (mCustomer) => {
+      let params = { customer: mCustomer, details: data };
+      if (customerOrder?.id) {
+        params.id = customerOrder.id;
+      }
+      if (dataId) {
+        params.dataId = dataId;
+      }
+      const { message: eMsg, data: order, errorCode } = await RequestUtils.Post("/order/save", params);
+      message.info(eMsg);
+      if (errorCode === SUCCESS_CODE) {
+        setLocalOrder(pre => ({ orderId: order.id, reload: !pre.reload }));
+      }
+    }
+
+    const onAfterSaveCustomer = (values) => {
+      submit(values);
+      setCustomer(values);
+    }
+
+    /* Tạo mới chưa có thông tin khách hàng */
+    if ((customer?.id || 0) !== 0) {
+      submit(customer);
+      return;
+    }
+
+    /* Tạo Lead và Customer */
+    InAppEvent.emit(HASH_POPUP, {
+      hash: "customer.add",
+      title: "Thêm / Chọn khách hàng ",
+      data: {
+        onSave: onAfterSaveCustomer,
+        customer,
+        details: data
+      }
+    });
+  }, [data, dataId, customer, customerOrder]);
+
+  const onOpenFormPayment = useCallback(() => {
+    InAppEvent.emit(HASH_MODAL, {
+      hash: "#order.payment",
+      title: "Thêm thanh toán đơn hàng",
+      data: {
+        customerOrder,
+        details: data,
+        onSave: (_) => setLocalOrder(pre => ({ ...pre, reload: !pre.reload }))
+      }
+    });
+  }, [customerOrder, data]);
+
+  const onOpenInvoice = useCallback(() => {
+    InAppEvent.emit(HASH_MODAL, {
+      hash: "#order.invoice",
+      title: "Hóa đơn thanh toán",
+      data: { customerOrder, customer, details: data }
+    });
+  }, [customerOrder, customer, data]);
 
   return (
-    <OrderEditorShell>
-      <OrderFormulaBuilder formula={editor.pricingFormula} defaultFormula={editor.defaultFormula}
-        lines={data} currency={currency} shippingCost={shippingCost} orderedQuantity={editor.orderedQuantity}
-        onApply={editor.applyPricingFormula} disabled={restrictOrderFields} />
-      <OrderItemsTable {...editor} hideEditColumn={hideEditColumn}
-        restrictOrderFields={restrictOrderFields} renderOrderAmount={renderOrderAmount} />
-      <div style={{ marginTop: 25, display: 'flex', flexWrap: 'wrap', gap: 24, justifyContent: 'space-between' }}>
+    <>
+      <Table
+        bordered
+        scroll={{ x: 1500 }}
+        dataSource={data}
+        columns={columns.map(col => ({
+          ...col,
+          onCell: () => ({ editable: col.editable?.toString() }),
+          render: col.dataIndex !== 'operation'
+            ? (text, record, index) => renderCell(text, record, index, col)
+            : col.render
+        }))}
+        pagination={false}
+        summary={() => (
+          <Table.Summary.Row>
+            <Table.Summary.Cell index={0} colSpan={3}>Tổng cộng</Table.Summary.Cell>
+            <Table.Summary.Cell index={3}>{totalQuantity}</Table.Summary.Cell>
+            <Table.Summary.Cell index={4}></Table.Summary.Cell>
+            <Table.Summary.Cell index={5}></Table.Summary.Cell>
+            <Table.Summary.Cell index={7}>{formatMoney(totalDiscount)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={8}>{formatMoney(totalSubOrder)}</Table.Summary.Cell>
+            <Table.Summary.Cell index={9}></Table.Summary.Cell>
+          </Table.Summary.Row>
+        )}
+      />
+      <div style={{ marginTop: 25, display: 'flex', justifyContent: 'space-between' }}>
         <div>
           <Button
             disabled={arrayEmpty(data)}
@@ -105,90 +522,73 @@ const BanHangPage = ({
             In hóa đơn
           </Button>
         </div>
-        <div style={{ width: 480, maxWidth: '100%', marginLeft: 'auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16, marginBottom: 12 }}>
-            <div>
-              <label htmlFor="order-code" style={{ display: 'block', fontWeight: 600, marginBottom: 8 }}>
-                {customerOrder?.type === 'order' ? 'Mã đơn hàng' : 'Mã cơ hội'}
-              </label>
-              <Input
-                id="order-code"
-                disabled={restrictOrderFields}
-                size="small"
-                value={customerOrder?.code ?? ''}
-                maxLength={100}
-                placeholder="Nhập mã (để trống để tự tạo)"
-                onChange={event => setCustomerOrder(current => ({ ...current, code: event.target.value }))}
-              />
-            </div>
-            <div>
-              <label htmlFor="order-shipping-cost" style={{ display: 'block', fontWeight: 600, marginBottom: 8 }}>
-                Phí vận chuyển ({currency})
-              </label>
-              <InputNumber
-                onFocus={selectNumberOnFocus}
-                id="order-shipping-cost"
-                size="small"
-                min={0}
-                value={shippingCost}
-                onChange={value => {
-                  setShippingCost(Number(value ?? 0));
-                }}
-                precision={currency === 'USD' ? 2 : undefined}
-                formatter={currency === 'USD' ? formatUsdInput : formatterInputNumber}
-                parser={currency === 'USD' ? parseUsdInput : parserInputNumber}
-                controls={false}
-                style={{ width: '100%' }}
-              />
-            </div>
-          </div>
-          {['cohoi', 'opportunity'].includes(customerOrder?.type) && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16, marginBottom: 12 }}>
-              <div>
-                <label htmlFor="order-payment-terms" style={{ display: 'block', fontWeight: 600, marginBottom: 8 }}>Điều kiện thanh toán</label>
-                <Select
-                  id="order-payment-terms"
-                  size="small"
-                  allowClear
-                  placeholder="Chọn điều kiện thanh toán"
-                  style={{ width: '100%' }}
-                  value={customerOrder.payOptions?.paymentTerms ?? undefined}
-                  options={[
-                    { value: 'PREPAID', label: 'Trả trước' },
-                    { value: 'POSTPAID', label: 'Trả sau' },
-                    { value: 'DEPOSIT', label: 'Đặt cọc' },
-                  ]}
-                  onChange={value => setCustomerOrder(current => ({ ...current, payOptions: { ...current.payOptions, paymentTerms: value ?? null } }))}
-                />
-              </div>
-              <div>
-                <label htmlFor="order-payment-percent" style={{ display: 'block', fontWeight: 600, marginBottom: 8 }}>Thanh toán (%)</label>
-                <InputNumber
-                  id="order-payment-percent"
-                  size="small"
-                  min={0}
-                  max={100}
-                  addonAfter="%"
-                  style={{ width: '100%' }}
-                  value={customerOrder.payOptions?.paymentPercent}
-                  onFocus={selectNumberOnFocus}
-                  onChange={value => setCustomerOrder(current => ({ ...current, payOptions: { ...current.payOptions, paymentPercent: value ?? null } }))}
-                />
-              </div>
-            </div>
-          )}
-          <OrderEditorSummary currency={currency} order={{
-            ...customerOrder,
-            subtotal: totalSubOrder,
-            vat: vatRate,
-            total: totalOrder + editor.chargedShippingCost,
-            paid: customerOrder?.paid ?? 0,
-            priceOff: customerOrder?.priceOff ?? 0,
-          }} />
+        <div>
+          {isOrder &&
+            <InvoiceTable
+              order={customerOrder}
+            />
+          }
         </div>
       </div>
-    </OrderEditorShell>
+    </>
   );
 }
+
+const InvoiceTable = ({
+  order
+}) => {
+  const { subtotal, vat, priceOff, total, paid } = order;
+  const data = [
+    {
+      key: '1',
+      leftLabel: 'Tổng chưa VAT',
+      leftValue: formatMoney(subtotal),
+      rightLabel: 'VAT',
+      rightValue: formatMoney(subtotal * (vat / 100))
+    },
+    {
+      key: '2',
+      leftLabel: 'C.Khấu | Voucher',
+      leftValue: formatMoney(priceOff),
+      rightLabel: 'Tổng tiền',
+      rightValue: formatMoney(total)
+    },
+    {
+      key: '3',
+      leftLabel: 'Đã thanh toán',
+      leftValue: formatMoney(paid),
+      rightLabel: 'Còn lại',
+      rightValue: formatMoney(total - paid)
+    }
+  ];
+
+  const columns = [
+    {
+      dataIndex: 'leftLabel',
+      key: 'left',
+      render: (_, record) => (
+        <div style={{ fontWeight: 'bold' }}>{record.leftLabel}: <span style={{ fontWeight: 'normal' }}>{record.leftValue}</span></div>
+      )
+    },
+    {
+      dataIndex: 'rightLabel',
+      key: 'right',
+      render: (_, record) => (
+        <div style={{ fontWeight: 'bold' }}>{record.rightLabel}: <span style={{ fontWeight: 'normal' }}>{record.rightValue}</span></div>
+      )
+    }
+  ];
+
+  return (
+    <Table
+      dataSource={data}
+      columns={columns}
+      pagination={false}
+      bordered
+      showHeader={false}
+      style={{ width: '100%' }}
+    />
+  )
+};
 
 export default BanHangPage;

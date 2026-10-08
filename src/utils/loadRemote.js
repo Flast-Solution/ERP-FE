@@ -7,6 +7,7 @@ import {
 import * as React           from "react"
 import * as ReactDOM        from "react-dom"
 import * as ReactRouterDom  from "react-router-dom"
+import * as ReactHelmet from 'react-helmet'
 import * as Antd            from "antd"
 import * as Axios           from "axios"
 import * as Dayjs           from "dayjs"
@@ -19,7 +20,12 @@ import * as JoditReact      from "jodit-react"
 import * as QueryString     from "query-string"
 import * as ReactWaypoint   from "react-waypoint"
 import * as FlastErpCore    from "@flast-erp/core"
+import * as FlastErpComponents from "@flast-erp/core/components"
+import * as FlastErpHooks from "@flast-erp/core/hooks"
+import * as FlastErpUtils from "@flast-erp/core/utils"
+import * as FlastErpConfigs from "@flast-erp/core/configs"
 import * as FlastWebRuntime from "@/containers/Landing/LandingRuntime"
+import * as TenantRuntime from '@erp/tenant-runtime'
 
 let initialized = false
 const registeredRemotes = new Set()
@@ -36,6 +42,14 @@ function resetLegacyRemoteChunkScope() {
 }
  
 const SHARED_DEPS = {
+  'react-helmet': {
+    version: '6.1.0', scope: 'default', lib: () => ReactHelmet,
+    shareConfig: { singleton: true, requiredVersion: '^6.1.0' },
+  },
+  '@erp/tenant-runtime': {
+    version: '1.0.0', scope: 'default', lib: () => TenantRuntime,
+    shareConfig: { singleton: true, requiredVersion: '^1.0.0' },
+  },
   react: {
     version: "18.3.1",
     scope: "default",
@@ -49,7 +63,7 @@ const SHARED_DEPS = {
     shareConfig: { singleton: true, requiredVersion: "^18.3.1" },
   },
   "react-router-dom": {
-    version: "6.27.0",
+    version: "6.30.4",
     scope: "default",
     lib: () => ReactRouterDom,
     shareConfig: { singleton: true, requiredVersion: "^6.27.0" },
@@ -121,18 +135,30 @@ const SHARED_DEPS = {
     shareConfig: { singleton: true, requiredVersion: "^10.3.0" },
   },
   "@flast-erp/core": {
-    version: "1.0.23",
+    version: "1.0.27",
     scope: "default",
     lib: () => FlastErpCore,
     shareConfig: { singleton: true, requiredVersion: "^1.0.23" },
   },
   "@flast-erp/core/components": {
-    version: "1.0.23",
+    version: "1.0.27",
     scope: "default",
-    lib: () => FlastErpCore,
+    lib: () => FlastErpComponents,
     shareConfig: { singleton: true, requiredVersion: "^1.0.23" },
   },
+  ...Object.fromEntries([
+    ['hooks', FlastErpHooks], ['utils', FlastErpUtils], ['configs', FlastErpConfigs],
+  ].map(([name, lib]) => [`@flast-erp/core/${name}`, {
+    version: '1.0.27', scope: 'default', lib: () => lib,
+    shareConfig: { singleton: true, requiredVersion: '^1.0.27' },
+  }])),
 }
+
+// Match the actual hoisted installation used by the remote compiler.
+const installedSharedVersions = JSON.parse(process.env.REACT_APP_TENANT_SHARED_VERSIONS || '{}')
+Object.entries(installedSharedVersions).forEach(([name, version]) => {
+  if (SHARED_DEPS[name]) SHARED_DEPS[name].version = version
+})
 
 function ensureInit() {
   // Landing artifact được build ở môi trường độc lập, vì vậy không thể import
@@ -140,6 +166,7 @@ function ensureInit() {
   // trực tiếp từ host trước khi Module Federation thực thi remote component.
   if (typeof window !== "undefined") {
     window.__FLAST_WEB_RUNTIME__ = FlastWebRuntime
+    window.__HATENKO_HOST_REMOTE_LOADER__ = { loadRemote, loadRemoteFromUrl, registerRemoteList }
   }
   if (initialized) {
     return
@@ -231,6 +258,7 @@ export async function loadRemoteFromUrl({
   scope,
   module = 'MPage',
   version = '',
+  force = false,
 }) {
   const remoteName = String(name || scope || '').trim()
   const remoteEntry = String(entry || '').trim()
@@ -241,7 +269,7 @@ export async function loadRemoteFromUrl({
     const entryUrl = version
       ? `${remoteEntry}${remoteEntry.includes('?') ? '&' : '?'}v=${encodeURIComponent(version)}`
       : remoteEntry
-    ensureRemoteRegistered(remoteName, entryUrl, String(scope || remoteName).trim())
+    ensureRemoteRegistered(remoteName, entryUrl, String(scope || remoteName).trim(), force)
     if (!loadedRemoteContainers.has(remoteName)) resetLegacyRemoteChunkScope()
     const mod = await mfLoadRemote(`${remoteName}/${exposedModule}`)
     if (!mod) throw new Error(`Không tìm thấy module "${module}" trong remote "${scope || remoteName}".`)

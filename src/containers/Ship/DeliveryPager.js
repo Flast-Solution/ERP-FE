@@ -17,7 +17,7 @@ import { useReactToPrint } from 'react-to-print';
 import dayjs from 'dayjs';
 import useGetMe from '@/hooks/useGetMe';
 import '@/containers/WareHouse/GiaoHang.less';
-import UploadedFilePreview from '../../components/UploadedFilePreview';
+import UploadedFilePreview from "@erp/shared-ui/components/UploadedFilePreview/index";
 import { toUploadFile } from '../PreviewModal/uploadUtils';
 
 const DOCUMENT_OPTIONS = [

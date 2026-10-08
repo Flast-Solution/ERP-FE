@@ -1,7 +1,9 @@
 import React from 'react';
 import { authRoles } from '@/auth';
+import TenantPage from '@/components/TenantPage';
 
-const ProductionOrderPage = React.lazy(() => import('@/pages/production-control'));
+const LocalProductionOrderPage = React.lazy(() => import('@/pages/production-control'));
+const ProductionOrderPage = () => <TenantPage page="ProductionOrders" local={LocalProductionOrderPage} />;
 
 export const ProductionControlConfig = {
     auth: authRoles.user,
