@@ -104,12 +104,31 @@ export const ReadyToggle = styled.button`
 `;
 
 export const DialerFrom = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 8px 14px 0;
   font: 400 12px/16px ${font};
   color: ${color.ink3};
+`;
 
-  b {
-    color: ${color.ink};
+export const CallerSelect = styled.select`
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid ${color.border};
+  border-radius: 6px;
+  background: ${color.surface};
+  font: 600 12px/1 ${font};
+  color: ${color.ink};
+  cursor: pointer;
+  outline: none;
+
+  &:focus {
+    border-color: ${color.primary};
+  }
+  &:disabled {
+    cursor: default;
+    opacity: 1;
   }
 `;
 

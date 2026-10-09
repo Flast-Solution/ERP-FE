@@ -1,5 +1,10 @@
 import { create } from 'zustand';
-import { CALL_DIRECTION, CALL_STATUS, CONNECTION } from '../constants';
+import {
+  CALL_DIRECTION,
+  CALL_STATUS,
+  CONNECTION,
+  DEFAULT_CALLER_NUMBERS,
+} from '../constants';
 import { MOCK_RECENT_CALLS } from '../mocks/customers';
 import { findCustomerByPhone } from '../services/callCenterService';
 import Softphone, { GW_STATE } from '../softphone/Softphone';
@@ -51,6 +56,9 @@ export const useCallCenterStore = create((set, get) => {
     error: null,
     isReady: false,
     dialNumber: '',
+    /* Số gọi ra: [{ label, value }] và số đang chọn */
+    callerNumbers: DEFAULT_CALLER_NUMBERS,
+    callerNumber: DEFAULT_CALLER_NUMBERS[0]?.value || '',
     recentCalls: MOCK_RECENT_CALLS,
     call: initialCall,
     activeTab: 'overview',
@@ -98,6 +106,15 @@ export const useCallCenterStore = create((set, get) => {
 
     clearError: () => set({ error: null }),
 
+    setCallerNumbers: (callerNumbers = []) => set(state => {
+      const exists = callerNumbers.some(item => item.value === state.callerNumber);
+      return {
+        callerNumbers,
+        callerNumber: exists ? state.callerNumber : (callerNumbers[0]?.value || ''),
+      };
+    }),
+    setCallerNumber: (callerNumber) => set({ callerNumber }),
+
     setDialNumber: (value) => set({ dialNumber: sanitizePhone(value) }),
     pressKey: (key) => set(state => ({ dialNumber: `${state.dialNumber}${key}` })),
     backspace: () => set(state => ({ dialNumber: state.dialNumber.slice(0, -1) })),
@@ -143,7 +160,8 @@ export const useCallCenterStore = create((set, get) => {
         error: null,
       });
       get().lookupCustomer(target);
-      const ok = await runCommand(sp => sp.dial(target));
+      const { callerNumber } = get();
+      const ok = await runCommand(sp => sp.dial(target, callerNumber));
       if (!ok) {
         set({ call: initialCall });
       }

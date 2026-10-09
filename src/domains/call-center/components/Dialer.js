@@ -11,13 +11,13 @@ import {
   CALL_STATUS,
   DIAL_KEYS,
   CONNECTION,
-  HOTLINE,
 } from '../constants';
 import { formatDuration, formatPhone } from '../utils/format';
 import { CustomerAvatar } from './CustomerSummary';
 import {
   CallButton,
   DevLink,
+  CallerSelect,
   DialerFrom,
   DialerHeader,
   DialerInput,
@@ -53,6 +53,9 @@ const describeRecent = (item) => {
 
 const Dialer = () => {
   const ext = useCallCenterStore(state => state.ext);
+  const callerNumbers = useCallCenterStore(state => state.callerNumbers);
+  const callerNumber = useCallCenterStore(state => state.callerNumber);
+  const setCallerNumber = useCallCenterStore(state => state.setCallerNumber);
   const connection = useCallCenterStore(state => state.connection);
   const error = useCallCenterStore(state => state.error);
   const dialNumber = useCallCenterStore(state => state.dialNumber);
@@ -91,7 +94,18 @@ const Dialer = () => {
       </DialerHeader>
 
       <DialerFrom>
-        Gọi từ <b>{HOTLINE}</b> · máy lẻ {ext || '—'}
+        Gọi từ
+        <CallerSelect
+          value={callerNumber}
+          disabled={callerNumbers.length < 2}
+          onChange={event => setCallerNumber(event.target.value)}
+          aria-label="Số gọi ra"
+        >
+          {callerNumbers.map(item => (
+            <option key={item.value} value={item.value}>{item.label}</option>
+          ))}
+        </CallerSelect>
+        · máy lẻ {ext || '—'}
       </DialerFrom>
       {error && <DialerError>{error}</DialerError>}
 

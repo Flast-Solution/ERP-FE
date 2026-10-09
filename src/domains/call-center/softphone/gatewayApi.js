@@ -1,5 +1,6 @@
 import { RequestUtils } from '@flast-erp/core/utils';
 import { SUCCESS_CODE } from '@/configs';
+import { getDeviceId } from './deviceId';
 
 /*
  * Trình duyệt làm máy nhánh (webrtc_gw của http_api), gọi thẳng từ trình duyệt.
@@ -9,9 +10,9 @@ import { SUCCESS_CODE } from '@/configs';
  *
  * Loại 2 - fetch tới http_api với "Authorization: Bearer <token>",
  * reply bọc { errorCode, data } như API của app (các shape dưới là `data`):
- *   POST /api/webrtc/sessions                       tạo WebRTC + đăng ký máy nhánh -> { id, sdp, ext }
+ *   POST /api/webrtc/sessions?device=               tạo WebRTC + đăng ký máy nhánh -> { id, sdp, ext }
  *   GET  /api/webrtc/sessions/{id}                  -> { id, ext, state, sip_code, sip_reason, caller, direction }
- *   POST /api/webrtc/sessions/{id}/dial?to=&caller= -> { id, call_id }
+ *   POST /api/webrtc/sessions/{id}/dial?to=        -> { id, call_id } (header X-Caller-Number)
  *   POST /api/webrtc/sessions/{id}/dtmf?digits=     -> { id }
  *   POST /api/webrtc/sessions/{id}/answer|reject|hangup|unregister -> { id }
  */
@@ -105,11 +106,11 @@ const buildUrl = (path, query) => {
 };
 
 /* fetch + Bearer token webrtc, không qua axios của app */
-const request = async (method, path = '', query) => {
+const request = async (method, path = '', query, headers = {}) => {
   const token = await ensureToken();
   const response = await fetch(buildUrl(path, query), {
     method,
-    headers: { 'Authorization': `Bearer ${token}` }
+    headers: { ...headers, 'Authorization': `Bearer ${token}` }
   });
   const body = await readJson(response);
   if (response.status === 401) {
@@ -133,12 +134,19 @@ export const clearGatewayToken = () => {
 
 export const gatewayApi = {
   token: (ext) => requestToken(ext),
-  createSession: () => request('POST'),
+  /* device: mã thiết bị duy nhất theo tài khoản, lưu localStorage */
+  createSession: () => request(
+    'POST',
+    '',
+    { device: getDeviceId(session.ext) }
+  ),
   status: (id) => request('GET', sessionPath(id)),
+  /* Số gọi ra (caller) gửi qua header X-Caller-Number */
   dial: (id, to, caller) => request(
     'POST',
     sessionPath(id, 'dial'),
-    { to, caller }
+    { to },
+    caller ? { 'X-Caller-Number': caller } : {}
   ),
   dtmf: (id, digits) => request(
     'POST',
