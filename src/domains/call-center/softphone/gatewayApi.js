@@ -105,11 +105,11 @@ const buildUrl = (path, query) => {
 };
 
 /* fetch + Bearer token webrtc, không qua axios của app */
-const request = async (method, path = '', query) => {
+const request = async (method, path = '', query, headers = {}) => {
   const token = await ensureToken();
   const response = await fetch(buildUrl(path, query), {
     method,
-    headers: { 'Authorization': `Bearer ${token}` }
+    headers: { ...headers, 'Authorization': `Bearer ${token}` }
   });
   const body = await readJson(response);
   if (response.status === 401) {
@@ -135,10 +135,12 @@ export const gatewayApi = {
   token: (ext) => requestToken(ext),
   createSession: () => request('POST'),
   status: (id) => request('GET', sessionPath(id)),
+  /* Số gọi ra (caller) gửi qua header X-Caller-Number */
   dial: (id, to, caller) => request(
     'POST',
     sessionPath(id, 'dial'),
-    { to, caller }
+    { to },
+    caller ? { 'X-Caller-Number': caller } : {}
   ),
   dtmf: (id, digits) => request(
     'POST',
