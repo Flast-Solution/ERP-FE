@@ -1,6 +1,5 @@
 import { PhoneOutlined, SearchOutlined } from '@ant-design/icons';
 import { useCallCenterStore } from '../store/useCallCenterStore';
-import { HOTLINE } from '../constants';
 import { formatPhone } from '../utils/format';
 import {
   CustomerAvatar,
@@ -29,7 +28,7 @@ const IncomingCallPopup = () => {
   return (
     <IncomingCard role="dialog" aria-label="Cuộc gọi đến">
       <IncomingLeft>
-        <span className="inc__kicker"><i />Cuộc gọi đến · {HOTLINE}</span>
+        <span className="inc__kicker"><i />Cuộc gọi đến·</span>
         <div className="inc__avatar">
           <CustomerAvatar name={customer?.name} size={72} />
         </div>

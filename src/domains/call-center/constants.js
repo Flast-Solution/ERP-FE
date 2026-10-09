@@ -22,16 +22,15 @@ export const CALL_DIRECTION = {
 /* Event để tích hợp tổng đài bắn cuộc gọi đến: InAppEvent.emit(CALL_CENTER_INCOMING, { phone }) */
 export const CALL_CENTER_INCOMING = 'CALL_CENTER_INCOMING';
 export const CALL_CENTER_ENDED = 'CALL_CENTER_ENDED';
-export const HOTLINE = process.env.REACT_APP_CALL_CENTER_HOTLINE || '19001900';
 
 /* Danh sách số gọi ra mặc định cho dropdown "Gọi từ": [{ label, value }] */
 export const DEFAULT_CALLER_NUMBERS = [
-  { label: HOTLINE, value: HOTLINE },
+  { label: 'Hotline', value: '0987938491' },
+  { label: 'Zalo OA', value: '1025317101683656920' },
 ];
 
 /* Máy nhánh mặc định khi tài khoản chưa có field máy nhánh (vd: acme_1001) */
 export const DEFAULT_EXT = process.env.REACT_APP_CALL_CENTER_EXT || '';
-
 export const DIAL_KEYS = [
   ['1', ''], 
   ['2', 'ABC'], 
