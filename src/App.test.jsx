@@ -10,6 +10,7 @@ jest.mock('@flast-erp/core/components', () => ({
 }))
 jest.mock('react-router-dom', () => ({ BrowserRouter: ({ children }) => children }))
 jest.mock('styled-components', () => ({ ThemeProvider: ({ children }) => children }))
+jest.mock('@/features/TenantRoutes/Provider', () => ({ TenantRouteProvider: ({children}) => children }))
 jest.mock('@/theme', () => ({}))
 jest.mock('@/i18n', () => ({ language: 'vi' }))
 jest.mock('@/@history', () => ({}))

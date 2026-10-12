@@ -34,11 +34,12 @@ import MainLayout from '@/layouts/MainLayout';
 import MyPopup from '@/routes/PopupRoute';
 import ModalRoutes from '@/routes/ModalRoutes';
 import routes from '@/routes/PrivateRoutes';
+import { TenantRouteProvider } from '@/features/TenantRoutes/Provider';
 import { WorkflowDrawerProvider } from '@/contexts/WorkflowDrawerContext';
 
 const ThemeRender = () => (
   <ThemeProvider theme={theme}>
-    <WorkflowDrawerProvider>
+    <TenantRouteProvider><WorkflowDrawerProvider>
       <Auth>
         <Authorization>
           <MainLayout />
@@ -48,7 +49,7 @@ const ThemeRender = () => (
         <ModalRoutes />
         <MyPopup />
       </Suspense>
-    </WorkflowDrawerProvider>
+    </WorkflowDrawerProvider></TenantRouteProvider>
   </ThemeProvider>
 );
 

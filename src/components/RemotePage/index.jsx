@@ -11,7 +11,7 @@ import { useWorkflowDrawer } from '@/contexts/WorkflowDrawerContext'
 import { GATEWAY } from '@/configs'
 
 function RemoteUnavailable({ onRetry, onHome }) {
-  return <Result status="warning" title="Không tải được màn hình Hatenko"
+  return <Result status="warning" title="Không tải được màn hình tuỳ chỉnh"
     subTitle="Màn hình hiện chưa sẵn sàng. Bạn có thể thử lại hoặc về trang chủ để tiếp tục sử dụng ERP."
     extra={[
       <Button type="primary" key="retry" onClick={onRetry}>Thử lại</Button>,
@@ -34,7 +34,7 @@ class RemoteErrorBoundary extends Component {
   }
 }
 
-export default function HatenkoRemotePage({ page, ...props }) {
+export default function RemotePage({ remoteEntry, scope, module, version = '', ...props }) {
   const session = useGetMe()
   const workflows = useWorkflowDrawer()
   const navigate = useNavigate()
@@ -51,16 +51,15 @@ export default function HatenkoRemotePage({ page, ...props }) {
   const [attempt, setAttempt] = useState(0)
   const RemotePage = useMemo(() => lazy(async () => {
     try {
-      const version = process.env.REACT_APP_HATENKO_REMOTE_VERSION || ''
       const remote = await loadRemoteFromUrl({
-        name: `hatenko${version ? `_${version}` : ''}`,
-        scope: 'hatenko',
-        entry: process.env.REACT_APP_HATENKO_REMOTE_ENTRY || '/remotes/hatenko/remoteEntry.js',
-        module: page,
+        name: `remote_${encodeURIComponent(`${scope}:${remoteEntry}:${version}`)}`,
+        scope,
+        entry: remoteEntry,
+        module,
         version,
         force: attempt > 0,
       })
-      if (!remote?.default) throw new Error(`Remote Hatenko thiếu export default: ${page}`)
+      if (!remote?.default) throw new Error(`Remote thiếu export default: ${module}`)
       return remote
     } catch {
       // Resolve failed loads to UI instead of throwing during React rendering.
@@ -68,9 +67,9 @@ export default function HatenkoRemotePage({ page, ...props }) {
       return { default: () => <RemoteUnavailable
         onRetry={() => setAttempt(value => value + 1)} onHome={() => navigate('/')} /> }
     }
-  }), [page, attempt, navigate])
+  }), [remoteEntry, scope, module, version, attempt, navigate])
 
-  return <RemoteErrorBoundary key={`${page}-${attempt}`} onRetry={() => setAttempt(value => value + 1)}
+  return <RemoteErrorBoundary key={`${module}-${attempt}`} onRetry={() => setAttempt(value => value + 1)}
     onHome={() => navigate('/')}>
     <TenantRuntimeProvider runtime={runtime}>
       <Suspense fallback={<Loading />}><RemotePage {...props} /></Suspense>
