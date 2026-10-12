@@ -44,7 +44,7 @@ const Header = () => {
     notifications,
     markRead,
     markAllRead,
-    requestBrowserNotificationPermission,
+    tasks, act, undoIgnore, completeTask, reset,
   } = useNotifications();
   
   const isVietnamese = String(i18n.language || 'vi').toLowerCase().startsWith('vi');
@@ -80,7 +80,11 @@ const Header = () => {
           notifications={notifications}
           onMarkRead={markRead}
           onMarkAllRead={markAllRead}
-          onRequestPermission={requestBrowserNotificationPermission}
+          tasks={tasks}
+          onAction={act}
+          onUndoIgnore={undoIgnore}
+          onCompleteTask={completeTask}
+          onReset={reset}
         />
         <Tooltip title={isVietnamese ? t('header.languageToggleToEn') : t('header.languageToggleToVi')}>
           <button
