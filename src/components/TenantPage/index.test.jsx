@@ -1,35 +1,11 @@
-/* eslint-disable testing-library/no-unnecessary-act */
-import React, { act } from 'react'
-import { createRoot } from 'react-dom/client'
-import TenantPage from './index'
-import useGetMe from '@/hooks/useGetMe'
-import HatenkoRemotePage from '@/components/HatenkoRemotePage'
-jest.mock('@/hooks/useGetMe', () => ({ __esModule: true, default: jest.fn() }))
-jest.mock('@/components/HatenkoRemotePage', () => ({ __esModule: true, default: jest.fn(({ page }) => <span>{page}</span>) }))
-jest.mock('@flast-erp/core/components', () => ({ Loading: () => <span>Loading</span> }))
-
-test.each(['SalesEditor', 'ProductionOrders', 'ProductionTracking', 'WorkflowProgress', 'ManufacturingLotCreate', 'Invoice'])('%s loads remote for 1649 and keeps local page for other tenants', async page => {
-  global.IS_REACT_ACT_ENVIRONMENT = true
-  const container = document.createElement('div')
-  const root = createRoot(container)
-  const Local = jest.fn(() => <span>Local</span>)
-  HatenkoRemotePage.mockClear()
-  HatenkoRemotePage.mockImplementation(({ page }) => <span>{page}</span>)
-  try {
-    useGetMe.mockReturnValue({ user: {} })
-    await act(async () => root.render(<TenantPage page={page} local={Local} />))
-    expect(container.textContent).toBe('Loading')
-    expect(HatenkoRemotePage).not.toHaveBeenCalled()
-    useGetMe.mockReturnValue({ user: { id: 1, bizId: 1 } })
-    await act(async () => root.render(<TenantPage page={page} local={Local} />))
-    expect(container.textContent).toBe('Local')
-    expect(HatenkoRemotePage).not.toHaveBeenCalled()
-    useGetMe.mockReturnValue({ user: { id: 1, bizId: '1649' } })
-    await act(async () => root.render(<TenantPage page={page} local={Local} dataId={12} />))
-    expect(container.textContent).toBe(page)
-    expect(HatenkoRemotePage.mock.calls.at(-1)[0]).toEqual({ page, dataId: 12 })
-  } finally {
-    await act(async () => root.unmount())
-    delete global.IS_REACT_ACT_ENVIRONMENT
-  }
-})
+import React,{act} from 'react';
+import {createRoot} from 'react-dom/client';
+import TenantPage from './index';
+import RemotePage from '@/components/RemotePage';
+import {useTenantRoutes} from '@/features/TenantRoutes/Provider';
+jest.mock('@/components/RemotePage',()=>({__esModule:true,default:jest.fn(()=> <span>Remote</span>)}));
+jest.mock('@/features/TenantRoutes/Provider',()=>({useTenantRoutes:jest.fn()}));
+jest.mock('react-router-dom',()=>({...jest.requireActual('react-router-dom'),useLocation:()=>({pathname:'/material/bom'})}));
+jest.mock('@flast-erp/core/components',()=>({Loading:()=> <span>Loading</span>}));
+jest.mock('antd',()=>({Result:({title,extra})=><div>{title}{extra}</div>,Button:({children,...props})=><button {...props}>{children}</button>}));
+test('configuration controls remote, disabled and empty use local, load errors never silently use local',async()=>{global.IS_REACT_ACT_ENVIRONMENT=true;const container=document.createElement('div'),root=createRoot(container);const local=()=> <span>Local</span>;const config={bizId:5,remotes:[{id:'custom',scope:'other',remoteEntry:'https://example.com/remoteEntry.js'}],routes:[{route:'/material/bom',remoteId:'custom',module:'CustomBOM',enabled:true}]};try{useTenantRoutes.mockReturnValue({status:'ready',config});await act(async()=>root.render(<TenantPage page="ProductionOrders" local={local}/>));expect(RemotePage.mock.calls.at(-1)[0]).toMatchObject({scope:'other',module:'CustomBOM'});useTenantRoutes.mockReturnValue({status:'ready',config:{...config,routes:[{...config.routes[0],enabled:false}]}});await act(async()=>root.render(<TenantPage page="ProductionOrders" local={local}/>));expect(container.textContent).toBe('Local');useTenantRoutes.mockReturnValue({status:'error',error:'offline',refresh:jest.fn()});await act(async()=>root.render(<TenantPage page="ProductionOrders" local={local}/>));expect(container.textContent).not.toContain('Local');}finally{await act(async()=>root.unmount());delete global.IS_REACT_ACT_ENVIRONMENT;}});

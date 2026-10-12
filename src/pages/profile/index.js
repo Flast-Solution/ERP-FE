@@ -16,6 +16,7 @@ import ProfileInfoTab from './ProfileInfoTab'
 import PasswordTab from './PasswordTab'
 import LayoutTab from './LayoutTab'
 import OmniTab from './OmniTab'
+import CustomRoutesTab from './CustomRoutesTab'
 
 const getInitialTab = () => {
   const tab = new URLSearchParams(window.location.search).get('tab')
@@ -26,11 +27,13 @@ const PROFILE_TABS = [
   { key: 'profile', label: 'Hồ sơ', icon: UserOutlined },
   { key: 'password', label: 'Mật khẩu', icon: LockOutlined },
   { key: 'layout', label: 'Bố cục trang', icon: AppstoreOutlined },
+  { key: 'custom-routes', label: 'Route tuỳ chỉnh', icon: AppstoreOutlined },
   { key: 'omni', label: 'Kênh tin nhắn', icon: MessageOutlined },
 ]
 
 const TAB_COMPONENTS = {
   profile: ProfileInfoTab,
+  'custom-routes': CustomRoutesTab,
   layout: LayoutTab,
   omni: OmniTab,
   password: PasswordTab

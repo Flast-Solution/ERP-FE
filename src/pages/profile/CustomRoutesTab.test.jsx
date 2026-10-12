@@ -1,0 +1,14 @@
+import React,{act} from 'react';
+import {createRoot} from 'react-dom/client';
+import CustomRoutesTab from './CustomRoutesTab';
+import useGetMe from '@/hooks/useGetMe';
+import {useTenantRoutes} from '@/features/TenantRoutes/Provider';
+import {saveConfig} from '@/features/TenantRoutes/service';
+import {Modal} from 'antd';
+jest.mock('@/hooks/useGetMe',()=>({__esModule:true,default:jest.fn()}));
+jest.mock('@/features/TenantRoutes/Provider',()=>({useTenantRoutes:jest.fn()}));
+jest.mock('@/features/TenantRoutes/service',()=>({saveConfig:jest.fn()}));
+jest.mock('@/utils/loadRemote',()=>({loadRemoteFromUrl:jest.fn()}));
+jest.mock('antd',()=>{const React=require('react');const Form=({children})=><div>{children}</div>;Form.Item=({children})=>children;Form.useForm=()=>[{resetFields:jest.fn(),setFieldsValue:jest.fn(),setFieldValue:jest.fn()}];const Button=({children,onClick})=><button onClick={onClick}>{children}</button>;return {Form,Button,Card:({title,extra,children})=><div>{title}{extra}{children}</div>,Space:({children})=><div>{children}</div>,Alert:({message})=><span>{message}</span>,Tag:({children})=><span>{children}</span>,Table:({dataSource})=><div>{JSON.stringify(dataSource)}</div>,Modal:Object.assign(({open,children})=>open?children:null,{confirm:jest.fn()}),Input:()=>null,Select:()=>null,Switch:()=>null,message:{success:jest.fn(),error:jest.fn()}};});
+const configured = {bizId:5,revision:3,remotes:[{id:'hatenko',scope:'hatenko',remoteEntry:'https://example.com/remoteEntry.js'}],routes:[{route:'/material/bom',remoteId:'hatenko',module:'ProductionOrders',enabled:true}]};
+test('reset requires confirmation then saves empty configuration with the current revision; normal users cannot reset',async()=>{global.IS_REACT_ACT_ENVIRONMENT=true;const refresh=jest.fn();useTenantRoutes.mockReturnValue({status:'ready',config:configured,refresh});useGetMe.mockReturnValue({user:{bizId:5},hasRole:()=>true});saveConfig.mockResolvedValue({...configured,revision:4,remotes:[],routes:[]});saveConfig.mockClear();Modal.confirm.mockClear();const container=document.createElement('div'),root=createRoot(container);try{await act(async()=>root.render(<CustomRoutesTab/>));expect(container.textContent).not.toContain('Thêm cấu hình mẫu');await act(async()=>Array.from(container.querySelectorAll('button')).find(b=>b.textContent==='Xoá cấu hình').click());expect(saveConfig).not.toHaveBeenCalled();await act(async()=>Modal.confirm.mock.calls[0][0].onOk());expect(saveConfig).toHaveBeenCalledWith(5,{...configured,remotes:[],routes:[]});expect(refresh).toHaveBeenCalled();useGetMe.mockReturnValue({user:{bizId:5},hasRole:()=>false});await act(async()=>root.render(<CustomRoutesTab/>));expect(container.textContent).not.toContain('Xoá cấu hình');expect(container.textContent).not.toContain('Lưu cấu hình');}finally{await act(async()=>root.unmount());delete global.IS_REACT_ACT_ENVIRONMENT;}});

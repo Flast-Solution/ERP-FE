@@ -1,4 +1,3 @@
-import { isHatecoBusiness } from '@/configs/business'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { message, Space, Tag } from 'antd'
@@ -11,25 +10,15 @@ import QuotationApproverSelect from './components/QuotationApproverSelect'
 import { HASH_MODAL } from '@/configs'
 import Filter from '../Filter'
 import createOrderColumns from './columns/createOrderColumns'
-import createOrderTrackingColumns from './columns/createOrderTrackingColumns'
 import OrderLotExpandable from './components/OrderLotExpandable'
-import OrderTrackingExpandedRow from './components/OrderTrackingExpandedRow'
 import WorkflowAttachModal from './components/WorkflowAttachModal'
 import WorkflowProgressDrawer from './components/WorkflowProgressDrawer'
 import useOrderLots from './hooks/useOrderLots'
 import useOrderWorkflowData from './hooks/useOrderWorkflowData'
-import useOrderTrackingList from './hooks/useOrderTrackingList'
 import useQuotationViewer from './hooks/useQuotationViewer'
 import useWorkflowModal from './hooks/useWorkflowModal'
 import useWorkflowProgressDrawer from './hooks/useWorkflowProgressDrawer'
 import OrderInboundDrawer from './components/OrderInboundDrawer'
-import OrderDeliveryDrawer from './components/OrderDeliveryDrawer'
-import {
-  getOrderDetails,
-  getShippingHistory,
-  getWarehouseHistory,
-  getWarehouseParcels,
-} from './utils/orderTracking'
 import './List.less'
 
 const QUOTATION_COMMENT_MOCKS = [
@@ -62,7 +51,6 @@ const QUOTATION_STATUS_META = {
   2: { label: 'Đã duyệt', color: 'success' },
 }
 
-const ORDER_TRACKING_API = 'erp/order-tracking/search'
 
 const useOpportunityOrderList = ({ queryParams, ...options }) => {
   const opportunityQueryParams = useMemo(() => ({
@@ -86,8 +74,6 @@ const ListOrder = ({
   apiPath = 'erp/order/fetch',
   orderMode = false,
   hideEditorEditColumn = false,
-  trackingOverview = false,
-  productionOverview = false,
   detailDrawerHash = '#order.tabs',
   detailDrawerTitle,
 }) => {
@@ -95,14 +81,9 @@ const ListOrder = ({
   const { user, hasPermission } = useGetMe()
   const [cancellingOpportunityId, setCancellingOpportunityId] = useState(null)
   const [copiedIndex, setCopiedIndex] = useState(null)
-  const [activeTrackingRowKey, setActiveTrackingRowKey] = useState(null)
   const isOrderList = orderMode || filter.type === 'order'
   const isOpportunityList = filter.type === 'cohoi'
-  const useTrackingOverview = isHatecoBusiness(user?.bizId)
-    && ((trackingOverview && isOrderList) || isOpportunityList)
-  const useProductionOverview = productionOverview && isOrderList && isHatecoBusiness(user?.bizId)
-  const useTrackingLayout = useTrackingOverview || useProductionOverview
-  const listApiPath = useTrackingOverview ? ORDER_TRACKING_API : apiPath
+  const listApiPath = apiPath
   const canViewDetail = hasPermission(isOpportunityList
     ? 'sales.opportunity.detail.view'
     : 'sales.order.detail.view')
@@ -117,10 +98,7 @@ const ListOrder = ({
     : 'sales.order.workflow.view')
   const canCreateReceipt = isOrderList && hasPermission('inventory.receipt.create')
   const [opportunityStatusOptions, setOpportunityStatusOptions] = useState([])
-  const [shippingStatusOptions, setShippingStatusOptions] = useState([])
   const [inboundOrder, setInboundOrder] = useState(null)
-  const [deliveryOrder, setDeliveryOrder] = useState(null)
-  const canCreateDelivery = useTrackingOverview && isOrderList && hasPermission('inventory.delivery.create')
 
   useEffect(() => {
     let mounted = true
@@ -144,29 +122,6 @@ const ListOrder = ({
       mounted = false
     }
   }, [isOpportunityList])
-
-  useEffect(() => {
-    let mounted = true
-
-    if (!useTrackingOverview) {
-      setShippingStatusOptions([])
-      return () => {
-        mounted = false
-      }
-    }
-
-    RequestUtils.GetAsList('/shipping/fetch-status')
-      .then((statuses) => {
-        if (mounted) setShippingStatusOptions(Array.isArray(statuses) ? statuses : [])
-      })
-      .catch(() => {
-        if (mounted) setShippingStatusOptions([])
-      })
-
-    return () => {
-      mounted = false
-    }
-  }, [useTrackingOverview])
 
   const {
     expandedRowKeys,
@@ -227,8 +182,7 @@ const ListOrder = ({
   } = useQuotationViewer({ approvalEnabled: isOpportunityList && !isOrderList, currentUserId: user?.id })
 
   const { onData } = useOrderWorkflowData(
-    isOrderList || isOpportunityList,
-    useTrackingLayout && isOrderList
+    isOrderList || isOpportunityList
   )
 
   const handleOpenWorkflowModal = useCallback((record, entityType) => {
@@ -266,7 +220,7 @@ const ListOrder = ({
 
   const actionWidth = (
     filter.type === 'cohoi' ? 260 : 220
-  ) + ((extraActions?.length ?? 0) * 44) + (canCreateReceipt ? 44 : 0) + (canCreateDelivery ? 44 : 0) + (canUpdateOpportunity ? 44 : 0)
+  ) + ((extraActions?.length ?? 0) * 44) + (canCreateReceipt ? 44 : 0) + (canUpdateOpportunity ? 44 : 0)
 
   const columnOptions = {
     isOpportunityList,
@@ -287,7 +241,7 @@ const ListOrder = ({
       ? { ...options, state: {
         ...options?.state,
         hideEditColumn: hideEditorEditColumn || options?.state?.hideEditColumn,
-        restrictOrderFields: (useTrackingOverview && isOrderList) || options?.state?.restrictOrderFields,
+        restrictOrderFields: options?.state?.restrictOrderFields,
       } }
       : options),
     canViewDetail,
@@ -300,18 +254,9 @@ const ListOrder = ({
     canViewWorkflow,
     canCreateReceipt,
     openOrderInboundDrawer: setInboundOrder,
-    canCreateDelivery,
-    openOrderDeliveryDrawer: setDeliveryOrder,
   }
 
-  const shippingStatusById = useMemo(() => shippingStatusOptions.reduce(
-    (result, status) => ({ ...result, [String(status?.id)]: status }),
-    {}
-  ), [shippingStatusOptions])
-
-  const columns = useTrackingLayout
-    ? createOrderTrackingColumns({ ...columnOptions, shippingStatusById, productionOverview: useProductionOverview, trackingOverview: useTrackingOverview && isOrderList })
-    : createOrderColumns(columnOptions)
+  const columns = createOrderColumns(columnOptions)
 
   const orderLotExpandable = enableLotTree
     ? OrderLotExpandable({
@@ -324,76 +269,23 @@ const ListOrder = ({
     })
     : undefined
 
-  const trackingExpandable = useTrackingLayout
-    ? {
-      showExpandColumn: false,
-      expandedRowKeys: activeTrackingRowKey == null ? [] : [activeTrackingRowKey],
-      expandedRowRender: record => (
-        <OrderTrackingExpandedRow
-          record={record}
-          isOpportunityList={isOpportunityList}
-          productionOverview={useProductionOverview}
-          canAttachProductionWorkflow={canAttachWorkflow}
-          canViewProductionWorkflow={canViewWorkflow}
-          onProductionWorkflowRefresh={() => f5List(listApiPath)}
-          trackingOverview={useTrackingOverview && isOrderList}
-          shippingStatusById={shippingStatusById}
-        />
-      ),
-      // Expand khi có dữ liệu cho 1 trong 3 tab của OrderTrackingExpandedRow
-      rowExpandable: record => (
-        getOrderDetails(record).length > 0
-        || getWarehouseParcels(record).length > 0
-        || getWarehouseHistory(record).length > 0
-        || getShippingHistory(record).length > 0
-      ),
-    }
-    : undefined
-
   return (
     <>
-      <div className={useTrackingLayout ? "order-tracking-compact" : undefined}>
       <RestList
-        rowKey={useTrackingOverview ? '_trackingRowKey' : 'id'}
+        rowKey="id"
         bordered
-        size={useTrackingLayout ? 'small' : undefined}
-        xScroll={useTrackingLayout
-          ? columns.flatMap(column => column.children ?? [column]).reduce((width, column) => width + (Number(column.width) || 100), 0)
-          : (isOpportunityList ? 1200 : 1800)}
-        expandable={trackingExpandable ?? orderLotExpandable}
+        xScroll={isOpportunityList ? 1200 : 1800}
+        expandable={orderLotExpandable}
         onData={onData}
         initialFilter={{ limit: 10, page: 1, ...filter }}
         filter={<Filter />}
         hasCreate={false}
         beforeSubmitFilter={beforeSubmitFilter}
-        useGetAllQuery={useTrackingOverview
-          ? useOrderTrackingList
-          : (isOpportunityList ? useOpportunityOrderList : useGetList)}
+        useGetAllQuery={isOpportunityList ? useOpportunityOrderList : useGetList}
         apiPath={listApiPath}
         columns={columns}
-        rowClassName={record => (
-          useTrackingLayout && (record?._trackingRowKey ?? record?.id) === activeTrackingRowKey
-            ? 'order-tracking-row order-tracking-row--active'
-            : (useTrackingLayout ? 'order-tracking-row' : '')
-        )}
-        onRow={record => useTrackingLayout ? ({
-          tabIndex: 0,
-          onClick: () => setActiveTrackingRowKey(current => (
-            current === (record?._trackingRowKey ?? record?.id) ? null : (record?._trackingRowKey ?? record?.id)
-          )),
-          onKeyDown: event => {
-            if (event.target !== event.currentTarget) return
-            if (event.key === 'Enter' || event.key === ' ') {
-              event.preventDefault()
-              setActiveTrackingRowKey(current => (
-                current === (record?._trackingRowKey ?? record?.id) ? null : (record?._trackingRowKey ?? record?.id)
-              ))
-            }
-          },
-        }) : {}}
       />
 
-      </div>
       <WorkflowAttachModal
         open={workflowModalOpen}
         onCancel={closeWorkflowModal}
@@ -426,8 +318,7 @@ const ListOrder = ({
         initialOrder={inboundOrder}
         onClose={() => setInboundOrder(null)}
       />
-      <OrderDeliveryDrawer order={deliveryOrder} onClose={() => setDeliveryOrder(null)}
-        onSaved={() => f5List(listApiPath)} />
+
 
       <GeneratedDocumentViewer
         open={quoteViewerOpen}

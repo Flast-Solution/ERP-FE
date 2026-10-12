@@ -63,7 +63,6 @@ import { Link } from "react-router-dom";
 import SideBarStyles from './styles';
 import useGetMe from '@/hooks/useGetMe';
 import { resolveUploadUrl } from '@/containers/PreviewModal/uploadUtils';
-import { isHatecoBusiness } from '@/configs/business';
 import {
   BUSINESS_UPDATED_EVENT,
   canManagePermissions,
@@ -110,7 +109,7 @@ function SideBar() {
   const canManageBusinessUnits = isSuperAdmin(user);
   const canManageUserPermissions = canManagePermissions(user);
   const bizId = user?.bizId ?? null;
-  const orderListPath = isHatecoBusiness(bizId) ? '/sale/hateco' : '/sale/order';
+  const orderListPath = '/sale/order';
 
   const revokeBusinessLogoObjectUrl = useCallback(() => {
     if (!businessLogoObjectUrlRef.current) {
