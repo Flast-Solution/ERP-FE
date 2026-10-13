@@ -17,3 +17,15 @@ Menu đơn hàng luôn dẫn tới `/sale/order`, không kiểm tra bizId. Muố
 Local ERP List không còn tracking layout/API riêng theo tenant, kể cả bizId 1649. Tracking và production overview được giữ trong remote. Những utility workflow/LOT còn dùng bởi host được giữ. Các bản sao columns, expanded row, hook search tracking và test tương ứng đã bỏ khỏi host; bộ nghiệp vụ/test remote vẫn giữ.
 
 fs-hatenko không còn kiểm tra bizId để bật nghiệp vụ của module, không còn expose `Routes` hoặc export `hatenkoRoutes`. Host sở hữu router và phân quyền. Các module phụ, shared runtime và cầu nối loader cho workflow remote vẫn được giữ vì còn dùng.
+
+## Phát triển remote local
+
+ERP-FE `.env.development` đã cấu hình:
+
+```dotenv
+REACT_APP_TENANT_REMOTE_OVERRIDES={"hatenko":"http://localhost:3001/remoteEntry.js"}
+```
+
+Chạy `npm run dev` trong fs-hatenko và `npm start` trong ERP-FE. Sau khi đổi env cần restart host. Mapping route/module và enabled vẫn lấy từ API. URL override chỉ áp dụng khi NODE_ENV=development; không lưu lên BE, không dùng khi build production/test. Key ưu tiên remoteId, nếu không có dùng scope. Có thể khai báo nhiều remote trong cùng object JSON. Xoá biến hoặc đặt `{}` để development dùng lại URL API.
+
+Nút Kiểm tra module trong Profile cũng tải URL local nếu có override. Các loader workflow sử dụng cùng scope cũng nhận override. Cấu hình remoteEntry hiển thị/lưu trong Profile vẫn là URL server. Dev server tự biên dịch fs-hatenko; có thể cần reload host để nhận component mới vì remote HMR không được đảm bảo xuyên host. Nếu port 3001 khác, đổi URL trong env. Production vẫn cần deploy toàn bộ dist của remote.

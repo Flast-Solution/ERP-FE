@@ -89,11 +89,11 @@ export const buildManufacturePayload = ({ productionOrder = {}, materialConfirma
   })
 
   return {
-    id: productionOrder.id ?? null,
     orderIds: [...new Map((productionOrder.orderIds ?? (productionOrder.salesOrderId != null ? [productionOrder.salesOrderId] : []))
       .filter(id => id != null && id !== '')
       .map(id => [String(id), id])).values()],
     manufactureProduct: {
+      id: productionOrder.id ?? null,
       code,
       orderCode: productionOrder.salesOrderCode ?? productionOrder.orderCode,
       typeOrder: productionOrder.typeOrder ?? 'PRODUCTION',

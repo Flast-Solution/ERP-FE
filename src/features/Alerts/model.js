@@ -2,7 +2,7 @@ export const LEVELS = { critical: 'Khẩn cấp', high: 'Cao', medium: 'Trung b�
 export const STATUSES = { pending: 'Chưa xử lý', task: 'Đã tạo việc', snoozed: 'Đang theo dõi', resolved: 'Đã xử lý', ignored: 'Đã bỏ qua' };
 export const OWNERS = ['Trần Văn B', 'Nguyễn Thị Lan', 'Lê Minh Anh'];
 export const isClosed = a => ['resolved', 'ignored'].includes(a.status);
-export const urgent = a => !isClosed(a) && a.status !== 'snoozed' && (a.level === 'critical' || a.escalated || new Date(a.dueAt) <= new Date());
+export const urgent = a => !isClosed(a) && a.status !== 'snoozed' && (a.level === 'critical' || a.escalated || (a.dueAt != null && new Date(a.dueAt) <= new Date()));
 export function seedAlerts(now = new Date()) {
  const date = hours => new Date(now.getTime() + hours * 3600000).toISOString();
  return [

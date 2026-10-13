@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
+  Alert,
+  Spin,
   Badge,
   Button,
   Checkbox,
@@ -39,15 +41,15 @@ import {
 } from '@ant-design/icons';
 import {
   LEVELS,
-  OWNERS,
   STATUSES,
   groups,
   isClosed,
   urgent,
 } from '@/features/Alerts/model';
 import '@/features/Alerts/alerts.css';
+import { findSystemUsers } from '@/pages/userPermissions/service';
 
-const format = value => new Date(value).toLocaleString('vi-VN', {
+const format = value => value == null ? '—' : new Date(value).toLocaleString('vi-VN', {
   hour: '2-digit',
   minute: '2-digit',
   day: '2-digit',
@@ -97,12 +99,17 @@ export default function NotificationDropdown({
   onMarkRead,
   onMarkAllRead,
   onAction,
+  acting = false,
+  onLoadTasks,
   onUndoIgnore,
   onCompleteTask,
   onReset,
+  onRefresh,
+  loading = false,
+  error,
 }) {
   const [open, setOpen] = useState(false);
-  const [filter, setFilter] = useState('urgent');
+  const [filter, setFilter] = useState('high');
   const [selectedId, setSelectedId] = useState(null);
   const [mode, setMode] = useState('detail');
   const [popover, setPopover] = useState(null);
@@ -112,7 +119,8 @@ export default function NotificationDropdown({
   const [query, setQuery] = useState('');
   const [reason, setReason] = useState('');
   const [other, setOther] = useState('');
-  const [approved, setApproved] = useState(false);
+  const [owners, setOwners] = useState([]);
+  const [ownersLoading, setOwnersLoading] = useState(false);
   const [remind, setRemind] = useState('1');
   const [custom, setCustom] = useState('');
   const [processing, setProcessing] = useState(false);
@@ -121,6 +129,11 @@ export default function NotificationDropdown({
   const [assignment] = Form.useForm();
   const [resolution] = Form.useForm();
   const a = notifications.find(item => item.id === selectedId);
+  const customerAlert = ['LEAD', 'CUSTOMER', 'DEAL', 'QUOTE'].includes(a?.entityData?.kind);
+  const activityOptions = customerAlert
+    ? [...new Set([a?.suggestion, 'Gọi hỏi thăm khách', 'Nhắn tin qua Zalo', 'Gửi lại báo giá', 'Hẹn gặp trực tiếp', 'Cách khác'].filter(Boolean))]
+    : [...new Set([a?.suggestion, 'Kiểm tra thông tin', 'Trao đổi với người phụ trách', 'Cách khác'].filter(Boolean))];
+  const resultOptions = customerAlert ? ['Vẫn quan tâm', 'Hẹn lúc khác', 'Chưa liên lạc được', 'Không còn nhu cầu'] : ['Đã hoàn thành', 'Cần theo dõi tiếp', 'Chưa xử lý được'];
   const buckets = groups(notifications);
   const list = buckets[filter]
     .filter(item => `${item.title} ${item.entity} ${item.code}`.toLowerCase().includes(query.toLowerCase()))
@@ -128,26 +141,27 @@ export default function NotificationDropdown({
 
   useEffect(() => {
     resolution.resetFields();
-  }, [selectedId, resolution]);
+    if (a) resolution.setFieldsValue({activity:a.suggestion, result:customerAlert ? 'Vẫn quan tâm' : 'Đã hoàn thành'});
+  }, [selectedId, a?.suggestion, customerAlert, resolution]);
 
   const select = item => {
     setMode('detail');
     setPopover(null);
     setReason('');
     setOther('');
-    setApproved(false);
     setRemind('1');
     setFiles([]);
     setRecording(false);
     setProcessing(false);
     onMarkRead?.(item);
+    onLoadTasks?.(item.id)?.catch(error => message.error(error.message));
     setSelectedId(item.id);
     setOpen(false);
   };
 
-  const run = (action, payload) => {
+  const run = async (action, payload) => {
     try {
-      onAction?.(a.id, action, payload);
+      await onAction?.(a.id, action, payload);
       return true;
     } catch (error) {
       message.error(error.message);
@@ -155,10 +169,12 @@ export default function NotificationDropdown({
     }
   };
 
-  const beginAssign = () => {
+  const beginAssign = async () => {
+    setOwnersLoading(true);
+    try { const users=await findSystemUsers(); setOwners(users.map(user=>({value:String(user.id ?? user.userId),label:user.fullName || user.ssoId || String(user.id)}))); } catch(error) { message.error(error.message); } finally {setOwnersLoading(false);}
     assignment.setFieldsValue({
       title: a.suggestion,
-      owner: a.owner,
+      ownerId: a.ownerId != null ? String(a.ownerId) : undefined,
       dueAt: future(1),
       priority: a.level,
     });
@@ -166,14 +182,10 @@ export default function NotificationDropdown({
     setPopover(null);
   };
 
-  const ignore = () => {
+  const ignore = async () => {
     const why = reason === 'Lý do khác' ? other.trim() : reason;
-    if (!why) {
-      message.warning('Vui lòng nhập lý do bỏ qua');
-      return;
-    }
     const before = { ...a };
-    if (!run('ignore', { reason: why, approved })) return;
+    if (!await run('ignore', { reason: why })) return;
     setPopover(null);
     const key = `undo-${a.id}`;
     notification.open({
@@ -183,9 +195,8 @@ export default function NotificationDropdown({
       duration: 5,
       btn: (
         <Button
-          onClick={() => {
-            onUndoIgnore?.(before.id, before);
-            notification.destroy(key);
+          onClick={async () => {
+            try { await onUndoIgnore?.(before.id); notification.destroy(key); } catch(error) {message.error(error.message);}
           }}
         >
           Hoàn tác
@@ -213,9 +224,9 @@ export default function NotificationDropdown({
     return d.toISOString();
   };
 
-  const snooze = () => {
+  const snooze = async () => {
     try {
-      if (run('snooze', { until: until() })) {
+      if (await run('snooze', { until: until() })) {
         setPopover(null);
         message.success('Đã đặt giờ nhắc lại');
       }
@@ -241,7 +252,7 @@ export default function NotificationDropdown({
       <span className={`alert-icon ${item.level}`}>{icon(item.level)}</span>
       <div className="alert-content">
         <strong>{item.title}</strong>
-        <p>{item.entity} · {item.amount}</p>
+        <p>{[item.entity, item.amount].filter(Boolean).join(' · ')}</p>
         <div className="alert-meta">
           <Tag color={levelColor[item.level]}>{LEVELS[item.level]}</Tag>
           {!isClosed(item) && (
@@ -333,6 +344,8 @@ export default function NotificationDropdown({
         ))}
       </div>
       {tabs}
+      {error && <Alert type="error" message={error} action={<Button size="small" onClick={onRefresh}>Thử lại</Button>} />}
+      {loading && <Spin style={{display: 'block', padding: 12}} />}
       <div className="alert-list">
         {list.length ? (
           <>
@@ -359,7 +372,7 @@ export default function NotificationDropdown({
           <ArrowRightOutlined />
         </Button>
       </div>
-      <div className="alert-demo-label" style={{ padding: '0 16px 10px' }}>Dữ liệu demo · lưu trên trình duyệt</div>
+
     </div>
   );
 
@@ -368,7 +381,7 @@ export default function NotificationDropdown({
       <h3>Bỏ qua cảnh báo này?</h3>
       <p>Vẫn xem lại được trong Đã xử lý.</p>
       <Radio.Group value={reason} onChange={e => setReason(e.target.value)}>
-        {['Mình đã xử lý ở chỗ khác', 'Khách không còn nhu cầu', 'Cảnh báo chưa đúng / bị trùng', 'Lý do khác'].map(text => (
+        {['Mình đã xử lý ở chỗ khác', customerAlert ? 'Khách không còn nhu cầu' : 'Không còn cần xử lý', 'Cảnh báo chưa đúng / bị trùng', 'Lý do khác'].map(text => (
           <Radio key={text} value={text}>{text}</Radio>
         ))}
       </Radio.Group>
@@ -380,14 +393,10 @@ export default function NotificationDropdown({
           placeholder="Nhập lý do"
         />
       )}
-      {a?.level === 'critical' && (
-        <Checkbox checked={approved} onChange={e => setApproved(e.target.checked)}>
-          Mô phỏng quản lý đồng ý (demo)
-        </Checkbox>
-      )}
+
       <Space style={{ marginTop: 16 }}>
         <Button onClick={() => setPopover(null)}>Huỷ</Button>
-        <Button danger type="primary" onClick={ignore}>Bỏ qua</Button>
+        <Button danger type="primary" loading={acting} onClick={ignore}>Bỏ qua</Button>
       </Space>
     </div>
   );
@@ -421,7 +430,7 @@ export default function NotificationDropdown({
     mode === 'assign' ? (
       <div className="alert-footer">
         <Button onClick={() => setMode('detail')}>Quay lại</Button>
-        <Button type="primary" onClick={() => assignment.submit()}>Giao việc</Button>
+        <Button type="primary" loading={acting} disabled={ownersLoading} onClick={() => assignment.submit()}>Giao việc</Button>
       </div>
     ) : !isClosed(a) && (
       <div className="alert-footer">
@@ -432,7 +441,7 @@ export default function NotificationDropdown({
           onOpenChange={value => setPopover(value ? 'ignore' : null)}
           content={ignorePanel}
         >
-          <Button danger>Bỏ qua</Button>
+          <Button danger disabled={acting}>Bỏ qua</Button>
         </Popover>
         <Popover
           trigger="click"
@@ -443,6 +452,7 @@ export default function NotificationDropdown({
         >
           <Button icon={<ClockCircleOutlined />}>Nhắc lại</Button>
         </Popover>
+        <Button loading={acting} onClick={async()=>{if(await run('approve'))message.success('Đã phê duyệt cảnh báo');}}>Phê duyệt</Button>
         <Button
           onClick={beginAssign}
           disabled={tasks.some(t => t.alertId === a.id && t.status === 'pending')}
@@ -467,7 +477,7 @@ export default function NotificationDropdown({
     <>
       <Dropdown
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={value => { setOpen(value); if (value) onRefresh?.(); }}
         trigger={['hover', 'click']}
         placement="bottomRight"
         dropdownRender={() => panel}
@@ -485,6 +495,7 @@ export default function NotificationDropdown({
         onClick={() => {
           setTaskOpen(true);
           setSelectedTask(null);
+          onLoadTasks?.()?.catch(error => message.error(error.message));
         }}
       >
         <Badge count={tasks.filter(t => t.status === 'pending').length} size="small" color="#b54708">
@@ -515,6 +526,7 @@ export default function NotificationDropdown({
             <Space>
               <Tag color={levelColor[a.level]}>{LEVELS[a.level]}</Tag>
               <span>{a.category}</span>
+              {a.blocksBusiness && <Tag color="orange">Có chặn nghiệp vụ</Tag>}
               <Status alert={a} />
             </Space>
             <h2>{a.title}</h2>
@@ -540,8 +552,8 @@ export default function NotificationDropdown({
                 <Form
                   form={assignment}
                   layout="vertical"
-                  onFinish={values => {
-                    if (run('assign', { ...values, dueAt: new Date(values.dueAt).toISOString() })) {
+                  onFinish={async values => {
+                    if (await run('assign', { ...values, dueAt: new Date(values.dueAt).toISOString() })) {
                       setMode('detail');
                       message.success('Đã tạo việc từ cảnh báo');
                     }
@@ -555,11 +567,11 @@ export default function NotificationDropdown({
                     <Input />
                   </Form.Item>
                   <Form.Item
-                    name="owner"
+                    name="ownerId"
                     label="Người phụ trách"
                     rules={[{ required: true, message: 'Chọn người phụ trách' }]}
                   >
-                    <Select options={OWNERS.map(name => ({ value: name, label: name }))} />
+                    <Select showSearch optionFilterProp="label" loading={ownersLoading} options={owners} />
                   </Form.Item>
                   <Form.Item name="dueAt" label="Hạn" rules={[{ required: true, message: 'Chọn hạn' }]}>
                     <Input type="datetime-local" />
@@ -567,6 +579,7 @@ export default function NotificationDropdown({
                   <Form.Item name="priority" label="Ưu tiên">
                     <Select options={Object.entries(LEVELS).map(([value, label]) => ({ value, label }))} />
                   </Form.Item>
+                  <Form.Item name="description" label="Mô tả"><Input.TextArea rows={3}/></Form.Item>
                   <p>Liên quan: {a.entity}</p>
                   <p>Khi việc xong, cảnh báo sẽ tự đóng.</p>
                 </Form>
@@ -576,6 +589,12 @@ export default function NotificationDropdown({
                 <section className="alert-section">
                   <h4>VÌ SAO BẠN NHẬN CẢNH BÁO NÀY</h4>
                   <strong>Rule: {a.rule}</strong>
+                  {a.triggerCondition && <p>{a.triggerCondition}</p>}
+                  {!a.conditions.length && a.defaultParameters && <p>Tham số tham khảo: {a.defaultParameters}</p>}
+                  {a.recipientGroup && <p>Nhóm nhận cảnh báo: {a.recipientGroup}</p>}
+                  {a.autoClose && <p>Tự đóng khi: {a.autoClose}</p>}
+                  {a.blocksBusiness && <p>Cảnh báo này có quy định chặn nghiệp vụ.</p>}
+                  {a.context?.map((item, index) => <div key={`context-${index}`} className="alert-condition"><span>{item.label || item.key}</span><strong>{item.format === 'date' ? format(typeof item.value === 'number' ? item.value * (item.value < 1e12 ? 1000 : 1) : item.value) : String(item.value ?? '—')}</strong></div>)}
                   {a.conditions.map(([label, value]) => (
                     <div key={label} className="alert-condition">
                       <span>{label}</span>
@@ -638,7 +657,7 @@ export default function NotificationDropdown({
                   <span>#{a.id} · {a.category}</span>
                 </div>
                 <h2>{a.title}</h2>
-                <p>{a.description} Ghi lại vài dòng để cả team cùng nắm nhé.</p>
+                <p>{a.description} Ghi lại nội dung và kết quả xử lý.</p>
               </div>
             </div>
             <div className="alert-resolution-body">
@@ -665,7 +684,7 @@ export default function NotificationDropdown({
                   <strong>{a.rule}</strong>
                 </span>
               </div>
-              <div className="alert-shortcuts">
+              <div className="alert-shortcuts" style={customerAlert ? undefined : {display:'none'}}>
                 <Button
                   onClick={() => Modal.info({
                     title: `Hội thoại · ${a.entity}`,
@@ -708,9 +727,9 @@ export default function NotificationDropdown({
               <Form
                 layout="vertical"
                 form={resolution}
-                initialValues={{ activity: 'Gọi hỏi thăm khách', result: 'Vẫn quan tâm' }}
-                onFinish={values => {
-                  if (run('resolve', {
+                initialValues={{ activity: a.suggestion, result: customerAlert ? 'Vẫn quan tâm' : 'Đã hoàn thành' }}
+                onFinish={async values => {
+                  if (await run('resolve', {
                     ...values,
                     attachments: files.map(f => ({ name: f.name, size: f.size })),
                     recording,
@@ -725,14 +744,14 @@ export default function NotificationDropdown({
                   <Radio.Group
                     className="alert-choice-group"
                     optionType="button"
-                    options={['Gọi hỏi thăm khách', 'Nhắn tin qua Zalo', 'Gửi lại báo giá', 'Hẹn gặp trực tiếp', 'Cách khác']}
+                    options={activityOptions}
                   />
                 </Form.Item>
-                <Form.Item name="result" label="Khách phản hồi thế nào?" rules={[{ required: true }]}>
+                <Form.Item name="result" label={customerAlert ? "Khách phản hồi thế nào?" : "Kết quả xử lý"} rules={[{ required: true }]}>
                   <Radio.Group
                     className="alert-choice-group"
                     optionType="button"
-                    options={['Vẫn quan tâm', 'Hẹn lúc khác', 'Chưa liên lạc được', 'Không còn nhu cầu']}
+                    options={resultOptions}
                   />
                 </Form.Item>
                 <Form.Item
@@ -740,11 +759,12 @@ export default function NotificationDropdown({
                   label="Ghi chú của bạn"
                   rules={[{ required: true, whitespace: true, message: 'Nhập chi tiết xử lý' }]}
                 >
-                  <Input.TextArea rows={4} placeholder="Ghi lại việc đã làm và phản hồi của khách" />
+                  <Input.TextArea rows={4} placeholder={customerAlert ? "Ghi lại việc đã làm và phản hồi của khách" : "Ghi lại việc đã làm và kết quả xử lý"} />
                 </Form.Item>
                 <div className="alert-attachment">
                   <Button
                     className={recording ? 'recording-selected' : ''}
+                    style={customerAlert ? undefined : {display:'none'}}
                     icon={<PhoneOutlined />}
                     aria-pressed={recording}
                     onClick={() => setRecording(!recording)}
@@ -759,10 +779,10 @@ export default function NotificationDropdown({
                     <Button type="dashed" icon={<PaperClipOutlined />}>Thêm tệp</Button>
                   </Upload>
                 </div>
-                <small className="alert-mock-hint">Dữ liệu demo · tệp và ghi âm chưa được tải lên server.</small>
+                <small className="alert-mock-hint">Thao tác xử lý đang mô phỏng · tệp và ghi âm chưa được tải lên server.</small>
                 <div className="alert-follow-up">
                   <Form.Item name="schedule" valuePropName="checked" noStyle>
-                    <Checkbox>Nhắc mình gọi lại vào</Checkbox>
+                    <Checkbox>{customerAlert ? 'Nhắc mình gọi lại vào' : 'Nhắc mình theo dõi vào'}</Checkbox>
                   </Form.Item>
                   <Form.Item noStyle shouldUpdate>
                     {({ getFieldValue }) => (
@@ -801,20 +821,12 @@ export default function NotificationDropdown({
             onChange={e => setQuery(e.target.value)}
           />
           <Button onClick={onMarkAllRead}>Đánh dấu đã xem</Button>
-          <Button
-            onClick={() => Modal.confirm({
-              title: 'Khôi phục dữ liệu demo?',
-              content: 'Các thay đổi demo hiện tại sẽ bị xoá.',
-              onOk: onReset,
-            })}
-          >
-            Khôi phục demo
-          </Button>
+          <Button onClick={onReset}>Tải lại</Button>
         </div>
         {tabs}
         {list.length ? list.map(row) : <Empty description="Không có cảnh báo" />}
       </Drawer>
-      <Drawer title="Việc từ cảnh báo · Demo" width={520} open={taskOpen} onClose={() => setTaskOpen(false)}>
+      <Drawer title="Việc từ cảnh báo" width={520} open={taskOpen} onClose={() => setTaskOpen(false)}>
         {(selectedTask ? tasks.filter(t => t.id === selectedTask) : tasks).map(task => (
           <div key={task.id} className="alert-section">
             <h3>{task.title}</h3>
@@ -835,7 +847,7 @@ export default function NotificationDropdown({
               >
                 Mở cảnh báo
               </Button>
-              {task.status === 'pending' && (
+              {task.status === 'pending' && !task._remote && (
                 <Button
                   type="primary"
                   icon={<CheckCircleOutlined />}

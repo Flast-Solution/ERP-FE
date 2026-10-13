@@ -1,21 +1,21 @@
 import { buildManufacturePayload, mapManufactureOrder } from './utils';
 
-test('sends root id and unique orderIds beside materialOutbounds when editing', () => {
+test('sends manufactureProduct id and keeps orderIds beside materialOutbounds when editing', () => {
   const payload = buildManufacturePayload({ isEdit: true,
     productionOrder: { id: 9, orderIds: [11, 22, 11], productionOrderCode: 'LSX-9',
       orderDetails: [{ id: 101, productId: 1 }, { id: 202, productId: 2 }],
       productDetails: { 101: { target: 3 }, 202: { target: 4 } } },
     materialConfirmation: { allocations: [{ warehouseId: 1, materialId: 2, quantity: 5 }] },
   });
-  expect(payload).toMatchObject({ id: 9, orderIds: [11, 22], materialOutbounds: [{ warehouseId: 1, materialId: 2, quantity: 5 }] });
-  expect(payload.manufactureProduct).not.toHaveProperty('id');
+  expect(payload).toMatchObject({ manufactureProduct: { id: 9 }, orderIds: [11, 22], materialOutbounds: [{ warehouseId: 1, materialId: 2, quantity: 5 }] });
+  expect(payload).not.toHaveProperty('id');
   expect(payload.manufactureProduct).not.toHaveProperty('orderIds');
   expect(payload.manufactureProduct.details.map(detail => detail.orderDetailId)).toEqual([101, 202]);
 });
 
-test('sends a null root id for creation and an explicit empty orderIds list', () => {
+test('sends a null manufactureProduct id for creation and an explicit empty orderIds list', () => {
   expect(buildManufacturePayload({ productionOrder: { orderIds: [] } }))
-    .toMatchObject({ id: null, orderIds: [], materialOutbounds: [] });
+    .toMatchObject({ manufactureProduct: { id: null }, orderIds: [], materialOutbounds: [] });
 });
 
 test('supports legacy single-order records and keeps the selected id type', () => {
@@ -39,7 +39,8 @@ test('restores children from multiple parent orders using exact child identities
   expect(mapped.customerName).toBe('A, B');
   expect(mapped.orderDetails.map(detail => [detail.code, detail.salesOrderId])).toEqual([['CON-202', 22], ['CON-101', 11]]);
   const payload = buildManufacturePayload({ productionOrder: mapped, isEdit: true });
-  expect(payload.id).toBe(9);
+  expect(payload.manufactureProduct.id).toBe(9);
+  expect(payload).not.toHaveProperty('id');
   expect(payload.orderIds).toEqual([11, 22]);
   expect(payload.manufactureProduct.details.map(detail => detail.id)).toEqual([2, 1]);
 });
