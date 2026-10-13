@@ -5,6 +5,7 @@ import authRoles from '@/auth/authRoles';
 import {useTenantRoutes} from '@/features/TenantRoutes/Provider';
 import {ROUTES,validateConfig} from '@/features/TenantRoutes/model';
 import {saveConfig} from '@/features/TenantRoutes/service';
+import {applyDevRemoteOverride} from '@/features/TenantRoutes/devOverrides';
 import {loadRemoteFromUrl} from '@/utils/loadRemote';
 export default function CustomRoutesTab(){
  const {user,hasRole}=useGetMe();const admin=hasRole([...authRoles.admin,...authRoles.partner]);const {status,config,error,refresh}=useTenantRoutes();
@@ -17,7 +18,7 @@ export default function CustomRoutesTab(){
  const edit=(type,row)=>{setEditor({type,original:row?.id||row?.route});form.resetFields();form.setFieldsValue(row||{enabled:true,version:''});};
  const persist=async()=>{if(!admin)return;try{validateConfig(draft,user.bizId);setSaving(true);await saveConfig(user.bizId,draft);await refresh();message.success('Đã lưu cấu hình route');}catch(e){message.error(e.message);}finally{setSaving(false);}};
  const submit=values=>{if(!admin)return;try{let next;if(editor.type==='remote')next={...draft,remotes:[...draft.remotes.filter(r=>r.id!==editor.original),values]};else next={...draft,routes:[...draft.routes.filter(r=>r.route!==editor.original),values]};validateConfig(next,user.bizId);setDraft(next);setEditor(null);}catch(e){message.error(e.message);}};
- const check=async row=>{const remote=draft.remotes.find(r=>r.id===row.remoteId);setChecking(row.route);try{const loaded=await loadRemoteFromUrl({name:`remote_${encodeURIComponent(`${remote.scope}:${remote.remoteEntry}:${remote.version||''}`)}`,entry:remote.remoteEntry,scope:remote.scope,module:row.module,version:remote.version,force:true});if(!loaded?.default)throw new Error('Module thiếu export default');message.success('Tải module thành công. Cần kiểm tra thêm nghiệp vụ trên route.');}catch(e){message.error(`Không tải được module: ${e.message}`);}finally{setChecking(null);}};
+ const check=async row=>{setChecking(row.route);try{const remote=applyDevRemoteOverride(draft.remotes.find(r=>r.id===row.remoteId));const loaded=await loadRemoteFromUrl({name:`remote_${encodeURIComponent(`${remote.scope}:${remote.remoteEntry}:${remote.version||''}`)}`,entry:remote.remoteEntry,scope:remote.scope,module:row.module,version:remote.version,force:true});if(!loaded?.default)throw new Error('Module thiếu export default');message.success('Tải module thành công. Cần kiểm tra thêm nghiệp vụ trên route.');}catch(e){message.error(`Không tải được module: ${e.message}`);}finally{setChecking(null);}};
  const resetConfig=()=>{if(!admin||saving)return;Modal.confirm({title:'Xoá toàn bộ cấu hình route?',content:'Xoá các remote và mapping của doanh nghiệp này. Các màn hình sẽ dùng giao diện ERP mặc định.',okText:'Xoá cấu hình',okButtonProps:{danger:true},cancelText:'Huỷ',onOk:async()=>{setSaving(true);try{await saveConfig(user.bizId,{...config,remotes:[],routes:[]});setEditor(null);await refresh();message.success('Đã xoá cấu hình route');}catch(e){message.error(e.message);throw e;}finally{setSaving(false);}}});};
  return <Space direction="vertical" size={16} style={{width:'100%'}}>
   {!admin&&<Alert type="warning" message="Chỉ quản trị viên hoặc chủ doanh nghiệp được sửa cấu hình."/>}

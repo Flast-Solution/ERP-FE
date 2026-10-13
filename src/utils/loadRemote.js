@@ -1,3 +1,4 @@
+import { applyDevRemoteOverride } from '@/features/TenantRoutes/devOverrides'
 import {
   init,
   loadRemote as mfLoadRemote,
@@ -221,8 +222,11 @@ export async function loadRemote(
   remoteEntryVersion = ''
 ) {
   const load = async () => {
-    const entryVersion = String(remoteEntryVersion || '').trim()
-    const entry = `${remoteBaseUrl}/${remoteEntryComponentId}/remoteEntry.js${entryVersion ? `?v=${encodeURIComponent(entryVersion)}` : ''}`
+    let entryVersion = String(remoteEntryVersion || '').trim()
+    let entry = `${remoteBaseUrl}/${remoteEntryComponentId}/remoteEntry.js${entryVersion ? `?v=${encodeURIComponent(entryVersion)}` : ''}`
+    const effective = applyDevRemoteOverride({ id: componentId, scope: remoteEntryGlobalName, remoteEntry: entry, version: entryVersion })
+    entry = effective.remoteEntry
+    entryVersion = effective.version
     ensureRemoteRegistered(
       componentId,
       entry,
@@ -266,9 +270,10 @@ export async function loadRemoteFromUrl({
   if (!remoteName || !remoteEntry) throw new Error('Thiếu tên hoặc URL remoteEntry.')
 
   const load = async () => {
-    const entryUrl = version
-      ? `${remoteEntry}${remoteEntry.includes('?') ? '&' : '?'}v=${encodeURIComponent(version)}`
-      : remoteEntry
+    const effective = applyDevRemoteOverride({ id: remoteName, scope: scope || remoteName, remoteEntry, version })
+    const entryUrl = effective.version
+      ? `${effective.remoteEntry}${effective.remoteEntry.includes('?') ? '&' : '?'}v=${encodeURIComponent(effective.version)}`
+      : effective.remoteEntry
     ensureRemoteRegistered(remoteName, entryUrl, String(scope || remoteName).trim(), force)
     if (!loadedRemoteContainers.has(remoteName)) resetLegacyRemoteChunkScope()
     const mod = await mfLoadRemote(`${remoteName}/${exposedModule}`)
