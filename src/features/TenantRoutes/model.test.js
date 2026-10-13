@@ -5,3 +5,9 @@ test('disabled specific mapping overrides enabled wildcard',()=>{expect(resolveR
 test('rejects business mismatch, unsafe URLs, duplicate routes and orphan references',()=>{expect(()=>validateConfig(config,6)).toThrow();expect(()=>validateConfig({...config,remotes:[{...config.remotes[0],remoteEntry:'javascript:alert(1)'}]},5)).toThrow();expect(()=>validateConfig({...config,routes:[config.routes[0],config.routes[0]]},5)).toThrow();expect(()=>validateConfig({...config,remotes:[]},5)).toThrow();expect(validateConfig(config,5)).toBe(config);});
 
 test('exact disabled root wins when enabled wildcard appears first',()=>{expect(resolveRoute({...config,routes:[config.routes[0],{route:'/sale/order',enabled:false,remoteId:'one',module:'Root'}]},'/sale/order')).toBeNull();});
+
+test('sale/order uses the configured OrderOverview instead of the host default OrderList',()=>{
+ const mapped={...config,routes:[{route:'/sale/order',enabled:true,remoteId:'one',module:'OrderOverview'}]};
+ expect(resolveRoute(mapped,'/sale/order','OrderList').module).toBe('OrderOverview');
+ expect(resolveRoute(mapped,'/sale/order','Invoice').module).toBe('Invoice');
+});
