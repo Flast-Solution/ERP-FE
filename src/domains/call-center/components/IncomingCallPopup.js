@@ -6,7 +6,7 @@ import {
   CustomerHero,
   CustomerKpi,
   CustomerOpenItems,
-  CustomerTimeline,
+  CustomerCommercialRecords,
 } from './CustomerSummary';
 import { EmptyBox, OpenRow, SectionTitle, StatusTag } from '../styles/shared.styles';
 import {
@@ -19,7 +19,7 @@ import {
 const HANGUP_STYLE = { transform: 'rotate(135deg)' };
 
 /* Popup thông tin cơ bản của khách khi có cuộc gọi đến */
-const IncomingCallPopup = () => {
+const IncomingCallPopup = ({ringtone}) => {
   const call = useCallCenterStore(state => state.call);
   const answer = useCallCenterStore(state => state.answer);
   const reject = useCallCenterStore(state => state.reject);
@@ -43,6 +43,7 @@ const IncomingCallPopup = () => {
             </StatusTag>
           </div>
         )}
+        {ringtone?.blocked&&<button type="button" onClick={ringtone.enable} style={{marginTop:12,padding:'6px 12px',cursor:'pointer'}}>Bật chuông cuộc gọi</button>}
         <IncomingActions>
           <button type="button" className="reject" onClick={reject}>
             <PhoneOutlined style={HANGUP_STYLE} /> Từ chối
@@ -60,7 +61,7 @@ const IncomingCallPopup = () => {
             <CustomerHero customer={customer} />
             <CustomerKpi kpi={customer.kpi} />
             <CustomerOpenItems items={customer.openItems} />
-            <CustomerTimeline events={customer.timeline} limit={4} />
+            <CustomerCommercialRecords records={customer.commercialRecords} />
           </>
         )}
         {!isLookingUp && !customer && (

@@ -31,7 +31,7 @@ export function normalizeNotification(alert, group = {}) {
     recipientGroup: definition?.recipients || '',
     autoClose: rule.autoClose || definition?.autoClose || '',
     level: ({CRITICAL:'critical', URGENT:'critical', HIGH:'high', MEDIUM:'medium', LOW:'info', INFO:'info'})[String(alert.severity || definition?.severity || '').toUpperCase()] || 'info',
-    status: ({CLOSE:'resolved', CLOSED:'resolved', DONE:'resolved', RESOLVED:'resolved', DISMISSED:'ignored', IGNORED:'ignored', SNOOZED:'snoozed', IN_PROGRESS:'task', TASK_CREATED:'task'})[status] || (taskIds.length ? 'task' : 'pending'),
+    status: (date(alert.snoozedUntil)&&new Date(date(alert.snoozedUntil))>new Date()&&!['CLOSE','CLOSED','DONE','RESOLVED','IGNORED','DISMISSED'].includes(status))?'snoozed':({CLOSE:'resolved', CLOSED:'resolved', DONE:'resolved', RESOLVED:'resolved', DISMISSED:'ignored', IGNORED:'ignored', SNOOZED:'snoozed', IN_PROGRESS:'task', TASK_CREATED:'task'})[status] || (taskIds.length ? 'task' : 'pending'),
     entity: entity.name || '', entityData: {...entity, kind:entity.kind || definition?.entityKind},
     code: entity.code || (entity.id != null ? String(entity.id) : ''),
     category: alert.typeLabel || group.typeLabel || definition?.stage || '',
@@ -52,12 +52,28 @@ export function normalizeNotification(alert, group = {}) {
   };
 }
 
+const SUMMARY_BUCKETS = [
+  ['statusOpen', 'open'],
+  ['severityHight', 'high'],
+  ['severityHigh', 'high'],
+  ['following', 'watch'],
+  ['statusClose', 'closed'],
+];
+
 export function normalizeNotificationSummary(data) {
   const alerts = new Map();
-  // severityHight is the field name returned by the backend.
-  for (const group of [...(data?.severityHight ?? data?.severityHigh ?? []), ...(data?.statusClose ?? [])]) {
-    for (const alert of group.alerts || []) {
-      if (alert.id != null) alerts.set(String(alert.id), normalizeNotification(alert, group));
+  for (const [key, bucket] of SUMMARY_BUCKETS) {
+    for (const group of data?.[key] ?? []) {
+      for (const alert of group.alerts || []) {
+        if (alert.id == null) continue;
+        const id = String(alert.id);
+        const current = alerts.get(id);
+        if (current) {
+          if (!current.buckets.includes(bucket)) current.buckets.push(bucket);
+          continue;
+        }
+        alerts.set(id, { ...normalizeNotification(alert, group), buckets: [bucket] });
+      }
     }
   }
   return [...alerts.values()];
@@ -87,17 +103,30 @@ export async function createAlertTask(alert, task) {
     task:{title:task.title.trim(),ownerId:String(task.ownerId),dueAt:task.dueAt,priority:String(task.priority || 'HIGH').toUpperCase(),description:task.description || ''},
   }));
 }
-export async function notificationAction(alert, action, reason) {
+export async function notificationAction(alert, action, reason, snoozedUntil) {
+  let until;
+  if(action==='REOPEN'){
+    const selected=new Date(snoozedUntil);
+    if(!Number.isFinite(selected.getTime())||selected<=new Date())throw new Error('Vui lòng chọn thời gian nhắc lại trong tương lai.');
+    const pad=value=>String(value).padStart(2,'0');
+    until=`${selected.getFullYear()}-${pad(selected.getMonth()+1)}-${pad(selected.getDate())} ${pad(selected.getHours())}:${pad(selected.getMinutes())}:${pad(selected.getSeconds())}`;
+  }
   return unwrapAction(await RequestUtils.Post('/notification/action', {
     alertId:alert.id, expectedVersion:versionOf(alert), action,
-    ...(reason?.trim() ? {reason:reason.trim()} : {}),
+    ...(action==='IGNORE'&&reason?.trim() ? {reason:reason.trim()} : {}),
+    ...(until?{snoozedUntil:until}:{}),
   }));
 }
 export async function fetchAlertDetails(alertId) {
   const data=unwrapAction(await RequestUtils.Get(`/erp/notification/alert/${encodeURIComponent(alertId)}`));
   const rows=Array.isArray(data)?data:data?.content ?? data?.embedded ?? data?.tasks;
   if (!Array.isArray(rows)) throw new Error('Response danh sách công việc cảnh báo không hợp lệ.');
-  const tasks=rows.map(task=>({...task,alertId:task.alertId ?? alertId,_remote:true,title:task.title ?? task.name ?? '',owner:task.ownerName ?? task.owner?.fullName ?? String(task.ownerId ?? ''),entity:typeof task.entity==='object'?(task.entity?.name || ''):(task.entity || ''),priority:String(task.priority || 'HIGH').toLowerCase(),status:['DONE','COMPLETED','CLOSED'].includes(String(task.status).toUpperCase())?'done':'pending'}));
+  let users=[];
+  if(rows.length){
+    try { const response=await RequestUtils.Get('/user/list-name-id');const data=response?.data ?? response;users=Array.isArray(data)?data:data?.embedded ?? data?.content ?? []; } catch { /* Keep IDs visible if the user directory is unavailable. */ }
+  }
+  const userNames=new Map((Array.isArray(users)?users:[]).map(user=>[String(user.id ?? user.userId),user.fullName || user.name || user.ssoId]));
+  const tasks=rows.map(task=>({...task,alertId:task.alertId ?? alertId,_remote:true,title:task.title ?? task.name ?? '',owner:task.ownerName || task.owner?.fullName || userNames.get(String(task.userId ?? task.ownerId)) || (task.userId != null ? `Người dùng #${task.userId}` : String(task.ownerId ?? '')),entity:typeof task.entity==='object'?(task.entity?.name || ''):(task.entity || ''),dueAt:date(task.end ?? task.dueAt),startAt:date(task.start),assignedAt:date(task.createdDate),assignedBy:task.createdByName || userNames.get(String(task.createdBy)) || (task.createdBy != null ? `Người dùng #${task.createdBy}` : ''),priority:String(task.priority || 'HIGH').toLowerCase(),status:['DONE','COMPLETED','CLOSED'].includes(String(task.status).toUpperCase())?'done':'pending'}));
   return {alert:data?.alert ? normalizeNotification(data.alert):null,tasks};
 }
 

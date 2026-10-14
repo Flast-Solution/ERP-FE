@@ -147,7 +147,7 @@ const Dialer = () => {
       </CallButton>
 
       {process.env.NODE_ENV === 'development' && (
-        <DevLink type="button" onClick={() => receiveIncoming('0912345678')}>
+        <DevLink type="button" onClick={() => receiveIncoming('0374148897')}>
           Giả lập cuộc gọi đến
         </DevLink>
       )}

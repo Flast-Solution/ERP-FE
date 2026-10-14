@@ -84,6 +84,7 @@ export const KpiGrid = styled.div`
     font: 700 16px/21px ${font};
     color: ${color.ink};
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
   .warn b {
     color: ${color.highFg};

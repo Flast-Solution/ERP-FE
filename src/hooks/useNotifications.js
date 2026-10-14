@@ -8,6 +8,7 @@ export const useNotifications = () => {
  const key=`${user?.bizId ?? 'guest'}:${user?.id ?? user?.userId ?? 'guest'}`;
  const activeKey=useRef(key); activeKey.current=key;
  const inFlight=useRef(null);
+ const detailRequests=useRef(new Map());
  const [store,setStore]=useState({key,state:{alerts:[],tasks:[]}});
  const [loading,setLoading]=useState(false);
  const [error,setError]=useState(null);
@@ -44,24 +45,31 @@ export const useNotifications = () => {
  useEffect(()=>{const tick=()=>setStore(previous=>previous.key===key?{key,state:awaken(previous.state)}:previous);const timer=setInterval(tick,15000);return()=>clearInterval(timer);},[key]);
  const update=fn=>setStore(previous=>({key,state:fn(previous.key===key?previous.state:{alerts:[],tasks:[]})}));
  const loadTasks=useCallback(async id=>{
-  const ids=id!=null?[id]:stateRef.current.alerts.map(a=>a.id);
-  const results=await Promise.allSettled(ids.map(alertId=>fetchAlertDetails(alertId)));
+  if(id==null)return;
+  const ids=[id];
+  const results=await Promise.allSettled(ids.map(alertId=>{
+   const requestKey=`${key}:${alertId}`;
+   if(detailRequests.current.has(requestKey))return detailRequests.current.get(requestKey);
+   const request=fetchAlertDetails(alertId).finally(()=>{if(detailRequests.current.get(requestKey)===request)detailRequests.current.delete(requestKey);});
+   detailRequests.current.set(requestKey,request);
+   return request;
+  }));
   if(activeKey.current!==key)return;
-  setStore(previous=>previous.key!==key?previous:{key,state:{...previous.state,alerts:previous.state.alerts.map(alert=>{const result=results.find((result,index)=>String(ids[index])===String(alert.id)&&result.status==='fulfilled'&&result.value.alert);return result?{...result.value.alert,read:alert.read}:alert;}),tasks:results.reduce((tasks,result,index)=>result.status==='fulfilled'?[...tasks.filter(t=>String(t.alertId)!==String(ids[index])),...result.value.tasks]:tasks,previous.state.tasks)}});
+  setStore(previous=>previous.key!==key?previous:{key,state:{...previous.state,alerts:previous.state.alerts.map(alert=>{const result=results.find((result,index)=>String(ids[index])===String(alert.id)&&result.status==='fulfilled'&&result.value.alert);return result?{...result.value.alert,read:alert.read,buckets:alert.buckets}:alert;}),tasks:results.reduce((tasks,result,index)=>result.status==='fulfilled'?[...tasks.filter(t=>String(t.alertId)!==String(ids[index])),...result.value.tasks]:tasks,previous.state.tasks)}});
   const failure=results.find(result=>result.status==='rejected');if(failure)throw failure.reason;
  },[key]);
  const act=async(id,action,payload={})=>{
   if(actionPending.current)throw new Error('Đang thực hiện thao tác, vui lòng đợi.');
   const alert=stateRef.current.alerts.find(a=>a.id===id);if(!alert)throw new Error('Không tìm thấy cảnh báo.');
-  if(!['assign','ignore','approve','undo'].includes(action)){
+  if(!['assign','ignore','snooze','approve','undo'].includes(action)){
    applyAction(stateRef.current,id,action,payload);update(current=>applyAction(current,id,action,payload));return;
   }
   actionPending.current=true;setActing(true);
   try {
-   const data=action==='assign'?await createAlertTask(alert,payload):await notificationAction(alert,{ignore:'IGNORE',approve:'APPROVE',undo:'UNDO'}[action],payload.reason);
+   const data=action==='assign'?await createAlertTask(alert,payload):await notificationAction(alert,{ignore:'IGNORE',snooze:'REOPEN',approve:'APPROVE',undo:'UNDO'}[action],payload.reason,...(action==='snooze'?[payload.until]:[]));
    if(activeKey.current!==key)return;
    const saved=data?.alert ?? (data?.id===id&&data?.status?data:null);
-   if(saved)setStore(previous=>previous.key!==key?previous:{key,state:{...previous.state,alerts:previous.state.alerts.map(item=>item.id===id?{...normalizeNotification(saved),read:item.read}:item)}});
+   if(saved)setStore(previous=>previous.key!==key?previous:{key,state:{...previous.state,alerts:previous.state.alerts.map(item=>item.id===id?{...normalizeNotification(saved),read:item.read,buckets:item.buckets}:item)}});
    await refresh();
    if(action==='assign')try{await loadTasks(id);}catch(failure){setError(`Đã tạo việc, nhưng chưa tải được danh sách: ${failure.message}`);}
    return data;

@@ -31,4 +31,10 @@ export function applyAction(state,id,action,payload={},now=new Date()) {
 export function awaken(state,now=new Date()) {
  let changed=false;const alerts=state.alerts.map(a=>{if(a.status!=='snoozed'||new Date(a.snoozedUntil)>now)return a;changed=true;return {...a,status:'pending',read:false,history:[...a.history,{text:'Đến giờ nhắc lại',at:now.toISOString()}]};});return changed?{...state,alerts}:state;
 }
-export const groups = alerts => ({ urgent:alerts.filter(urgent),high:alerts.filter(a=>!isClosed(a)&&a.level==='high'),watch:alerts.filter(a=>!isClosed(a)),closed:alerts.filter(isClosed) });
+const inBucket = (alert, bucket, fallback) => Array.isArray(alert.buckets) ? alert.buckets.includes(bucket) : fallback(alert);
+export const groups = alerts => ({
+ urgent: alerts.filter(a => inBucket(a, 'open', urgent)),
+ high: alerts.filter(a => inBucket(a, 'high', item => !isClosed(item) && item.level === 'high')),
+ watch: alerts.filter(a => inBucket(a, 'watch', item => !isClosed(item))),
+ closed: alerts.filter(a => inBucket(a, 'closed', isClosed)),
+});

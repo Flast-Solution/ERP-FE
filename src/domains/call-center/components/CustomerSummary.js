@@ -64,10 +64,10 @@ export const CustomerHero = ({ customer, size = 48 }) => (
 
 export const CustomerKpi = ({ kpi = {} }) => (
   <KpiGrid>
-    <div><b>{kpi.totalPurchase ?? '—'}</b>Tổng mua</div>
+    <div><b title={kpi.totalPurchaseFull}>{kpi.totalPurchase ?? '—'}</b>Tổng mua</div>
     <div className="warn"><b>{kpi.debt ?? '—'}</b>Còn nợ</div>
     <div><b>{kpi.orderCount ?? '—'}</b>Đơn hàng</div>
-    <div><b>{kpi.lastContact ?? '—'}</b>Liên hệ cuối</div>
+    <div><b title={kpi.lastContactHint}>{kpi.lastContact ?? '—'}</b>Tương tác cuối</div>
   </KpiGrid>
 );
 
@@ -118,4 +118,22 @@ export const CustomerTimeline = ({ events = [], limit = 4 }) => (
       </div>
     ))}
   </Timeline>
+);
+
+export const CustomerCommercialRecords = ({records=[]}) => (
+ <div style={{display:'flex',flexDirection:'column',gap:8}}>
+  <SectionTitle>Cơ hội và Đơn hàng <span>{records.length} hồ sơ</span></SectionTitle>
+  {records.length===0?<div style={{color:'#64748b'}}>Chưa có cơ hội hoặc đơn hàng.</div>:records.slice(0,5).map(record=>(
+   <div key={`${record.kind}:${record.id}`} style={{border:'1px solid #e2e8f0',borderRadius:10,padding:'10px 12px'}}>
+    <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'baseline'}}>
+     <b>{record.kind==='order'?'Đơn hàng':'Cơ hội'} · {record.code}</b>
+     <b style={{whiteSpace:'nowrap'}}>{record.amount}</b>
+    </div>
+    <div title={`${record.products||'Chưa có thông tin sản phẩm'}${record.quantities?` · SL: ${record.quantities}`:''}`} style={{marginTop:5,color:'#475569',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',minWidth:0}}>{record.products||'Chưa có thông tin sản phẩm'}{record.quantities&&<span> · SL: {record.quantities}</span>}</div>
+    <div style={{display:'flex',justifyContent:'space-between',gap:8,marginTop:5,fontSize:11,color:'#64748b'}}>
+     <span>{[record.status,record.payment].filter(Boolean).join(' · ')}</span><span>Cập nhật {record.date}</span>
+    </div>
+   </div>
+  ))}
+ </div>
 );

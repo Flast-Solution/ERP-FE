@@ -1,3 +1,4 @@
+import useIncomingRingtone from '../useIncomingRingtone';
 import { createPortal } from 'react-dom';
 import { useCallCenterStore } from '../store/useCallCenterStore';
 import useGetMe from '@/hooks/useGetMe';
@@ -13,9 +14,10 @@ const CallCenterLayer = () => {
   const { user } = useGetMe();
   useSoftphoneConnection(user?.sipExt || "acme_1002");
   useCallCenterEvents();
+  const ringtone=useIncomingRingtone(status);
 
   if (status === CALL_STATUS.INCOMING) {
-    return createPortal(<IncomingCallPopup />, document.body);
+    return createPortal(<IncomingCallPopup ringtone={ringtone} />, document.body);
   }
   if (status === CALL_STATUS.IN_CALL) {
     return createPortal(<InCallDrawer />, document.body);
