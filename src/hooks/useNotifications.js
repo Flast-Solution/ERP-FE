@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useGetMe from './useGetMe';
 import { applyAction, awaken } from '@/features/Alerts/model';
-import { fetchNotifications, createAlertTask, notificationAction, fetchAlertTasks, normalizeNotification } from '@/features/Alerts/service';
+import { fetchNotifications, createAlertTask, notificationAction, fetchAlertDetails, normalizeNotification } from '@/features/Alerts/service';
 
 export const useNotifications = () => {
  const {user}=useGetMe();
@@ -45,9 +45,9 @@ export const useNotifications = () => {
  const update=fn=>setStore(previous=>({key,state:fn(previous.key===key?previous.state:{alerts:[],tasks:[]})}));
  const loadTasks=useCallback(async id=>{
   const ids=id!=null?[id]:stateRef.current.alerts.map(a=>a.id);
-  const results=await Promise.allSettled(ids.map(alertId=>fetchAlertTasks(alertId)));
+  const results=await Promise.allSettled(ids.map(alertId=>fetchAlertDetails(alertId)));
   if(activeKey.current!==key)return;
-  setStore(previous=>previous.key!==key?previous:{key,state:{...previous.state,tasks:results.reduce((tasks,result,index)=>result.status==='fulfilled'?[...tasks.filter(t=>String(t.alertId)!==String(ids[index])),...result.value]:tasks,previous.state.tasks)}});
+  setStore(previous=>previous.key!==key?previous:{key,state:{...previous.state,alerts:previous.state.alerts.map(alert=>{const result=results.find((result,index)=>String(ids[index])===String(alert.id)&&result.status==='fulfilled'&&result.value.alert);return result?{...result.value.alert,read:alert.read}:alert;}),tasks:results.reduce((tasks,result,index)=>result.status==='fulfilled'?[...tasks.filter(t=>String(t.alertId)!==String(ids[index])),...result.value.tasks]:tasks,previous.state.tasks)}});
   const failure=results.find(result=>result.status==='rejected');if(failure)throw failure.reason;
  },[key]);
  const act=async(id,action,payload={})=>{

@@ -93,9 +93,14 @@ export async function notificationAction(alert, action, reason) {
     ...(reason?.trim() ? {reason:reason.trim()} : {}),
   }));
 }
-export async function fetchAlertTasks(alertId) {
-  const data=unwrapAction(await RequestUtils.Get(`/alert-task/${encodeURIComponent(alertId)}`));
+export async function fetchAlertDetails(alertId) {
+  const data=unwrapAction(await RequestUtils.Get(`/erp/notification/alert/${encodeURIComponent(alertId)}`));
   const rows=Array.isArray(data)?data:data?.content ?? data?.embedded ?? data?.tasks;
   if (!Array.isArray(rows)) throw new Error('Response danh sách công việc cảnh báo không hợp lệ.');
-  return rows.map(task=>({...task,alertId:task.alertId ?? alertId,_remote:true,title:task.title ?? task.name ?? '',owner:task.ownerName ?? task.owner?.fullName ?? String(task.ownerId ?? ''),entity:typeof task.entity==='object'?(task.entity?.name || ''):(task.entity || ''),priority:String(task.priority || 'HIGH').toLowerCase(),status:['DONE','COMPLETED','CLOSED'].includes(String(task.status).toUpperCase())?'done':'pending'}));
+  const tasks=rows.map(task=>({...task,alertId:task.alertId ?? alertId,_remote:true,title:task.title ?? task.name ?? '',owner:task.ownerName ?? task.owner?.fullName ?? String(task.ownerId ?? ''),entity:typeof task.entity==='object'?(task.entity?.name || ''):(task.entity || ''),priority:String(task.priority || 'HIGH').toLowerCase(),status:['DONE','COMPLETED','CLOSED'].includes(String(task.status).toUpperCase())?'done':'pending'}));
+  return {alert:data?.alert ? normalizeNotification(data.alert):null,tasks};
+}
+
+export async function fetchAlertTasks(alertId) {
+  return (await fetchAlertDetails(alertId)).tasks;
 }

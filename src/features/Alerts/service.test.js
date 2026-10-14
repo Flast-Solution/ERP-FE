@@ -1,4 +1,4 @@
-import { fetchNotifications, normalizeNotificationSummary, NOTIFICATION_SUMMARY_API, createAlertTask, notificationAction, fetchAlertTasks } from './service';
+import { fetchNotifications, normalizeNotificationSummary, NOTIFICATION_SUMMARY_API, createAlertTask, notificationAction, fetchAlertTasks, fetchAlertDetails } from './service';
 import { RequestUtils } from '@flast-erp/core/utils';
 import { groups } from './model';
 jest.mock('@flast-erp/core/utils',()=>({RequestUtils:{Get:jest.fn(),Post:jest.fn()}}));
@@ -37,7 +37,13 @@ test('uses supplied task and action endpoints with optional reason and live vers
 test('loads real tasks by alert ID and rejects malformed responses',async()=>{
  RequestUtils.Get.mockResolvedValueOnce({success:true,data:[{id:501,title:'Call',ownerId:2,status:'OPEN',entity:{name:'Lead'}}]});
  await expect(fetchAlertTasks('a')).resolves.toEqual([expect.objectContaining({id:501,alertId:'a',_remote:true,entity:'Lead',status:'pending'})]);
- expect(RequestUtils.Get).toHaveBeenCalledWith('/alert-task/a');
+ expect(RequestUtils.Get).toHaveBeenCalledWith('/erp/notification/alert/a');
  RequestUtils.Get.mockResolvedValueOnce({success:true,data:{}});
  await expect(fetchAlertTasks('a')).rejects.toThrow('không hợp lệ');
+});
+
+test('reads alert details and tasks from the new notification endpoint',async()=>{
+ RequestUtils.Get.mockResolvedValueOnce({errorCode:200,success:true,data:{alert:{id:'a',version:79,severity:'HIGH',status:'OPEN',entity:{id:75,kind:'LEAD',name:'Trần văn hùng'},rule:{name:'Chưa liên hệ',conditions:[]}},tasks:[]}});
+ await expect(fetchAlertDetails('a')).resolves.toMatchObject({alert:{id:'a',version:79,entity:'Trần văn hùng',level:'high'},tasks:[]});
+ expect(RequestUtils.Get).toHaveBeenLastCalledWith('/erp/notification/alert/a');
 });
