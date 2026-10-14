@@ -1,10 +1,29 @@
 import { GATEWAY } from '@/configs';
-import { pickBy, identity } from 'lodash'
 import { notification } from 'antd';
 import i18next from 'i18next';
 
-const CUSTOMERS_TAB_KEYS = {
-  individuals: 'individuals'
+const originalTitle = document.title
+let titleTimer      = null
+let titleInterval   = null
+
+export function bumpTitle(displayName) {
+  if (!displayName) {
+    return
+  }
+  clearTimeout(titleTimer)
+  clearInterval(titleInterval)
+
+  let visible = true
+  titleInterval = setInterval(() => {
+    document.title = visible ? `💬 ${displayName}` : '🔔 Tin nhắn mới'
+    visible = !visible
+  }, 1000)
+
+  titleTimer = setTimeout(() => {
+    clearInterval(titleInterval)
+    titleInterval = null
+    document.title = originalTitle
+  }, 10000)
 };
 
 export const showNotifyError = (description) => {
@@ -12,32 +31,6 @@ export const showNotifyError = (description) => {
     message: i18next.t('error.title'),
     description: i18next.t(description),
   });
-};
-
-export const getQueryParamsFromUrl = (url) => {
-  if(!url) return {};
-  var query = url.substr(1);
-  var result = {};
-  query.split("&").forEach(function(part) {
-      var item = part.split("=");
-      if(item[1]) {
-        result[item[0]] = decodeURIComponent(item[1]);
-      }
-  });
-  return result;
-};
-
-export const getTabCustomer = (pathname) => {
-    if (!pathname?.includes('/customers')) return null;
-    if (pathname === '/customers') return CUSTOMERS_TAB_KEYS.individuals;
-    return pathname?.split('/')?.[2];
-};
-
-export const convertObjToSearchStr = (params) => {
-  /* removes undefined, "", 0, null, ... */
-  const newParams = pickBy(params, identity);
-  delete newParams.resource;
-  return new URLSearchParams(newParams).toString();
 };
 
 export const onSearch = ( data, inputValue ) =>
@@ -57,9 +50,4 @@ export const formatterInputNumber = (value) =>
 
 export const parserInputNumber = (value) => {
   return value ? value.replace(/\$\s?|(\.*)/g, '').replace(/(,{1})/g, '.') : '';
-};
-
-export const getATagHref = (url) => {
-  if (!url) return '';
-  return `https://${url.replace(/^(https:\/\/)|(http:\/\/)/g, '')}`;
 };
