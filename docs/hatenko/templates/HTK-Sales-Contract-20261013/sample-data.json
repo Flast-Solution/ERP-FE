@@ -1,0 +1,15 @@
+{
+  "customerOrder": {
+    "contractRows": [
+      {
+        "id": "1",
+        "description": "Item: Vải dệt thoi EF3329.03.25\nArticle: Woven fabric\nComposition: 100% Polyester\nWidth: 62 inch\nWeight: 175 g/m2",
+        "color": "DARK BROWN",
+        "quantity": 1000,
+        "price": 1.48,
+        "amount": 1480
+      }
+    ],
+    "contractExtraRows": []
+  }
+}

@@ -1,9 +1,9 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useNotifications } from './useNotifications';
-import { fetchNotifications, notificationAction, createAlertTask, fetchAlertTasks } from '@/features/Alerts/service';
+import { fetchNotifications, notificationAction, createAlertTask, fetchAlertDetails } from '@/features/Alerts/service';
 jest.mock('./useGetMe',()=>({__esModule:true,default:()=>({user:mockUser})}));
-jest.mock('@/features/Alerts/service',()=>({fetchNotifications:jest.fn(),notificationAction:jest.fn(),createAlertTask:jest.fn(),fetchAlertTasks:jest.fn(),normalizeNotification:value=>value}));
+jest.mock('@/features/Alerts/service',()=>({fetchNotifications:jest.fn(),notificationAction:jest.fn(),createAlertTask:jest.fn(),fetchAlertDetails:jest.fn(),normalizeNotification:value=>value}));
 let mockUser, root, state;
 function Harness(){state=useNotifications();return null;}
 beforeEach(()=>{global.IS_REACT_ACT_ENVIRONMENT=true;jest.resetAllMocks();mockUser={bizId:1645,id:2};root=createRoot(document.createElement('div'));});
@@ -41,9 +41,9 @@ test('ignore failure does not change state; undo uses the refreshed version',asy
  expect(notificationAction).toHaveBeenLastCalledWith(expect.objectContaining({version:4}),'UNDO',undefined);
 });
 test('creates real task and reloads alert tasks after saving',async()=>{
- fetchNotifications.mockResolvedValue([{id:'a',version:3}]);createAlertTask.mockResolvedValue({});fetchAlertTasks.mockResolvedValue([{id:501,alertId:'a',_remote:true}]);
+ fetchNotifications.mockResolvedValue([{id:'a',version:3}]);createAlertTask.mockResolvedValue({});fetchAlertDetails.mockResolvedValue({tasks:[{id:501,alertId:'a',_remote:true}],alert:null});
  await act(async()=>root.render(<Harness/>));
  await act(async()=>state.act('a','assign',{title:'Liên hệ',ownerId:'2'}));
  expect(createAlertTask).toHaveBeenCalledWith(expect.objectContaining({id:'a',version:3}),{title:'Liên hệ',ownerId:'2'});
- expect(fetchAlertTasks).toHaveBeenCalledWith('a');expect(state.tasks[0].id).toBe(501);
+ expect(fetchAlertDetails).toHaveBeenCalledWith('a');expect(state.tasks[0].id).toBe(501);
 });
