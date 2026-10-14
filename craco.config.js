@@ -44,11 +44,6 @@ module.exports = {
       return config
     },
   },
-
-  // devServer: {
-  //   host: "127.0.0.1",
-  //   port: 3000
-  // }
   devServer: {
     host: "127.0.0.1",
     port: 3000,
@@ -58,8 +53,8 @@ module.exports = {
         changeOrigin: true,
         secure: false,
         cookieDomainRewrite: "127.0.0.1",
-        cookiePathRewrite: "/",
-      },
-    },
+        cookiePathRewrite: "/"
+      }
+    }
   },
 }

@@ -35,7 +35,6 @@ import {
   PhoneOutlined,
   TeamOutlined,
   ThunderboltOutlined,
-  UnorderedListOutlined,
   UserOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
@@ -102,7 +101,6 @@ export default function NotificationDropdown({
   acting = false,
   onLoadTasks,
   onUndoIgnore,
-  onCompleteTask,
   onReset,
   onRefresh,
   loading = false,
@@ -114,8 +112,7 @@ export default function NotificationDropdown({
   const [mode, setMode] = useState('detail');
   const [popover, setPopover] = useState(null);
   const [center, setCenter] = useState(false);
-  const [taskOpen, setTaskOpen] = useState(false);
-  const [selectedTask, setSelectedTask] = useState(null);
+  const [tasksLoadingId, setTasksLoadingId] = useState(null);
   const [query, setQuery] = useState('');
   const [reason, setReason] = useState('');
   const [other, setOther] = useState('');
@@ -154,7 +151,10 @@ export default function NotificationDropdown({
     setRecording(false);
     setProcessing(false);
     onMarkRead?.(item);
-    onLoadTasks?.(item.id)?.catch(error => message.error(error.message));
+    setTasksLoadingId(item.id);
+    Promise.resolve(onLoadTasks?.(item.id))
+      .catch(error => message.error(error.message))
+      .finally(() => setTasksLoadingId(current => current === item.id ? null : current));
     setSelectedId(item.id);
     setOpen(false);
   };
@@ -263,20 +263,7 @@ export default function NotificationDropdown({
             </span>
           )}
           <Status alert={item} />
-          {item.status === 'task' && (
-            <Button
-              size="small"
-              type="link"
-              onClick={e => {
-                e.stopPropagation();
-                setSelectedTask(tasks.find(t => t.alertId === item.id && t.status === 'pending')?.id);
-                setTaskOpen(true);
-                setOpen(false);
-              }}
-            >
-              Mở việc
-            </Button>
-          )}
+
         </div>
       </div>
       {!item.read && <span className="alert-dot" aria-label="Chưa xem" />}
@@ -350,7 +337,7 @@ export default function NotificationDropdown({
         {list.length ? (
           <>
             <div className="alert-group">
-              {filter === 'urgent' ? 'CẦN XỬ LÝ NGAY' : FILTERS.find(([key]) => key === filter)[1].toUpperCase()}
+              {FILTERS.find(([key]) => key === filter)[1].toUpperCase()}
             </div>
             {list.map(row)}
           </>
@@ -488,20 +475,6 @@ export default function NotificationDropdown({
           </Badge>
         </button>
       </Dropdown>
-      <button
-        type="button"
-        className="alert-trigger-task"
-        aria-label="Việc từ cảnh báo"
-        onClick={() => {
-          setTaskOpen(true);
-          setSelectedTask(null);
-          onLoadTasks?.()?.catch(error => message.error(error.message));
-        }}
-      >
-        <Badge count={tasks.filter(t => t.status === 'pending').length} size="small" color="#b54708">
-          <UnorderedListOutlined />
-        </Badge>
-      </button>
       <Drawer
         title={(
           <span>
@@ -546,6 +519,34 @@ export default function NotificationDropdown({
                 </div>
               ))}
             </div>
+            <section className="alert-section">
+              <h4>LỊCH SỬ GIAO VIỆC</h4>
+              {tasksLoadingId === a.id ? <Spin size="small" /> : (
+                tasks.filter(task => String(task.alertId) === String(a.id)).length ?
+                  tasks.filter(task => String(task.alertId) === String(a.id)).map(task => (
+                    <div key={task.id} className="alert-section">
+                      <strong>{task.title}</strong>
+                      {task.description && <p>{task.description}</p>}
+                      <div className="alert-task-facts">
+                        {[
+                          ['Phụ trách', task.owner || 'Chưa có thông tin'],
+                          ['Người giao', task.assignedBy],
+                          ['Ngày giao', task.assignedAt && format(task.assignedAt)],
+                          ['Bắt đầu', task.startAt && format(task.startAt)],
+                          ['Hạn', format(task.dueAt)],
+                          ['Ưu tiên', ({high:'Cao',critical:'Khẩn cấp',medium:'Trung bình',low:'Thấp',info:'Thấp'})[task.priority] || task.priority],
+                          ['Địa điểm', task.location],
+                        ].filter(([,value]) => value).map(([label,value]) => (
+                          <div key={label}><small>{label}</small><div>{value}</div></div>
+                        ))}
+                      </div>
+                      <Tag color={task.status === 'done' ? 'green' : 'blue'}>
+                        {task.status === 'done' ? 'Hoàn thành' : 'Đang mở'}
+                      </Tag>
+                    </div>
+                  )) : <p>Chưa có lịch sử giao việc</p>
+              )}
+            </section>
             {mode === 'assign' ? (
               <div className="alert-assignment">
                 <h3>Giao việc cho ai đó</h3>
@@ -826,44 +827,7 @@ export default function NotificationDropdown({
         {tabs}
         {list.length ? list.map(row) : <Empty description="Không có cảnh báo" />}
       </Drawer>
-      <Drawer title="Việc từ cảnh báo" width={520} open={taskOpen} onClose={() => setTaskOpen(false)}>
-        {(selectedTask ? tasks.filter(t => t.id === selectedTask) : tasks).map(task => (
-          <div key={task.id} className="alert-section">
-            <h3>{task.title}</h3>
-            <p>{task.entity} · {task.owner}</p>
-            <p>Hạn: {format(task.dueAt)}</p>
-            <Tag color={task.status === 'done' ? 'green' : 'blue'}>
-              {task.status === 'done' ? 'Hoàn thành' : 'Đang mở'}
-            </Tag>
-            <Space>
-              <Button
-                onClick={() => {
-                  const alert = notifications.find(n => n.id === task.alertId);
-                  if (alert) {
-                    setTaskOpen(false);
-                    select(alert);
-                  }
-                }}
-              >
-                Mở cảnh báo
-              </Button>
-              {task.status === 'pending' && !task._remote && (
-                <Button
-                  type="primary"
-                  icon={<CheckCircleOutlined />}
-                  onClick={() => {
-                    onCompleteTask?.(task.id);
-                    message.success('Việc hoàn thành');
-                  }}
-                >
-                  Hoàn thành
-                </Button>
-              )}
-            </Space>
-          </div>
-        ))}
-        {!tasks.length && <Empty description="Chưa có việc" />}
-      </Drawer>
+
     </>
   );
 }

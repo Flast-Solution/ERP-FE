@@ -33,6 +33,7 @@ import UserInfo from './UserInfo';
 import NotificationDropdown from './NotificationDropdown';
 import { useNavigate } from "react-router-dom";
 import { useNotifications } from '@/hooks/useNotifications';
+import CallCenter from '@/domains/call-center';
 
 const Header = () => {
 
@@ -76,6 +77,7 @@ const Header = () => {
           icon={<PlusOutlined />}
           type='primary'
         />
+        <CallCenter />
         <NotificationDropdown
           notifications={notifications}
           onMarkRead={markRead}

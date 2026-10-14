@@ -47,3 +47,14 @@ test('creates real task and reloads alert tasks after saving',async()=>{
  expect(createAlertTask).toHaveBeenCalledWith(expect.objectContaining({id:'a',version:3}),{title:'Liên hệ',ownerId:'2'});
  expect(fetchAlertDetails).toHaveBeenCalledWith('a');expect(state.tasks[0].id).toBe(501);
 });
+
+test('loads tasks only for the opened alert and shares simultaneous detail requests',async()=>{
+ fetchNotifications.mockResolvedValue([{id:'empty',status:'pending',taskIds:[]},{id:'task',status:'task',taskIds:[501]}]);
+ let resolveDetails;fetchAlertDetails.mockImplementation(()=>new Promise(resolve=>{resolveDetails=resolve;}));
+ await act(async()=>root.render(<Harness/>));
+ await act(async()=>state.loadTasks());expect(fetchAlertDetails).not.toHaveBeenCalled();
+ let first,second;act(()=>{first=state.loadTasks('task');second=state.loadTasks('task');});
+ expect(fetchAlertDetails).toHaveBeenCalledTimes(1);expect(fetchAlertDetails).toHaveBeenCalledWith('task');
+ await act(async()=>{resolveDetails({alert:null,tasks:[{id:501,alertId:'task'}]});await Promise.all([first,second]);});
+ expect(state.tasks).toHaveLength(1);
+});
