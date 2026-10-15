@@ -62,6 +62,8 @@ import { useTranslation } from 'react-i18next';
 import { Link } from "react-router-dom";
 import SideBarStyles from './styles';
 import useGetMe from '@/hooks/useGetMe';
+import { useTenantRoutes } from '@/features/TenantRoutes/Provider';
+import { applyTenantMenuOrder } from './menuOrder';
 import { resolveUploadUrl } from '@/containers/PreviewModal/uploadUtils';
 import {
   BUSINESS_UPDATED_EVENT,
@@ -102,6 +104,7 @@ function SideBar() {
   const { t } = useTranslation();
   const { isCollapseSidebar: collapsed, toggleCollapse } = useCollapseSidebar();
   const { user } = useGetMe();
+  const { config: tenantConfig } = useTenantRoutes();
   const [ businessLogo, setBusinessLogo ] = useState('');
   const businessLogoObjectUrlRef = useRef('');
   const businessLogoRequestRef = useRef(0);
@@ -297,7 +300,7 @@ function SideBar() {
         </div>
         <Menu
           mode="inline"
-          items={items}
+          items={applyTenantMenuOrder(items, tenantConfig)}
         />
       </Sider>
     </SideBarStyles>
