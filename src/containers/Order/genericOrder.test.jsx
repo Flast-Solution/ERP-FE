@@ -85,3 +85,25 @@ test('opens SKU selection through the current drawer and keeps payment/invoice d
   await act(async () => click('In hóa đơn'))
   expect(InAppEvent.emit).toHaveBeenLastCalledWith('#modal', expect.objectContaining({ hash: '#order.invoice', data: expect.objectContaining({ customer: expect.objectContaining({ id: 5 }) }) }))
 })
+
+test('passes every lead product to the drawer and persists additional line metadata', async () => {
+  RequestUtils.Get.mockResolvedValue({errorCode:200,data:{customer:{id:5},lead:{productIds:[7,8],productNames:['Vải','Hộp']}}})
+  RequestUtils.Post.mockResolvedValue({errorCode:200,data:{id:12}})
+  await act(async()=>root.render(<GenericOrder dataId={75}/>))
+  const picker=InAppEvent.emit.mock.calls.find(([,event])=>event.hash==='sku.add')[1]
+  expect(picker.data.leadProducts).toEqual([{id:7,name:'Vải'},{id:8,name:'Hộp'}])
+  await act(async()=>picker.data.onSave({productId:8,skuId:10,quantity:2,code:'ORDER-1',productCode:'P8',orderLine:{Color:'White'},mProduct:{id:8,name:'Hộp',unit:'Cái',skus:[{id:10,skuPrices:[{quantityFrom:1,quantityTo:10,priceRef:50}]}]}}))
+  const line=currentTable().dataSource.at(-1)
+  expect(line).toMatchObject({code:'ORDER-1',productCode:'P8',skuId:10,unit:'Cái',orderLine:{Color:'White'},price:50,totalPrice:100})
+  await act(async()=>[...container.querySelectorAll('button')].find(button=>button.textContent==='Lưu đơn hàng').click())
+  expect(RequestUtils.Post.mock.calls.at(-1)[1].details.at(-1)).toMatchObject({orderLine:{Color:'White'},productCode:'P8',code:'ORDER-1'})
+})
+
+test('saves directly without opening customer selection when no customer is selected', async () => {
+ GenericOrderService.getOrderOnEdit.mockResolvedValue({customer:null,order:null,data:[{key:"a",productId:7,quantity:1,price:10,totalPrice:10}]})
+ RequestUtils.Post.mockResolvedValue({errorCode:200,data:{id:13}})
+ await act(async()=>root.render(<GenericOrder/>))
+ await act(async()=>[...container.querySelectorAll('button')].find(button=>button.textContent==='Lưu đơn hàng').click())
+ expect(RequestUtils.Post).toHaveBeenCalledWith('/order/save',expect.objectContaining({details:[expect.objectContaining({productId:7})]}))
+ expect(InAppEvent.emit.mock.calls.some(([,event])=>event.hash==='customer.add')).toBe(false)
+})

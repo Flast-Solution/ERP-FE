@@ -9,17 +9,19 @@ import OrderPayment from './OrderPayment'
 
 jest.mock('antd', () => {
   const React = require('react')
-  const form = { setFieldValue: jest.fn(), resetFields: jest.fn() }
+  const form = { setFieldValue: jest.fn(), setFieldsValue:jest.fn(), getFieldsValue:()=>({}), resetFields: jest.fn() }
   const Form = jest.fn(({ children }) => <div>{children}</div>)
   Form.useForm = () => [form]
+  Form.List = () => null
+  Form.Item = ({children}) => <div>{children}</div>
   Form.useWatch = () => 0
   const Wrapper = ({ children }) => <div>{children}</div>
-  return { Form, Row: Wrapper, Col: Wrapper, message: { info: jest.fn() } }
+  return { Form, Row: Wrapper, Col: Wrapper, Space:Wrapper, Tag:Wrapper, Button:Wrapper, Input:()=>null, Typography:{Text:Wrapper,Paragraph:Wrapper,Title:Wrapper}, message: { info: jest.fn(),success:jest.fn(),warning:jest.fn() } }
 })
 jest.mock('@flast-erp/core/components', () => ({
   FormSelectInfiniteProduct: jest.fn(() => null), FormSelect: jest.fn(() => null),
   FormInputNumber: () => null, FormDatePicker: () => null, BtnSubmit: () => null,
-  FormAutoComplete: () => null, FormTextArea: () => null,
+  FormInput:()=>null, FormAutoComplete: () => null, FormTextArea: () => null,
 }))
 jest.mock('@flast-erp/core/utils', () => ({
   arrayNotEmpty: value => !!value?.length, createMSkuDetails: value => value,
@@ -50,13 +52,13 @@ test('generic SKU picker accepts current drawer data, keeps stock UI, and return
   const onSave = jest.fn(), close = jest.fn()
   await act(async () => root.render(<AddSKU data={{ onSave }} closeModalAfterSubmit={close} />))
   expect(container.textContent).toContain('Tồn kho')
-  const product = { id: 7, name: 'Product', skus: [{ id: 9, name: 'SKU' }], warehouses: [] }
+  const skuDetails = [{ text: 'Color', values: [{ text: 'White' }] }]
+  const product = { id: 7, name: 'Product', code:'P7', skus: [{ id: 9, name: 'SKU',skuDetails }], warehouses: [] }
   await act(async () => FormSelectInfiniteProduct.mock.calls.at(-1)[0].onChangeGetSelectedItem(7, product))
   const skuSelect = FormSelect.mock.calls.filter(([props]) => props.name === 'skuId').at(-1)[0]
-  const skuDetails = [{ text: 'Color', values: [{ text: 'White' }] }]
   await act(async () => skuSelect.onChangeGetSelectedItem(9, { id: 9, skuDetails }))
   await act(async () => Form.mock.calls.at(-1)[0].onFinish({ productId: 7, skuId: 9, quantity: 2 }))
-  expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ productId: 7, skuId: 9, quantity: 2, mProduct: product, mSkuDetails: skuDetails }))
+  expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ productId: 7, skuId: 9, quantity: 2, mProduct: product, productCode:'P7',orderLine:expect.objectContaining({Color:''}), mSkuDetails: skuDetails }))
   expect(close).toHaveBeenCalledTimes(1)
 })
 

@@ -28,7 +28,7 @@ export const getWarehouseByProduct = (skuId, mProduct) => {
   }
   let warehouseOptions = [];
   for (let warehouse of mProduct.warehouses) {
-    if (skuId === warehouse.skuId) {
+    if (String(skuId) === String(warehouse.skuId)) {
       warehouseOptions.push(warehouse);
     }
   }
