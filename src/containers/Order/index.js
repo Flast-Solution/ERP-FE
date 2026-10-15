@@ -20,6 +20,7 @@
 /**************************************************************************/
 
 import React, { useCallback, useState } from 'react';
+import { resolveOrderSkuDetails } from './orderSku';
 import { Table, Button, InputNumber, Select, Typography, message } from 'antd';
 import { ShowSkuDetail } from '@/containers/Product/SkuView';
 import { arrayEmpty, arrayNotEmpty, formatMoney } from '@flast-erp/core/utils';
@@ -69,6 +70,12 @@ const ORDER_TEMPLATE = {
   mSkuDetails: []
 }
 
+function getLeadProducts(lead = {}) {
+  const ids = Array.isArray(lead?.productIds) ? lead.productIds : lead?.productId != null ? [lead.productId] : [];
+  const names = Array.isArray(lead?.productNames) ? lead.productNames : [lead?.productName];
+  return ids.filter(id => id != null).map((id,index) => ({id,name:names[index] || `Sản phẩm #${id}`}));
+}
+
 function randomString(length = 8) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let result = '';
@@ -111,6 +118,7 @@ const BanHangPage = ({
 
   const [data, setData] = useState([]);
   const [customer, setCustomer] = useState();
+  const [leadProducts, setLeadProducts] = useState([]);
 
   const [localOrder, setLocalOrder] = useState({ orderId, reload: false });
   const [customerOrder, setCustomerOrder] = useState();
@@ -135,11 +143,13 @@ const BanHangPage = ({
     const { data: response, errorCode } = await RequestUtils.Get("/data/get-customer", { dataId });
     if (errorCode === SUCCESS_CODE) {
       setCustomer(response.customer);
+      setLeadProducts(getLeadProducts(response.lead));
       onAddProduct(response.lead);
     }
   }, [dataId]);
 
   const onAddProduct = useCallback((lead = null) => {
+    const suggestedProducts = lead ? getLeadProducts(lead) : leadProducts;
     const onAfterChoiseProduct = (values) => {
       let order = _.cloneDeep(ORDER_TEMPLATE);
       const { mSkuDetails, mProduct, quantity, productId, skuId } = values;
@@ -147,21 +157,24 @@ const BanHangPage = ({
       order.key = randomString();
       order.note = values?.note ?? "";
       order.orderName = values?.orderName ?? "";
+      order.code = values?.code ?? "";
+      order.productCode = values?.productCode ?? mProduct.code ?? null;
+      order.orderLine = values?.orderLine ?? {};
       order.productId = productId;
       order.productName = mProduct.name;
       order.unit = mProduct.unit ?? "N/A";
-      order.mSkuDetails = mSkuDetails;
+      order.mSkuDetails = resolveOrderSkuDetails({mSkuDetails, skuDetails:values.skuDetails, skuId}, mProduct);
+      order.skuId = Number(skuId);
       order.skuDetailCode = String(skuId);
       order.quantity = quantity;
       order.warehouseOptions = getWarehouseByProduct(skuId, mProduct);
 
       const skus = mProduct?.skus ?? [];
-      let skuPrices = [];
+      const skuPrices = skus.find(s => String(s.id) === String(skuId))?.skuPrices ?? [];
       if (arrayNotEmpty(order.warehouseOptions)) {
         let warehouse = _.first(order.warehouseOptions);
         order.warehouse = warehouse?.stockName ?? '';
         order.stock = warehouse?.quantity ?? 0;
-        skuPrices = skus.find(s => s.id === warehouse?.skuId)?.skuPrices ?? [];
       }
 
       const dataPrice = findByQuantity(skuPrices, order.quantity);
@@ -177,10 +190,11 @@ const BanHangPage = ({
       title: "Thêm sản phẩm",
       data: {
         onSave: onAfterChoiseProduct,
-        ...(lead ? { productId: lead.productId } : {})
+        productId: suggestedProducts[0]?.id,
+        leadProducts: suggestedProducts
       }
     });
-  }, []);
+  }, [leadProducts]);
 
   const onAddStock = useCallback(() => {
     const onAfterSubmit = (values) => {
@@ -399,7 +413,7 @@ const BanHangPage = ({
   const onSubmitOrder = useCallback(async () => {
 
     const submit = async (mCustomer) => {
-      let params = { customer: mCustomer, details: data };
+      let params = { customer: mCustomer, details: data.map(line => ({...line, skuId:line.skuId == null || line.skuId === "" ? null : Number(line.skuId)})) };
       if (customerOrder?.id) {
         params.id = customerOrder.id;
       }
@@ -413,27 +427,7 @@ const BanHangPage = ({
       }
     }
 
-    const onAfterSaveCustomer = (values) => {
-      submit(values);
-      setCustomer(values);
-    }
-
-    /* Tạo mới chưa có thông tin khách hàng */
-    if ((customer?.id || 0) !== 0) {
-      submit(customer);
-      return;
-    }
-
-    /* Tạo Lead và Customer */
-    InAppEvent.emit(HASH_POPUP, {
-      hash: "customer.add",
-      title: "Thêm / Chọn khách hàng ",
-      data: {
-        onSave: onAfterSaveCustomer,
-        customer,
-        details: data
-      }
-    });
+    await submit(customer);
   }, [data, dataId, customer, customerOrder]);
 
   const onOpenFormPayment = useCallback(() => {

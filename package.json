@@ -16,7 +16,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@emoji-mart/data": "^1.1.1",
     "@emoji-mart/react": "^1.1.0",
-    "@erp/shared-ui": "file:vendor/erp-shared-ui-1.0.0.tgz",
+    "@erp/shared-ui": "file:vendor/erp-shared-ui-1.0.0-7b418bc68615.tgz",
     "@erp/tenant-runtime": "file:vendor/erp-tenant-runtime-1.0.0.tgz",
     "@flast-erp/core": "^1.0.27",
     "@fullcalendar/core": "^6.1.19",
