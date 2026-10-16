@@ -19,7 +19,7 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Form, message } from 'antd';
 import { FormContextCustom } from "@flast-erp/core/components";
 
@@ -34,6 +34,7 @@ import {
 } from './productImages';
 import { mergeInitialProductProperties, isDefaultProductAttribute } from './productProperties';
 import useDrawerLeaveGuard from '@/hooks/useDrawerLeaveGuard';
+import { PRODUCT_FORM_EDIT_EVENT, shouldConfirmProductLeave } from './productFormEdit';
 
 /**
  * @param [ {id: 10384, attributedId: 10023, attributedValueId: 10085}, ... ] oldSku
@@ -57,6 +58,7 @@ const Product = ({ data, registerCloseGuard, closeModalAfterSubmit }) => {
 
   const [form] = Form.useForm();
   const [ record, setRecord ] = useState({});
+  const userEditedRef = useRef(false);
   const {
     guardClose,
     markClean,
@@ -67,11 +69,30 @@ const Product = ({ data, registerCloseGuard, closeModalAfterSubmit }) => {
     resetKey: data?.id ?? 'create-product',
   });
 
+  const noteEdit = useCallback(() => {
+    userEditedRef.current = true;
+    markDirty();
+  }, [markDirty]);
+
+  const requestGuardedClose = useCallback((close) => {
+    if (shouldConfirmProductLeave(userEditedRef.current)) {
+      markDirty();
+    } else {
+      markClean();
+    }
+    guardClose(close);
+  }, [guardClose, markClean, markDirty]);
+
   useEffect(() => {
     if (!registerCloseGuard) return undefined;
-    const unregister = registerCloseGuard(guardClose);
+    const unregister = registerCloseGuard(requestGuardedClose);
     return () => unregister?.();
-  }, [guardClose, registerCloseGuard]);
+  }, [registerCloseGuard, requestGuardedClose]);
+
+  useEffect(() => {
+    window.addEventListener(PRODUCT_FORM_EDIT_EVENT, noteEdit);
+    return () => window.removeEventListener(PRODUCT_FORM_EDIT_EVENT, noteEdit);
+  }, [noteEdit]);
 
   useEffect(() => {
     log({ action: 'props', data });
@@ -122,8 +143,10 @@ const Product = ({ data, registerCloseGuard, closeModalAfterSubmit }) => {
   }, [ data ]);
 
   useEffect(() => {
+    userEditedRef.current = false;
+    markClean();
     form.setFieldsValue(record);
-  }, [form, record]);
+  }, [form, markClean, record]);
 
   const updateRecord = useCallback((values) => {
     setRecord(curvals => ({ ...curvals, ...values }));
@@ -180,6 +203,7 @@ const Product = ({ data, registerCloseGuard, closeModalAfterSubmit }) => {
     const { errorCode } = await RequestUtils.Post("/product/save", body, params);
     const isSuccess = errorCode === 200;
     if (isSuccess) {
+      userEditedRef.current = false;
       markClean();
       f5List('erp/product/fetch');
       closeModalAfterSubmit?.();
@@ -192,7 +216,9 @@ const Product = ({ data, registerCloseGuard, closeModalAfterSubmit }) => {
       form={form}
       layout="vertical"
       onFinish={onSubmit}
-      onValuesChange={markDirty}
+      onValuesChange={noteEdit}
+      onChangeCapture={noteEdit}
+      onInputCapture={noteEdit}
     >
       <FormContextCustom.Provider value={{ form, record, updateRecord }}>
         <ProductForm />

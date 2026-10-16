@@ -426,13 +426,12 @@ const CreateOrder = ({
                             label={`Số lượng sản xuất${getProductUnit(product) ? ` (${getProductUnit(product)})` : ''}`}
                             placeholder="Nhập số lượng sản xuất"
                             min={0.000001}
-                            max={getProductionQuantityLimit(product)}
                             rules={[{ validator: (_, value) => {
                               const error = getProductionQuantityError(product, value);
                               return error ? Promise.reject(new Error(error)) : Promise.resolve();
                             } }]}
                             formItemProps={{ extra: getProductionQuantityLimit(product) !== undefined
-                              ? `Tối đa ${formatProductQuantity(getProductionQuantityLimit(product), getProductUnit(product))}` : undefined }}
+                              ? `Số lượng đơn: ${formatProductQuantity(getProductionQuantityLimit(product), getProductUnit(product))}` : undefined }}
                             style={{ width: '100%' }}
                           />
                           <FormDatePicker

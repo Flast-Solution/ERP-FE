@@ -72,7 +72,7 @@ describe('quotation approval flow', () => {
     await act(async () => { expect(await viewer.saveQuotation(editedData)).toBe(true) })
     expect(RequestUtils.Post).toHaveBeenCalledWith('/order/save', expect.objectContaining({
       id: 34019,
-      details: order.details,
+      details: order.details.map(detail => ({ ...detail, detailId: detail.detailId ?? detail.id })),
       aproval: { status: 1, type: 'quote', userApproval: 1650 },
       quoteConfig: { manualValues: { 'customerOrder.customerNote': 'New quote note' } },
     }))

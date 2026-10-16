@@ -100,7 +100,7 @@ describe('quotation quoteConfig mapping', () => {
       34080: { manualValues: { moq: '123', mcq: '333', date: '22-11-2026' } },
     })
     expect(payload.details.every(detail => !Object.prototype.hasOwnProperty.call(detail, 'quoteConfig'))).toBe(true)
-    expect(payload.details).toEqual(order.details.map(({ quoteConfig, ...detail }) => detail))
+    expect(payload.details).toEqual(order.details.map(({ quoteConfig, ...detail }) => ({ ...detail, detailId: detail.id })))
     expect(payload.customer.name).toBe(order.customerReceiverName)
     expect(payload.customerNote).toBeNull()
     expect(payload.quoteConfig.manualValues).not.toHaveProperty('customerOrder.code')
@@ -218,4 +218,14 @@ describe('quotation quoteConfig mapping', () => {
     expect(payload.quoteConfig.details['34079'].manualValues.price).toBe(250000)
     expect(createQuotationData(mergeSavedQuotationOrder(order, payload), priceTemplate).customerOrder.details[0].price).toBe(250000)
   })
+})
+
+
+test('save keeps the original order code and backend detailId for existing lines', () => {
+  const order = { ...makeOrder(), code: 'ORDER-2026' }
+  const data = createQuotationData(order, template)
+  data.customerOrder.code = 'document-only-code'
+  const payload = buildQuotationPayload(data, template, order)
+  expect(payload.code).toBe('ORDER-2026')
+  expect(payload.details.map(detail => detail.detailId)).toEqual([34079, 34080])
 })

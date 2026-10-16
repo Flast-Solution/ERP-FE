@@ -155,10 +155,14 @@ export const buildQuotationPayload = (
   })
 
   order.quoteConfig = Object.keys(orderConfig).length ? orderConfig : null
-  const payloadDetails = details.map(({ quoteConfig, ...detail }) => detail)
+  const payloadDetails = details.map(({ quoteConfig, ...detail }) => ({
+    ...detail,
+    detailId: detail.detailId ?? detail.id ?? null,
+  }))
 
   return {
     id: order.id,
+    code: order.code,
     dataId: order.dataId ?? null,
     customer: {
       id: order.customerId ?? null,

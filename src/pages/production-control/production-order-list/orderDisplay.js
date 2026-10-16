@@ -26,9 +26,6 @@ export const getProductionQuantityError = (product, target) => {
   if (target == null || target === '') return 'Vui lòng nhập số lượng sản xuất.';
   const quantity = Number(target);
   if (!Number.isFinite(quantity) || quantity <= 0) return 'Số lượng sản xuất phải lớn hơn 0.';
-  const limit = getProductionQuantityLimit(product);
-  if (limit === undefined) return 'Chưa có số lượng của đơn con để kiểm tra giới hạn sản xuất.';
-  if (quantity > limit) return `Số lượng sản xuất không được vượt quá ${formatProductQuantity(limit, getProductUnit(product))} của đơn con.`;
   return null;
 };
 

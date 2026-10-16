@@ -1,4 +1,5 @@
 import FormFileUpload from '@/containers/PreviewModal/FormFileUpload'
+import { notifyProductFormEdit } from './productFormEdit'
 
 const ProductImagesUpload = () => (
   <FormFileUpload
@@ -8,6 +9,7 @@ const ProductImagesUpload = () => (
     folder="product"
     image
     maxSizeMB={8}
+    onEdit={notifyProductFormEdit}
   />
 )
 

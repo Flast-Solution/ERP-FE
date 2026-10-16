@@ -72,7 +72,7 @@ test('updates quantity and discount using original pricing then saves the origin
     id: 12, customer: expect.objectContaining({ id: 5 }),
     details: [expect.objectContaining({ quantity: 3, price: 100, totalPrice: 300, discountAmount: 30 })],
   }))
-  expect(Object.keys(RequestUtils.Post.mock.calls[0][1]).sort()).toEqual(['customer', 'details', 'id'])
+  expect(Object.keys(RequestUtils.Post.mock.calls[0][1]).sort()).toEqual(['code', 'customer', 'details', 'id'])
 })
 
 test('opens SKU selection through the current drawer and keeps payment/invoice data contracts', async () => {

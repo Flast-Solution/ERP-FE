@@ -19,6 +19,7 @@ const FormFileUpload = ({
   folder = 'test',
   image = false,
   maxSizeMB,
+  onEdit,
 }) => {
   const form = Form.useFormInstance()
   const formValue = Form.useWatch(name, form)
@@ -110,6 +111,7 @@ const FormFileUpload = ({
           onChange={({ fileList: nextFileList }) => {
             setFileList(nextFileList)
             form.setFieldValue(name, fileListToValues(nextFileList))
+            onEdit?.()
           }}
           onPreview={openPreview}
           itemRender={(originNode, file) => (

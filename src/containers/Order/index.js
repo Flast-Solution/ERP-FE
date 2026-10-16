@@ -413,9 +413,10 @@ const BanHangPage = ({
   const onSubmitOrder = useCallback(async () => {
 
     const submit = async (mCustomer) => {
-      let params = { customer: mCustomer, details: data.map(line => ({...line, skuId:line.skuId == null || line.skuId === "" ? null : Number(line.skuId)})) };
+      let params = { customer: mCustomer, details: data.map(line => ({...line, detailId: line.detailId ?? line.id ?? null, skuId:line.skuId == null || line.skuId === "" ? null : Number(line.skuId)})) };
       if (customerOrder?.id) {
         params.id = customerOrder.id;
+        params.code = customerOrder.code;
       }
       if (dataId) {
         params.dataId = dataId;
