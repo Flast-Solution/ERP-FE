@@ -12,9 +12,12 @@ const CallCenterLayer = () => {
   
   const status = useCallCenterStore(state => state.call.status);
   const { user } = useGetMe();
-  useSoftphoneConnection(user?.sipExt || "acme_1002");
-  useCallCenterEvents();
+  const ext = String(user?.sipExt ?? '').trim();
+  useSoftphoneConnection(ext);
+  useCallCenterEvents(Boolean(ext));
   const ringtone=useIncomingRingtone(status);
+
+  if (!ext) return null;
 
   if (status === CALL_STATUS.INCOMING) {
     return createPortal(<IncomingCallPopup ringtone={ringtone} />, document.body);

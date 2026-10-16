@@ -1,3 +1,4 @@
+import { getDocumentShipmentError } from './documentShipment';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Button,
@@ -372,6 +373,11 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
       return;
     }
     setLotValidationError('');
+    const documentError = getDocumentShipmentError(data, selectedQuantity, submitTypeRef.current);
+    if (documentError) {
+      setLotValidationError(documentError);
+      return;
+    }
 
     const selectedLots = lotRows.filter(row => selectedLotKeys.includes(row.id));
     const primaryLot = selectedLots[0];
@@ -448,7 +454,7 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
       }
       message.success(response.message);
       closeModal?.();
-      data.onSaved?.(response.data);
+      data.onSaved?.(data.documentSetId ? { ...response.data, submitType: payload.submitType, documentSetId: data.documentSetId, orderDetailId: payload.orderDetailId, quantity: selectedQuantity } : response.data);
     } catch (error) {
       message.error(error?.response?.data?.message ?? error?.message ?? 'Không thể tạo lệnh xuất kho');
     } finally {
