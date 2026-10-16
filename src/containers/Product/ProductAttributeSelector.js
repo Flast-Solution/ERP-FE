@@ -3,6 +3,7 @@ import { Checkbox, Form, message, Select } from 'antd';
 import { RequestUtils } from '@flast-erp/core/utils';
 import ProductAttrService from '@/services/ProductAttrService';
 import { syncSelectedProductProperties, isDefaultProductAttribute, updateAttributeDefaults } from './productProperties';
+import { notifyProductFormEdit } from './productFormEdit';
 
 const ProductAttributeSelector = () => {
   const form = Form.useFormInstance();
@@ -56,6 +57,7 @@ const ProductAttributeSelector = () => {
 
   const handleChange = async values => {
     if (savingRef.current) return;
+    notifyProductFormEdit();
     const selectedType = form.getFieldValue('productTypeId');
     const previousProperties = form.getFieldValue('listProperties') ?? [];
     savingRef.current = true;

@@ -25,7 +25,8 @@ import OrderTextTableOnly from './OrderTextTableOnly';
 import { useReactToPrint } from "react-to-print";
 
 import { CustomButton, HeaderCompany } from '@flast-erp/core/components';
-import { formatPhoneNumber, formatMoney } from '@flast-erp/core/utils';
+import { formatPhoneNumber } from '@flast-erp/core/utils';
+import { formatCurrency } from '@/utils/formatCurrency';
 import { useEffectAsync } from '@flast-erp/core/hooks';
 import UserService from '@/services/UserService';
 import { StyledHeaderInvoice } from "@/css/global";
@@ -103,6 +104,7 @@ const Invoice = ({ data }) => {
 	const reactToPrintFn = useReactToPrint({ contentRef });
 
 	const { customer, details, customerOrder } = data;
+	const formatMoney = value => formatCurrency(value, customerOrder.currency);
 	const monneyVAT = customerOrder.subtotal * (customerOrder.vat || 0) / 100;
 
 	return <>
@@ -112,7 +114,7 @@ const Invoice = ({ data }) => {
 				customerOrder={customerOrder}
 			/>
 			<p><strong>Đơn hàng #{customerOrder?.code || ''}</strong></p>
-			<OrderTextTableOnly details={details} />
+			<OrderTextTableOnly details={details} currency={customerOrder.currency} />
 			<table
 				id="pay__order__info"
 				cellSpacing={0}

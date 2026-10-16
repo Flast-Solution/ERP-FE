@@ -151,29 +151,28 @@ test('blocks submission of a restored legacy selection containing different curr
 });
 
 
-test('rejects production quantities above the child order quantity and accepts the exact limit', async () => {
+test('allows production quantities above the child order quantity through submission', async () => {
   const onNext = jest.fn();
   await act(async () => root.render(<CreateOrder waitingOrders={orders} onNext={onNext} />));
   await act(async () => parentSelect().onChange([11]));
   await clickAdd();
   await act(async () => childSelect().onChange(101));
   const quantityInput = FormInputNumber.mock.calls.at(-1)[0];
-  expect(quantityInput.max).toBe(10);
+  expect(quantityInput.max).toBeUndefined();
   expect(quantityInput.label).toBe('Số lượng sản xuất (m)');
-  expect(quantityInput.formItemProps.extra).toBe('Tối đa 10 m');
-  await expect(quantityInput.rules[0].validator(null, 11)).rejects.toThrow('không được vượt quá 10 m');
+  expect(quantityInput.formItemProps.extra).toBe('Số lượng đơn: 10 m');
+  await expect(quantityInput.rules[0].validator(null, 11)).resolves.toBeUndefined();
   await expect(quantityInput.rules[0].validator(null, 10)).resolves.toBeUndefined();
   const form = Form.useForm()[0];
   form.setFieldsValue({ productDetails: { 101: { target: 11 } } });
   await act(async () => Form.mock.calls.at(-1)[0].onFinish(form.getFieldsValue()));
-  expect(onNext).not.toHaveBeenCalled();
-  expect(message.error).toHaveBeenCalledWith(expect.stringContaining('không được vượt quá 10 m'));
+  expect(onNext.mock.calls[0][0].productDetails['101'].target).toBe(11);
   form.setFieldsValue({ productDetails: { 101: { target: 10 } } });
   await act(async () => Form.mock.calls.at(-1)[0].onFinish(form.getFieldsValue()));
-  expect(onNext.mock.calls[0][0].productDetails['101'].target).toBe(10);
+  expect(onNext.mock.calls.at(-1)[0].productDetails['101'].target).toBe(10);
 });
 
-test('uses the child unit and its own quantity limit for each production input', async () => {
+test('keeps the child unit without enforcing its quantity as a limit', async () => {
   const unitOrders = [{ ...orders[0], details: [
     { ...orders[0].details[0], unit: 'kg', quantity: 2.5 },
   ] }];
@@ -183,6 +182,6 @@ test('uses the child unit and its own quantity limit for each production input',
   await act(async () => childSelect().onChange(101));
   const quantityInput = FormInputNumber.mock.calls.at(-1)[0];
   expect(quantityInput.label).toBe('Số lượng sản xuất (kg)');
-  expect(quantityInput.max).toBe(2.5);
-  await expect(quantityInput.rules[0].validator(null, 2.6)).rejects.toThrow('2,5 kg');
+  expect(quantityInput.max).toBeUndefined();
+  await expect(quantityInput.rules[0].validator(null, 2.6)).resolves.toBeUndefined();
 });

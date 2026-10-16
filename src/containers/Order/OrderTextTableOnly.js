@@ -22,7 +22,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Table, Typography } from "antd";
 import styled from "styled-components";
-import { arrayEmpty, formatMoney } from '@flast-erp/core/utils';
+import { arrayEmpty } from '@flast-erp/core/utils';
+import { formatCurrency } from '@/utils/formatCurrency';
 import { ShowSkuDetail } from '@/containers/Product/SkuView';
 
 const { Text } = Typography;
@@ -45,7 +46,8 @@ const StyledTable = styled.div`
 	}
 `;
 
-const OrderTextTableOnly = ({ details }) => {
+const OrderTextTableOnly = ({ details, currency }) => {
+	const formatMoney = (value, record) => formatCurrency(value, record?.currency || currency);
 
 	const [rawData, setRawData] = useState([]);
 	const generateRaws = useCallback((datas) => {
@@ -115,9 +117,9 @@ const OrderTextTableOnly = ({ details }) => {
 			align: "center",
 			render: (price, record) => record.isNoiDungMoRong ? COL_SPAN_0 : (
 				<>
-					{formatMoney(price)}
+					{formatMoney(price, record)}
 					{record.discountAmount > 0 &&
-						<strong><br />Giảm: ({formatMoney(record.discountAmount)}) </strong>
+						<strong><br />Giảm: ({formatMoney(record.discountAmount, record)}) </strong>
 					}
 				</>
 			)
@@ -128,8 +130,8 @@ const OrderTextTableOnly = ({ details }) => {
 			align: "center",
 			render: (totalPrice, record) => record.isNoiDungMoRong ? COL_SPAN_0 : (
 				<Text strong>{record.discountAmount > 0
-					? formatMoney(totalPrice - record.discountAmount)
-					: formatMoney(totalPrice)}
+					? formatMoney(totalPrice - record.discountAmount, record)
+					: formatMoney(totalPrice, record)}
 				</Text>
 			)
 		}

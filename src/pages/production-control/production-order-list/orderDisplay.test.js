@@ -25,14 +25,14 @@ test('groups production quantities by unit instead of combining different dimens
 });
 
 
-test('validates production quantity against the individual child order including decimals and zero limits', () => {
+test('allows production above ordered quantity while rejecting invalid quantities', () => {
   const product = { quantity: 2.5, unit: 'm' };
   expect(getProductionQuantityError(product, 2.5)).toBeNull();
-  expect(getProductionQuantityError(product, 2.6)).toContain('2,5 m');
+  expect(getProductionQuantityError(product, 2.6)).toBeNull();
   expect(getProductionQuantityError(product, null)).toBeTruthy();
   expect(getProductionQuantityError(product, 0)).toBeTruthy();
   expect(getProductionQuantityError(product, -1)).toBeTruthy();
   expect(getProductionQuantityError(product, Infinity)).toBeTruthy();
-  expect(getProductionQuantityError({ quantity: 0 }, 1)).toBeTruthy();
-  expect(getProductionQuantityError({}, 1)).toBeTruthy();
+  expect(getProductionQuantityError({ quantity: 0 }, 1)).toBeNull();
+  expect(getProductionQuantityError({}, 1)).toBeNull();
 });
