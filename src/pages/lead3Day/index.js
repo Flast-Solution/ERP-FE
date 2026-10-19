@@ -1,3 +1,4 @@
+import AlertLink from '@/features/Alerts/components/AlertLink';
 /**************************************************************************/
 /*  index.js                                                           		*/
 /**************************************************************************/
@@ -128,9 +129,9 @@ export const Lead3DayContent = () => {
       width: 120,
       fixed: 'right',
       render: (record) => (
-        <Button color="primary" variant="dashed" onClick={() => onEdit(record)} size='small'>
+        <><AlertLink entityId={record.id} entityKind={'LEAD'} /> <Button color="primary" variant="dashed" onClick={() => onEdit(record)} size='small'>
           Cập nhật
-        </Button>
+        </Button></>
       )
     }
   ];

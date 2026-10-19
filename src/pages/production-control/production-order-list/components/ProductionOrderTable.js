@@ -1,3 +1,4 @@
+import AlertLink from '@/features/Alerts/components/AlertLink';
 import React, { useMemo } from 'react'
 import { Button, Select, Space, Table, Tooltip } from 'antd'
 import { EditOutlined, EyeOutlined } from '@ant-design/icons'
@@ -99,6 +100,7 @@ const getProductionOrderColumns = ({
     fixed: 'right',
     render: (_, record) => (
       <Space size={4}>
+        <AlertLink entityId={record.id} entityKind="MO" />
         <Tooltip title="Xem chi tiết">
           <Button
             type="text"
