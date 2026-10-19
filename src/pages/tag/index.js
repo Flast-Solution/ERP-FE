@@ -20,74 +20,53 @@
 /**************************************************************************/
 
 
-import React, { useState } from 'react';
-import { message } from 'antd';
-import { useGetList } from "@flast-erp/core/hooks";
-import { Helmet } from "react-helmet";
-import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
-import Filter from '@/pages/tag/Filter';
-import { GATEWAY } from '@/configs';
-import { RequestUtils } from '@flast-erp/core/utils';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Button, Input, message, Popconfirm, Select, Space, Table } from 'antd';
+import { Helmet } from 'react-helmet';
+import { BreadcrumbCustom } from '@flast-erp/core/components';
 import { useNavigateSearch } from '@flast-erp/core/hooks';
 import useGetMe from '@/hooks/useGetMe';
+import { listTags, deleteTag } from './service';
 
-const Tag = () => {
-    const { hasPermission } = useGetMe();
-    const canCreate = hasPermission('web.tag.create');
-    const canUpdate = hasPermission('web.tag.update');
-    const canDelete = hasPermission('web.tag.delete');
-
-    const navigate = useNavigateSearch();
-    const onEdit = (item) => {
-        navigate("/tag/edit", { id: item.id });
-    }
-
-    const onDeleteCate = async ({ id }) => {
-        const { message: MSG } = await RequestUtils.Post("/tag/delete", {}, { id });
-        message.info(MSG);
-    }
-
-    const [title] = useState("Trang quản lý Tag");
-    const CUSTOM_ACTION = [
-        {
-            title: "Tên",
-            dataIndex: 'name',
-            width: 150,
-            ellipsis: true
-        },
-        {
-            title: "Slug",
-            dataIndex: 'slug',
-            width: 120,
-            ellipsis: true
-        },
-        {
-            title: "Mô tả",
-            dataIndex: 'description',
-            width: 200,
-            ellipsis: true
-        }
-    ]
-
-    return <>
-        <Helmet>
-            <title>{title}</title>
-        </Helmet>
-        <BreadcrumbCustom
-            data={[{ title: 'Trang chủ' }, { title: title }]}
-        />
-        <RestList
-            apiPath={GATEWAY + "/tag/get-list"}
-            useGetAllQuery={useGetList}
-            columns={CUSTOM_ACTION}
-            filter={<Filter />}
-            onEdit={canUpdate ? onEdit : undefined}
-            onDelete={canDelete ? onDeleteCate : undefined}
-            hasCreate={canCreate}
-            customClickCreate={() => navigate("/tag/edit")}
-            initialFilter={{ page: 1, limit: 10 }}
-        />
-    </>
+export default function Tag() {
+  const { hasPermission } = useGetMe();
+  const navigate = useNavigateSearch();
+  const [tags, setTags] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState('');
+  const [type, setType] = useState('product');
+  const requestId = useRef(0);
+  const load = useCallback(async () => {
+    const current = ++requestId.current;
+    setLoading(true);
+    setTags([]);
+    try { const rows = await listTags(type); if (current === requestId.current) setTags(rows); }
+    catch (error) { if (current === requestId.current) message.error(error.message); }
+    finally { if (current === requestId.current) setLoading(false); }
+  }, [type]);
+  useEffect(() => { load(); }, [load]);
+  const remove = async id => {
+    try { await deleteTag(id); message.success('Đã xóa tag'); await load(); }
+    catch (error) { message.error(error.message); }
+  };
+  const columns = [
+    { title: 'Tên', dataIndex: 'name' },
+    { title: 'Loại tag', dataIndex: 'type', render: type => ({ product: 'Sản phẩm', pages: 'Trang' }[type] || type || '—') },
+    { title: 'Mô tả', dataIndex: 'description' },
+    { title: 'Thao tác', key: 'actions', render: (_, tag) => <Space>
+      {hasPermission('web.tag.update') && <Button onClick={() => navigate('/tag/edit', { id: tag.id, type })}>Sửa</Button>}
+      {hasPermission('web.tag.delete') && <Popconfirm title="Xóa tag này?" onConfirm={() => remove(tag.id)} okText="Xóa" cancelText="Hủy"><Button danger>Xóa</Button></Popconfirm>}
+    </Space> },
+  ];
+  return <>
+    <Helmet><title>Trang quản lý Tag</title></Helmet>
+    <BreadcrumbCustom data={[{ title: 'Trang chủ' }, { title: 'Trang quản lý Tag' }]} />
+    <Space style={{ marginBottom: 16 }} wrap>
+      <Select aria-label="Loại tag" value={type} onChange={setType} style={{ minWidth: 180 }} options={[{ value: 'product', label: 'Sản phẩm (product)' }, { value: 'pages', label: 'Trang (pages)' }]} />
+      <Input placeholder="Tìm tên tag" value={query} onChange={event => setQuery(event.target.value)} allowClear />
+      <Button onClick={load}>Làm mới</Button>
+      {hasPermission('web.tag.create') && <Button type="primary" onClick={() => navigate('/tag/edit', { type })}>Thêm tag</Button>}
+    </Space>
+    <Table rowKey="id" loading={loading} columns={columns} dataSource={tags.filter(tag => (tag.name || '').toLocaleLowerCase().includes(query.toLocaleLowerCase()))} pagination={{ pageSize: 10, showSizeChanger: true }} />
+  </>;
 }
-
-export default Tag;

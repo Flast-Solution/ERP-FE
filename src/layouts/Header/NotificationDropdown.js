@@ -1,4 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { InAppEvent } from '@flast-erp/core/utils';
+import { OPEN_BUSINESS_ALERT, findEntityAlerts } from '@/features/Alerts/entrypoint';
+import BusinessAlertDetails from '@/features/Alerts/components/BusinessAlertDetails';
+import useBusinessAlertActions from '@/features/Alerts/components/useBusinessAlertActions';
+import { getBusinessScenario, businessActions } from '@/features/Alerts/businessModel';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Spin,
@@ -106,6 +111,8 @@ export default function NotificationDropdown({
   loading = false,
   error,
 }) {
+  const [pendingOpen, setPendingOpen] = useState(null);
+  const [entryReady, setEntryReady] = useState(false);
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState('high');
   const [selectedId, setSelectedId] = useState(null);
@@ -126,6 +133,8 @@ export default function NotificationDropdown({
   const [assignment] = Form.useForm();
   const [resolution] = Form.useForm();
   const a = notifications.find(item => item.id === selectedId);
+  const scenario = getBusinessScenario(a);
+  const businessAction = useBusinessAlertActions(a, scenario, onRefresh);
   const customerAlert = ['LEAD', 'CUSTOMER', 'DEAL', 'QUOTE'].includes(a?.entityData?.kind);
   const activityOptions = customerAlert
     ? [...new Set([a?.suggestion, 'Gọi hỏi thăm khách', 'Nhắn tin qua Zalo', 'Gửi lại báo giá', 'Hẹn gặp trực tiếp', 'Cách khác'].filter(Boolean))]
@@ -136,12 +145,13 @@ export default function NotificationDropdown({
     .filter(item => `${item.title} ${item.entity} ${item.code}`.toLowerCase().includes(query.toLowerCase()))
     .sort((x, y) => Number(urgent(y)) - Number(urgent(x)));
 
+  const initialActivity=a?.suggestion;
   useEffect(() => {
     resolution.resetFields();
-    if (a) resolution.setFieldsValue({activity:a.suggestion, result:customerAlert ? 'Vẫn quan tâm' : 'Đã hoàn thành'});
-  }, [selectedId, a?.suggestion, customerAlert, resolution]);
+    if (selectedId!=null) resolution.setFieldsValue({activity:initialActivity, result:customerAlert ? 'Vẫn quan tâm' : 'Đã hoàn thành'});
+  }, [selectedId, initialActivity, customerAlert, resolution]);
 
-  const select = item => {
+  const select = useCallback(item => {
     setMode('detail');
     setPopover(null);
     setReason('');
@@ -157,7 +167,20 @@ export default function NotificationDropdown({
       .finally(() => setTasksLoadingId(current => current === item.id ? null : current));
     setSelectedId(item.id);
     setOpen(false);
-  };
+  },[onMarkRead,onLoadTasks]);
+
+  useEffect(() => {
+    const handler = target => { setPendingOpen(target); setEntryReady(false); Promise.resolve(onRefresh?.()).catch(()=>{}).finally(()=>setEntryReady(true)); };
+    InAppEvent.addEventListener(OPEN_BUSINESS_ALERT,handler);
+    return ()=>InAppEvent.removeListener(OPEN_BUSINESS_ALERT,handler);
+  },[onRefresh]);
+  useEffect(() => {
+    if(!pendingOpen || !entryReady || loading)return;
+    const matches=findEntityAlerts(notifications,pendingOpen);
+    setPendingOpen(null);
+    const next=matches.find(item=>!isClosed(item))||matches[0];
+    if(next)select(next);else message.info('Chưa có cảnh báo của đối tượng trong danh sách được cấp quyền.');
+  },[pendingOpen,entryReady,loading,notifications,select]);
 
   const run = async (action, payload) => {
     try {
@@ -420,7 +443,7 @@ export default function NotificationDropdown({
         <Button type="primary" loading={acting} disabled={ownersLoading} onClick={() => assignment.submit()}>Giao việc</Button>
       </div>
     ) : !isClosed(a) && (
-      <div className="alert-footer">
+      <div className={`alert-footer ${scenario ? 'business-alert-footer' : ''}`}>
         <Popover
           trigger="click"
           placement="topLeft"
@@ -439,13 +462,15 @@ export default function NotificationDropdown({
         >
           <Button icon={<ClockCircleOutlined />}>Nhắc lại</Button>
         </Popover>
-        <Button loading={acting} onClick={async()=>{if(await run('approve'))message.success('Đã phê duyệt cảnh báo');}}>Phê duyệt</Button>
+        {!scenario && <Button loading={acting} onClick={async()=>{if(await run('approve'))message.success('Đã phê duyệt cảnh báo');}}>Phê duyệt</Button>}
         <Button
           onClick={beginAssign}
           disabled={tasks.some(t => t.alertId === a.id && t.status === 'pending')}
         >
           Giao việc
         </Button>
+        {scenario && <span className="business-alert-footer-spacer" />}
+        {scenario && businessAction.visible && <Button disabled={acting || businessAction.disabled} icon={['lead','production'].includes(scenario)?<PhoneOutlined/>:scenario==='pod'?<PaperClipOutlined/>:<ArrowRightOutlined/>} onClick={()=>businessAction.open('primary')}>{businessActions[scenario]}</Button>}
         <Button
           type="primary"
           icon={<FlagOutlined />}
@@ -480,12 +505,14 @@ export default function NotificationDropdown({
           <span>
             <BellOutlined />
             {' '}
-            Cảnh báo
+            Chi tiết cảnh báo
             {' '}
             <small style={{ color: '#667085' }}>#{a?.id}</small>
           </span>
         )}
-        width={560}
+        width={scenario ? 'min(880px, 100vw)' : 560}
+        rootClassName={scenario ? 'business-alert-drawer' : undefined}
+        extra={scenario ? <Button type="text" icon={<LinkOutlined/>} aria-label="Mở đối tượng liên quan" onClick={()=>businessAction.open(({lead:'lead',opportunity:'opportunity',pod:'shipping'})[scenario]||'order')}/> : undefined}
         open={Boolean(a)}
         onClose={() => {
           setSelectedId(null);
@@ -494,7 +521,7 @@ export default function NotificationDropdown({
         }}
         footer={footer}
       >
-        {a && (
+        {a && (scenario && mode === 'detail' ? <BusinessAlertDetails key={a.id} alert={a} scenario={scenario} onOpen={businessAction.open}/> : (
           <div className="alert-detail">
             <Space>
               <Tag color={levelColor[a.level]}>{LEVELS[a.level]}</Tag>
@@ -582,7 +609,7 @@ export default function NotificationDropdown({
                   </Form.Item>
                   <Form.Item name="description" label="Mô tả"><Input.TextArea rows={3}/></Form.Item>
                   <p>Liên quan: {a.entity}</p>
-                  <p>Khi việc xong, cảnh báo sẽ tự đóng.</p>
+                  <p>{scenario ? 'Hoàn thành việc sẽ được ghi nhận. Cảnh báo chỉ đóng khi điều kiện nghiệp vụ được giải quyết.' : 'Khi việc xong, cảnh báo sẽ tự đóng.'}</p>
                 </Form>
               </div>
             ) : (
@@ -624,7 +651,7 @@ export default function NotificationDropdown({
               </>
             )}
           </div>
-        )}
+        ))}
       </Drawer>
       <Modal
         className="alert-resolution-modal"
@@ -730,14 +757,14 @@ export default function NotificationDropdown({
                 form={resolution}
                 initialValues={{ activity: a.suggestion, result: customerAlert ? 'Vẫn quan tâm' : 'Đã hoàn thành' }}
                 onFinish={async values => {
-                  if (await run('resolve', {
+                  if (await run(scenario ? 'record' : 'resolve', {
                     ...values,
                     attachments: files.map(f => ({ name: f.name, size: f.size })),
                     recording,
                     followUp: values.schedule ? new Date(values.followUp).toISOString() : undefined,
                   })) {
                     setProcessing(false);
-                    message.success('Đã lưu kết quả xử lý (demo)');
+                    message.success(scenario ? 'Đã ghi nhận trong phiên. Trạng thái cảnh báo vẫn theo dữ liệu nghiệp vụ.' : 'Đã lưu kết quả xử lý (demo)');
                   }
                 }}
               >

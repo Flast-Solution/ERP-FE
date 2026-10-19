@@ -254,6 +254,8 @@ function SideBar() {
       getItem(<Link to="/category/tin-tuc">D.Mục tin tức</Link>, 'cate-tin-tuc', <span> - </span>, undefined, 'web.news_category.view'),
       getItem(<Link to="/post">Trang tin tức</Link>, 'post', <span> - </span>, undefined, 'web.post.view'),
       getItem(<Link to="/faq">Faq</Link>, 'faq', <span> - </span>, undefined, 'web.faq.view'),
+      getItem(<Link to="/menu">Quản lý Menu</Link>, 'web-menu', <span> - </span>, undefined, 'web.menu.view'),
+      getItem(<Link to="/banner">Quản lý banner</Link>, 'banner', <span> - </span>, undefined, 'web.banner.view'),
       getItem(<Link to="/tag">Quản lý Tag</Link>, 'tag', <span> - </span>, undefined, 'web.tag.view'),
       getItem(<Link to="/landing">Quản lý trang</Link>, 'page', <span> - </span>, undefined, 'web.landing.view')
     ]),

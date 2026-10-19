@@ -1,3 +1,4 @@
+import AlertLink from '@/features/Alerts/components/AlertLink';
 /**************************************************************************/
 /*  index.js                                                           		*/
 /**************************************************************************/
@@ -60,13 +61,13 @@ export const CoHoi7DayContent = ({ type }) => {
       fixed: 'right',
       width: 100,
       render: (record) => (
-        <Button
+        <><AlertLink entityId={record.id} entityKind={type === 'cohoi' ? 'DEAL' : 'ORDER'} /> <Button
           type="primary"
           size="small"
           onClick={() => onEdit(record)}
         >
           Cập nhật
-        </Button>
+        </Button></>
       )
     }
   ];

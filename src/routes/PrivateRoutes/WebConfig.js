@@ -6,6 +6,9 @@ const CatePage = React.lazy(() => import('@/pages/category/page'));
 const FaqPage = React.lazy(() => import('@/pages/faq'));
 const ContentPage = React.lazy(() => import('@/pages/post'));
 const ContentEdit = React.lazy(() => import('@/pages/post/Edit'));
+const MenuPage = React.lazy(() => import('@/pages/menu'));
+const BannerEditPage = React.lazy(() => import('@/pages/banner/Edit'));
+const BannerPage = React.lazy(() => import('@/pages/banner'));
 const TagPage = React.lazy(() => import('@/pages/tag'));
 const TagEditPage = React.lazy(() => import('@/pages/tag/Edit'));
 const Landing = React.lazy(() => import('@/pages/landing'));
@@ -26,6 +29,9 @@ export const WebConfig = {
     { path     : '/faq', permission: 'web.faq.view', element: <FaqPage /> },
     { path     : '/post', permission: 'web.post.view', element: <ContentPage /> },
     { path     : '/post/edit', permission: ({ search }) => new URLSearchParams(search).has('id') ? 'web.post.update' : 'web.post.create', element: <ContentEdit /> },
+    { path: '/banner/edit', permission: ({ search }) => new URLSearchParams(search).has('id') ? 'web.banner.update' : 'web.banner.create', element: <BannerEditPage /> },
+    { path: '/menu', permission: 'web.menu.view', element: <MenuPage /> },
+    { path     : '/banner', permission: 'web.banner.view', element: <BannerPage /> },
     { path     : '/tag', permission: 'web.tag.view', element: <TagPage /> },
     { path     : '/tag/edit', permission: ({ search }) => new URLSearchParams(search).has('id') ? 'web.tag.update' : 'web.tag.create', element: <TagEditPage /> },
     { path     : '/landing', permission: 'web.landing.view', element: <Landing /> },

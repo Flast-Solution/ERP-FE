@@ -1,3 +1,5 @@
+import AlertLink from '@/features/Alerts/components/AlertLink';
+import { useLocation } from 'react-router-dom';
 /**************************************************************************/
 /*  index.js                                                           		*/
 /**************************************************************************/
@@ -60,6 +62,8 @@ const getDeliveryMode = delivery => {
 };
 
 const ShipPage = () => {
+  const {search}=useLocation();
+  const requestedOrderCode=new URLSearchParams(search).get('orderCode');
 
   const [title] = useState("Đã giao");
   const { hasPermission } = useGetMe();
@@ -241,12 +245,12 @@ const ShipPage = () => {
         onData={onData}
         hasCreate={false}
         xScroll={1400}
-        initialFilter={{ limit: 10, page: 1 }}
+        initialFilter={{ limit: 10, page: 1, ...(requestedOrderCode?{orderCode:requestedOrderCode}:{}) }}
         filter={<ShipFilter />}
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
         apiPath={'shipping/fetch'}
-        columns={CUSTOM_ACTION}
+        columns={[...CUSTOM_ACTION, { title: 'Cảnh báo', key: 'alerts', width: 84, render: (_,record)=><AlertLink entityId={record.id} entityKind="SHIPPING"/> }]}
       />
       <WorkflowAttachModal
         open={workflow.workflowModalOpen}

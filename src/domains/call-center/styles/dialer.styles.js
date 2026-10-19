@@ -20,6 +20,7 @@ export const PhoneTrigger = styled.button`
   color: ${p => (p.$active ? color.onPrimarySoft : color.ink2)};
   font: 600 12px/1 ${font};
   cursor: pointer;
+  &:disabled { cursor: not-allowed; opacity: .55; }
 
   .anticon {
     font-size: 18px;

@@ -186,6 +186,12 @@ export const PERMISSION_MENUS = [
     p('Xem bài viết', 'web.post.view'), p('Tạo', 'web.post.create'), p('Sửa', 'web.post.update'),
     p('Xóa', 'web.post.delete'), p('Quản lý nội dung/ảnh', 'web.post.content.manage'),
   ]),
+  menu('Web', 'Menu', '/menu', [
+    p('Xem menu', 'web.menu.view'), p('Tạo', 'web.menu.create'), p('Sửa', 'web.menu.update'), p('Xóa', 'web.menu.delete'),
+  ]),
+  menu('Web', 'Banner', '/banner', [
+    p('Xem banner', 'web.banner.view'), p('Tạo', 'web.banner.create'), p('Sửa', 'web.banner.update'), p('Xóa', 'web.banner.delete'),
+  ]),
   menu('Web', 'Tag', '/tag', [
     p('Xem Tag', 'web.tag.view'), p('Tạo', 'web.tag.create'), p('Sửa', 'web.tag.update'), p('Xóa', 'web.tag.delete'),
   ]),

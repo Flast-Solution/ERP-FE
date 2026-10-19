@@ -1,196 +1,56 @@
-import { useState, useCallback, useContext } from 'react';
-import { Row, Col, message, Form } from 'antd';
-import { CloseOutlined } from '@ant-design/icons';
-import { useEffectAsync } from '@flast-erp/core/hooks';
+import { useEffect, useState } from 'react';
+import { Button, Form, Input, message, Select, Space, Spin } from 'antd';
 import { Helmet } from 'react-helmet';
-import { 
-  RestEditModal, 
-  BreadcrumbCustom,
-  FormHidden,
-  FormInput,
-  FormTextArea,
-  CustomButton,
-  FormContextCustom
-} from '@flast-erp/core/components';
-import { RequestUtils } from '@flast-erp/core/utils';
+import { BreadcrumbCustom } from '@flast-erp/core/components';
 import { useNavigateSearch, useQueryParams } from '@flast-erp/core/hooks';
-import { SUCCESS_CODE } from '@/configs';
+import { listTags, saveTag } from './service';
 
-const TagEdit = () => {
+export default function TagEdit() {
   const { get } = useQueryParams();
-  const navigate = useNavigateSearch();
   const id = get('id');
-
-  const [tag, setTag] = useState({});
-  const [formInstance] = Form.useForm();
-  const [localTags, setLocalTags] = useState([]);
-
-
-  useEffectAsync(
-    async () => {
-      if (!id) {
-        setTag({});
-        return;
-      }
-      const { data, errorCode } = await RequestUtils.Get('/tag/find-by-id', { id });
-      if (errorCode === SUCCESS_CODE) {
-        setTag(data || {});
-      }
-    },
-    [id],
-    () => {
-      setTag({});
-    }
-  );
-
-  const onSubmit = useCallback(
-    async (values) => {
-      const body = id ? { id, ...values } : values;
-      const { message: MSG, data, errorCode } = await RequestUtils.Post('/tag/save', body);
-      if (errorCode === SUCCESS_CODE && data) {
-        setTag(data);
-        if (!id) {
-          formInstance.resetFields();
-          setTag({});
-          navigate('/tag/edit');
-        }
-      }
-      message.info(MSG);
-    },
-    [id, formInstance, navigate]
-  );
-
-  const handleAgree = useCallback(() => {
-    formInstance.validateFields().then(values => {
-      setLocalTags(pre => [...pre, values]);
-      formInstance.resetFields();
-    }).catch(() => {});
-  }, [formInstance]);
-
-  const handleRemoveTag = useCallback((idx) => {
-    setLocalTags(pre => pre.filter((_, i) => i !== idx));
-  }, []);
-
-  const makeSlug = (text = '') => {
-    return text
-      .toString()
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-+|-+$/g, '');
+  const type = get('type') === 'pages' ? 'pages' : 'product';
+  const navigate = useNavigateSearch();
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [ready, setReady] = useState(!id);
+  useEffect(() => {
+    let active = true;
+    form.resetFields();
+    form.setFieldsValue({ type });
+    setReady(!id);
+    if (!id) { setLoading(false); return; }
+    setLoading(true);
+    listTags(type).then(tags => {
+      if (!active) return;
+      const tag = tags.find(item => String(item.id) === String(id));
+      if (!tag) throw new Error('Không tìm thấy tag');
+      form.setFieldsValue(tag);
+      setReady(true);
+    }).catch(error => { if (active) message.error(error.message); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [id, type, form]);
+  const submit = async values => {
+    setSaving(true);
+    try {
+      await saveTag({ ...values, id: id || null });
+      message.success('Đã lưu tag');
+      navigate('/tag');
+    } catch (error) { message.error(error.message); }
+    finally { setSaving(false); }
   };
-
-  const TagFormContent = () => {
-    const { form } = useContext(FormContextCustom);
-
-    const handleNameChange = (e) => {
-      const nameVal = e.target.value;
-      const slugVal = makeSlug(nameVal);
-      form.setFieldsValue({ slug: slugVal });
-    };
-
-    return (
-      <Row gutter={16} style={{ marginTop: 20 }}>
-        <Col md={24} xs={24}>
-          <FormHidden name="id" />
-        </Col>
-
-        <Col md={12} xs={24}>
-          <FormInput
-            label="Tên tag"
-            name="name"
-            placeholder="Nhập tên"
-            onChange={handleNameChange}
-          />
-          <FormInput
-            label="Slug"
-            name="slug"
-            placeholder="Nhập slug"
-          />
-          <FormTextArea
-            label="Mô tả"
-            name="description"
-            placeholder="Nhập mô tả"
-          />
-          <Form.Item label="Màu" name="color" initialValue="#000000">
-            <input type="color" style={{ width: 32, height: 32, border: 'none', padding: 0 }} />
-          </Form.Item>
-          <Form.Item>
-            <div style={{
-                display: "flex",
-                justifyContent:"space-between"
-            }}>  
-              <CustomButton
-                style={{ marginLeft: 8 }}
-                type="default"
-                onClick={handleAgree}
-                title="Xem trước"
-              />
-              <CustomButton type="primary" htmlType="submit" title="Lưu tag" />
-            </div>
-          </Form.Item>
-        </Col>
-
-        <Col md={12} xs={24} style={{ padding: 16, border: '1px solid #f0f0f0' }}>
-          {localTags.length === 0 ? (
-            <div style={{ color: '#999' }}>Thêm tag để xem trước</div>
-          ) : (
-            localTags.map((t, idx) => (
-              <div
-                key={idx}
-                style={{
-                  display: 'inline-block',
-                  padding: '4px 8px',
-                  backgroundColor: t.color || '#ccc',
-                  color: '#fff',
-                  borderRadius: 4,
-                  marginRight: 4,
-                  marginBottom: 4,
-                  position: 'relative',
-                }}
-              >
-                {t.name || '-'}
-                <CloseOutlined
-                  onClick={() => handleRemoveTag(idx)}
-                  style={{
-                    marginLeft: 6,
-                    cursor: 'pointer',
-                    fontSize: 12,
-                  }}
-                />
-              </div>
-            ))
-          )}
-        </Col>
-      </Row>
-    );
-  };
-
-  return (
-    <>
-      <Helmet>
-        <title>{id ? 'Sửa tag' : 'Thêm mới tag'}</title>
-      </Helmet>
-      <BreadcrumbCustom
-        data={[
-          { title: 'Trang chủ' },
-          { title: 'Tag' },
-          { title: tag?.name ?? (id ? '...' : 'Thêm mới tag') },
-        ]}
-      />
-      <RestEditModal
-        form={formInstance}
-        record={tag}
-        updateRecord={(values) => setTag((prev) => ({ ...prev, ...values }))}
-        onSubmit={onSubmit}
-      >
-        <TagFormContent />
-      </RestEditModal>
-    </>
-  );
-};
-
-export default TagEdit;
+  const title = id ? 'Sửa tag' : 'Thêm mới tag';
+  return <>
+    <Helmet><title>{title}</title></Helmet>
+    <BreadcrumbCustom data={[{ title: 'Trang chủ' }, { title: 'Tag' }, { title }]} />
+    <Spin spinning={loading}>
+      <Form form={form} layout="vertical" onFinish={submit} style={{ maxWidth: 640 }} disabled={!ready || saving}>
+        <Form.Item name="name" label="Tên tag" rules={[{ required: true, whitespace: true, message: 'Vui lòng nhập tên tag' }]}><Input placeholder="Nhập tên tag" /></Form.Item>
+        <Form.Item name="type" label="Loại tag" rules={[{ required: true, message: 'Vui lòng chọn loại tag' }]}><Select placeholder="Chọn loại tag" options={[{ value: 'product', label: 'Sản phẩm (product)' }, { value: 'pages', label: 'Trang (pages)' }]} /></Form.Item>
+        <Form.Item name="description" label="Mô tả"><Input.TextArea rows={4} placeholder="Mô tả tùy chọn" /></Form.Item>
+        <Space><Button type="primary" htmlType="submit" loading={saving}>Lưu tag</Button><Button onClick={() => navigate('/tag')}>Quay lại</Button></Space>
+      </Form>
+    </Spin>
+  </>;
+}

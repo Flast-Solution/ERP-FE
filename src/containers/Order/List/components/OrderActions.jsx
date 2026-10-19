@@ -1,3 +1,4 @@
+import AlertLink from '@/features/Alerts/components/AlertLink';
 import React from 'react'
 import { Button, Dropdown, Popconfirm, Space, Tooltip } from 'antd'
 import { ApartmentOutlined, DeleteOutlined, EditFilled, EyeOutlined, InboxOutlined, TruckOutlined } from '@ant-design/icons'
@@ -106,6 +107,7 @@ const OrderActions = ({
 
   return (
     <Space size={compact ? 4 : 8} wrap={compact}>
+      <AlertLink entityId={record.id} entityKind={isOpportunityList ? 'DEAL' : 'ORDER'} />
       {canViewDetail ? <Button
         type="primary"
         size="small"
