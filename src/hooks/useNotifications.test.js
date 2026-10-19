@@ -6,6 +6,19 @@ jest.mock('./useGetMe',()=>({__esModule:true,default:()=>({user:mockUser})}));
 jest.mock('@/features/Alerts/service',()=>({fetchNotifications:jest.fn(),notificationAction:jest.fn(),createAlertTask:jest.fn(),fetchAlertDetails:jest.fn(),normalizeNotification:value=>value}));
 let mockUser, root, state;
 function Harness(){state=useNotifications();return null;}
+test('shares loaded entity identities with tenant buttons and clears them on refresh',async()=>{
+ fetchNotifications.mockResolvedValue([{id:'a',entityData:{id:42,kind:'ORDER'}}]);
+ await act(async()=>root.render(<Harness/>));
+ const receive=jest.fn();window.addEventListener('ERP_ENTITY_ALERTS_UPDATED',receive);
+ try {
+  window.dispatchEvent(new CustomEvent('ERP_ENTITY_ALERTS_REQUEST'));
+  expect(receive.mock.calls.at(-1)[0].detail).toEqual([{id:42,kind:'ORDER'}]);
+  expect(fetchNotifications).toHaveBeenCalledTimes(1);
+  fetchNotifications.mockResolvedValue([]);
+  await act(async()=>state.refresh());
+  expect(receive.mock.calls.at(-1)[0].detail).toEqual([]);
+ } finally {window.removeEventListener('ERP_ENTITY_ALERTS_UPDATED',receive);}
+});
 beforeEach(()=>{global.IS_REACT_ACT_ENVIRONMENT=true;jest.resetAllMocks();mockUser={bizId:1645,id:2};root=createRoot(document.createElement('div'));});
 afterEach(async()=>{await act(async()=>root.unmount());delete global.IS_REACT_ACT_ENVIRONMENT;});
 test('loads on mount, reloads on request, does not fall back to demo on errors',async()=>{

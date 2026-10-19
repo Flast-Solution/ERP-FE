@@ -11,7 +11,7 @@ jest.mock('antd',()=>({message:{info:jest.fn(),error:jest.fn()}}));
 let root,actions;
 beforeEach(()=>{jest.clearAllMocks();global.IS_REACT_ACT_ENVIRONMENT=true;root=createRoot(document.createElement('div'))});
 afterEach(async()=>{await act(async()=>root.unmount());delete global.IS_REACT_ACT_ENVIRONMENT});
-async function mount(scenario,alert){const Harness=()=>{actions=useBusinessAlertActions(alert,scenario);return null};await act(async()=>root.render(<Harness/>))}
+async function mount(scenario,alert,onNavigate){const Harness=()=>{actions=useBusinessAlertActions(alert,scenario,undefined,onNavigate);return null};await act(async()=>root.render(<Harness/>))}
 test('debt action opens real order payment with the original order identity',async()=>{
  const order={id:7,code:'ORDER-7',details:[{id:8}],currency:'USD'};
  RequestUtils.Get.mockResolvedValue({errorCode:200,data:{order,customer:{id:3}}});
@@ -30,4 +30,27 @@ test('POD action opens the exact shipping record when provided',async()=>{
  await mount('pod',{id:1,entityData:{kind:'SHIPPING'},businessData:{shipping}});
  await actions.open('primary');
  expect(InAppEvent.emit).toHaveBeenCalledWith('#modal',expect.objectContaining({hash:'#ship.update',data:shipping}));
+});
+test('POD action opens flat SHIPMENT entity by its shipment ID',async()=>{
+ const shipment={id:39,kind:'SHIPMENT',orderId:75,deliveryCode:'GDN-DEMO',delivery:{recipientName:'Người nhận'},attachments:[],requiredDocuments:[]};
+ await mount('pod',{id:'pod',entityData:shipment});
+ await actions.open('primary');
+ expect(InAppEvent.emit).toHaveBeenCalledWith('#modal',expect.objectContaining({hash:'#ship.update',data:shipment}));
+ expect(mockNavigate).not.toHaveBeenCalled();
+ expect(RequestUtils.Get).not.toHaveBeenCalled();
+});
+test('lead action reads the phone from the expanded entity DTO',async()=>{
+ await mount('lead',{id:'expanded',entityData:{id:101,kind:'LEAD',customerName:'API customer',customerMobile:'0900001234',customerType:'INDIVIDUAL'}});
+ await actions.open('primary');
+ expect(mockDial).toHaveBeenCalledWith('0900001234');
+ expect(RequestUtils.Get).not.toHaveBeenCalled();
+});
+
+test('opening the order navigates using entity.order.code then closes the alert drawer',async()=>{
+ const close=jest.fn();
+ await mount('debt',{id:'debt',entityData:{kind:'INVOICE',id:101,order:{id:101,code:'DEMO-DEBT-01',status:2}}},close);
+ await actions.open('order');
+ expect(mockNavigate).toHaveBeenCalledWith('/sale/order?code=DEMO-DEBT-01');
+ expect(close).toHaveBeenCalledTimes(1);
+ expect(RequestUtils.Get).not.toHaveBeenCalled();
 });
