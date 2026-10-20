@@ -89,6 +89,7 @@ const ListOrder = ({
     : 'sales.order.detail.view')
   const canUpdateOpportunity = isOpportunityList && hasPermission('sales.opportunity.update')
   const canUpdateOrder = isOrderList && hasPermission('sales.order.update')
+  const canDeleteOrder = canUpdateOrder && !apiPath.includes('manufacture/')
   const canViewQuotation = isOpportunityList && hasPermission('sales.quotation.view')
   const canAttachWorkflow = hasPermission(isOpportunityList
     ? 'sales.opportunity.workflow.attach'
@@ -203,16 +204,17 @@ const ListOrder = ({
   }, [filter])
 
   const cancelOpportunity = async (record) => {
+    const entityLabel = isOpportunityList ? 'cơ hội bán hàng' : 'đơn hàng'
     setCancellingOpportunityId(record.id)
     try {
       const response = await RequestUtils.Post(`/order/cancel-co-hoi?orderId=${encodeURIComponent(record.id)}`, {})
       if (response?.success === false || (response?.success !== true && Number(response?.errorCode) !== 200)) {
-        throw new Error(response?.message || 'Không thể xóa cơ hội bán hàng.')
+        throw new Error(response?.message || `Không thể xóa ${entityLabel}.`)
       }
-      message.success('Đã xóa cơ hội bán hàng.')
+      message.success(`Đã xóa ${entityLabel}.`)
       f5List(listApiPath)
     } catch (error) {
-      message.error(error?.response?.data?.message || error?.message || 'Không thể xóa cơ hội bán hàng.')
+      message.error(error?.response?.data?.message || error?.message || `Không thể xóa ${entityLabel}.`)
     } finally {
       setCancellingOpportunityId(null)
     }
@@ -220,7 +222,7 @@ const ListOrder = ({
 
   const actionWidth = (
     filter.type === 'cohoi' ? 260 : 220
-  ) + ((extraActions?.length ?? 0) * 44) + (canCreateReceipt ? 44 : 0) + (canUpdateOpportunity ? 44 : 0)
+  ) + ((extraActions?.length ?? 0) * 44) + (canCreateReceipt ? 44 : 0) + (canUpdateOpportunity ? 44 : 0) + (canDeleteOrder ? 44 : 0)
 
   const columnOptions = {
     isOpportunityList,
@@ -249,6 +251,7 @@ const ListOrder = ({
     cancelOpportunity,
     cancellingOpportunityId,
     canUpdateOrder,
+    canDeleteOrder,
     canViewQuotation,
     canAttachWorkflow,
     canViewWorkflow,
@@ -277,7 +280,7 @@ const ListOrder = ({
         xScroll={isOpportunityList ? 1200 : 1800}
         expandable={orderLotExpandable}
         onData={onData}
-        initialFilter={{ limit: 10, page: 1, ...filter }}
+        initialFilter={{ limit: isOrderList ? 20 : 10, page: 1, ...filter }}
         filter={<Filter />}
         hasCreate={false}
         beforeSubmitFilter={beforeSubmitFilter}

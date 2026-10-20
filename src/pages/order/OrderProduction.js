@@ -72,7 +72,6 @@ const OrderProduction = () => {
             <ListOrder hideEditorEditColumn
                 filter={filter}
                 apiPath="erp/manufacture/get-order"
-                initialPage={0}
                 orderMode
                 hideQuoteButton={true}
                 disableWorkflowAttach={true}
