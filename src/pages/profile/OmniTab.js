@@ -3,13 +3,14 @@
 /**************************************************************************/
 
 import { useCallback, useEffect, useState } from 'react'
-import { Button, Modal, Skeleton, Tooltip, message } from 'antd'
+import { Button, Input, Modal, Skeleton, Tooltip, message } from 'antd'
 import {
   ApiOutlined,
   DeleteOutlined,
   DisconnectOutlined,
   ExclamationCircleOutlined,
   PlusOutlined,
+  PhoneOutlined,
   ReloadOutlined,
 } from '@ant-design/icons'
 import moment from 'moment'
@@ -23,6 +24,9 @@ import {
   AddRow,
   PickChannel,
 } from './omniTabStyles'
+
+import useGetMe from '@/hooks/useGetMe'
+import { saveCallCenterExtension } from './callCenterService'
 
 const OAUTH_MSG_KEY = 'omni-oauth-result'
 const STATUS_META = {
@@ -61,6 +65,23 @@ const consumeOAuthResult = () => {
 }
 
 const OmniTab = () => {
+  const { user, setMe } = useGetMe()
+  const savedExtension = String(user?.sipExt ?? '').trim()
+  const [callCenterSelected, setCallCenterSelected] = useState(false)
+  const [sipExt, setSipExt] = useState('')
+  const [savingExtension, setSavingExtension] = useState(false)
+  const openPicker = () => { setCallCenterSelected(false); setSipExt(savedExtension); setPicking(true) }
+  const saveExtension = async () => {
+    if (savingExtension) return
+    setSavingExtension(true)
+    try {
+      const saved = await saveCallCenterExtension(user, sipExt)
+      setMe({ ...user, sipExt: saved })
+      setPicking(false)
+      message.success('Đã lưu máy nhánh tổng đài')
+    } catch (error) { message.error(error.message) }
+    finally { setSavingExtension(false) }
+  }
 
   const [ channels, setChannels ] = useState(null)
   const [ picking, setPicking ] = useState(false)
@@ -146,34 +167,38 @@ const OmniTab = () => {
   return (
     <TabWrapper>
       <div className="head">
-        <div className="title">Kênh tin nhắn</div>
+        <div className="title">Kênh tương tác</div>
         <div className="desc">
-          Nối Zalo OA và Facebook fanpage để tin nhắn khách chảy về hộp thư chung. Mỗi kênh cần
-          được cấp quyền một lần, sau đó hệ thống tự làm mới kết nối.
+          Kết nối Zalo OA, Facebook Fanpage và cấu hình máy nhánh tổng đài cho tài khoản để nhắn tin, nghe và gọi khách hàng.
         </div>
       </div>
 
-      {channels.length === 0 ? (
+      {savedExtension && <ChannelCard>
+        <div className="badge"><PhoneOutlined /></div>
+        <div className="info"><div className="name">Tổng đài</div><div className="meta">Máy nhánh: {savedExtension}</div></div>
+        <div className="actions"><Button onClick={() => { setSipExt(savedExtension); setCallCenterSelected(true); setPicking(true) }}>Chỉnh sửa</Button></div>
+      </ChannelCard>}
+      {channels.length === 0 && !savedExtension ? (
         <EmptyCard>
           <div className="icon">
             <ApiOutlined />
           </div>
           <div className="title">Chưa nối kênh nào</div>
           <div className="desc">
-            Nối Zalo OA hoặc Facebook fanpage để tin nhắn khách chảy về đây.
+            Kết nối Zalo OA, Facebook Fanpage hoặc thêm máy nhánh tổng đài.
           </div>
           <Button
             type="primary"
             className="primary"
             icon={<PlusOutlined />}
-            onClick={() => setPicking(true)}
+            onClick={openPicker}
           >
             Nối kênh
           </Button>
         </EmptyCard>
       ) : (
         <>
-          {!hasWorkingChannel && (
+          {channels.length > 0 && !hasWorkingChannel && (
             <div style={{ marginBottom: 12, fontSize: 13, color: '#cf1322' }}>
               Tất cả kênh đang ngắt — hộp thư không nhận được tin mới.
             </div>
@@ -259,7 +284,7 @@ const OmniTab = () => {
           })}
 
           <AddRow>
-            <Button icon={<PlusOutlined />} onClick={() => setPicking(true)}>
+            <Button icon={<PlusOutlined />} onClick={openPicker}>
               Nối thêm kênh
             </Button>
           </AddRow>
@@ -271,7 +296,9 @@ const OmniTab = () => {
         title="Chọn loại kênh"
         footer={null}
         width={520}
-        onCancel={() => setPicking(false)}
+        onCancel={() => { if (!savingExtension) setPicking(false) }}
+        closable={!savingExtension}
+        maskClosable={!savingExtension}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
           {CHANNEL_OPTIONS.map((opt) => (
@@ -279,7 +306,7 @@ const OmniTab = () => {
               key={opt.type}
               type="button"
               $channelType={opt.type}
-              disabled={connecting !== null}
+              disabled={connecting !== null || savingExtension}
               onClick={() => handleConnect(opt.type)}
             >
               <span className="badge">{opt.initial}</span>
@@ -291,6 +318,14 @@ const OmniTab = () => {
               </span>
             </PickChannel>
           ))}
+          <PickChannel type="button" disabled={connecting !== null || savingExtension} aria-pressed={callCenterSelected} onClick={() => setCallCenterSelected(true)} style={callCenterSelected ? { borderColor: '#0068ff', background: '#f5f9ff' } : undefined}>
+            <span className="badge"><PhoneOutlined /></span><span><span className="name">Tổng đài</span><span className="desc" style={{ display: 'block' }}>Cấu hình máy nhánh nghe gọi cho tài khoản</span></span>
+          </PickChannel>
+          {callCenterSelected && <div>
+            <label htmlFor="profile-sip-extension" style={{ display: 'block', marginBottom: 8 }}>Máy nhánh (sipExt) <span style={{ color: '#cf1322' }}>*</span></label>
+            <Input id="profile-sip-extension" value={sipExt} onChange={event => setSipExt(event.target.value)} disabled={savingExtension} placeholder="Nhập máy nhánh được cấp" onPressEnter={saveExtension} />
+            <Button type="primary" loading={savingExtension} disabled={!sipExt.trim()} onClick={saveExtension} style={{ marginTop: 12 }}>Lưu máy nhánh</Button>
+          </div>}
         </div>
       </Modal>
     </TabWrapper>
