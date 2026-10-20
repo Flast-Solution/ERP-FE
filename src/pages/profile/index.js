@@ -28,7 +28,7 @@ const PROFILE_TABS = [
   { key: 'password', label: 'Mật khẩu', icon: LockOutlined },
   { key: 'layout', label: 'Bố cục trang', icon: AppstoreOutlined },
   { key: 'custom-routes', label: 'Route tuỳ chỉnh', icon: AppstoreOutlined },
-  { key: 'omni', label: 'Kênh tin nhắn', icon: MessageOutlined },
+  { key: 'omni', label: 'Kênh tương tác', icon: MessageOutlined },
 ]
 
 const TAB_COMPONENTS = {

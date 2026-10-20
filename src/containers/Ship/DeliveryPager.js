@@ -19,6 +19,7 @@ import useGetMe from '@/hooks/useGetMe';
 import '@/containers/WareHouse/GiaoHang.less';
 import UploadedFilePreview from "@erp/shared-ui/components/UploadedFilePreview/index";
 import { toUploadFile } from '../PreviewModal/uploadUtils';
+import WarehouseDocumentsUpload from '../WareHouse/WarehouseDocumentsUpload';
 
 const DOCUMENT_OPTIONS = [
   { label: 'Phiếu xuất kho', value: 'warehouseSlip' },
@@ -84,13 +85,15 @@ const ReadonlyField = ({ label, value, mono = false }) => (
   </div>
 );
 
-const DeliveryPager = ({ data = {} }) => {
+const DeliveryPager = ({ data = {}, markDrawerClean }) => {
   const { hasPermission } = useGetMe();
   const canUpdate = hasPermission('shipping.delivery.update');
   const canPrint = hasPermission('shipping.delivery.print');
   const contentRef = useRef();
   const [form] = Form.useForm();
   const savingRef = useRef(false);
+  const uploadingRef = useRef(false);
+  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [previewFile, setPreviewFile] = useState(null);
   const delivery = data?.delivery ?? {};
@@ -112,8 +115,8 @@ const DeliveryPager = ({ data = {} }) => {
   }, []);
 
   useEffect(() => {
-    form.setFieldValue('status', data?.status);
-  }, [data?.status, form]);
+    form.setFieldsValue({ status: data?.status, attachments: parseAttachments(data?.attachments), requiredDocuments: Array.isArray(data?.requiredDocuments) ? data.requiredDocuments : [] });
+  }, [data?.id, data?.status, data?.attachments, data?.requiredDocuments, form]);
 
   const productLabel = [
     data?.productId ? `SP #${data.productId}` : null,
@@ -170,17 +173,18 @@ const DeliveryPager = ({ data = {} }) => {
     }
   ];
 
-  const onFinish = async ({ status }) => {
-    if (!canUpdate || savingRef.current) return;
+  const onFinish = async ({ status, attachments: updatedAttachments, requiredDocuments: updatedDocuments }) => {
+    if (!canUpdate || savingRef.current || uploadingRef.current) return;
     savingRef.current = true;
     setSaving(true);
     try {
-      const response = await RequestUtils.Post('/warehouse/delivery', { ...data, status });
-      if (!(response?.success === true || Number(response?.errorCode) === 200)) {
+      const response = await RequestUtils.Post('/warehouse/delivery', { ...data, status, attachments: updatedAttachments ?? parseAttachments(data?.attachments), requiredDocuments: updatedDocuments ?? requiredDocuments });
+      if (response?.success === false || !(response?.success === true || Number(response?.errorCode) === 200)) {
         message.error(response?.message || 'Không cập nhật được phiếu giao hàng');
         return;
       }
-      message.success(response?.message || 'Đã cập nhật trạng thái giao hàng');
+      markDrawerClean?.();
+      message.success(response?.message || 'Đã cập nhật lệnh giao và chứng từ');
       f5List('shipping/fetch');
     } catch (error) {
       message.error(error?.message || 'Không cập nhật được phiếu giao hàng');
@@ -191,7 +195,7 @@ const DeliveryPager = ({ data = {} }) => {
   };
 
   return (
-    <>
+    <Form form={form} layout="vertical" onFinish={onFinish} disabled={saving || uploading}>
       <div className="warehouse-delivery warehouse-delivery--compact" ref={contentRef}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0 4px' }}>
           <div>
@@ -252,9 +256,9 @@ const DeliveryPager = ({ data = {} }) => {
 
         <Section number="4" title="Chứng từ kèm theo">
           <div className="warehouse-delivery__documents">
-            <Checkbox.Group options={DOCUMENT_OPTIONS} value={requiredDocuments} disabled />
+            {canUpdate ? <Form.Item name="requiredDocuments" style={{ marginBottom: 0 }}><Checkbox.Group options={DOCUMENT_OPTIONS} /></Form.Item> : <Checkbox.Group options={DOCUMENT_OPTIONS} value={requiredDocuments} disabled />}
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+          {canUpdate ? <div className="warehouse-delivery__upload"><WarehouseDocumentsUpload disabled={saving} onUploadingChange={value => { uploadingRef.current = value; setUploading(value); }} /><p style={{ color: '#6b7280' }}>Tải lên POD, ảnh giao hàng hoặc biên bản ký nhận, sau đó bấm Cập nhật để lưu vào lệnh giao.</p></div> : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
             {attachments.length > 0 ? attachments.map(file => (
               <Tooltip key={file.uid} title={`Xem ${file.name}`}>
                 <Button icon={<FileOutlined />} onClick={() => setPreviewFile(file)}
@@ -263,15 +267,14 @@ const DeliveryPager = ({ data = {} }) => {
                 </Button>
               </Tooltip>
             )) : <span style={{ color: '#6b7280' }}>Không có tệp đính kèm</span>}
-          </div>
+          </div>}
         </Section>
       </div>
 
       <UploadedFilePreview file={previewFile} onClose={() => setPreviewFile(null)} />
 
-      <Form form={form} layout="vertical" onFinish={onFinish} disabled={saving}>
         <footer className="warehouse-delivery__footer">
-          <span>Phiếu xuất kho được hiển thị ở chế độ xem chi tiết.</span>
+          <span>Chứng từ được lưu khi bấm Cập nhật.</span>
           <div>
             {canUpdate && (
               <FormSelectAPI
@@ -282,12 +285,11 @@ const DeliveryPager = ({ data = {} }) => {
                 formItemProps={{ style: { width: 220, marginBottom: 0 } }}
               />
             )}
-            {canUpdate && <Button htmlType="submit" loading={saving} icon={<SaveOutlined />}>Cập nhật</Button>}
+            {canUpdate && <Button htmlType="submit" loading={saving} disabled={uploading} icon={<SaveOutlined />}>Cập nhật</Button>}
             {canPrint && <Button type="primary" icon={<PrinterOutlined />} onClick={printReceipt}>In phiếu</Button>}
           </div>
         </footer>
-      </Form>
-    </>
+    </Form>
   );
 };
 

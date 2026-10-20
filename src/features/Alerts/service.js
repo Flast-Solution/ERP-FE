@@ -22,6 +22,8 @@ export function normalizeNotification(alert, group = {}) {
   const taskIds = parse(alert.taskIds ?? alert.taskIdsJson, []);
   const status = String(alert.status || '').toUpperCase();
   const createdAt = date(alert.triggeredAt ?? alert.createdDate);
+  const entityKind = entity.kind || definition?.entityKind;
+  const entityName = entity.name || (entityKind === 'LEAD' ? entity.customerName : '') || '';
   return {
     ...alert,
     type: alert.type || group.type,
@@ -32,15 +34,15 @@ export function normalizeNotification(alert, group = {}) {
     autoClose: rule.autoClose || definition?.autoClose || '',
     level: ({CRITICAL:'critical', URGENT:'critical', HIGH:'high', MEDIUM:'medium', LOW:'info', INFO:'info'})[String(alert.severity || definition?.severity || '').toUpperCase()] || 'info',
     status: (date(alert.snoozedUntil)&&new Date(date(alert.snoozedUntil))>new Date()&&!['CLOSE','CLOSED','DONE','RESOLVED','IGNORED','DISMISSED'].includes(status))?'snoozed':({CLOSE:'resolved', CLOSED:'resolved', DONE:'resolved', RESOLVED:'resolved', DISMISSED:'ignored', IGNORED:'ignored', SNOOZED:'snoozed', IN_PROGRESS:'task', TASK_CREATED:'task'})[status] || (taskIds.length ? 'task' : 'pending'),
-    entity: entity.name || '', entityData: {...entity, kind:entity.kind || definition?.entityKind},
-    code: entity.code || (entity.id != null ? String(entity.id) : ''),
+    entity: entityName, entityData: {...entity, ...(entityName ? {name:entityName} : {}), kind:entityKind},
+    code: entity.code || entity.deliveryCode || (entity.id != null ? String(entity.id) : ''),
     category: alert.typeLabel || group.typeLabel || definition?.stage || '',
     rule: rule.name || definition?.title || '', ruleData: rule,
-    triggerCondition: rule.description || definition?.condition || '',
+    triggerCondition: rule.description || alert.description || definition?.condition || '',
     defaultParameters: definition?.parameters === '—' ? '' : definition?.parameters || '',
     conditions: (Array.isArray(rule.conditions) ? rule.conditions : []).map(item => [item.label, String(item.actual ?? '')]),
     context: Array.isArray(context) ? context : [],
-    amount: '', owner: alert.ownerName || 'Chưa có thông tin',
+    amount: '', owner: alert.ownerName || (entityKind === 'LEAD' ? entity.saleName || entity.assignTo : '') || 'Chưa có thông tin',
     suggestion: suggestion.label || getActionLabel(suggestion.code || definition?.action),
     suggestedAction: {...suggestion, code:suggestion.code || definition?.action, label:suggestion.label || getActionLabel(suggestion.code || definition?.action)},
     dueAt: date(alert.dueAt), createdAt,

@@ -134,7 +134,7 @@ export default function NotificationDropdown({
   const [resolution] = Form.useForm();
   const a = notifications.find(item => item.id === selectedId);
   const scenario = getBusinessScenario(a);
-  const businessAction = useBusinessAlertActions(a, scenario, onRefresh);
+  const businessAction = useBusinessAlertActions(a, scenario, onRefresh, () => { setSelectedId(null); setMode('detail'); setPopover(null); });
   const customerAlert = ['LEAD', 'CUSTOMER', 'DEAL', 'QUOTE'].includes(a?.entityData?.kind);
   const activityOptions = customerAlert
     ? [...new Set([a?.suggestion, 'Gọi hỏi thăm khách', 'Nhắn tin qua Zalo', 'Gửi lại báo giá', 'Hẹn gặp trực tiếp', 'Cách khác'].filter(Boolean))]

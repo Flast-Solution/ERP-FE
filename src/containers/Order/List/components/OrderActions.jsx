@@ -22,6 +22,7 @@ const OrderActions = ({
   cancelOpportunity,
   cancellingOpportunityId,
   canUpdateOrder,
+  canDeleteOrder,
   canViewQuotation,
   canAttachWorkflow,
   canViewWorkflow,
@@ -30,6 +31,7 @@ const OrderActions = ({
   canCreateDelivery,
   openOrderDeliveryDrawer,
 }) => {
+  const deleteLabel = isOpportunityList ? 'cơ hội bán hàng' : 'đơn hàng'
   const workflowDetails = (record?.details ?? []).filter(detail => (
     Array.isArray(detail?.workflowInstances) && detail.workflowInstances.length > 0
   ))
@@ -167,20 +169,20 @@ const OrderActions = ({
           <EditFilled />
         </Button>
       )}
-      {isOpportunityList && canUpdateOpportunity && (
+      {((isOpportunityList && canUpdateOpportunity) || canDeleteOrder) && (
         <span onClick={event => event.stopPropagation()}>
           <Popconfirm
-            title="Xóa cơ hội bán hàng?"
-            description="Bạn có chắc muốn hủy cơ hội bán hàng này?"
+            title={`Xóa ${deleteLabel}?`}
+            description={`Bạn có chắc muốn xóa ${deleteLabel} ${record.code || ''}?`}
             okText="Xóa"
             cancelText="Hủy"
             okButtonProps={{ danger: true }}
             disabled={cancellingOpportunityId != null}
             onConfirm={() => cancelOpportunity(record)}
           >
-            <Tooltip title="Xóa cơ hội bán hàng">
+            <Tooltip title={`Xóa ${deleteLabel}`}>
               <Button danger size="small" icon={<DeleteOutlined />}
-                aria-label="Xóa cơ hội bán hàng"
+                aria-label={`Xóa ${deleteLabel}`}
                 loading={cancellingOpportunityId === record.id}
                 disabled={cancellingOpportunityId != null && cancellingOpportunityId !== record.id}
               />

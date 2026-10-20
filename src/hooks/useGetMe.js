@@ -21,11 +21,16 @@
 
 import { useCallback, useContext, useMemo } from 'react';
 import { DataContext } from '@flast-erp/core/components';
+import { ACTIONS } from '@/configs';
 import authRoles from '@/auth/authRoles';
 import { getClientPermissions, hasClientPermission } from '@/utils/authUtils';
 
 function useGetMe() {
-    const { user, setMyData } = useContext(DataContext)
+    const { user, dispatch } = useContext(DataContext)
+
+    const setMe = useCallback(me => {
+        dispatch({ type: ACTIONS.ADD_USER, data: me });
+    }, [dispatch]);
 
     const userRoles = useMemo(() => {
         if (Array.isArray(user?.roles) && user.roles.length) {
@@ -62,7 +67,7 @@ function useGetMe() {
         user,
         permissionsClient: getClientPermissions(user),
         hasPermission: permission => hasClientPermission(user, permission),
-        setMe: (me) => setMyData(pre => ({ ...pre, user: me })),
+        setMe,
         isLeader,
         isManager,
         isUser,

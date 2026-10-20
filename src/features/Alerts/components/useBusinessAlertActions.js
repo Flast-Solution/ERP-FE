@@ -6,8 +6,9 @@ import { createBusinessReader } from '../businessModel';
 import { useCallCenterStore } from '@/domains/call-center/store/useCallCenterStore';
 import useGetMe from '@/hooks/useGetMe';
 
-export default function useBusinessAlertActions(alert, scenario, refresh) {
+export default function useBusinessAlertActions(alert, scenario, refresh, onNavigate) {
   const navigate=useNavigate();const {user,hasPermission}=useGetMe();
+  const go = path => { navigate(path); onNavigate?.(); };
   const dial=useCallCenterStore(state=>state.dial);
   const connection=useCallCenterStore(state=>state.connection);
   const read=createBusinessReader(alert||{});
@@ -36,14 +37,14 @@ export default function useBusinessAlertActions(alert, scenario, refresh) {
           if(!order?.id)throw new Error('API chưa trả thông tin đơn hàng.');
           InAppEvent.emit(HASH_MODAL,{hash:'#order.payment',title:`${scenario==='opportunity'?'Chuyển cơ hội thành đơn':'Ghi nhận thanh toán'} · ${order.code||code}`,data:{customerOrder:order,simplifiedPayment:scenario==='opportunity',details:data?.data||order.details||[],customer:data?.customer,onSave:()=>refresh?.()}});return;
         }
-        if(scenario==='unplanned'){navigate(`/material/bom?orderCode=${encodeURIComponent(code||'')}`);return;}
-        if(scenario==='production'){navigate('/provider');return;}
+        if(scenario==='unplanned'){go(`/material/bom?orderCode=${encodeURIComponent(code||'')}`);return;}
+        if(scenario==='production'){go('/provider');return;}
         if(scenario==='pod'){await open('shipping');return;}
       }
-      if(target==='lead'){navigate('/lead');return;}
-      if(target==='opportunity'){navigate(`/sale/co-hoi?code=${encodeURIComponent(code||'')}`);return;}
-      if(target==='shipping'){const shipping=read('shipping','shipment');if(shipping?.id!=null){InAppEvent.emit(HASH_MODAL,{hash:'#ship.update',title:`Lệnh giao · ${shipping.deliveryCode||shipping.id}`,data:shipping});}else navigate(`/ship?orderCode=${encodeURIComponent(read('shipping.orderCode','orderCode')||'')}`);return;}
-      navigate(`/sale/order?code=${encodeURIComponent(code||'')}`);
+      if(target==='lead'){go('/lead');return;}
+      if(target==='opportunity'){go(`/sale/co-hoi?code=${encodeURIComponent(code||'')}`);return;}
+      if(target==='shipping'){const shipping=read('shipping','shipment');if(shipping?.id!=null){InAppEvent.emit(HASH_MODAL,{hash:'#ship.update',title:`Lệnh giao · ${shipping.deliveryCode||shipping.id}`,data:shipping});}else go(`/ship?orderCode=${encodeURIComponent(read('shipping.orderCode','orderCode')||'')}`);return;}
+      go(`/sale/order?code=${encodeURIComponent(code||'')}`);
     } catch(error){message.error(error.message||'Không mở được thao tác nghiệp vụ.');}
   };
   return {open, visible:scenario!=='lead'||callAvailable,disabled:!allowed(permission)||(scenario==='lead'&&connection!=='online')};

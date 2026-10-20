@@ -128,6 +128,7 @@ const createOrderColumns = ({
   cancelOpportunity,
   cancellingOpportunityId,
   canUpdateOrder,
+  canDeleteOrder,
   canViewQuotation,
   canAttachWorkflow,
   canViewWorkflow,
@@ -300,6 +301,7 @@ const createOrderColumns = ({
         cancelOpportunity={cancelOpportunity}
         cancellingOpportunityId={cancellingOpportunityId}
         canUpdateOrder={canUpdateOrder}
+        canDeleteOrder={canDeleteOrder}
         canViewQuotation={canViewQuotation}
         canAttachWorkflow={canAttachWorkflow}
         canViewWorkflow={canViewWorkflow}

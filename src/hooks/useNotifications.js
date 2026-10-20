@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useGetMe from './useGetMe';
+import { notificationUserKey, useEntityAlertStore } from '@/features/Alerts/entityAlertStore';
 import { applyAction, awaken } from '@/features/Alerts/model';
 import { fetchNotifications, createAlertTask, notificationAction, fetchAlertDetails, normalizeNotification } from '@/features/Alerts/service';
 
 export const useNotifications = () => {
  const {user}=useGetMe();
- const key=`${user?.bizId ?? 'guest'}:${user?.id ?? user?.userId ?? 'guest'}`;
+ const key=notificationUserKey(user);
  const activeKey=useRef(key); activeKey.current=key;
  const inFlight=useRef(null);
  const detailRequests=useRef(new Map());
@@ -13,6 +14,13 @@ export const useNotifications = () => {
  const [loading,setLoading]=useState(false);
  const [error,setError]=useState(null);
  const state=store.key===key?store.state:{alerts:[],tasks:[]};
+ useEffect(()=>{useEntityAlertStore.setState({key,alerts:store.key===key?store.state.alerts:[]});},[key,store]);
+ useEffect(()=>{
+  const publish=()=>window.dispatchEvent(new CustomEvent('ERP_ENTITY_ALERTS_UPDATED',{detail:store.key===key?store.state.alerts.map(alert=>({id:alert.entityData?.id,kind:alert.entityData?.kind})):[]}));
+  window.addEventListener('ERP_ENTITY_ALERTS_REQUEST',publish);
+  publish();
+  return()=>window.removeEventListener('ERP_ENTITY_ALERTS_REQUEST',publish);
+ },[key,store]);
  const stateRef=useRef(state);stateRef.current=state;
  const actionPending=useRef(false);
  const [acting,setActing]=useState(false);
