@@ -24,7 +24,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
 import LeadFilter from './LeadFilter';
-import { useGetList } from "@flast-erp/core/hooks";
+import { useGetList } from '@flast-erp/core/hooks';
 import { Button, Tag } from 'antd';
 import { dateFormatOnSubmit } from '@flast-erp/core/utils';
 import { HASH_MODAL } from '@/configs';
@@ -39,19 +39,16 @@ export const Lead3DayContent = () => {
 
   useEffect(() => {
     RequestUtils.GetAsList('/service/list')
-      .then(items => setServices(Array.isArray(items) ? items : []))
+      .then((items) => setServices(Array.isArray(items) ? items : []))
       .catch(() => setServices([]));
     RequestUtils.GetAsList('/entity-status/list-by-type', { type: 'LEAD' })
       .then(setLeadStatuses)
       .catch(() => setLeadStatuses([]));
   }, []);
 
-  const statusOptions = useMemo(
-    () => mergeLeadStatusOptions(leadStatuses),
-    [leadStatuses],
-  );
+  const statusOptions = useMemo(() => mergeLeadStatusOptions(leadStatuses), [leadStatuses]);
   const serviceNameById = useMemo(
-    () => new Map(services.map(service => [String(service.id), service.name])),
+    () => new Map(services.map((service) => [String(service.id), service.name])),
     [services],
   );
 
@@ -60,80 +57,82 @@ export const Lead3DayContent = () => {
     let hash = '#draw/lead3day.edit';
     let data = cloneDeep(item);
     InAppEvent.emit(HASH_MODAL, { hash, title, data });
-  }
+  };
 
   const CUSTOM_ACTION = [
     {
-      title: "K.Hàng",
+      title: 'K.Hàng',
       dataIndex: 'customerName',
       width: 150,
-      ellipsis: true
+      ellipsis: true,
     },
     {
-      title: "Số đ/t",
+      title: 'Số đ/t',
       dataIndex: 'customerMobile',
       width: 150,
-      ellipsis: true
+      ellipsis: true,
     },
     {
-      title: "Dịch vụ",
+      title: 'Dịch vụ',
       dataIndex: 'serviceId',
       width: 100,
       ellipsis: true,
-      render: (serviceId) => serviceNameById.get(String(serviceId)) || '-'
+      render: (serviceId) => serviceNameById.get(String(serviceId)) || '-',
     },
     {
-      title: "Nguồn",
+      title: 'Nguồn',
       dataIndex: 'source',
       width: 170,
-      render: (sourceId) => CHANNEL_SOURCE_MAP_KEYS[sourceId]?.name
+      render: (sourceId) => CHANNEL_SOURCE_MAP_KEYS[sourceId]?.name,
     },
     {
-      title: "S.Phẩm",
+      title: 'S.Phẩm',
       dataIndex: 'productNames',
       width: 100,
       ellipsis: true,
-      render: (productNames) => (
-        Array.isArray(productNames) && productNames.length > 0
-          ? productNames.join(', ')
-          : '-'
-      )
+      render: (productNames) =>
+        Array.isArray(productNames) && productNames.length > 0 ? productNames.join(', ') : '-',
     },
     {
-      title: "Trạng thái",
+      title: 'Trạng thái',
       dataIndex: 'status',
       width: 100,
       ellipsis: true,
       render: (status) => {
         const statusItem = getLeadStatusOption(status, leadStatuses);
-        return statusItem
-          ? <Tag color={statusItem.color || undefined}>{statusItem.name}</Tag>
-          : '-';
-      }
+        return statusItem ? (
+          <Tag color={statusItem.color || undefined}>{statusItem.name}</Tag>
+        ) : (
+          '-'
+        );
+      },
     },
     {
-      title: "K.Doanh",
+      title: 'K.Doanh',
       dataIndex: 'assignTo',
       width: 120,
-      ellipsis: true
+      ellipsis: true,
     },
     {
-      title: "Ngày",
+      title: 'Ngày',
       dataIndex: 'inTime',
       width: 120,
       ellipsis: true,
-      render: (inTime) => dateFormatOnSubmit(inTime)
+      render: (inTime) => dateFormatOnSubmit(inTime),
     },
     {
-      title: "Thao tác",
+      title: 'Thao tác',
       width: 120,
       fixed: 'right',
       render: (record) => (
-        <><AlertLink entityId={record.id} entityKind={'LEAD'} /> <Button color="primary" variant="dashed" onClick={() => onEdit(record)} size='small'>
-          Cập nhật
-        </Button></>
-      )
-    }
+        <>
+          <AlertLink entityId={record.id} entityKind={'LEAD'} />{' '}
+          <Button color="primary" variant="dashed" onClick={() => onEdit(record)} size="small">
+            Cập nhật
+          </Button>
+        </>
+      ),
+    },
   ];
 
   const beforeSubmitFilter = useCallback((values) => {
@@ -152,19 +151,21 @@ export const Lead3DayContent = () => {
       apiPath={'cs/3day-fetch'}
       columns={CUSTOM_ACTION}
     />
-  )
-}
+  );
+};
 
 const Lead3DayPage = () => {
-  const title = 'Khách hàng 3 ngày chưa ra cơ hội bán hàng'
+  const title = 'Khách hàng 3 ngày chưa ra cơ hội bán hàng';
 
   return (
     <div>
-      <Helmet><title>{title}</title></Helmet>
+      <Helmet>
+        <title>{title}</title>
+      </Helmet>
       <BreadcrumbCustom data={[{ title: 'Trang chủ' }, { title }]} />
       <Lead3DayContent />
     </div>
-  )
-}
+  );
+};
 
-export default Lead3DayPage
+export default Lead3DayPage;

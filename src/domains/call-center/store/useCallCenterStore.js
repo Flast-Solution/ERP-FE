@@ -1,10 +1,5 @@
 import { create } from 'zustand';
-import {
-  CALL_DIRECTION,
-  CALL_STATUS,
-  CONNECTION,
-  DEFAULT_CALLER_NUMBERS,
-} from '../constants';
+import { CALL_DIRECTION, CALL_STATUS, CONNECTION, DEFAULT_CALLER_NUMBERS } from '../constants';
 import { MOCK_RECENT_CALLS } from '../mocks/customers';
 import { findCustomerByPhone } from '../services/callCenterService';
 import Softphone, { GW_STATE } from '../softphone/Softphone';
@@ -30,12 +25,15 @@ let softphone = null;
 let connectionVersion = 0;
 
 export const useCallCenterStore = create((set, get) => {
-
   const getSoftphone = () => {
     if (!softphone) {
       softphone = new Softphone({
-        onState: status => get().onGatewayState(status),
-        onError: error => set({ error: error.message, ...(error.status === 401 ? {connection: CONNECTION.ERROR, isReady: false} : {}) }),
+        onState: (status) => get().onGatewayState(status),
+        onError: (error) =>
+          set({
+            error: error.message,
+            ...(error.status === 401 ? { connection: CONNECTION.ERROR, isReady: false } : {}),
+          }),
       });
     }
     return softphone;
@@ -73,7 +71,10 @@ export const useCallCenterStore = create((set, get) => {
       }
       const { connection, ext: currentExt } = get();
       /* tránh tạo nhiều session khi effect/StrictMode gọi connect lặp lại */
-      if (currentExt === target && [CONNECTION.CONNECTING, CONNECTION.ONLINE].includes(connection)) {
+      if (
+        currentExt === target &&
+        [CONNECTION.CONNECTING, CONNECTION.ONLINE].includes(connection)
+      ) {
         return;
       }
       const version = ++connectionVersion;
@@ -84,7 +85,8 @@ export const useCallCenterStore = create((set, get) => {
           set({ connection: CONNECTION.ONLINE, isReady: true });
         }
       } catch (error) {
-        if (version === connectionVersion) set({ connection: CONNECTION.ERROR, isReady: false, error: error.message });
+        if (version === connectionVersion)
+          set({ connection: CONNECTION.ERROR, isReady: false, error: error.message });
       }
     },
 
@@ -109,40 +111,41 @@ export const useCallCenterStore = create((set, get) => {
 
     clearError: () => set({ error: null }),
 
-    setCallerNumbers: (callerNumbers = []) => set(state => {
-      const exists = callerNumbers.some(item => item.value === state.callerNumber);
-      return {
-        callerNumbers,
-        callerNumber: exists ? state.callerNumber : (callerNumbers[0]?.value || ''),
-      };
-    }),
+    setCallerNumbers: (callerNumbers = []) =>
+      set((state) => {
+        const exists = callerNumbers.some((item) => item.value === state.callerNumber);
+        return {
+          callerNumbers,
+          callerNumber: exists ? state.callerNumber : callerNumbers[0]?.value || '',
+        };
+      }),
     setCallerNumber: (callerNumber) => set({ callerNumber }),
 
     setDialNumber: (value) => set({ dialNumber: sanitizePhone(value) }),
-    pressKey: (key) => set(state => ({ dialNumber: `${state.dialNumber}${key}` })),
-    backspace: () => set(state => ({ dialNumber: state.dialNumber.slice(0, -1) })),
+    pressKey: (key) => set((state) => ({ dialNumber: `${state.dialNumber}${key}` })),
+    backspace: () => set((state) => ({ dialNumber: state.dialNumber.slice(0, -1) })),
 
     setActiveTab: (activeTab) => set({ activeTab }),
-    setNote: (note) => set(state => ({ call: { ...state.call, note } })),
-    toggleHold: () => set(state => ({ call: { ...state.call, isOnHold: !state.call.isOnHold } })),
+    setNote: (note) => set((state) => ({ call: { ...state.call, note } })),
+    toggleHold: () => set((state) => ({ call: { ...state.call, isOnHold: !state.call.isOnHold } })),
 
     toggleMute: () => {
       const isMuted = !get().call.isMuted;
       getSoftphone().setMuted(isMuted);
-      set(state => ({ call: { ...state.call, isMuted } }));
+      set((state) => ({ call: { ...state.call, isMuted } }));
     },
 
     /* Gửi DTMF (vd: nhập PIN khi gọi số cần PIN) */
-    sendDtmf: (digits) => runCommand(phone => phone.dtmf(digits)),
+    sendDtmf: (digits) => runCommand((phone) => phone.dtmf(digits)),
 
     lookupCustomer: async (phone) => {
-      set(state => ({ call: { ...state.call, isLookingUp: true } }));
+      set((state) => ({ call: { ...state.call, isLookingUp: true } }));
       const customer = await findCustomerByPhone(phone);
       /* Bỏ kết quả nếu cuộc gọi đã đổi */
       if (get().call.phone !== phone) {
         return;
       }
-      set(state => ({ call: { ...state.call, customer, isLookingUp: false } }));
+      set((state) => ({ call: { ...state.call, customer, isLookingUp: false } }));
     },
 
     /* Gọi ra qua SBC */
@@ -164,7 +167,7 @@ export const useCallCenterStore = create((set, get) => {
       });
       get().lookupCustomer(target);
       const { callerNumber } = get();
-      const ok = await runCommand(sp => sp.dial(target, callerNumber));
+      const ok = await runCommand((sp) => sp.dial(target, callerNumber));
       if (!ok) {
         set({ call: initialCall });
       }
@@ -198,7 +201,7 @@ export const useCallCenterStore = create((set, get) => {
         call: { ...call, status: CALL_STATUS.IN_CALL },
         activeTab: 'overview',
       });
-      const ok = await runCommand(sp => sp.answer());
+      const ok = await runCommand((sp) => sp.answer());
       if (!ok) {
         get().finishCall();
       }
@@ -208,7 +211,7 @@ export const useCallCenterStore = create((set, get) => {
       if (get().call.status !== CALL_STATUS.INCOMING) {
         return;
       }
-      await runCommand(sp => sp.reject());
+      await runCommand((sp) => sp.reject());
       get().finishCall();
     },
 
@@ -216,7 +219,7 @@ export const useCallCenterStore = create((set, get) => {
       if (get().call.status === CALL_STATUS.IDLE) {
         return;
       }
-      await runCommand(sp => sp.hangup());
+      await runCommand((sp) => sp.hangup());
       get().finishCall();
     },
 
@@ -228,10 +231,7 @@ export const useCallCenterStore = create((set, get) => {
       }
       const isMissed = call.status === CALL_STATUS.INCOMING;
       const duration = call.startedAt ? (Date.now() - call.startedAt) / 1000 : 0;
-      get().pushRecent(
-        isMissed ? { ...call, direction: CALL_DIRECTION.MISSED } : call,
-        duration
-      );
+      get().pushRecent(isMissed ? { ...call, direction: CALL_DIRECTION.MISSED } : call, duration);
       getSoftphone().setMuted(false);
       set({ call: initialCall, dialNumber: '' });
     },
@@ -266,19 +266,20 @@ export const useCallCenterStore = create((set, get) => {
       }
     },
 
-    pushRecent: (call, duration) => set(state => ({
-      recentCalls: [
-        {
-          id: Date.now(),
-          direction: call.direction,
-          phone: call.phone,
-          name: call.customer?.name || '',
-          time: formatClock(),
-          duration,
-        },
-        ...state.recentCalls,
-      ].slice(0, MAX_RECENT),
-    })),
+    pushRecent: (call, duration) =>
+      set((state) => ({
+        recentCalls: [
+          {
+            id: Date.now(),
+            direction: call.direction,
+            phone: call.phone,
+            name: call.customer?.name || '',
+            time: formatClock(),
+            duration,
+          },
+          ...state.recentCalls,
+        ].slice(0, MAX_RECENT),
+      })),
   };
 });
 

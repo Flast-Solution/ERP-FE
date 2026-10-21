@@ -11,22 +11,37 @@ export const mapLeadEntity = (entity, ownerName) => {
       name: entity.customerName ?? entity.name,
       mobilePhone: entity.customerMobile,
       email: entity.customerEmail,
-      typeLabel: ({ INDIVIDUAL: 'Cá nhân', BUSINESS: 'Doanh nghiệp' })[entity.customerType] ?? entity.customerType,
+      typeLabel:
+        { INDIVIDUAL: 'Cá nhân', BUSINESS: 'Doanh nghiệp' }[entity.customerType] ??
+        entity.customerType,
     },
-    lead: { ...entity, createdAt: entity.createdDate ?? entity.inTime,
-      sourceName: entity.sourceName ?? source?.name ?? (entity.source != null ? `Nguồn #${entity.source}` : undefined),
-      statusName: entity.statusName ?? status?.name ?? (entity.status != null ? `Trạng thái #${entity.status}` : undefined),
+    lead: {
+      ...entity,
+      createdAt: entity.createdDate ?? entity.inTime,
+      sourceName:
+        entity.sourceName ??
+        source?.name ??
+        (entity.source != null ? `Nguồn #${entity.source}` : undefined),
+      statusName:
+        entity.statusName ??
+        status?.name ??
+        (entity.status != null ? `Trạng thái #${entity.status}` : undefined),
     },
     owner: { id: entity.saleId, name: ownerName || entity.saleName || entity.assignTo },
     productNames: entity.productNames,
     expectedQuantity: entity.quantityRange,
-    interestLabel: entity.interestLabel ?? ({ HIGH: 'Cao', MEDIUM: 'Trung bình', LOW: 'Thấp' })[String(entity.interestLevel || '').toUpperCase()] ?? entity.interestLevel,
+    interestLabel:
+      entity.interestLabel ??
+      { HIGH: 'Cao', MEDIUM: 'Trung bình', LOW: 'Thấp' }[
+        String(entity.interestLevel || '').toUpperCase()
+      ] ??
+      entity.interestLevel,
     appointmentAt: entity.nextAppointmentAt,
     lastContactedAt: entity.lastContactedAt,
   };
 };
 
-export const leadTimelineDays = alert => {
+export const leadTimelineDays = (alert) => {
   const rule = alert.ruleData || {};
   const configured = Number(rule.parameters?.interactionWindowDays ?? rule.parameters?.days);
   if (Number.isFinite(configured) && configured > 0) return Math.min(31, Math.ceil(configured));

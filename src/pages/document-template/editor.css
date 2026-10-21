@@ -1,5 +1,5 @@
-.document-template-editor-page a[download][href$="/document-templates/htk-commercial-invoice.zip"],
-.document-template-editor-page a[download][href$="/document-templates/htk-packing-list.zip"],
-.document-template-editor-page .ant-upload-wrapper:has(input[accept="application/pdf,.pdf"]) {
+.document-template-editor-page a[download][href$='/document-templates/htk-commercial-invoice.zip'],
+.document-template-editor-page a[download][href$='/document-templates/htk-packing-list.zip'],
+.document-template-editor-page .ant-upload-wrapper:has(input[accept='application/pdf,.pdf']) {
   display: none;
 }

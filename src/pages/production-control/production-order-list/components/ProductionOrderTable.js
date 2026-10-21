@@ -1,14 +1,13 @@
 import AlertLink from '@/features/Alerts/components/AlertLink';
-import React, { useMemo } from 'react'
-import { Button, Select, Space, Table, Tooltip } from 'antd'
-import { EditOutlined, EyeOutlined } from '@ant-design/icons'
+import React, { useMemo } from 'react';
+import { Button, Select, Space, Table, Tooltip } from 'antd';
+import { EditOutlined, EyeOutlined } from '@ant-design/icons';
 import {
   formatListDate,
   getProductLabel,
   getProductionDeadline,
   getProductionQuantity,
-} from '../utils'
-
+} from '../utils';
 
 const getProductionOrderColumns = ({
   onView,
@@ -33,9 +32,10 @@ const getProductionOrderColumns = ({
     title: 'Mã đơn hàng',
     key: 'salesOrderCode',
     width: 185,
-    render: (_, record) => record.salesOrderCode || (record.salesOrderId != null ? `#${record.salesOrderId}` : '-'),
+    render: (_, record) =>
+      record.salesOrderCode || (record.salesOrderId != null ? `#${record.salesOrderId}` : '-'),
   },
- 
+
   {
     title: 'Khách hàng',
     key: 'customerName',
@@ -74,17 +74,15 @@ const getProductionOrderColumns = ({
     key: 'status',
     width: 175,
     render: (_, record) => (
-      <div onClick={event => event.stopPropagation()}>
+      <div onClick={(event) => event.stopPropagation()}>
         <Select
           value={record.manufactureStatus}
           options={statusOptions}
           loading={String(updatingStatusId) === String(record.id)}
           disabled={updatingStatusId != null}
-          onChange={nextStatus => onStatusChange(record, nextStatus)}
-          optionRender={option => (
-            <span style={{ color: option.data?.color || undefined }}>
-              {option.label}
-            </span>
+          onChange={(nextStatus) => onStatusChange(record, nextStatus)}
+          optionRender={(option) => (
+            <span style={{ color: option.data?.color || undefined }}>{option.label}</span>
           )}
           style={{ width: '100%' }}
           aria-label={`Thay đổi trạng thái lệnh ${record.productionOrderCode}`}
@@ -107,8 +105,8 @@ const getProductionOrderColumns = ({
             icon={<EyeOutlined />}
             aria-label="Xem chi tiết"
             onClick={(event) => {
-              event.stopPropagation()
-              onView(record)
+              event.stopPropagation();
+              onView(record);
             }}
           />
         </Tooltip>
@@ -118,15 +116,15 @@ const getProductionOrderColumns = ({
             icon={<EditOutlined />}
             aria-label="Chỉnh sửa"
             onClick={(event) => {
-              event.stopPropagation()
-              onEdit(record)
+              event.stopPropagation();
+              onEdit(record);
             }}
           />
         </Tooltip>
       </Space>
     ),
   },
-]
+];
 
 const ProductionOrderTable = ({
   orders = [],
@@ -138,15 +136,16 @@ const ProductionOrderTable = ({
   updatingStatusId,
 }) => {
   const columns = useMemo(
-    () => getProductionOrderColumns({
-      onView,
-      onEdit,
-      onStatusChange,
-          statusOptions,
-      updatingStatusId,
-    }),
+    () =>
+      getProductionOrderColumns({
+        onView,
+        onEdit,
+        onStatusChange,
+        statusOptions,
+        updatingStatusId,
+      }),
     [onView, onEdit, onStatusChange, statusOptions, updatingStatusId],
-  )
+  );
 
   return (
     <div className="production-list-table">
@@ -161,7 +160,7 @@ const ProductionOrderTable = ({
         scroll={{ x: 1490 }}
       />
     </div>
-  )
-}
+  );
+};
 
-export default ProductionOrderTable
+export default ProductionOrderTable;

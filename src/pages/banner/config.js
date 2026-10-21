@@ -7,6 +7,12 @@ export const BANNER_POSITIONS = [
   { value: 'CENTER', label: 'Chính giữa (CENTER)' },
 ];
 
-export const bannerImageUrl = value => /^https?:\/\//i.test(value || '') || /^\/(?!\/)/.test(value || '') ? resolveRuntimeAssetUrl(value) : toUploadFile(value)?.url;
+export const bannerImageUrl = (value) =>
+  /^https?:\/\//i.test(value || '') || /^\/(?!\/)/.test(value || '')
+    ? resolveRuntimeAssetUrl(value)
+    : toUploadFile(value)?.url;
 
-export const bannerImages = value => (Array.isArray(value) ? value : typeof value === 'string' ? [value] : []).filter(url => typeof url === 'string' && url.trim()).map(url => url.trim());
+export const bannerImages = (value) =>
+  (Array.isArray(value) ? value : typeof value === 'string' ? [value] : [])
+    .filter((url) => typeof url === 'string' && url.trim())
+    .map((url) => url.trim());

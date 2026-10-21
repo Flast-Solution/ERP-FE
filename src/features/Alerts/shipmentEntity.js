@@ -1,4 +1,4 @@
-export const mapShipmentEntity = entity => {
+export const mapShipmentEntity = (entity) => {
   if (!['SHIPMENT', 'SHIPPING'].includes(entity?.kind)) return null;
   return {
     shipping: entity,

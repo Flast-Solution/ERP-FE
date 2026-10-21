@@ -26,53 +26,57 @@ import authRoles from '@/auth/authRoles';
 import { getClientPermissions, hasClientPermission } from '@/utils/authUtils';
 
 function useGetMe() {
-    const { user, dispatch } = useContext(DataContext)
+  const { user, dispatch } = useContext(DataContext);
 
-    const setMe = useCallback(me => {
-        dispatch({ type: ACTIONS.ADD_USER, data: me });
-    }, [dispatch]);
+  const setMe = useCallback(
+    (me) => {
+      dispatch({ type: ACTIONS.ADD_USER, data: me });
+    },
+    [dispatch],
+  );
 
-    const userRoles = useMemo(() => {
-        if (Array.isArray(user?.roles) && user.roles.length) {
-            return user.roles;
-        }
-        return Array.isArray(user?.userProfiles)
-            ? user.userProfiles.map(profile => profile?.type).filter(Boolean)
-            : [];
-    }, [user]);
+  const userRoles = useMemo(() => {
+    if (Array.isArray(user?.roles) && user.roles.length) {
+      return user.roles;
+    }
+    return Array.isArray(user?.userProfiles)
+      ? user.userProfiles.map((profile) => profile?.type).filter(Boolean)
+      : [];
+  }, [user]);
 
-    const hasRole = useCallback(
-        roles => roles.some(role => userRoles.includes(role)),
-        [userRoles],
-    );
+  const hasRole = useCallback(
+    (roles) => roles.some((role) => userRoles.includes(role)),
+    [userRoles],
+  );
 
-    const isLeader = useCallback(
-        () => hasRole([...authRoles.admin, ...authRoles.partner, ...authRoles.leader]),
-        [hasRole],
-    );
+  const isLeader = useCallback(
+    () => hasRole([...authRoles.admin, ...authRoles.partner, ...authRoles.leader]),
+    [hasRole],
+  );
 
-    const isManager = useCallback(
-        () => hasRole([
-            ...authRoles.admin,
-            ...authRoles.partner,
-            ...authRoles.provider,
-            ...authRoles.leader,
-        ]),
-        [hasRole],
-    );
+  const isManager = useCallback(
+    () =>
+      hasRole([
+        ...authRoles.admin,
+        ...authRoles.partner,
+        ...authRoles.provider,
+        ...authRoles.leader,
+      ]),
+    [hasRole],
+  );
 
-    const isUser = useCallback(() => !isLeader() && !isManager(), [isLeader, isManager]);
+  const isUser = useCallback(() => !isLeader() && !isManager(), [isLeader, isManager]);
 
-    return {
-        user,
-        permissionsClient: getClientPermissions(user),
-        hasPermission: permission => hasClientPermission(user, permission),
-        setMe,
-        isLeader,
-        isManager,
-        isUser,
-        hasRole,
-    };
+  return {
+    user,
+    permissionsClient: getClientPermissions(user),
+    hasPermission: (permission) => hasClientPermission(user, permission),
+    setMe,
+    isLeader,
+    isManager,
+    isUser,
+    hasRole,
+  };
 }
 
 export default useGetMe;

@@ -12,7 +12,7 @@ import {
   Radio,
   Row,
   Table,
-  Tag
+  Tag,
 } from 'antd';
 import { ArrowRightOutlined, SaveOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -26,7 +26,7 @@ const DOCUMENT_OPTIONS = [
   { label: 'Phiếu xuất kho', value: 'warehouseSlip' },
   { label: 'Biên bản giao nhận', value: 'handoverReport' },
   { label: 'COA', value: 'coa' },
-  { label: 'Hoá đơn VAT', value: 'vatInvoice' }
+  { label: 'Hoá đơn VAT', value: 'vatInvoice' },
 ];
 const EMPTY_RECORD = {};
 
@@ -44,7 +44,7 @@ const parseJsonArray = (value) => {
 
 const isQcPassed = (criteria) => {
   const items = parseJsonArray(criteria);
-  return items.length > 0 && items.every(item => item.passed === true);
+  return items.length > 0 && items.every((item) => item.passed === true);
 };
 
 /** Map 1 record embedded từ GET /erp/warehouse/fetch-history */
@@ -80,7 +80,7 @@ const formatQuantity = (value, unit) => {
 
 const emptyToNull = (value) => (value === undefined || value === '' ? null : value);
 
-const toDayjs = value => (value && dayjs(value).isValid() ? dayjs(value) : undefined);
+const toDayjs = (value) => (value && dayjs(value).isValid() ? dayjs(value) : undefined);
 
 const DeliverySection = ({ number, title, children }) => (
   <section className="warehouse-delivery__section">
@@ -106,7 +106,7 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
   const draftIdRef = useRef(null);
   const itemInStock = data.itemInStock ?? EMPTY_RECORD;
   const [historyItems, setHistoryItems] = useState(
-    Array.isArray(data.inStocks) ? data.inStocks : []
+    Array.isArray(data.inStocks) ? data.inStocks : [],
   );
   const product = itemInStock.product ?? EMPTY_RECORD;
   const unit = product.unit ?? '';
@@ -128,7 +128,7 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
 
     let mounted = true;
     RequestUtils.Get('/erp/order/view-on-edit', { orderId })
-      .then(response => {
+      .then((response) => {
         if (!mounted || hasSubmittedDataRef.current) return;
         const orderData = response?.data ?? EMPTY_RECORD;
         const order = orderData.order ?? EMPTY_RECORD;
@@ -136,10 +136,10 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
           address: order.customerAddress,
           recipientName: order.customerReceiverName,
           recipientPhone: order.customerMobilePhone,
-          ...(order.transportTypeId != null ? { carrier: order.transportTypeId } : {})
+          ...(order.transportTypeId != null ? { carrier: order.transportTypeId } : {}),
         });
       })
-      .catch(error => {
+      .catch((error) => {
         if (!mounted) return;
         message.error(error?.message ?? 'Không tải được thông tin người nhận');
       });
@@ -154,7 +154,7 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
 
     let mounted = true;
     RequestUtils.Get('/shipping/find-submit', { orderCode, productId })
-      .then(response => {
+      .then((response) => {
         if (!mounted) return;
         const submittedData = response?.data;
         if (!submittedData || typeof submittedData !== 'object' || Array.isArray(submittedData)) {
@@ -163,20 +163,32 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
 
         const delivery = submittedData.delivery ?? EMPTY_RECORD;
         const lots = Array.isArray(submittedData.lots) ? submittedData.lots : [];
-        if (data.orderDetailId != null && String(submittedData.orderDetailId) !== String(data.orderDetailId)) return;
-        if (data.orderDetailId != null && lots.some(lot => !(data.inStocks ?? []).some(item => String(item.id) === String(lot.historyId)))) return;
+        if (
+          data.orderDetailId != null &&
+          String(submittedData.orderDetailId) !== String(data.orderDetailId)
+        )
+          return;
+        if (
+          data.orderDetailId != null &&
+          lots.some(
+            (lot) =>
+              !(data.inStocks ?? []).some((item) => String(item.id) === String(lot.historyId)),
+          )
+        )
+          return;
         const mode = delivery.mode ?? 'self';
 
         hasSubmittedDataRef.current = true;
-        draftIdRef.current = submittedData.submitType === 'draft'
-          ? submittedData.id ?? null
-          : null;
+        draftIdRef.current =
+          submittedData.submitType === 'draft' ? (submittedData.id ?? null) : null;
         setDeliveryMode(mode);
-        setSelectedLotKeys(lots.map(lot => lot.historyId).filter(id => id != null));
-        setLotQuantities(lots.reduce((quantities, lot) => {
-          if (lot.historyId != null) quantities[lot.historyId] = Number(lot.quantity ?? 0);
-          return quantities;
-        }, {}));
+        setSelectedLotKeys(lots.map((lot) => lot.historyId).filter((id) => id != null));
+        setLotQuantities(
+          lots.reduce((quantities, lot) => {
+            if (lot.historyId != null) quantities[lot.historyId] = Number(lot.quantity ?? 0);
+            return quantities;
+          }, {}),
+        );
         form.setFieldsValue({
           outboundType: submittedData.outboundType,
           deliveryCode: submittedData.deliveryCode || initialDeliveryCode,
@@ -200,12 +212,10 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
           requiredDocuments: Array.isArray(submittedData.requiredDocuments)
             ? submittedData.requiredDocuments
             : [],
-          attachments: Array.isArray(submittedData.attachments)
-            ? submittedData.attachments
-            : []
+          attachments: Array.isArray(submittedData.attachments) ? submittedData.attachments : [],
         });
       })
-      .catch(error => {
+      .catch((error) => {
         if (!mounted) return;
         message.error(error?.message ?? 'Không tải được dữ liệu lệnh xuất đã lưu');
       });
@@ -228,16 +238,14 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
       : { warehouseId: itemInStock.id, isFull: 'True' };
 
     RequestUtils.Get('/erp/warehouse/fetch-history', params)
-      .then(response => {
+      .then((response) => {
         if (!mounted) return;
-        const items = Array.isArray(response?.data?.embedded)
-          ? response.data.embedded
-          : [];
-        setHistoryItems(items.filter(
-          item => String(item.warehouserProductId) === String(itemInStock.id)
-        ));
+        const items = Array.isArray(response?.data?.embedded) ? response.data.embedded : [];
+        setHistoryItems(
+          items.filter((item) => String(item.warehouserProductId) === String(itemInStock.id)),
+        );
       })
-      .catch(error => {
+      .catch((error) => {
         if (!mounted) return;
         setHistoryItems([]);
         message.error(error?.message ?? 'Không tải được danh sách lô nhập');
@@ -249,17 +257,14 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
   }, [data.inStocks, itemInStock]);
 
   const productLabel = [product.code, product.name].filter(Boolean).join(' · ');
-  const orderLabel = [orderMeta?.orderCode, orderMeta?.orderDetailCode]
-    .filter(Boolean)
-    .join(' · ');
+  const orderLabel = [orderMeta?.orderCode, orderMeta?.orderDetailCode].filter(Boolean).join(' · ');
 
   const lotRows = useMemo(() => {
-    const sourceItems = historyItems.length > 0
-      ? historyItems
-      : (data.receiptDetail ? [data.receiptDetail] : []);
+    const sourceItems =
+      historyItems.length > 0 ? historyItems : data.receiptDetail ? [data.receiptDetail] : [];
 
     return sourceItems
-      .filter(item => item?.id != null && Number(item.total) > 0)
+      .filter((item) => item?.id != null && Number(item.total) > 0)
       .map(mapHistoryLot)
       .sort((first, second) => {
         const firstTime = dayjs(first.inTime);
@@ -272,38 +277,41 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
 
   // itemInStock.total = tồn còn của SKU trong kho
   const availableQuantity = Number(itemInStock.total);
-  const requiredQuantity = Number.isFinite(availableQuantity) && availableQuantity > 0
-    ? availableQuantity
-    : lotRows.reduce((total, item) => total + item.quantity, 0);
+  const requiredQuantity =
+    Number.isFinite(availableQuantity) && availableQuantity > 0
+      ? availableQuantity
+      : lotRows.reduce((total, item) => total + item.quantity, 0);
 
   useEffect(() => {
     const firstLot = lotRows[0];
     if (firstLot?.id == null) return;
 
-    setSelectedLotKeys(current => {
-      const validKeys = current.filter(key => lotRows.some(item => item.id === key));
+    setSelectedLotKeys((current) => {
+      const validKeys = current.filter((key) => lotRows.some((item) => item.id === key));
       return validKeys.length > 0 ? validKeys : [firstLot.id];
     });
-    setLotQuantities(current => (current[firstLot.id] !== undefined
-      ? current
-      : { ...current, [firstLot.id]: firstLot.quantity }));
+    setLotQuantities((current) =>
+      current[firstLot.id] !== undefined
+        ? current
+        : { ...current, [firstLot.id]: firstLot.quantity },
+    );
   }, [lotRows]);
 
   const selectedQuantity = selectedLotKeys.reduce(
     (total, key) => total + Number(lotQuantities[key] ?? 0),
-    0
+    0,
   );
 
-  const toggleLot = row => {
+  const toggleLot = (row) => {
     setLotValidationError('');
-    setSelectedLotKeys(current => {
+    setSelectedLotKeys((current) => {
       if (current.includes(row.id)) {
-        setLotQuantities(values => ({ ...values, [row.id]: 0 }));
-        return current.filter(key => key !== row.id);
+        setLotQuantities((values) => ({ ...values, [row.id]: 0 }));
+        return current.filter((key) => key !== row.id);
       }
-      setLotQuantities(values => ({
+      setLotQuantities((values) => ({
         ...values,
-        [row.id]: values[row.id] ?? row.quantity
+        [row.id]: values[row.id] ?? row.quantity,
       }));
       return [...current, row.id];
     });
@@ -316,7 +324,7 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
       align: 'center',
       render: (_, row) => (
         <Checkbox checked={selectedLotKeys.includes(row.id)} onChange={() => toggleLot(row)} />
-      )
+      ),
     },
     {
       title: 'Lô · phiếu nhập',
@@ -326,21 +334,21 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
           <strong>{row.lotNo ?? '—'}</strong>
           <span>{row.receiptCode ?? '—'}</span>
         </div>
-      )
+      ),
     },
     {
       title: 'Ngày nhập',
       dataIndex: 'inTime',
       width: 150,
-      render: value => (dayjs(value).isValid() ? dayjs(value).format('DD/MM/YYYY HH:mm') : '—')
+      render: (value) => (dayjs(value).isValid() ? dayjs(value).format('DD/MM/YYYY HH:mm') : '—'),
     },
-    { title: 'Vị trí', dataIndex: 'binLocation', width: 150, render: value => value ?? '—' },
+    { title: 'Vị trí', dataIndex: 'binLocation', width: 150, render: (value) => value ?? '—' },
     {
       title: 'Tồn',
       dataIndex: 'quantity',
       width: 130,
       align: 'right',
-      render: value => formatQuantity(value, unit)
+      render: (value) => formatQuantity(value, unit),
     },
     {
       title: 'SL xuất',
@@ -351,23 +359,22 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
           max={row.quantity}
           value={lotQuantities[row.id] ?? 0}
           disabled={!selectedLotKeys.includes(row.id)}
-          onChange={value => {
+          onChange={(value) => {
             setLotValidationError('');
-            setLotQuantities(current => ({ ...current, [row.id]: value ?? 0 }));
+            setLotQuantities((current) => ({ ...current, [row.id]: value ?? 0 }));
           }}
         />
-      )
+      ),
     },
     {
       title: 'QC',
       width: 120,
-      render: (_, row) => (row.qcPassed
-        ? <Tag color="success">Đạt</Tag>
-        : <Tag color="warning">Chưa đạt</Tag>)
-    }
+      render: (_, row) =>
+        row.qcPassed ? <Tag color="success">Đạt</Tag> : <Tag color="warning">Chưa đạt</Tag>,
+    },
   ];
 
-  const onFinish = async values => {
+  const onFinish = async (values) => {
     if (selectedLotKeys.length === 0 || selectedQuantity <= 0) {
       setLotValidationError('Vui lòng chọn lô và nhập số lượng xuất lớn hơn 0');
       return;
@@ -379,25 +386,32 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
       return;
     }
 
-    const selectedLots = lotRows.filter(row => selectedLotKeys.includes(row.id));
+    const selectedLots = lotRows.filter((row) => selectedLotKeys.includes(row.id));
     const primaryLot = selectedLots[0];
-    if (selectedLots.length !== selectedLotKeys.length || selectedLots.some(lot => {
-      const quantity = Number(lotQuantities[lot.id]);
-      return !Number.isFinite(quantity) || quantity <= 0 || quantity > lot.quantity;
-    })) {
+    if (
+      selectedLots.length !== selectedLotKeys.length ||
+      selectedLots.some((lot) => {
+        const quantity = Number(lotQuantities[lot.id]);
+        return !Number.isFinite(quantity) || quantity <= 0 || quantity > lot.quantity;
+      })
+    ) {
       setLotValidationError('Số lượng xuất của mỗi lot phải lớn hơn 0 và không vượt tồn còn.');
       return;
     }
-    if (!primaryLot || selectedLots.some(lot => (
-      String(lot.orderId) !== String(primaryLot.orderId)
-      || String(lot.orderDetailId) !== String(primaryLot.orderDetailId)
-      || String(lot.productId) !== String(primaryLot.productId)
-      || String(lot.skuId) !== String(primaryLot.skuId)
-    ))) {
+    if (
+      !primaryLot ||
+      selectedLots.some(
+        (lot) =>
+          String(lot.orderId) !== String(primaryLot.orderId) ||
+          String(lot.orderDetailId) !== String(primaryLot.orderDetailId) ||
+          String(lot.productId) !== String(primaryLot.productId) ||
+          String(lot.skuId) !== String(primaryLot.skuId),
+      )
+    ) {
       setLotValidationError('Chỉ chọn các lot thuộc cùng đơn con và sản phẩm/SKU.');
       return;
     }
-    const lots = selectedLots.map(row => ({
+    const lots = selectedLots.map((row) => ({
       historyId: row.id,
       warehouserProductId: row.warehouserProductId,
       receiptCode: emptyToNull(row.receiptCode),
@@ -406,7 +420,7 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
       stockName: emptyToNull(row.stockName),
       binLocation: emptyToNull(row.binLocation),
       availableQuantity: row.quantity,
-      quantity: Number(lotQuantities[row.id] ?? 0)
+      quantity: Number(lotQuantities[row.id] ?? 0),
     }));
 
     const payload = {
@@ -439,10 +453,10 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
         packages: values.packages ?? null,
         freightPayer: values.freightPayer ?? null,
         expectedShippingCost: values.expectedShippingCost ?? null,
-        note: values.note ?? null
+        note: values.note ?? null,
       },
       requiredDocuments: values.requiredDocuments ?? [],
-      attachments: values.attachments ?? []
+      attachments: values.attachments ?? [],
     };
 
     setSubmitting(true);
@@ -454,9 +468,21 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
       }
       message.success(response.message);
       closeModal?.();
-      data.onSaved?.(data.documentSetId ? { ...response.data, submitType: payload.submitType, documentSetId: data.documentSetId, orderDetailId: payload.orderDetailId, quantity: selectedQuantity } : response.data);
+      data.onSaved?.(
+        data.documentSetId
+          ? {
+              ...response.data,
+              submitType: payload.submitType,
+              documentSetId: data.documentSetId,
+              orderDetailId: payload.orderDetailId,
+              quantity: selectedQuantity,
+            }
+          : response.data,
+      );
     } catch (error) {
-      message.error(error?.response?.data?.message ?? error?.message ?? 'Không thể tạo lệnh xuất kho');
+      message.error(
+        error?.response?.data?.message ?? error?.message ?? 'Không thể tạo lệnh xuất kho',
+      );
     } finally {
       setSubmitting(false);
     }
@@ -474,7 +500,7 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
         selfMethod: 'company_vehicle',
         freightPayer: 'sender',
         requiredDocuments: [],
-        attachments: []
+        attachments: [],
       }}
       onFinish={onFinish}
     >
@@ -504,7 +530,12 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
               name="outboundDate"
               rules={[{ required: true, message: 'Vui lòng chọn ngày xuất' }]}
             >
-              <DatePicker placeholder="Chọn ngày xuất" showTime format="DD/MM/YYYY · HH:mm" className="warehouse-delivery__control" />
+              <DatePicker
+                placeholder="Chọn ngày xuất"
+                showTime
+                format="DD/MM/YYYY · HH:mm"
+                className="warehouse-delivery__control"
+              />
             </Form.Item>
           </Col>
           <Col md={8} xs={24}>
@@ -527,26 +558,50 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
           pagination={false}
           bordered
           scroll={{ x: 720 }}
-          onRow={row => ({ onClick: event => {
-            if (!event.target.closest('.ant-input-number, .ant-checkbox-wrapper')) toggleLot(row);
-          } })}
+          onRow={(row) => ({
+            onClick: (event) => {
+              if (!event.target.closest('.ant-input-number, .ant-checkbox-wrapper')) toggleLot(row);
+            },
+          })}
         />
         {lotValidationError && (
-          <div style={{ marginTop: 6, color: '#ff4d4f', fontSize: 14 }}>
-            {lotValidationError}
-          </div>
+          <div style={{ marginTop: 6, color: '#ff4d4f', fontSize: 14 }}>{lotValidationError}</div>
         )}
         <div className="warehouse-delivery__summary">
-          <div><span>Yêu cầu</span><strong>{formatQuantity(requiredQuantity, unit)}</strong></div>
-          <div><span>Đã chọn</span><strong className="warehouse-delivery__highlight">{formatQuantity(selectedQuantity, unit)}</strong></div>
-          <div><span>Tồn còn lại</span><strong>{formatQuantity(Math.max(requiredQuantity - selectedQuantity, 0), unit)}</strong></div>
-          <div><span>Đối chiếu</span><Tag color={selectedQuantity > 0 && selectedQuantity <= requiredQuantity ? 'success' : 'warning'}>{selectedQuantity > 0 && selectedQuantity <= requiredQuantity ? 'Đủ điều kiện' : 'Chưa chọn lô'}</Tag></div>
+          <div>
+            <span>Yêu cầu</span>
+            <strong>{formatQuantity(requiredQuantity, unit)}</strong>
+          </div>
+          <div>
+            <span>Đã chọn</span>
+            <strong className="warehouse-delivery__highlight">
+              {formatQuantity(selectedQuantity, unit)}
+            </strong>
+          </div>
+          <div>
+            <span>Tồn còn lại</span>
+            <strong>
+              {formatQuantity(Math.max(requiredQuantity - selectedQuantity, 0), unit)}
+            </strong>
+          </div>
+          <div>
+            <span>Đối chiếu</span>
+            <Tag
+              color={
+                selectedQuantity > 0 && selectedQuantity <= requiredQuantity ? 'success' : 'warning'
+              }
+            >
+              {selectedQuantity > 0 && selectedQuantity <= requiredQuantity
+                ? 'Đủ điều kiện'
+                : 'Chưa chọn lô'}
+            </Tag>
+          </div>
         </div>
       </DeliverySection>
 
       <DeliverySection number="3" title="Thông tin giao hàng">
         <Form.Item name="deliveryMode" className="warehouse-delivery__mode">
-          <Radio.Group onChange={event => setDeliveryMode(event.target.value)}>
+          <Radio.Group onChange={(event) => setDeliveryMode(event.target.value)}>
             <Radio.Button value="self">Tự giao</Radio.Button>
             <Radio.Button value="carrier">Đơn vị vận chuyển</Radio.Button>
           </Radio.Group>
@@ -567,10 +622,14 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
               </Form.Item>
             </Col>
             <Col md={12} xs={24}>
-              <Form.Item label="Biển số xe" name="vehiclePlate"><Input /></Form.Item>
+              <Form.Item label="Biển số xe" name="vehiclePlate">
+                <Input />
+              </Form.Item>
             </Col>
             <Col md={12} xs={24}>
-              <Form.Item label="Tài xế" name="driverName"><Input /></Form.Item>
+              <Form.Item label="Tài xế" name="driverName">
+                <Input />
+              </Form.Item>
             </Col>
           </Row>
         ) : (
@@ -600,13 +659,19 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
               </Form.Item>
             </Col>
             <Col md={12} xs={24}>
-              <Form.Item label="Mã vận đơn" name="trackingCode"><Input /></Form.Item>
+              <Form.Item label="Mã vận đơn" name="trackingCode">
+                <Input />
+              </Form.Item>
             </Col>
             <Col md={6} xs={12}>
-              <Form.Item label="Khối lượng" name="weight"><InputNumber min={0} addonAfter="kg" className="warehouse-delivery__control" /></Form.Item>
+              <Form.Item label="Khối lượng" name="weight">
+                <InputNumber min={0} addonAfter="kg" className="warehouse-delivery__control" />
+              </Form.Item>
             </Col>
             <Col md={6} xs={12}>
-              <Form.Item label="Số kiện" name="packages"><InputNumber min={0} className="warehouse-delivery__control" /></Form.Item>
+              <Form.Item label="Số kiện" name="packages">
+                <InputNumber min={0} className="warehouse-delivery__control" />
+              </Form.Item>
             </Col>
             <Col md={12} xs={24}>
               <Form.Item
@@ -614,11 +679,16 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
                 name="freightPayer"
                 rules={[{ required: true, message: 'Vui lòng chọn người trả cước' }]}
               >
-                <Radio.Group><Radio value="sender">Bên gửi</Radio><Radio value="receiver">Bên nhận</Radio></Radio.Group>
+                <Radio.Group>
+                  <Radio value="sender">Bên gửi</Radio>
+                  <Radio value="receiver">Bên nhận</Radio>
+                </Radio.Group>
               </Form.Item>
             </Col>
             <Col md={12} xs={24}>
-              <Form.Item label="Cước dự kiến" name="expectedShippingCost"><InputNumber min={0} addonAfter="₫" className="warehouse-delivery__control" /></Form.Item>
+              <Form.Item label="Cước dự kiến" name="expectedShippingCost">
+                <InputNumber min={0} addonAfter="₫" className="warehouse-delivery__control" />
+              </Form.Item>
             </Col>
           </Row>
         )}
@@ -655,15 +725,20 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
             <Form.Item
               label={deliveryMode === 'self' ? 'Dự kiến giao' : 'Hẹn lấy hàng'}
               name="scheduledAt"
-              rules={[{
-                required: true,
-                message: deliveryMode === 'self'
-                  ? 'Vui lòng chọn thời gian dự kiến giao'
-                  : 'Vui lòng chọn thời gian hẹn lấy hàng'
-              }]}
+              rules={[
+                {
+                  required: true,
+                  message:
+                    deliveryMode === 'self'
+                      ? 'Vui lòng chọn thời gian dự kiến giao'
+                      : 'Vui lòng chọn thời gian hẹn lấy hàng',
+                },
+              ]}
             >
               <DatePicker
-                placeholder={deliveryMode === 'self' ? 'Chọn thời gian giao' : 'Chọn thời gian lấy hàng'}
+                placeholder={
+                  deliveryMode === 'self' ? 'Chọn thời gian giao' : 'Chọn thời gian lấy hàng'
+                }
                 showTime
                 format="DD/MM/YYYY · HH:mm"
                 className="warehouse-delivery__control"
@@ -671,16 +746,15 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
             </Form.Item>
           </Col>
           <Col span={24}>
-            <Form.Item label="Ghi chú giao hàng" name="note"><Input.TextArea rows={3} /></Form.Item>
+            <Form.Item label="Ghi chú giao hàng" name="note">
+              <Input.TextArea rows={3} />
+            </Form.Item>
           </Col>
         </Row>
       </DeliverySection>
 
       <DeliverySection number="4" title="Chứng từ kèm theo">
-        <Form.Item
-          name="requiredDocuments"
-          className="warehouse-delivery__documents"
-        >
+        <Form.Item name="requiredDocuments" className="warehouse-delivery__documents">
           <Checkbox.Group options={DOCUMENT_OPTIONS} />
         </Form.Item>
         <WarehouseDocumentsUpload />
@@ -693,7 +767,9 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
             htmlType="submit"
             loading={submitting && submitTypeRef.current === 'draft'}
             disabled={submitting}
-            onClick={() => { submitTypeRef.current = 'draft'; }}
+            onClick={() => {
+              submitTypeRef.current = 'draft';
+            }}
           >
             Lưu nháp
           </Button>
@@ -703,7 +779,9 @@ const GiaoHangForm = ({ data = {}, closeModal }) => {
             htmlType="submit"
             loading={submitting && submitTypeRef.current === 'confirm'}
             disabled={submitting}
-            onClick={() => { submitTypeRef.current = 'confirm'; }}
+            onClick={() => {
+              submitTypeRef.current = 'confirm';
+            }}
           >
             Xác nhận xuất &amp; giao
           </Button>

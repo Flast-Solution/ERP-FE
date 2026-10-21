@@ -1,28 +1,27 @@
-import React from 'react'
-import { Divider, Tag, Tooltip, Typography } from 'antd'
-import { CopyOutlined } from '@ant-design/icons'
+import React from 'react';
+import { Divider, Tooltip, Typography } from 'antd';
+import { CopyOutlined } from '@ant-design/icons';
 import { formatTime } from '@flast-erp/core/utils';
 import { formatCurrency as formatMoney } from '../../../../utils/formatCurrency';
-import { renderArrayColor } from '../../utils'
-import { copyToClipboard } from '../utils/clipboard'
-import OrderActions from '../components/OrderActions'
-import { STATUS_LEAD } from '@/configs/constant'
-import { parseOrderLine } from '../../orderLine'
+import { renderArrayColor } from '../../utils';
+import { copyToClipboard } from '../utils/clipboard';
+import OrderActions from '../components/OrderActions';
+import { parseOrderLine } from '../../orderLine';
 
-const { Text } = Typography
+const { Text } = Typography;
 
 const OpportunityOrderTooltip = ({ details }) => {
-  const orderDetails = Array.isArray(details) ? details : []
+  const orderDetails = Array.isArray(details) ? details : [];
 
   if (orderDetails.length === 0) {
-    return <span>Chưa có thông tin SKU và thông tin bổ sung.</span>
+    return <span>Chưa có thông tin SKU và thông tin bổ sung.</span>;
   }
 
   return (
     <div style={{ maxHeight: 360, overflowY: 'auto', paddingRight: 4 }}>
       {orderDetails.map((detail, detailIndex) => {
-        const skuDetails = Array.isArray(detail?.skuDetails) ? detail.skuDetails : []
-        const orderLineEntries = Object.entries(parseOrderLine(detail?.orderLine))
+        const skuDetails = Array.isArray(detail?.skuDetails) ? detail.skuDetails : [];
+        const orderLineEntries = Object.entries(parseOrderLine(detail?.orderLine));
 
         return (
           <div key={detail?.id ?? detail?.code ?? detailIndex}>
@@ -32,41 +31,46 @@ const OpportunityOrderTooltip = ({ details }) => {
             </Text>
 
             <div style={{ marginTop: 6 }}>
-              <Text strong style={{ color: 'inherit' }}>SKU:</Text>
-              {skuDetails.length > 0 ? skuDetails.map((sku, skuIndex) => (
-                <div key={`${sku?.text || 'sku'}-${skuIndex}`} style={{ paddingLeft: 12 }}>
-                  {sku?.text || 'Thuộc tính'}:{' '}
-                  {(Array.isArray(sku?.values) ? sku.values : [])
-                    .map(value => value?.text ?? value?.value ?? value?.id)
-                    .filter(value => value !== undefined && value !== null && value !== '')
-                    .join(', ') || '-'}
-                </div>
-              )) : <span style={{ marginLeft: 6 }}>Chưa có</span>}
+              <Text strong style={{ color: 'inherit' }}>
+                SKU:
+              </Text>
+              {skuDetails.length > 0 ? (
+                skuDetails.map((sku, skuIndex) => (
+                  <div key={`${sku?.text || 'sku'}-${skuIndex}`} style={{ paddingLeft: 12 }}>
+                    {sku?.text || 'Thuộc tính'}:{' '}
+                    {(Array.isArray(sku?.values) ? sku.values : [])
+                      .map((value) => value?.text ?? value?.value ?? value?.id)
+                      .filter((value) => value !== undefined && value !== null && value !== '')
+                      .join(', ') || '-'}
+                  </div>
+                ))
+              ) : (
+                <span style={{ marginLeft: 6 }}>Chưa có</span>
+              )}
             </div>
 
             <div style={{ marginTop: 6 }}>
-              <Text strong style={{ color: 'inherit' }}>Thông tin bổ sung:</Text>
-              {orderLineEntries.length > 0 ? orderLineEntries.map(([key, value]) => (
-                <div key={key} style={{ paddingLeft: 12 }}>
-                  {key}: {String(value ?? '-')}
-                </div>
-              )) : <span style={{ marginLeft: 6 }}>Chưa có</span>}
+              <Text strong style={{ color: 'inherit' }}>
+                Thông tin bổ sung:
+              </Text>
+              {orderLineEntries.length > 0 ? (
+                orderLineEntries.map(([key, value]) => (
+                  <div key={key} style={{ paddingLeft: 12 }}>
+                    {key}: {String(value ?? '-')}
+                  </div>
+                ))
+              ) : (
+                <span style={{ marginLeft: 6 }}>Chưa có</span>
+              )}
             </div>
           </div>
-        )
+        );
       })}
     </div>
-  )
-}
+  );
+};
 
-const OrderCodeCell = ({
-  text,
-  record,
-  index,
-  copiedIndex,
-  setCopiedIndex,
-  showDetails,
-}) => {
+const OrderCodeCell = ({ text, record, index, copiedIndex, setCopiedIndex, showDetails }) => {
   const code = (
     <span
       onClick={() => copyToClipboard(text, setCopiedIndex, index)}
@@ -79,7 +83,7 @@ const OrderCodeCell = ({
       <CopyOutlined style={{ marginRight: 8 }} />
       {text}
     </span>
-  )
+  );
 
   return showDetails ? (
     <Tooltip
@@ -90,8 +94,10 @@ const OrderCodeCell = ({
     >
       {code}
     </Tooltip>
-  ) : code
-}
+  ) : (
+    code
+  );
+};
 
 const OPPORTUNITY_HIDDEN_COLUMN_KEYS = new Set([
   'opportunityAt',
@@ -100,12 +106,7 @@ const OPPORTUNITY_HIDDEN_COLUMN_KEYS = new Set([
   'shippingCost',
   'paid',
   'remainingAmount',
-])
-
-const DEFAULT_OPPORTUNITY_STATUS = {
-  [STATUS_LEAD.CREATE_DATA]: { name: 'Tạo mới' },
-  [STATUS_LEAD.THANH_CO_HOI]: { name: 'Thành cơ hội', color: 'green' },
-}
+]);
 
 const createOrderColumns = ({
   isOpportunityList,
@@ -134,184 +135,182 @@ const createOrderColumns = ({
   canViewWorkflow,
   canCreateReceipt,
   openOrderInboundDrawer,
-}) => ([
-  {
-    title: 'Kinh doanh',
-    dataIndex: 'userCreateUsername',
-    key: 'userCreateUsername',
-    width: 120,
-    ellipsis: true,
-  },
-  {
-    title: 'Mã đơn',
-    dataIndex: 'code',
-    key: 'code',
-    width: 200,
-    ellipsis: true,
-    render: (text, record, index) => (
-      <OrderCodeCell
-        text={text}
-        record={record}
-        index={index}
-        copiedIndex={copiedIndex}
-        setCopiedIndex={setCopiedIndex}
-        showDetails={showOrderDetailTooltip}
-      />
-    ),
-  },
-  {
-    title: 'Sản phẩm',
-    dataIndex: 'products',
-    key: 'products',
-    width: 300,
-    render: (products, record) => renderArrayColor(products, record.detailstatus),
-  },
-  // {
-  //   title: 'T.Thái',
-  //   dataIndex: 'detailstatus',
-  //   key: 'detailstatus',
-  //   width: 150,
-  //   ellipsis: true,
-  //   render: (array, record) => {
-  //     if (isOpportunityList) {
-  //       const detailStatuses = Array.isArray(record?.details)
-  //         ? record.details.map(detail => detail?.status)
-  //         : []
+}) =>
+  [
+    {
+      title: 'Kinh doanh',
+      dataIndex: 'userCreateUsername',
+      key: 'userCreateUsername',
+      width: 120,
+      ellipsis: true,
+    },
+    {
+      title: 'Mã đơn',
+      dataIndex: 'code',
+      key: 'code',
+      width: 200,
+      ellipsis: true,
+      render: (text, record, index) => (
+        <OrderCodeCell
+          text={text}
+          record={record}
+          index={index}
+          copiedIndex={copiedIndex}
+          setCopiedIndex={setCopiedIndex}
+          showDetails={showOrderDetailTooltip}
+        />
+      ),
+    },
+    {
+      title: 'Sản phẩm',
+      dataIndex: 'products',
+      key: 'products',
+      width: 300,
+      render: (products, record) => renderArrayColor(products, record.detailstatus),
+    },
+    // {
+    //   title: 'T.Thái',
+    //   dataIndex: 'detailstatus',
+    //   key: 'detailstatus',
+    //   width: 150,
+    //   ellipsis: true,
+    //   render: (array, record) => {
+    //     if (isOpportunityList) {
+    //       const detailStatuses = Array.isArray(record?.details)
+    //         ? record.details.map(detail => detail?.status)
+    //         : []
 
-  //       return detailStatuses.length > 0
-  //         ? detailStatuses.map((status, index) => {
-  //           const statusItem = DEFAULT_OPPORTUNITY_STATUS[Number(status)]
-  //             ?? opportunityStatusOptions.find(item => String(item.id) === String(status))
+    //       return detailStatuses.length > 0
+    //         ? detailStatuses.map((status, index) => {
+    //           const statusItem = DEFAULT_OPPORTUNITY_STATUS[Number(status)]
+    //             ?? opportunityStatusOptions.find(item => String(item.id) === String(status))
 
-  //           return (
-  //             <div key={record.details[index]?.id ?? index}>
-  //               {index + 1} -{' '}
-  //               {statusItem
-  //                 ? <Tag color={statusItem.color || undefined}>{statusItem.name}</Tag>
-  //                 : '-'}
-  //             </div>
-  //           )
-  //         })
-  //         : '-'
-  //     }
+    //           return (
+    //             <div key={record.details[index]?.id ?? index}>
+    //               {index + 1} -{' '}
+    //               {statusItem
+    //                 ? <Tag color={statusItem.color || undefined}>{statusItem.name}</Tag>
+    //                 : '-'}
+    //             </div>
+    //           )
+    //         })
+    //         : '-'
+    //     }
 
-  //     return renderArrayColor(array, record.detailstatus)
-  //   },
-  // },
-  {
-    title: 'T.G Chốt',
-    dataIndex: 'opportunityAt',
-    key: 'opportunityAt',
-    width: 120,
-    ellipsis: true,
-    render: (time) => formatTime(time),
-  },
-  {
-    title: 'Khách hàng',
-    dataIndex: 'customerReceiverName',
-    key: 'customerReceiverName',
-    width: 130,
-    ellipsis: true,
-    render: (customerReceiverName, record) => (
-      record?.enterpriseName || customerReceiverName || '-'
-    ),
-  },
-  {
-    title: 'Số điện thoại',
-    dataIndex: 'customerMobilePhone',
-    key: 'customerMobilePhone',
-    width: 130,
-    ellipsis: true,
-  },
-  {
-    title: 'Tỉnh/T.P',
-    dataIndex: 'customerAddress',
-    key: 'customerAddress',
-    width: 120,
-    ellipsis: true,
-    render: (address) => address || '(Chưa có)',
-  },
-  {
-    title: 'Ngày đặt',
-    dataIndex: 'createdAt',
-    key: 'createdAt',
-    width: 130,
-    ellipsis: true,
-    render: (time) => formatTime(time),
-  },
-  {
-    title: 'Tổng tiền',
-    dataIndex: 'total',
-    key: 'total',
-    width: 130,
-    ellipsis: true,
-    render: (total) => formatMoney(total),
-  },
-  {
-    title: 'Giảm giá',
-    dataIndex: 'priceOff',
-    key: 'priceOff',
-    width: 130,
-    ellipsis: true,
-    render: (priceOff) => formatMoney(priceOff),
-  },
-  {
-    title: 'Phí ship',
-    dataIndex: 'shippingCost',
-    key: 'shippingCost',
-    width: 130,
-    ellipsis: true,
-    render: (shippingCost) => formatMoney(shippingCost),
-  },
-  {
-    title: 'Thanh toán',
-    dataIndex: 'paid',
-    key: 'paid',
-    width: 130,
-    ellipsis: true,
-    render: (paid) => formatMoney(paid),
-  },
-  {
-    title: 'Còn lại',
-    key: 'remainingAmount',
-    width: 130,
-    ellipsis: true,
-    render: (record) => formatMoney(record.total - record.paid),
-  },
-  {
-    title: 'Action',
-    key: 'action',
-    fixed: 'right',
-    width: actionWidth,
-    render: (_, record) => (
-      <OrderActions
-        record={record}
-        isOpportunityList={isOpportunityList}
-        hideQuoteButton={hideQuoteButton}
-        disableWorkflowAttach={disableWorkflowAttach}
-        showWorkflowProgressAction={showWorkflowProgressAction}
-        extraActions={extraActions}
-        onClickViewDetail={onClickViewDetail}
-        openQuotationViewer={openQuotationViewer}
-        openWorkflowModal={openWorkflowModal}
-        openWorkflowProgressDrawer={openWorkflowProgressDrawer}
-        navigate={navigate}
-        canViewDetail={canViewDetail}
-        canUpdateOpportunity={canUpdateOpportunity}
-        cancelOpportunity={cancelOpportunity}
-        cancellingOpportunityId={cancellingOpportunityId}
-        canUpdateOrder={canUpdateOrder}
-        canDeleteOrder={canDeleteOrder}
-        canViewQuotation={canViewQuotation}
-        canAttachWorkflow={canAttachWorkflow}
-        canViewWorkflow={canViewWorkflow}
-        canCreateReceipt={canCreateReceipt}
-        openOrderInboundDrawer={openOrderInboundDrawer}
-      />
-    ),
-  },
-].filter(column => !(
-  isOpportunityList && OPPORTUNITY_HIDDEN_COLUMN_KEYS.has(column.key)
-)))
+    //     return renderArrayColor(array, record.detailstatus)
+    //   },
+    // },
+    {
+      title: 'T.G Chốt',
+      dataIndex: 'opportunityAt',
+      key: 'opportunityAt',
+      width: 120,
+      ellipsis: true,
+      render: (time) => formatTime(time),
+    },
+    {
+      title: 'Khách hàng',
+      dataIndex: 'customerReceiverName',
+      key: 'customerReceiverName',
+      width: 130,
+      ellipsis: true,
+      render: (customerReceiverName, record) =>
+        record?.enterpriseName || customerReceiverName || '-',
+    },
+    {
+      title: 'Số điện thoại',
+      dataIndex: 'customerMobilePhone',
+      key: 'customerMobilePhone',
+      width: 130,
+      ellipsis: true,
+    },
+    {
+      title: 'Tỉnh/T.P',
+      dataIndex: 'customerAddress',
+      key: 'customerAddress',
+      width: 120,
+      ellipsis: true,
+      render: (address) => address || '(Chưa có)',
+    },
+    {
+      title: 'Ngày đặt',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 130,
+      ellipsis: true,
+      render: (time) => formatTime(time),
+    },
+    {
+      title: 'Tổng tiền',
+      dataIndex: 'total',
+      key: 'total',
+      width: 130,
+      ellipsis: true,
+      render: (total) => formatMoney(total),
+    },
+    {
+      title: 'Giảm giá',
+      dataIndex: 'priceOff',
+      key: 'priceOff',
+      width: 130,
+      ellipsis: true,
+      render: (priceOff) => formatMoney(priceOff),
+    },
+    {
+      title: 'Phí ship',
+      dataIndex: 'shippingCost',
+      key: 'shippingCost',
+      width: 130,
+      ellipsis: true,
+      render: (shippingCost) => formatMoney(shippingCost),
+    },
+    {
+      title: 'Thanh toán',
+      dataIndex: 'paid',
+      key: 'paid',
+      width: 130,
+      ellipsis: true,
+      render: (paid) => formatMoney(paid),
+    },
+    {
+      title: 'Còn lại',
+      key: 'remainingAmount',
+      width: 130,
+      ellipsis: true,
+      render: (record) => formatMoney(record.total - record.paid),
+    },
+    {
+      title: 'Action',
+      key: 'action',
+      fixed: 'right',
+      width: actionWidth,
+      render: (_, record) => (
+        <OrderActions
+          record={record}
+          isOpportunityList={isOpportunityList}
+          hideQuoteButton={hideQuoteButton}
+          disableWorkflowAttach={disableWorkflowAttach}
+          showWorkflowProgressAction={showWorkflowProgressAction}
+          extraActions={extraActions}
+          onClickViewDetail={onClickViewDetail}
+          openQuotationViewer={openQuotationViewer}
+          openWorkflowModal={openWorkflowModal}
+          openWorkflowProgressDrawer={openWorkflowProgressDrawer}
+          navigate={navigate}
+          canViewDetail={canViewDetail}
+          canUpdateOpportunity={canUpdateOpportunity}
+          cancelOpportunity={cancelOpportunity}
+          cancellingOpportunityId={cancellingOpportunityId}
+          canUpdateOrder={canUpdateOrder}
+          canDeleteOrder={canDeleteOrder}
+          canViewQuotation={canViewQuotation}
+          canAttachWorkflow={canAttachWorkflow}
+          canViewWorkflow={canViewWorkflow}
+          canCreateReceipt={canCreateReceipt}
+          openOrderInboundDrawer={openOrderInboundDrawer}
+        />
+      ),
+    },
+  ].filter((column) => !(isOpportunityList && OPPORTUNITY_HIDDEN_COLUMN_KEYS.has(column.key)));
 
-export default createOrderColumns
+export default createOrderColumns;

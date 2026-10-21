@@ -24,8 +24,8 @@ export const useCallDuration = (startedAt) => {
 
 /* Lắng nghe sự kiện từ tổng đài và đẩy vào store */
 export const useCallCenterEvents = (enabled = true) => {
-  const receiveIncoming = useCallCenterStore(state => state.receiveIncoming);
-  const hangup = useCallCenterStore(state => state.hangup);
+  const receiveIncoming = useCallCenterStore((state) => state.receiveIncoming);
+  const hangup = useCallCenterStore((state) => state.hangup);
 
   useEffect(() => {
     if (!enabled) return undefined;
@@ -42,11 +42,11 @@ export const useCallCenterEvents = (enabled = true) => {
 
 /* Đăng ký máy nhánh khi vào app, huỷ đăng ký khi rời trang */
 export const useSoftphoneConnection = (ext) => {
-  const connect = useCallCenterStore(state => state.connect);
-  const disconnect = useCallCenterStore(state => state.disconnect);
+  const connect = useCallCenterStore((state) => state.connect);
+  const disconnect = useCallCenterStore((state) => state.disconnect);
   const target = String(ext ?? '').trim();
-  const sipToken = useSipSession(state => state.credential?.token);
-  const sipOwner = useSipSession(state => state.ownerId);
+  const sipToken = useSipSession((state) => state.credential?.token);
+  const sipOwner = useSipSession((state) => state.ownerId);
 
   useEffect(() => {
     if (!target) {

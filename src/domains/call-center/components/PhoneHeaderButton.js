@@ -17,8 +17,8 @@ const PhoneHeaderButton = () => {
   const hasExtension = Boolean(String(user?.sipExt ?? '').trim());
   const [open, setOpen] = useState(false);
   const closeTimer = useRef(null);
-  const connection = useCallCenterStore(state => state.connection);
-  const call = useCallCenterStore(state => state.call);
+  const connection = useCallCenterStore((state) => state.connection);
+  const call = useCallCenterStore((state) => state.call);
   const duration = useCallDuration(call.startedAt);
 
   const isInCall = call.status === CALL_STATUS.IN_CALL;

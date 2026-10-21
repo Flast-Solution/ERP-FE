@@ -24,7 +24,7 @@ import React, { useCallback } from 'react';
 import { Button } from 'antd';
 import { Helmet } from 'react-helmet';
 import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
-import { useGetList } from "@flast-erp/core/hooks";
+import { useGetList } from '@flast-erp/core/hooks';
 import { HASH_MODAL } from '@/configs';
 import { InAppEvent } from '@flast-erp/core/utils';
 import { cloneDeep } from 'lodash';
@@ -44,15 +44,16 @@ const OPPORTUNITY_HIDDEN_COLUMN_KEYS = new Set([
 
 export const CoHoi7DayContent = ({ type }) => {
   const onEdit = (item) => {
-    let title = 'Cập nhật mã Cơ hội / Đơn hàng #' + item.code
+    let title = 'Cập nhật mã Cơ hội / Đơn hàng #' + item.code;
     let hash = '#draw/cohoi7Day.edit';
     let data = cloneDeep(item);
     InAppEvent.emit(HASH_MODAL, { hash, title, data });
-  }
+  };
 
-  const baseColumns = type === 'cohoi'
-    ? ORDER_COLUMN_ACTION.filter(column => !OPPORTUNITY_HIDDEN_COLUMN_KEYS.has(column.key))
-    : ORDER_COLUMN_ACTION;
+  const baseColumns =
+    type === 'cohoi'
+      ? ORDER_COLUMN_ACTION.filter((column) => !OPPORTUNITY_HIDDEN_COLUMN_KEYS.has(column.key))
+      : ORDER_COLUMN_ACTION;
 
   const CUSTOM_ACTION = [
     ...baseColumns,
@@ -61,15 +62,14 @@ export const CoHoi7DayContent = ({ type }) => {
       fixed: 'right',
       width: 100,
       render: (record) => (
-        <><AlertLink entityId={record.id} entityKind={type === 'cohoi' ? 'DEAL' : 'ORDER'} /> <Button
-          type="primary"
-          size="small"
-          onClick={() => onEdit(record)}
-        >
-          Cập nhật
-        </Button></>
-      )
-    }
+        <>
+          <AlertLink entityId={record.id} entityKind={type === 'cohoi' ? 'DEAL' : 'ORDER'} />{' '}
+          <Button type="primary" size="small" onClick={() => onEdit(record)}>
+            Cập nhật
+          </Button>
+        </>
+      ),
+    },
   ];
 
   const beforeSubmitFilter = useCallback((values) => {
@@ -93,25 +93,24 @@ export const CoHoi7DayContent = ({ type }) => {
       apiPath={'cs/co-hoi-order-fetch'}
       columns={CUSTOM_ACTION}
     />
-  )
-}
+  );
+};
 
 const CoHoi7DayPage = ({ type }) => {
-  const title = type === 'cohoi'
-    ? 'Danh sách Cơ hội 7 ngày chưa ra đơn hàng'
-    : 'Đơn hàng chưa chăm sóc sau bán';
+  const title =
+    type === 'cohoi'
+      ? 'Danh sách Cơ hội 7 ngày chưa ra đơn hàng'
+      : 'Đơn hàng chưa chăm sóc sau bán';
 
   return (
     <div>
       <Helmet>
         <title>{title}</title>
       </Helmet>
-      <BreadcrumbCustom
-        data={[{ title: 'Trang chủ' }, { title }]}
-      />
+      <BreadcrumbCustom data={[{ title: 'Trang chủ' }, { title }]} />
       <CoHoi7DayContent type={type} />
     </div>
-  )
-}
+  );
+};
 
-export default CoHoi7DayPage
+export default CoHoi7DayPage;

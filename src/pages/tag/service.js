@@ -1,6 +1,6 @@
 import { RequestUtils } from '@flast-erp/core/utils';
 
-const check = response => {
+const check = (response) => {
   if (response?.success === false || (response?.errorCode != null && response.errorCode !== 200)) {
     throw new Error(response.message || 'Không thể xử lý tag');
   }
@@ -13,7 +13,14 @@ export async function listTags(type = 'product') {
 }
 export async function saveTag({ id = null, name, description, type }) {
   if (!['product', 'pages'].includes(type)) throw new Error('Vui lòng chọn loại tag');
-  return check(await RequestUtils.Post('/erp/tag/save', { id, name: name.trim(), description: description || '', type }));
+  return check(
+    await RequestUtils.Post('/erp/tag/save', {
+      id,
+      name: name.trim(),
+      description: description || '',
+      type,
+    }),
+  );
 }
 export async function deleteTag(id) {
   return check(await RequestUtils.Delete(`/erp/tag/delete?id=${encodeURIComponent(id)}`));

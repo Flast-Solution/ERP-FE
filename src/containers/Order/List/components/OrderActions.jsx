@@ -1,8 +1,15 @@
 import AlertLink from '@/features/Alerts/components/AlertLink';
-import React from 'react'
-import { Button, Dropdown, Popconfirm, Space, Tooltip } from 'antd'
-import { ApartmentOutlined, DeleteOutlined, EditFilled, EyeOutlined, InboxOutlined, TruckOutlined } from '@ant-design/icons'
-import { clonePlainData } from '../utils/orderMappers'
+import React from 'react';
+import { Button, Dropdown, Popconfirm, Space, Tooltip } from 'antd';
+import {
+  ApartmentOutlined,
+  DeleteOutlined,
+  EditFilled,
+  EyeOutlined,
+  InboxOutlined,
+  TruckOutlined,
+} from '@ant-design/icons';
+import { clonePlainData } from '../utils/orderMappers';
 
 const OrderActions = ({
   record,
@@ -31,99 +38,104 @@ const OrderActions = ({
   canCreateDelivery,
   openOrderDeliveryDrawer,
 }) => {
-  const deleteLabel = isOpportunityList ? 'cơ hội bán hàng' : 'đơn hàng'
-  const workflowDetails = (record?.details ?? []).filter(detail => (
-    Array.isArray(detail?.workflowInstances) && detail.workflowInstances.length > 0
-  ))
+  const deleteLabel = isOpportunityList ? 'cơ hội bán hàng' : 'đơn hàng';
+  const workflowDetails = (record?.details ?? []).filter(
+    (detail) => Array.isArray(detail?.workflowInstances) && detail.workflowInstances.length > 0,
+  );
   const parentWorkflowInstances = Array.isArray(record?.workflowInstances)
     ? record.workflowInstances
-    : (record?.workflowInstance ? [record.workflowInstance] : [])
-  const hasParentWorkflowInstance = parentWorkflowInstances.length > 0
+    : record?.workflowInstance
+      ? [record.workflowInstance]
+      : [];
+  const hasParentWorkflowInstance = parentWorkflowInstances.length > 0;
   const hasWorkflowInstance = isOpportunityList
     ? hasParentWorkflowInstance || workflowDetails.length > 0
-    : hasParentWorkflowInstance
+    : hasParentWorkflowInstance;
   const workflowMenuItems = isOpportunityList
     ? [
-      ...(canViewWorkflow ? workflowDetails.map(detail => ({
-        key: `progress:${detail.id}`,
-        icon: <EyeOutlined />,
-        label: (
-          <span>
-            <strong>Mã&nbsp;</strong> {detail.code}
-          </span>
-        ),
-      })) : []),
-      canViewWorkflow && hasParentWorkflowInstance && workflowDetails.length === 0 && {
-        key: 'progress',
-        icon: <EyeOutlined />,
-        label: 'Xem tiến trình',
-      },
-      canAttachWorkflow && !disableWorkflowAttach && {
-        key: 'attach',
-        icon: <ApartmentOutlined />,
-        label: hasWorkflowInstance ? 'Gắn thêm workflow' : 'Gắn workflow',
-      },
-    ].filter(Boolean)
+        ...(canViewWorkflow
+          ? workflowDetails.map((detail) => ({
+              key: `progress:${detail.id}`,
+              icon: <EyeOutlined />,
+              label: (
+                <span>
+                  <strong>Mã&nbsp;</strong> {detail.code}
+                </span>
+              ),
+            }))
+          : []),
+        canViewWorkflow &&
+          hasParentWorkflowInstance &&
+          workflowDetails.length === 0 && {
+            key: 'progress',
+            icon: <EyeOutlined />,
+            label: 'Xem tiến trình',
+          },
+        canAttachWorkflow &&
+          !disableWorkflowAttach && {
+            key: 'attach',
+            icon: <ApartmentOutlined />,
+            label: hasWorkflowInstance ? 'Gắn thêm workflow' : 'Gắn workflow',
+          },
+      ].filter(Boolean)
     : [
-      canAttachWorkflow && !disableWorkflowAttach && {
-        key: 'attach',
-        icon: <ApartmentOutlined />,
-        label: hasParentWorkflowInstance ? 'Gắn thêm workflow' : 'Gắn workflow',
-      },
-      canViewWorkflow && (hasParentWorkflowInstance || showWorkflowProgressAction) && {
-        key: 'progress',
-        icon: <EyeOutlined />,
-        label: 'Xem tiến trình',
-        disabled: !hasParentWorkflowInstance,
-      },
-    ].filter(Boolean)
+        canAttachWorkflow &&
+          !disableWorkflowAttach && {
+            key: 'attach',
+            icon: <ApartmentOutlined />,
+            label: hasParentWorkflowInstance ? 'Gắn thêm workflow' : 'Gắn workflow',
+          },
+        canViewWorkflow &&
+          (hasParentWorkflowInstance || showWorkflowProgressAction) && {
+            key: 'progress',
+            icon: <EyeOutlined />,
+            label: 'Xem tiến trình',
+            disabled: !hasParentWorkflowInstance,
+          },
+      ].filter(Boolean);
 
   const handleWorkflowAction = (key, event) => {
-    event?.stopPropagation?.()
+    event?.stopPropagation?.();
     if (key === 'attach') {
-      openWorkflowModal(record)
-      return
+      openWorkflowModal(record);
+      return;
     }
     if (key.startsWith('progress:')) {
-      const detailId = key.slice('progress:'.length)
-      const detail = workflowDetails.find(item => String(item?.id) === detailId)
+      const detailId = key.slice('progress:'.length);
+      const detail = workflowDetails.find((item) => String(item?.id) === detailId);
       if (detail) {
-        openWorkflowProgressDrawer(record, detail)
+        openWorkflowProgressDrawer(record, detail);
       }
-      return
+      return;
     }
     if (key === 'progress') {
       navigate(`/sale/order/progress/${record.id}`, {
         state: {
           order: clonePlainData(record),
         },
-      })
+      });
     }
-  }
+  };
 
-  const singleWorkflowAction = workflowMenuItems.length === 1
-    ? workflowMenuItems[0]
-    : null
-  const isDirectProgressAction = singleWorkflowAction?.key === 'progress'
-    || singleWorkflowAction?.key?.startsWith('progress:')
+  const singleWorkflowAction = workflowMenuItems.length === 1 ? workflowMenuItems[0] : null;
+  const isDirectProgressAction =
+    singleWorkflowAction?.key === 'progress' || singleWorkflowAction?.key?.startsWith('progress:');
 
   return (
     <Space size={compact ? 4 : 8} wrap={compact}>
       <AlertLink entityId={record.id} entityKind={isOpportunityList ? 'DEAL' : 'ORDER'} />
-      {canViewDetail ? <Button
-        type="primary"
-        size="small"
-        onClick={() => onClickViewDetail(record)}
-      >
-        Chi tiết
-      </Button> : null}
+      {canViewDetail ? (
+        <Button type="primary" size="small" onClick={() => onClickViewDetail(record)}>
+          Chi tiết
+        </Button>
+      ) : null}
       {canViewQuotation && !hideQuoteButton && (
         <Button
           size="small"
           style={{ color: '#fa8c16' }}
           onClick={(event) => {
-            event.stopPropagation()
-            openQuotationViewer(record)
+            event.stopPropagation();
+            openQuotationViewer(record);
           }}
         >
           Báo giá
@@ -151,9 +163,13 @@ const OrderActions = ({
           <Tooltip title={hasWorkflowInstance ? 'Xem tiến trình' : 'Chưa có workflow'}>
             <Button
               size="small"
-              icon={(hasWorkflowInstance || showWorkflowProgressAction)
-                ? <EyeOutlined />
-                : <ApartmentOutlined />}
+              icon={
+                hasWorkflowInstance || showWorkflowProgressAction ? (
+                  <EyeOutlined />
+                ) : (
+                  <ApartmentOutlined />
+                )
+              }
               disabled={showWorkflowProgressAction && !hasWorkflowInstance}
               onClick={(event) => event.stopPropagation()}
             />
@@ -170,7 +186,7 @@ const OrderActions = ({
         </Button>
       )}
       {((isOpportunityList && canUpdateOpportunity) || canDeleteOrder) && (
-        <span onClick={event => event.stopPropagation()}>
+        <span onClick={(event) => event.stopPropagation()}>
           <Popconfirm
             title={`Xóa ${deleteLabel}?`}
             description={`Bạn có chắc muốn xóa ${deleteLabel} ${record.code || ''}?`}
@@ -181,7 +197,10 @@ const OrderActions = ({
             onConfirm={() => cancelOpportunity(record)}
           >
             <Tooltip title={`Xóa ${deleteLabel}`}>
-              <Button danger size="small" icon={<DeleteOutlined />}
+              <Button
+                danger
+                size="small"
+                icon={<DeleteOutlined />}
                 aria-label={`Xóa ${deleteLabel}`}
                 loading={cancellingOpportunityId === record.id}
                 disabled={cancellingOpportunityId != null && cancellingOpportunityId !== record.id}
@@ -207,33 +226,43 @@ const OrderActions = ({
             aria-label="Nhập kho theo đơn"
             style={{ color: '#389e0d', borderColor: '#b7eb8f' }}
             onClick={(event) => {
-              event.stopPropagation()
-              openOrderInboundDrawer(record)
+              event.stopPropagation();
+              openOrderInboundDrawer(record);
             }}
           />
         </Tooltip>
       )}
       {canCreateDelivery && record.type === 'order' && (
         <Tooltip title="Giao hàng">
-          <Button type="primary" size="small" icon={<TruckOutlined />} aria-label="Giao hàng"
-            onClick={event => { event.stopPropagation(); openOrderDeliveryDrawer(record) }} />
+          <Button
+            type="primary"
+            size="small"
+            icon={<TruckOutlined />}
+            aria-label="Giao hàng"
+            onClick={(event) => {
+              event.stopPropagation();
+              openOrderDeliveryDrawer(record);
+            }}
+          />
         </Tooltip>
       )}
-      {extraActions?.filter(action => action.visible?.(record) !== false).map((action, index) => {
-        const { visible, ...buttonAction } = action
-        return (
-        <Button
-          key={action.key ?? action.children ?? index}
-          size="small"
-          {...buttonAction}
-          onClick={() => action.onClick(record)}
-        >
-          {action.children}
-        </Button>
-        )
-      })}
+      {extraActions
+        ?.filter((action) => action.visible?.(record) !== false)
+        .map((action, index) => {
+          const { visible, ...buttonAction } = action;
+          return (
+            <Button
+              key={action.key ?? action.children ?? index}
+              size="small"
+              {...buttonAction}
+              onClick={() => action.onClick(record)}
+            >
+              {action.children}
+            </Button>
+          );
+        })}
     </Space>
-  )
-}
+  );
+};
 
-export default OrderActions
+export default OrderActions;
