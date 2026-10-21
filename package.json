@@ -86,7 +86,11 @@
     "extends": [
       "react-app",
       "react-app/jest"
-    ]
+    ],
+    "settings": {
+      "testing-library/utils-module": "off",
+      "testing-library/custom-renders": "off"
+    }
   },
   "browserslist": {
     "production": [
