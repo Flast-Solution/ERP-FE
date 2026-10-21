@@ -9,13 +9,12 @@ import InCallDrawer from './InCallDrawer';
 
 /* Lớp overlay của tổng đài: popup cuộc gọi đến hoặc drawer đang gọi */
 const CallCenterLayer = () => {
-  
-  const status = useCallCenterStore(state => state.call.status);
+  const status = useCallCenterStore((state) => state.call.status);
   const { user } = useGetMe();
   const ext = String(user?.sipExt ?? '').trim();
   useSoftphoneConnection(ext);
   useCallCenterEvents(Boolean(ext));
-  const ringtone=useIncomingRingtone(status);
+  const ringtone = useIncomingRingtone(status);
 
   if (!ext) return null;
 

@@ -23,7 +23,7 @@ export const GW_STATE = {
   INCOMING: 'incoming',
   EARLY: 'early',
   CONNECTED: 'connected',
-  ENDED: 'ended'
+  ENDED: 'ended',
 };
 
 /* Lỗi từ http_api, giữ mã HTTP để nơi gọi xử lý (401 hết token, 404 mất phiên) */
@@ -46,11 +46,11 @@ const unwrap = (response) => {
 const session = {
   ext: null,
   token: null,
-  expires: 0
+  expires: 0,
 };
 
 // SIP credentials come exclusively from auth, including sign-with-token.
-const requestToken = async ext => {
+const requestToken = async (ext) => {
   const credential = useSipSession.getState().getToken(ext);
   session.ext = ext;
   session.token = credential.token;
@@ -87,7 +87,7 @@ const request = async (method, path = '', query, headers = {}) => {
   const token = await ensureToken();
   const response = await fetch(buildUrl(path, query), {
     method,
-    headers: { ...headers, 'Authorization': `Bearer ${token}` }
+    headers: { ...headers, Authorization: `Bearer ${token}` },
   });
   const body = await readJson(response);
   if (response.status === 401) {
@@ -113,24 +113,12 @@ export const clearGatewayToken = () => {
 export const gatewayApi = {
   token: (ext) => requestToken(ext),
   /* device: mã thiết bị duy nhất theo tài khoản, lưu localStorage */
-  createSession: () => request(
-    'POST',
-    '',
-    { device: getDeviceId(session.ext) }
-  ),
+  createSession: () => request('POST', '', { device: getDeviceId(session.ext) }),
   status: (id) => request('GET', sessionPath(id)),
   /* Số gọi ra (caller) gửi qua header X-Caller-Number */
-  dial: (id, to, caller) => request(
-    'POST',
-    sessionPath(id, 'dial'),
-    { to },
-    caller ? { 'X-Caller-Number': caller } : {}
-  ),
-  dtmf: (id, digits) => request(
-    'POST',
-    sessionPath(id, 'dtmf'),
-    { digits }
-  ),
+  dial: (id, to, caller) =>
+    request('POST', sessionPath(id, 'dial'), { to }, caller ? { 'X-Caller-Number': caller } : {}),
+  dtmf: (id, digits) => request('POST', sessionPath(id, 'dtmf'), { digits }),
   answer: (id) => request('POST', sessionPath(id, 'answer')),
   reject: (id) => request('POST', sessionPath(id, 'reject')),
   hangup: (id) => request('POST', sessionPath(id, 'hangup')),

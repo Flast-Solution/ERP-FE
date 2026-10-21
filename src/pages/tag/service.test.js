@@ -1,6 +1,8 @@
 import { listTags, saveTag, deleteTag } from './service';
 import { RequestUtils } from '@flast-erp/core/utils';
-jest.mock('@flast-erp/core/utils', () => ({ RequestUtils: { Get: jest.fn(), Post: jest.fn(), Delete: jest.fn() } }));
+jest.mock('@flast-erp/core/utils', () => ({
+  RequestUtils: { Get: jest.fn(), Post: jest.fn(), Delete: jest.fn() },
+}));
 beforeEach(() => jest.clearAllMocks());
 test('loads product tags by default', async () => {
   RequestUtils.Get.mockResolvedValue({ errorCode: 200, data: [{ id: 1, name: 'A' }] });
@@ -10,9 +12,19 @@ test('loads product tags by default', async () => {
 test('saves only supported fields and preserves update identity', async () => {
   RequestUtils.Post.mockResolvedValue({ success: true, data: null });
   await saveTag({ name: ' A ', slug: 'a', color: 'red', type: 'product' });
-  expect(RequestUtils.Post).toHaveBeenLastCalledWith('/erp/tag/save', { id: null, name: 'A', description: '', type: 'product' });
+  expect(RequestUtils.Post).toHaveBeenLastCalledWith('/erp/tag/save', {
+    id: null,
+    name: 'A',
+    description: '',
+    type: 'product',
+  });
   await saveTag({ id: 9, name: 'B', description: 'text', type: 'pages' });
-  expect(RequestUtils.Post).toHaveBeenLastCalledWith('/erp/tag/save', { id: 9, name: 'B', description: 'text', type: 'pages' });
+  expect(RequestUtils.Post).toHaveBeenLastCalledWith('/erp/tag/save', {
+    id: 9,
+    name: 'B',
+    description: 'text',
+    type: 'pages',
+  });
 });
 test('deletes via DELETE with id in query and propagates rejection', async () => {
   RequestUtils.Delete.mockResolvedValue({ success: false, message: 'Không thể xóa' });

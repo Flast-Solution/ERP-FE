@@ -16,11 +16,14 @@ export const PhoneTrigger = styled.button`
   padding: 0 10px;
   border: 0;
   border-radius: 8px;
-  background: ${p => (p.$active ? color.primarySoft : 'transparent')};
-  color: ${p => (p.$active ? color.onPrimarySoft : color.ink2)};
+  background: ${(p) => (p.$active ? color.primarySoft : 'transparent')};
+  color: ${(p) => (p.$active ? color.onPrimarySoft : color.ink2)};
   font: 600 12px/1 ${font};
   cursor: pointer;
-  &:disabled { cursor: not-allowed; opacity: .55; }
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
 
   .anticon {
     font-size: 18px;
@@ -29,7 +32,7 @@ export const PhoneTrigger = styled.button`
     width: 8px;
     height: 8px;
     border-radius: 9999px;
-    background: ${p => p.$dot};
+    background: ${(p) => p.$dot};
   }
 `;
 
@@ -41,7 +44,9 @@ export const DialerPanel = styled.div`
   width: 340px;
   background: ${color.surface};
   border-radius: 14px;
-  box-shadow: 0 18px 50px rgba(16, 24, 40, .22), 0 0 0 1px ${color.border};
+  box-shadow:
+    0 18px 50px rgba(16, 24, 40, 0.22),
+    0 0 0 1px ${color.border};
   display: flex;
   flex-direction: column;
   font-family: ${font};
@@ -91,8 +96,8 @@ export const ReadyToggle = styled.button`
   padding: 0 10px;
   border: 0;
   border-radius: 9999px;
-  background: ${p => (p.$ready ? color.customerBg : color.surfaceSunken)};
-  color: ${p => (p.$ready ? color.customerFg : color.ink2)};
+  background: ${(p) => (p.$ready ? color.customerBg : color.surfaceSunken)};
+  color: ${(p) => (p.$ready ? color.customerFg : color.ink2)};
   font: 600 12px/1 ${font};
   cursor: pointer;
 
@@ -100,7 +105,7 @@ export const ReadyToggle = styled.button`
     width: 7px;
     height: 7px;
     border-radius: 9999px;
-    background: ${p => (p.$ready ? color.success : color.ink3)};
+    background: ${(p) => (p.$ready ? color.success : color.ink3)};
   }
 `;
 
@@ -150,7 +155,7 @@ export const DialerInput = styled.div`
     outline: none;
     background: transparent;
     font: 600 20px/1 ${font};
-    letter-spacing: .02em;
+    letter-spacing: 0.02em;
     font-variant-numeric: tabular-nums;
     color: ${color.ink};
   }
@@ -206,7 +211,7 @@ export const DialPad = styled.div`
   }
   small {
     font: 600 8px/10px ${font};
-    letter-spacing: .1em;
+    letter-spacing: 0.1em;
     color: ${color.ink3};
     min-height: 10px;
   }
@@ -227,7 +232,7 @@ export const CallButton = styled.button`
   cursor: pointer;
 
   &:disabled {
-    opacity: .5;
+    opacity: 0.5;
     cursor: not-allowed;
   }
 `;
@@ -240,7 +245,7 @@ export const RecentList = styled.div`
     margin: 6px 14px;
     font: 700 11px/14px ${font};
     text-transform: uppercase;
-    letter-spacing: .05em;
+    letter-spacing: 0.05em;
     color: ${color.ink3};
   }
 `;
@@ -251,7 +256,7 @@ export const RecentItem = styled.div`
   gap: 10px;
   padding: 7px 14px;
   font: 500 13px/18px ${font};
-  color: ${p => (p.$missed ? color.danger : color.ink)};
+  color: ${(p) => (p.$missed ? color.danger : color.ink)};
 
   .recent__body {
     flex: 1;

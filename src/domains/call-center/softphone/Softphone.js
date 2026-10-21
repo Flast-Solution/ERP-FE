@@ -10,7 +10,7 @@ const CONNECT_TIMEOUT = 10000;
 /* Địa chỉ media trong SDP offer (c= và a=candidate) */
 const getOfferHosts = (sdp = '') => {
   const hosts = new Set();
-  sdp.split(/\r?\n/).forEach(line => {
+  sdp.split(/\r?\n/).forEach((line) => {
     const conn = line.match(/^c=IN IP[46] (\S+)/);
     if (conn) {
       hosts.add(conn[1]);
@@ -103,14 +103,17 @@ export default class Softphone {
     await pc.setRemoteDescription({ type: 'offer', sdp: offer });
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      if (stale()) { stream.getTracks().forEach(track => track.stop()); return; }
+      if (stale()) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       this.stream = stream;
     } catch (error) {
       /* NotFoundError / NotAllowedError / NotReadableError, hoặc trang không chạy HTTPS */
       throw new Error(AUDIO_UNAVAILABLE);
     }
     if (stale()) return;
-    this.stream.getTracks().forEach(track => pc.addTrack(track, this.stream));
+    this.stream.getTracks().forEach((track) => pc.addTrack(track, this.stream));
     await pc.setLocalDescription(await pc.createAnswer());
 
     if (stale()) return;
@@ -137,9 +140,11 @@ export default class Softphone {
           hosts,
           offer,
         });
-        done(new Error(
-          `Kết nối media tới SBC thất bại (ICE ${pc.iceConnectionState}, SBC ${hosts.join(', ') || '?'})`
-        ));
+        done(
+          new Error(
+            `Kết nối media tới SBC thất bại (ICE ${pc.iceConnectionState}, SBC ${hosts.join(', ') || '?'})`,
+          ),
+        );
       };
       const onChange = () => {
         if (pc.connectionState === 'connected') {
@@ -183,7 +188,9 @@ export default class Softphone {
           this.id = null;
           this.onState({ state: GW_STATE.ENDED, peer: '' });
           void this.disconnect();
-          this.onError(error.status === 401 ? error : new Error('Mất phiên WebRTC trên SBC, cần kết nối lại'));
+          this.onError(
+            error.status === 401 ? error : new Error('Mất phiên WebRTC trên SBC, cần kết nối lại'),
+          );
           return;
         }
         failures += 1;
@@ -261,7 +268,7 @@ export default class Softphone {
   }
 
   setMuted(muted) {
-    (this.stream?.getAudioTracks() || []).forEach(track => {
+    (this.stream?.getAudioTracks() || []).forEach((track) => {
       track.enabled = !muted;
     });
   }
@@ -272,7 +279,7 @@ export default class Softphone {
     const id = this.id;
     this.id = null;
     this.lastState = null;
-    (this.stream?.getTracks() || []).forEach(track => track.stop());
+    (this.stream?.getTracks() || []).forEach((track) => track.stop());
     this.stream = null;
     if (this.pc) {
       this.pc.close();

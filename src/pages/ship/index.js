@@ -26,7 +26,7 @@ import { Helmet } from 'react-helmet';
 import { Button, Dropdown, Space, Tooltip } from 'antd';
 import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
 import ShipFilter from './Filter';
-import { useGetList } from "@flast-erp/core/hooks";
+import { useGetList } from '@flast-erp/core/hooks';
 import { arrayEmpty, dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils';
 import { RequestUtils, InAppEvent, f5List } from '@flast-erp/core/utils';
 import { HASH_MODAL } from '@/configs/constant';
@@ -38,34 +38,40 @@ import { useWorkflowDrawer } from '@/contexts/WorkflowDrawerContext';
 import { SHIPPING_WORKFLOW_ENTITY_TYPE } from '@/containers/Order/List/constants';
 import { enrichEntitiesWithWorkflowData } from '@/containers/Order/List/services/workflowApi';
 
-const getLots = record => Array.isArray(record?.lots) ? record.lots : [];
-const getTotalQuantity = record => getLots(record).reduce(
-  (total, lot) => total + Number(lot?.quantity ?? 0),
-  0
-);
-const getStockNames = record => Array.from(new Set(
-  getLots(record).map(lot => lot?.stockName).filter(Boolean)
-)).join(', ');
-const getProductSkuLabel = record => [
-  record?.productId ? `SP #${record.productId}` : null,
-  record?.skuId ? `SKU #${record.skuId}` : null
-].filter(Boolean).join(' · ') || '—';
-const renderTooltip = value => (
+const getLots = (record) => (Array.isArray(record?.lots) ? record.lots : []);
+const getTotalQuantity = (record) =>
+  getLots(record).reduce((total, lot) => total + Number(lot?.quantity ?? 0), 0);
+const getStockNames = (record) =>
+  Array.from(
+    new Set(
+      getLots(record)
+        .map((lot) => lot?.stockName)
+        .filter(Boolean),
+    ),
+  ).join(', ');
+const getProductSkuLabel = (record) =>
+  [
+    record?.productId ? `SP #${record.productId}` : null,
+    record?.skuId ? `SKU #${record.skuId}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ') || '—';
+const renderTooltip = (value) => (
   <Tooltip title={value || '—'}>
     <span>{value || '—'}</span>
   </Tooltip>
 );
-const getDeliveryMode = delivery => {
+const getDeliveryMode = (delivery) => {
   if (delivery?.mode === 'self') return 'Tự giao';
   if (delivery?.mode === 'carrier') return delivery?.carrier || 'Đơn vị vận chuyển';
   return '—';
 };
 
 const ShipPage = () => {
-  const {search}=useLocation();
-  const requestedOrderCode=new URLSearchParams(search).get('orderCode');
+  const { search } = useLocation();
+  const requestedOrderCode = new URLSearchParams(search).get('orderCode');
 
-  const [title] = useState("Đã giao");
+  const [title] = useState('Đã giao');
   const { hasPermission } = useGetMe();
   const { openWorkflowDrawer } = useWorkflowDrawer();
   const canViewWorkflow = hasPermission('shipping.delivery.view');
@@ -79,9 +85,9 @@ const ShipPage = () => {
 
   const onClickGiaoHang = (record) => {
     InAppEvent.emit(HASH_MODAL, {
-      hash: "#ship.update",
+      hash: '#ship.update',
       title: 'Chi tiết phiếu xuất kho #' + (record.deliveryCode || record.orderCode),
-      data: record
+      data: record,
     });
   };
 
@@ -89,148 +95,168 @@ const ShipPage = () => {
     if (arrayEmpty(values.embedded)) {
       return values;
     }
-    const listStatus = await RequestUtils.GetAsList("/shipping/fetch-status");
+    const listStatus = await RequestUtils.GetAsList('/shipping/fetch-status');
     for (let ship of values.embedded) {
-      ship.statusName = listStatus.find(i => i.id === ship.status)?.name || '';
+      ship.statusName = listStatus.find((i) => i.id === ship.status)?.name || '';
     }
     return enrichEntitiesWithWorkflowData(values, SHIPPING_WORKFLOW_ENTITY_TYPE);
-  }
+  };
 
   const CUSTOM_ACTION = [
-    ...(canViewWorkflow || canUpdate || canPrint ? [{
-      title: 'Mã phiếu xuất',
-      dataIndex: 'deliveryCode',
-      width: 180,
-      ellipsis: true,
-      render: renderTooltip
-    },
-    {
-      title: 'Mã đơn',
-      dataIndex: 'orderCode',
-      width: 140,
-      ellipsis: true
-    },
-    {
-      title: 'Mã đơn con',
-      dataIndex: 'detailCode',
-      width: 140,
-      render: (_, record) => record?.detailCode || record?.orderDetailId || '—',
-      ellipsis: true
-    },
-    {
-      title: 'Sản phẩm / SKU',
-      width: 150,
-      render: (_, record) => renderTooltip(getProductSkuLabel(record)),
-      ellipsis: true,
-    },
-    {
-      title: 'Người nhận',
-      width: 150,
-      render: (_, record) => record?.delivery?.recipientName || '—',
-      ellipsis: true
-    },
-    {
-      title: 'SĐT',
-      width: 120,
-      render: (_, record) => record?.delivery?.recipientPhone || '—',
-      ellipsis: true
-    },
-    {
-      title: 'Địa chỉ',
-      width: 200,
-      render: (_, record) => renderTooltip(record?.delivery?.address),
-      ellipsis: true
-    },
-    {
-      title: 'Hình thức giao',
-      width: 150,
-      render: (_, record) => getDeliveryMode(record?.delivery),
-      ellipsis: true
-    },
-    {
-      title: 'Kho',
-      width: 150,
-      render: (_, record) => getStockNames(record) || '—',
-      ellipsis: true
-    },
-    {
-      title: 'Số lượng',
-      width: 100,
-      render: (_, record) => getTotalQuantity(record).toLocaleString('vi-VN'),
-      ellipsis: true
-    },
-    {
-      title: 'Ngày xuất',
-      dataIndex: 'outboundDate',
-      width: 150,
-      ellipsis: true,
-      render: (outboundDate) => formatTime(outboundDate)
-    },
-    {
-      title: 'Trạng thái',
-      dataIndex: 'statusName',
-      width: 130,
-      render: (statusName, record) => statusName || record?.status,
-      ellipsis: true
-    },
-    {
-      title: 'Action',
-      key: 'action',
-      fixed: 'right',
-      width: 135,
-      render: (record) => (
-        <Space size={4}>
-        {canUpdate || canPrint ? <Button
-          type="primary"
-          size="small"
-          onClick={() => onClickGiaoHang(record)}
-        >
-          Chi tiết
-        </Button> : null}
-        {(canViewWorkflow && record.workflowInstances?.length > 0) || canUpdate ? <Dropdown
-          trigger={['click']}
-          placement="bottomRight"
-          menu={{
-            items: [
-              ...(canViewWorkflow && record.workflowInstances?.length > 0 ? [{
-                key: 'progress',
-                icon: <EyeOutlined />,
-                label: <><strong>Mã</strong> {record.deliveryCode || record.orderCode || `#${record.id}`}</>,
-                onClick: ({ domEvent }) => {
-                  domEvent.stopPropagation();
-                  openWorkflowDrawer(record, record, {
-                    entityName: SHIPPING_WORKFLOW_ENTITY_TYPE,
-                    entityType: SHIPPING_WORKFLOW_ENTITY_TYPE,
-                    entityLabel: 'Phiếu xuất kho',
-                    workflowInstances: record.workflowInstances ?? [],
-                    includeAllInstances: true,
-                  });
-                },
-              }] : []),
-              ...(canUpdate ? [{
-                key: 'attach',
-                icon: <ApartmentOutlined />,
-                label: 'Gắn thêm workflow',
-                onClick: ({ domEvent }) => {
-                  domEvent.stopPropagation();
-                  workflow.openWorkflowModal({ ...record, code: record.deliveryCode || record.orderCode }, SHIPPING_WORKFLOW_ENTITY_TYPE);
-                },
-              }] : []),
-            ],
-          }}
-          disabled={!record?.id}
-        >
-          <Button
-            size="small"
-            icon={<EyeOutlined />}
-            aria-label="Workflow"
-            disabled={!record?.id}
-            onClick={event => event.stopPropagation()}
-          />
-        </Dropdown> : null}
-        </Space>
-      )
-    }] : [])
+    ...(canViewWorkflow || canUpdate || canPrint
+      ? [
+          {
+            title: 'Mã phiếu xuất',
+            dataIndex: 'deliveryCode',
+            width: 180,
+            ellipsis: true,
+            render: renderTooltip,
+          },
+          {
+            title: 'Mã đơn',
+            dataIndex: 'orderCode',
+            width: 140,
+            ellipsis: true,
+          },
+          {
+            title: 'Mã đơn con',
+            dataIndex: 'detailCode',
+            width: 140,
+            render: (_, record) => record?.detailCode || record?.orderDetailId || '—',
+            ellipsis: true,
+          },
+          {
+            title: 'Sản phẩm / SKU',
+            width: 150,
+            render: (_, record) => renderTooltip(getProductSkuLabel(record)),
+            ellipsis: true,
+          },
+          {
+            title: 'Người nhận',
+            width: 150,
+            render: (_, record) => record?.delivery?.recipientName || '—',
+            ellipsis: true,
+          },
+          {
+            title: 'SĐT',
+            width: 120,
+            render: (_, record) => record?.delivery?.recipientPhone || '—',
+            ellipsis: true,
+          },
+          {
+            title: 'Địa chỉ',
+            width: 200,
+            render: (_, record) => renderTooltip(record?.delivery?.address),
+            ellipsis: true,
+          },
+          {
+            title: 'Hình thức giao',
+            width: 150,
+            render: (_, record) => getDeliveryMode(record?.delivery),
+            ellipsis: true,
+          },
+          {
+            title: 'Kho',
+            width: 150,
+            render: (_, record) => getStockNames(record) || '—',
+            ellipsis: true,
+          },
+          {
+            title: 'Số lượng',
+            width: 100,
+            render: (_, record) => getTotalQuantity(record).toLocaleString('vi-VN'),
+            ellipsis: true,
+          },
+          {
+            title: 'Ngày xuất',
+            dataIndex: 'outboundDate',
+            width: 150,
+            ellipsis: true,
+            render: (outboundDate) => formatTime(outboundDate),
+          },
+          {
+            title: 'Trạng thái',
+            dataIndex: 'statusName',
+            width: 130,
+            render: (statusName, record) => statusName || record?.status,
+            ellipsis: true,
+          },
+          {
+            title: 'Action',
+            key: 'action',
+            fixed: 'right',
+            width: 135,
+            render: (record) => (
+              <Space size={4}>
+                {canUpdate || canPrint ? (
+                  <Button type="primary" size="small" onClick={() => onClickGiaoHang(record)}>
+                    Chi tiết
+                  </Button>
+                ) : null}
+                {(canViewWorkflow && record.workflowInstances?.length > 0) || canUpdate ? (
+                  <Dropdown
+                    trigger={['click']}
+                    placement="bottomRight"
+                    menu={{
+                      items: [
+                        ...(canViewWorkflow && record.workflowInstances?.length > 0
+                          ? [
+                              {
+                                key: 'progress',
+                                icon: <EyeOutlined />,
+                                label: (
+                                  <>
+                                    <strong>Mã</strong>{' '}
+                                    {record.deliveryCode || record.orderCode || `#${record.id}`}
+                                  </>
+                                ),
+                                onClick: ({ domEvent }) => {
+                                  domEvent.stopPropagation();
+                                  openWorkflowDrawer(record, record, {
+                                    entityName: SHIPPING_WORKFLOW_ENTITY_TYPE,
+                                    entityType: SHIPPING_WORKFLOW_ENTITY_TYPE,
+                                    entityLabel: 'Phiếu xuất kho',
+                                    workflowInstances: record.workflowInstances ?? [],
+                                    includeAllInstances: true,
+                                  });
+                                },
+                              },
+                            ]
+                          : []),
+                        ...(canUpdate
+                          ? [
+                              {
+                                key: 'attach',
+                                icon: <ApartmentOutlined />,
+                                label: 'Gắn thêm workflow',
+                                onClick: ({ domEvent }) => {
+                                  domEvent.stopPropagation();
+                                  workflow.openWorkflowModal(
+                                    { ...record, code: record.deliveryCode || record.orderCode },
+                                    SHIPPING_WORKFLOW_ENTITY_TYPE,
+                                  );
+                                },
+                              },
+                            ]
+                          : []),
+                      ],
+                    }}
+                    disabled={!record?.id}
+                  >
+                    <Button
+                      size="small"
+                      icon={<EyeOutlined />}
+                      aria-label="Workflow"
+                      disabled={!record?.id}
+                      onClick={(event) => event.stopPropagation()}
+                    />
+                  </Dropdown>
+                ) : null}
+              </Space>
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -238,19 +264,29 @@ const ShipPage = () => {
       <Helmet>
         <title>{title}</title>
       </Helmet>
-      <BreadcrumbCustom
-        data={[{ title: 'Trang chủ' }, { title: title }]}
-      />
+      <BreadcrumbCustom data={[{ title: 'Trang chủ' }, { title: title }]} />
       <RestList
         onData={onData}
         hasCreate={false}
         xScroll={1400}
-        initialFilter={{ limit: 10, page: 1, ...(requestedOrderCode?{orderCode:requestedOrderCode}:{}) }}
+        initialFilter={{
+          limit: 10,
+          page: 1,
+          ...(requestedOrderCode ? { orderCode: requestedOrderCode } : {}),
+        }}
         filter={<ShipFilter />}
         beforeSubmitFilter={beforeSubmitFilter}
         useGetAllQuery={useGetList}
         apiPath={'shipping/fetch'}
-        columns={[...CUSTOM_ACTION, { title: 'Cảnh báo', key: 'alerts', width: 84, render: (_,record)=><AlertLink entityId={record.id} entityKind="SHIPPING"/> }]}
+        columns={[
+          ...CUSTOM_ACTION,
+          {
+            title: 'Cảnh báo',
+            key: 'alerts',
+            width: 84,
+            render: (_, record) => <AlertLink entityId={record.id} entityKind="SHIPPING" />,
+          },
+        ]}
       />
       <WorkflowAttachModal
         open={workflow.workflowModalOpen}
@@ -269,7 +305,7 @@ const ShipPage = () => {
         entityLabel="Phiếu xuất kho"
       />
     </div>
-  )
+  );
 };
 
 export default ShipPage;

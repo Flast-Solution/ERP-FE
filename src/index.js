@@ -46,7 +46,7 @@ installSipSessionBridge(jwtService);
 axios.defaults.withCredentials = true;
 axios.defaults.baseURL = resolveApiBaseUrl(GATEWAY);
 axios.interceptors.request.use(
-  config => {
+  (config) => {
     const token = window.localStorage.getItem('jwt_access_token');
     if (token && isAccessTokenExpired(token)) {
       handleUnauthorized();
@@ -55,16 +55,16 @@ axios.interceptors.request.use(
     scheduleAccessTokenExpiry(token);
     return config;
   },
-  error => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 axios.interceptors.response.use(
-  response => response,
-  error => {
+  (response) => response,
+  (error) => {
     if (error?.response?.status === 401 && hasAccessToken()) {
       handleUnauthorized();
     }
     return Promise.reject(error);
-  }
+  },
 );
 startAccessTokenExpiryMonitor();
 
