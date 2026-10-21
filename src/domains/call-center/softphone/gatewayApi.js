@@ -1,12 +1,11 @@
-import { RequestUtils } from '@flast-erp/core/utils';
+import { useSipSession } from './authSipSession';
 import { SUCCESS_CODE } from '@/configs';
 import { getDeviceId } from './deviceId';
 
 /*
  * Trình duyệt làm máy nhánh (webrtc_gw của http_api), gọi thẳng từ trình duyệt.
  *
- * Loại 1 - xin token qua API của app (RequestUtils kèm token đăng nhập):
- *   POST omni/webrtc/register?ext=                -> { errorCode, data: { token, expires } }
+ * Token lấy từ data.sipToken trong response auth; FE không xin token riêng.
  *
  * Loại 2 - fetch tới http_api với "Authorization: Bearer <token>",
  * reply bọc { errorCode, data } như API của app (các shape dưới là `data`):
@@ -18,7 +17,6 @@ import { getDeviceId } from './deviceId';
  */
 
 const BASE_RTC = `https://ws.flast.vn/webrtc/sessions`;
-const API_TOKEN = '/omni/webrtc/register';
 
 export const GW_STATE = {
   IDLE: 'idle',
@@ -51,36 +49,15 @@ const session = {
   expires: 0
 };
 
-const TOKEN_REFRESH_MARGIN = 30;
-const isTokenValid = () => (
-  !!session.token && session.expires - TOKEN_REFRESH_MARGIN > Date.now() / 1000
-);
-
-const requestToken = async (ext) => {
-  const response = await RequestUtils.Post(
-    `${API_TOKEN}?ext=${encodeURIComponent(ext)}`,
-    { ext }
-  );
-  const data = unwrap(response);
-  if (!data?.token) {
-    throw new Error(`Không lấy được token cho máy nhánh ${ext}`);
-  }
+// SIP credentials come exclusively from auth, including sign-with-token.
+const requestToken = async ext => {
+  const credential = useSipSession.getState().getToken(ext);
   session.ext = ext;
-  session.token = data.token;
-  session.expires = Number(data.expires) || 0;
-  return data;
+  session.token = credential.token;
+  session.expires = credential.expires;
+  return credential;
 };
-
-const ensureToken = async () => {
-  if (isTokenValid()) {
-    return session.token;
-  }
-  if (!session.ext) {
-    throw new Error('Chưa xin token webrtc_gw');
-  }
-  await requestToken(session.ext);
-  return session.token;
-};
+const ensureToken = async () => (await requestToken(session.ext)).token;
 
 const readJson = async (response) => {
   const text = await response.text();
@@ -114,6 +91,7 @@ const request = async (method, path = '', query, headers = {}) => {
   });
   const body = await readJson(response);
   if (response.status === 401) {
+    useSipSession.getState().invalidate(token);
     session.token = null;
   }
   const data = unwrap(body);

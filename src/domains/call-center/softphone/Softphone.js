@@ -70,9 +70,10 @@ export default class Softphone {
     this.id = created.id;
     this.ext = created.ext || ext;
     try {
-      await this.setupPeer(created.sdp);
+      await this.setupPeer(created.sdp, generation);
     } catch (error) {
       /* gỡ session đã tạo trên SBC để không treo máy nhánh */
+      if (isStale()) return false;
       await this.disconnect();
       throw error;
     }
@@ -83,11 +84,13 @@ export default class Softphone {
     return true;
   }
 
-  async setupPeer(offer) {
+  async setupPeer(offer, generation) {
+    const stale = () => generation !== this.generation;
 
     const pc = new RTCPeerConnection();
     this.pc = pc;
     pc.ontrack = (event) => {
+      if (stale()) return;
       if (!this.audio) {
         this.audio = document.createElement('audio');
         this.audio.autoplay = true;
@@ -99,14 +102,18 @@ export default class Softphone {
 
     await pc.setRemoteDescription({ type: 'offer', sdp: offer });
     try {
-      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (stale()) { stream.getTracks().forEach(track => track.stop()); return; }
+      this.stream = stream;
     } catch (error) {
       /* NotFoundError / NotAllowedError / NotReadableError, hoặc trang không chạy HTTPS */
       throw new Error(AUDIO_UNAVAILABLE);
     }
+    if (stale()) return;
     this.stream.getTracks().forEach(track => pc.addTrack(track, this.stream));
     await pc.setLocalDescription(await pc.createAnswer());
 
+    if (stale()) return;
     await this.waitConnected(pc, offer);
   }
 
@@ -172,10 +179,11 @@ export default class Softphone {
           return;
         }
         /* 404: phiên không còn trên SBC, dừng poll */
-        if (error.status === 404) {
+        if (error.status === 404 || error.status === 401) {
           this.id = null;
           this.onState({ state: GW_STATE.ENDED, peer: '' });
-          this.onError(new Error('Mất phiên WebRTC trên SBC, cần kết nối lại'));
+          void this.disconnect();
+          this.onError(error.status === 401 ? error : new Error('Mất phiên WebRTC trên SBC, cần kết nối lại'));
           return;
         }
         failures += 1;
@@ -264,13 +272,6 @@ export default class Softphone {
     const id = this.id;
     this.id = null;
     this.lastState = null;
-    if (id) {
-      try {
-        await gatewayApi.unregister(id);
-      } catch (error) {
-        /* phiên có thể đã hết hạn */
-      }
-    }
     (this.stream?.getTracks() || []).forEach(track => track.stop());
     this.stream = null;
     if (this.pc) {
@@ -281,7 +282,11 @@ export default class Softphone {
       this.audio.remove();
       this.audio = null;
     }
+    // Start unregister with the old credential, then clear synchronously.
+    // A slow old unregister must not clear a newly connected session's token.
+    const unregistering = id ? gatewayApi.unregister(id).catch(() => {}) : Promise.resolve();
     clearGatewayToken();
+    await unregistering;
   }
 }
 
