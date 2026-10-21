@@ -27,6 +27,7 @@ const initialCall = {
 };
 
 let softphone = null;
+let connectionVersion = 0;
 
 export const useCallCenterStore = create((set, get) => {
 
@@ -34,7 +35,7 @@ export const useCallCenterStore = create((set, get) => {
     if (!softphone) {
       softphone = new Softphone({
         onState: status => get().onGatewayState(status),
-        onError: error => set({ error: error.message }),
+        onError: error => set({ error: error.message, ...(error.status === 401 ? {connection: CONNECTION.ERROR, isReady: false} : {}) }),
       });
     }
     return softphone;
@@ -75,22 +76,24 @@ export const useCallCenterStore = create((set, get) => {
       if (currentExt === target && [CONNECTION.CONNECTING, CONNECTION.ONLINE].includes(connection)) {
         return;
       }
+      const version = ++connectionVersion;
       set({ ext: target, connection: CONNECTION.CONNECTING, error: null });
       try {
         const isActive = await getSoftphone().connect(target);
-        if (isActive) {
+        if (isActive && version === connectionVersion) {
           set({ connection: CONNECTION.ONLINE, isReady: true });
         }
       } catch (error) {
-        set({ connection: CONNECTION.ERROR, isReady: false, error: error.message });
+        if (version === connectionVersion) set({ connection: CONNECTION.ERROR, isReady: false, error: error.message });
       }
     },
 
     disconnect: async () => {
+      const version = ++connectionVersion;
       if (softphone) {
         await softphone.disconnect();
       }
-      set({ connection: CONNECTION.OFFLINE, isReady: false });
+      if (version === connectionVersion) set({ connection: CONNECTION.OFFLINE, isReady: false });
     },
 
     toggleReady: () => {

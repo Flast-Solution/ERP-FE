@@ -1,3 +1,4 @@
+import { useSipSession } from './softphone/authSipSession';
 import { useEffect, useState } from 'react';
 import { InAppEvent } from '@flast-erp/core/utils';
 import { CALL_CENTER_INCOMING, CALL_CENTER_ENDED } from './constants';
@@ -44,6 +45,8 @@ export const useSoftphoneConnection = (ext) => {
   const connect = useCallCenterStore(state => state.connect);
   const disconnect = useCallCenterStore(state => state.disconnect);
   const target = String(ext ?? '').trim();
+  const sipToken = useSipSession(state => state.credential?.token);
+  const sipOwner = useSipSession(state => state.ownerId);
 
   useEffect(() => {
     if (!target) {
@@ -56,5 +59,5 @@ export const useSoftphoneConnection = (ext) => {
       window.removeEventListener('beforeunload', onUnload);
       disconnect();
     };
-  }, [target, connect, disconnect]);
+  }, [target, sipToken, sipOwner, connect, disconnect]);
 };

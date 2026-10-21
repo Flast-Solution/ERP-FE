@@ -1,3 +1,5 @@
+import { installSipSessionBridge } from '@/domains/call-center/softphone/authSipSession';
+import { jwtService } from '@flast-erp/core/utils';
 /**************************************************************************/
 /*  index.js                                                              */
 /**************************************************************************/
@@ -38,6 +40,8 @@ const resolveApiBaseUrl = (gateway) => {
   }
   return `${window.location.origin}${gateway}`;
 };
+
+installSipSessionBridge(jwtService);
 
 axios.defaults.withCredentials = true;
 axios.defaults.baseURL = resolveApiBaseUrl(GATEWAY);
