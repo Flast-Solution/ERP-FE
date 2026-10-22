@@ -1,10 +1,10 @@
-import React from 'react'
-import { Descriptions, Table, Typography } from 'antd'
-import { ShoppingCartOutlined } from '@ant-design/icons'
+import React from 'react';
+import { Descriptions, Table, Typography } from 'antd';
+import { ShoppingCartOutlined } from '@ant-design/icons';
 
 import { formatCurrency as formatMoney } from '../../../../utils/formatCurrency';
 
-const { Text } = Typography
+const { Text } = Typography;
 
 const orderDetailColumns = [
   {
@@ -33,10 +33,10 @@ const orderDetailColumns = [
     align: 'right',
     render: (_, record) => formatMoney(record?.totalPrice ?? 0),
   },
-]
+];
 
 const OrderInfoSection = ({ order }) => {
-  const orderDetailRows = Array.isArray(order?.details) ? order.details : []
+  const orderDetailRows = Array.isArray(order?.details) ? order.details : [];
 
   return (
     <div>
@@ -45,6 +45,7 @@ const OrderInfoSection = ({ order }) => {
         <span>Thông tin đơn hàng</span>
       </div>
       <Table
+        scroll={{ x: 'max-content' }}
         rowKey="detailId"
         size="small"
         columns={orderDetailColumns}
@@ -57,7 +58,11 @@ const OrderInfoSection = ({ order }) => {
           column={1}
           items={[
             { key: 'total', label: 'Tổng chi phí', children: formatMoney(order?.total ?? 0) },
-            { key: 'shipping', label: 'Phí vận chuyển', children: formatMoney(order?.shippingCost ?? 0) },
+            {
+              key: 'shipping',
+              label: 'Phí vận chuyển',
+              children: formatMoney(order?.shippingCost ?? 0),
+            },
             {
               key: 'vat',
               label: 'VAT',
@@ -78,7 +83,7 @@ const OrderInfoSection = ({ order }) => {
         />
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default OrderInfoSection
+export default OrderInfoSection;

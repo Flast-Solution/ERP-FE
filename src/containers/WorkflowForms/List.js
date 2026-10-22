@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AutoComplete,
   Button,
@@ -16,69 +16,70 @@ import {
   Tag,
   Table,
   Col,
-} from 'antd'
+} from 'antd';
 import {
   EditOutlined,
   FormOutlined,
   MoreOutlined,
   PlusOutlined,
   SaveOutlined,
-} from '@ant-design/icons'
-import { RestList } from '@flast-erp/core/components'
-import { RequestUtils } from '@flast-erp/core/utils'
-import { SUCCESS_CODE } from '@/configs'
-import { getBusinessIdLocal } from '@/utils/dataUtils'
-import { parseJsxToSchema } from '@/containers/PreviewModal/parseJSXSchema'
-import { DynamicTableControl, FormDynamicTableField } from '../PreviewModal/DynamicTableField'
-import { projectTableErpValues } from '../../utils/dynamicTableErp'
-import useGetMe from '@/hooks/useGetMe'
-import dayjs from 'dayjs'
-import Filter from './Filter'
-import '@/pages/form-list/style.css'
+} from '@ant-design/icons';
+import { RestList } from '@flast-erp/core/components';
+import { RequestUtils } from '@flast-erp/core/utils';
+import { SUCCESS_CODE } from '@/configs';
+import { getBusinessIdLocal } from '@/utils/dataUtils';
+import { parseJsxToSchema } from '@/containers/PreviewModal/parseJSXSchema';
+import { DynamicTableControl, FormDynamicTableField } from '../PreviewModal/DynamicTableField';
+import { projectTableErpValues } from '../../utils/dynamicTableErp';
+import useGetMe from '@/hooks/useGetMe';
+import dayjs from 'dayjs';
+import Filter from './Filter';
+import '@/pages/form-list/style.css';
 
-const FORM_TEMPLATE_DETAIL_API = '/workflow/forms/template/find-id'
-const REST_LIST_API_PATH = 'workflow/forms/template/filter'
-const DATA_SAVE_API = '/workflow/forms/storage/submit'
-const DATA_FILTER_API = '/workflow/forms/storage/template/filter-data'
-const DATA_LIST_RELOAD_DELAY_MS = 1500
+const FORM_TEMPLATE_DETAIL_API = '/workflow/forms/template/find-id';
+const REST_LIST_API_PATH = 'workflow/forms/template/filter';
+const DATA_SAVE_API = '/workflow/forms/storage/submit';
+const DATA_FILTER_API = '/workflow/forms/storage/template/filter-data';
+const DATA_LIST_RELOAD_DELAY_MS = 1500;
 
-const formatDate = value => {
-  if (!value) return ''
-  const parsed = dayjs(value, ['YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD HH:mm', dayjs.ISO_8601], true)
-  return parsed.isValid() ? parsed.format('DD/MM/YYYY HH:mm') : String(value)
-}
+const formatDate = (value) => {
+  if (!value) return '';
+  const parsed = dayjs(value, ['YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD HH:mm', dayjs.ISO_8601], true);
+  return parsed.isValid() ? parsed.format('DD/MM/YYYY HH:mm') : String(value);
+};
 
 const resolveStatus = (item = {}) => {
   if (item.status != null && item.status !== '') {
     if (Number(item.status) === 0) {
-      return { label: 'Chưa gắn bước', kind: 'unassigned' }
+      return { label: 'Chưa gắn bước', kind: 'unassigned' };
     }
     if (Number(item.status) === 1) {
-      return { label: 'Đã gắn bước', kind: 'published' }
+      return { label: 'Đã gắn bước', kind: 'published' };
     }
-    return { label: String(item.status), kind: 'published' }
+    return { label: String(item.status), kind: 'published' };
   }
   if (item.enabled === false) {
-    return { label: 'Nháp', kind: 'draft' }
+    return { label: 'Nháp', kind: 'draft' };
   }
   if (item.stepId == null || item.stepId === '') {
-    return { label: 'Chưa gắn bước', kind: 'unassigned' }
+    return { label: 'Chưa gắn bước', kind: 'unassigned' };
   }
-  return { label: 'Đã xuất bản', kind: 'published' }
-}
+  return { label: 'Đã xuất bản', kind: 'published' };
+};
 
 const mapTemplateRow = (item = {}) => {
-  const fields = Array.isArray(item.fields) ? item.fields : []
-  const updatedAt = item.sourceComponent?.updatedDate
-    ?? item.sourceComponent?.createdDate
-    ?? item.updatedAt
-    ?? item.createdAt
+  const fields = Array.isArray(item.fields) ? item.fields : [];
+  const updatedAt =
+    item.sourceComponent?.updatedDate ??
+    item.sourceComponent?.createdDate ??
+    item.updatedAt ??
+    item.createdAt;
 
-  const displayName = (item.name ?? '').trim() || item.description || ''
-  const formTitle = (item.description ?? '').trim()
-  const formKey = item.name ?? ''
-  const domain = (item.domain ?? '').trim()
-  const { label: statusLabel, kind: statusKind } = resolveStatus(item)
+  const displayName = (item.name ?? '').trim() || item.description || '';
+  const formTitle = (item.description ?? '').trim();
+  const formKey = item.name ?? '';
+  const domain = (item.domain ?? '').trim();
+  const { label: statusLabel, kind: statusKind } = resolveStatus(item);
 
   return {
     id: item.id,
@@ -92,8 +93,8 @@ const mapTemplateRow = (item = {}) => {
     statusKind,
     updatedAt: formatDate(updatedAt),
     source: item,
-  }
-}
+  };
+};
 
 /**
  * GET /workflow/forms/template/filter
@@ -101,189 +102,191 @@ const mapTemplateRow = (item = {}) => {
  * useWorkflowFormsListQuery → onData nhận sẵn data (đã unwrap).
  */
 const normalizeTemplateListResponse = (data = {}) => {
-  const embedded = Array.isArray(data?.embedded) ? data.embedded : []
-  const total = data?.page?.totalElements ?? embedded.length
-  return { embedded, total }
-}
+  const embedded = Array.isArray(data?.embedded) ? data.embedded : [];
+  const total = data?.page?.totalElements ?? embedded.length;
+  return { embedded, total };
+};
 
 const replaceResponseItems = (_response, embedded, total) => ({
   embedded,
   page: { totalElements: total },
-})
+});
 
 const withOffset = (queryParams = {}) => {
-  const page = Number(queryParams.page ?? 1)
-  const limit = Number(queryParams.limit ?? 10)
-  const offset = Number.isFinite(page) && Number.isFinite(limit)
-    ? (page - 1) * limit
-    : Number(queryParams.offset ?? 0)
-  const rest = { ...queryParams }
-  delete rest.limit
-  delete rest.offset
-  delete rest.page
+  const page = Number(queryParams.page ?? 1);
+  const limit = Number(queryParams.limit ?? 10);
+  const offset =
+    Number.isFinite(page) && Number.isFinite(limit)
+      ? (page - 1) * limit
+      : Number(queryParams.offset ?? 0);
+  const rest = { ...queryParams };
+  delete rest.limit;
+  delete rest.offset;
+  delete rest.page;
 
   return {
     limit: String(limit),
     offset: String(Math.max(offset, 0)),
     page: String(page),
     ...rest,
-  }
-}
+  };
+};
 
 const useWorkflowFormsListQuery = ({ queryParams, onData }) => {
-  const [loading, setLoading] = useState(false)
-  const [data, setData] = useState({ embedded: [], page: {} })
-  const queryParamsKey = JSON.stringify(queryParams ?? {})
-  const nextQueryParams = useMemo(() => withOffset(JSON.parse(queryParamsKey)), [queryParamsKey])
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState({ embedded: [], page: {} });
+  const queryParamsKey = JSON.stringify(queryParams ?? {});
+  const nextQueryParams = useMemo(() => withOffset(JSON.parse(queryParamsKey)), [queryParamsKey]);
 
   useEffect(() => {
-    let mounted = true
-    const { apiPath, ...params } = nextQueryParams
+    let mounted = true;
+    const { apiPath, ...params } = nextQueryParams;
 
     if (!apiPath) {
-      return undefined
+      return undefined;
     }
 
-    setLoading(true)
+    setLoading(true);
     RequestUtils.Get(`/${apiPath}`, params)
       .then(async (response) => {
-        const ok = response?.success || response?.errorCode === SUCCESS_CODE || response?.errorCode == null
+        const ok =
+          response?.success || response?.errorCode === SUCCESS_CODE || response?.errorCode == null;
         if (!ok) {
-          message.error(response?.message || 'Không tải được danh sách form.')
-          return
+          message.error(response?.message || 'Không tải được danh sách form.');
+          return;
         }
-        const nextData = await onData(response?.data ?? response)
+        const nextData = await onData(response?.data ?? response);
         if (mounted) {
-          setData(nextData)
+          setData(nextData);
         }
       })
       .catch((error) => {
         if (mounted) {
-          message.error(error?.message || 'Không tải được danh sách form.')
+          message.error(error?.message || 'Không tải được danh sách form.');
         }
       })
       .finally(() => {
         if (mounted) {
-          setLoading(false)
+          setLoading(false);
         }
-      })
+      });
 
     return () => {
-      mounted = false
-    }
-  }, [nextQueryParams, onData])
+      mounted = false;
+    };
+  }, [nextQueryParams, onData]);
 
-  return { data, loading }
-}
+  return { data, loading };
+};
 
-const isSameId = (left, right) => String(left ?? '') === String(right ?? '')
+const isSameId = (left, right) => String(left ?? '') === String(right ?? '');
 
 /** GET /workflow/forms/template/find-id → data = Template */
 const resolveTemplateDetail = (res = {}) => {
-  const ok = res?.success === true
-    || Number(res?.errorCode) === SUCCESS_CODE
-    || res?.errorCode == null
-  const template = res?.data
-  if (
-    !ok
-    || !template
-    || typeof template !== 'object'
-    || Array.isArray(template)
-  ) {
-    return { ok: false, template: null, message: res?.message }
+  const ok =
+    res?.success === true || Number(res?.errorCode) === SUCCESS_CODE || res?.errorCode == null;
+  const template = res?.data;
+  if (!ok || !template || typeof template !== 'object' || Array.isArray(template)) {
+    return { ok: false, template: null, message: res?.message };
   }
-  return { ok: true, template, message: res?.message }
-}
+  return { ok: true, template, message: res?.message };
+};
 
-const normalizeFieldOptions = (options = []) => options.map(option => ({
-  value: option.value ?? option.id,
-  label: option.label ?? option.name ?? option.value ?? option.id,
-}))
+const normalizeFieldOptions = (options = []) =>
+  options.map((option) => ({
+    value: option.value ?? option.id,
+    label: option.label ?? option.name ?? option.value ?? option.id,
+  }));
 
 const getValueByDataExpression = (item, expression = '') => {
   const path = String(expression)
     .trim()
     .replace(/^data\??\.?/, '')
     .split(/\??\./)
-    .map(part => part.trim())
-    .filter(Boolean)
+    .map((part) => part.trim())
+    .filter(Boolean);
 
-  if (path.length === 0) return undefined
+  if (path.length === 0) return undefined;
 
-  return path.reduce((value, key) => value?.[key], item)
-}
+  return path.reduce((value, key) => value?.[key], item);
+};
 
 const createSelectApiOnData = (dataLabel, dataValue) => {
-  if (!dataLabel || !dataValue) return undefined
+  if (!dataLabel || !dataValue) return undefined;
 
-  return (response) => getSelectApiItems(response).map(data => ({
-    label: getValueByDataExpression(data, dataLabel),
-    value: getValueByDataExpression(data, dataValue),
-  }))
-}
+  return (response) =>
+    getSelectApiItems(response).map((data) => ({
+      label: getValueByDataExpression(data, dataLabel),
+      value: getValueByDataExpression(data, dataValue),
+    }));
+};
 
 /** FormSelectAPI / select_api: apiPath tùy cấu hình field — giữ multi-shape. */
 const getSelectApiItems = (payload) => {
-  if (Array.isArray(payload)) return payload
-  if (Array.isArray(payload?.embedded)) return payload.embedded
-  if (Array.isArray(payload?.data)) return payload.data
-  if (Array.isArray(payload?.items)) return payload.items
-  if (Array.isArray(payload?.content)) return payload.content
-  return []
-}
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.embedded)) return payload.embedded;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.content)) return payload.content;
+  return [];
+};
 
 const normalizeSelectApiOptions = (payload, config = {}) => {
-  const customOnData = createSelectApiOnData(config.dataLabel, config.dataValue)
+  const customOnData = createSelectApiOnData(config.dataLabel, config.dataValue);
   if (customOnData) {
-    return customOnData(payload)
+    return customOnData(payload);
   }
 
-  const valueProp = config.valueProp ?? 'id'
-  const titleProp = config.titleProp ?? config.labelField ?? 'name'
+  const valueProp = config.valueProp ?? 'id';
+  const titleProp = config.titleProp ?? config.labelField ?? 'name';
 
-  return getSelectApiItems(payload).map(item => ({
+  return getSelectApiItems(payload).map((item) => ({
     value: item?.[valueProp],
     label: item?.[titleProp] ?? item?.name ?? item?.label ?? item?.[valueProp],
-  }))
-}
+  }));
+};
 
 const SelectApiField = ({ field }) => {
-  const config = useMemo(() => field.config ?? {}, [field.config])
-  const placeholder = config.placeholder || field.label || 'Chọn dữ liệu từ API'
-  const [loading, setLoading] = useState(false)
-  const [options, setOptions] = useState([])
+  const config = useMemo(() => field.config ?? {}, [field.config]);
+  const placeholder = config.placeholder || field.label || 'Chọn dữ liệu từ API';
+  const [loading, setLoading] = useState(false);
+  const [options, setOptions] = useState([]);
 
-  const fetchOptions = useCallback((keyword = '') => {
-    if (!config.api) {
-      setOptions([])
-      return
-    }
+  const fetchOptions = useCallback(
+    (keyword = '') => {
+      if (!config.api) {
+        setOptions([]);
+        return;
+      }
 
-    const params = keyword
-      ? { [config.labelField ?? config.titleProp ?? 'name']: keyword }
-      : {}
+      const params = keyword ? { [config.labelField ?? config.titleProp ?? 'name']: keyword } : {};
 
-    setLoading(true)
-    RequestUtils.Get(`/${config.api}`, params)
-      .then(response => {
-        const ok = response?.success || response?.errorCode === SUCCESS_CODE || response?.errorCode == null
-        if (!ok) {
-          message.error(response?.message || 'Không tải được dữ liệu select.')
-          setOptions([])
-          return
-        }
-        setOptions(normalizeSelectApiOptions(response?.data ?? response, config))
-      })
-      .catch(error => {
-        message.error(error?.message || 'Không tải được dữ liệu select.')
-        setOptions([])
-      })
-      .finally(() => setLoading(false))
-  }, [config])
+      setLoading(true);
+      RequestUtils.Get(`/${config.api}`, params)
+        .then((response) => {
+          const ok =
+            response?.success ||
+            response?.errorCode === SUCCESS_CODE ||
+            response?.errorCode == null;
+          if (!ok) {
+            message.error(response?.message || 'Không tải được dữ liệu select.');
+            setOptions([]);
+            return;
+          }
+          setOptions(normalizeSelectApiOptions(response?.data ?? response, config));
+        })
+        .catch((error) => {
+          message.error(error?.message || 'Không tải được dữ liệu select.');
+          setOptions([]);
+        })
+        .finally(() => setLoading(false));
+    },
+    [config],
+  );
 
   useEffect(() => {
-    fetchOptions()
-  }, [fetchOptions])
+    fetchOptions();
+  }, [fetchOptions]);
 
   return (
     <Form.Item
@@ -304,171 +307,225 @@ const SelectApiField = ({ field }) => {
         style={{ width: '100%' }}
       />
     </Form.Item>
-  )
-}
+  );
+};
 
-const getTemplateCode = (template = {}) => (
-  template.jsx_code
-  ?? template.jsxCode
-  ?? template.code
-  ?? template.sourceComponent?.jsx_code
-  ?? template.sourceComponent?.jsxCode
-  ?? template.sourceComponent?.code
-  ?? ''
-)
+const getTemplateCode = (template = {}) =>
+  template.jsx_code ??
+  template.jsxCode ??
+  template.code ??
+  template.sourceComponent?.jsx_code ??
+  template.sourceComponent?.jsxCode ??
+  template.sourceComponent?.code ??
+  '';
 
 const collectOptionsByFieldKey = (fields = [], map = new Map()) => {
-  fields.forEach(field => {
-    if (field?.fieldKey && Array.isArray(field?.config?.options) && field.config.options.length > 0) {
-      map.set(field.fieldKey, field.config.options)
+  fields.forEach((field) => {
+    if (
+      field?.fieldKey &&
+      Array.isArray(field?.config?.options) &&
+      field.config.options.length > 0
+    ) {
+      map.set(field.fieldKey, field.config.options);
     }
     if (Array.isArray(field?.children)) {
-      collectOptionsByFieldKey(field.children, map)
+      collectOptionsByFieldKey(field.children, map);
     }
-  })
-  return map
-}
+  });
+  return map;
+};
 
-const mergeMissingOptions = (fields = [], optionsByKey = new Map()) => fields.map(field => {
-  const children = Array.isArray(field.children)
-    ? mergeMissingOptions(field.children, optionsByKey)
-    : field.children
-  const currentOptions = field?.config?.options
-  const parsedOptions = field?.fieldKey ? optionsByKey.get(field.fieldKey) : null
+const mergeMissingOptions = (fields = [], optionsByKey = new Map()) =>
+  fields.map((field) => {
+    const children = Array.isArray(field.children)
+      ? mergeMissingOptions(field.children, optionsByKey)
+      : field.children;
+    const currentOptions = field?.config?.options;
+    const parsedOptions = field?.fieldKey ? optionsByKey.get(field.fieldKey) : null;
 
-  if (!parsedOptions?.length || currentOptions?.length) {
-    return { ...field, children }
-  }
+    if (!parsedOptions?.length || currentOptions?.length) {
+      return { ...field, children };
+    }
 
-  return {
-    ...field,
-    children,
-    config: {
-      ...(field.config ?? {}),
-      options: parsedOptions,
-    },
-  }
-})
+    return {
+      ...field,
+      children,
+      config: {
+        ...(field.config ?? {}),
+        options: parsedOptions,
+      },
+    };
+  });
 
 const enrichTemplateOptionsFromCode = (template = {}) => {
-  const fields = Array.isArray(template.fields) ? template.fields : []
-  const code = getTemplateCode(template)
+  const fields = Array.isArray(template.fields) ? template.fields : [];
+  const code = getTemplateCode(template);
   if (!code) {
-    return template
+    return template;
   }
 
   try {
-    const parsed = parseJsxToSchema(code, { name: template.name ?? '' })
-    const optionsByKey = collectOptionsByFieldKey(parsed.fields ?? [])
+    const parsed = parseJsxToSchema(code, { name: template.name ?? '' });
+    const optionsByKey = collectOptionsByFieldKey(parsed.fields ?? []);
     return {
       ...template,
       fields: mergeMissingOptions(fields, optionsByKey),
-    }
+    };
   } catch (_) {
-    return template
+    return template;
   }
-}
+};
 
 const collectFieldTypeByKey = (fields = [], map = new Map()) => {
-  fields.forEach(field => {
+  fields.forEach((field) => {
     if (field?.fieldKey) {
-      map.set(field.fieldKey, field.inputType)
+      map.set(field.fieldKey, field.inputType);
     }
     if (Array.isArray(field?.children)) {
-      collectFieldTypeByKey(field.children, map)
+      collectFieldTypeByKey(field.children, map);
     }
-  })
-  return map
-}
+  });
+  return map;
+};
 
 const normalizeSubmissionValue = (value, inputType) => {
   if (dayjs.isDayjs(value)) {
     if (inputType === 'datetime') {
-      return value.format('YYYY-MM-DD HH:mm:ss')
+      return value.format('YYYY-MM-DD HH:mm:ss');
     }
-    return value.format('YYYY-MM-DD')
+    return value.format('YYYY-MM-DD');
   }
   if (Array.isArray(value)) {
-    return value.map(item => normalizeSubmissionValue(item, inputType))
+    return value.map((item) => normalizeSubmissionValue(item, inputType));
   }
   if (value && typeof value === 'object') {
     return Object.fromEntries(
       Object.entries(value).map(([key, item]) => [key, normalizeSubmissionValue(item)]),
-    )
+    );
   }
-  return value
-}
+  return value;
+};
 
 const normalizeSubmissionValues = (values = {}, fields = []) => {
-  const fieldTypeByKey = collectFieldTypeByKey(fields)
-  return projectTableErpValues(Object.fromEntries(
-    Object.entries(values).map(([key, value]) => [
-      key,
-      normalizeSubmissionValue(value, fieldTypeByKey.get(key)),
-    ]),
-  ), fields)
-}
+  const fieldTypeByKey = collectFieldTypeByKey(fields);
+  return projectTableErpValues(
+    Object.fromEntries(
+      Object.entries(values).map(([key, value]) => [
+        key,
+        normalizeSubmissionValue(value, fieldTypeByKey.get(key)),
+      ]),
+    ),
+    fields,
+  );
+};
 
 const resolveBizId = (profile) => {
-  const value = profile?.bizId
-    ?? profile?.businessId
-    ?? profile?.biz?.id
-    ?? profile?.business?.id
-    ?? getBusinessIdLocal()
+  const value =
+    profile?.bizId ??
+    profile?.businessId ??
+    profile?.biz?.id ??
+    profile?.business?.id ??
+    getBusinessIdLocal();
 
-  const bizId = value ? Number(value) : null
-  return bizId && !Number.isNaN(bizId) ? bizId : null
-}
+  const bizId = value ? Number(value) : null;
+  return bizId && !Number.isNaN(bizId) ? bizId : null;
+};
 
 const renderInputField = (field = {}) => {
-  const config = field.config ?? {}
-  const placeholder = config.placeholder || field.label
-  const options = normalizeFieldOptions(config.options ?? [])
+  const config = field.config ?? {};
+  const placeholder = config.placeholder || field.label;
+  const options = normalizeFieldOptions(config.options ?? []);
 
   switch (field.inputType) {
     case 'dynamic_table':
-      return <DynamicTableControl tableConfig={config} />
+      return <DynamicTableControl tableConfig={config} />;
     case 'textarea':
-      return <Input.TextArea rows={config.rows ?? 3} placeholder={placeholder} />
+      return <Input.TextArea rows={config.rows ?? 3} placeholder={placeholder} />;
     case 'number':
-      return <InputNumber min={config.min ?? undefined} max={config.max ?? undefined} precision={0} placeholder={placeholder} style={{ width: '100%' }} />
+      return (
+        <InputNumber
+          min={config.min ?? undefined}
+          max={config.max ?? undefined}
+          precision={0}
+          placeholder={placeholder}
+          style={{ width: '100%' }}
+        />
+      );
     case 'decimal':
-      return <InputNumber min={config.min ?? undefined} max={config.max ?? undefined} precision={2} placeholder={placeholder} style={{ width: '100%' }} />
+      return (
+        <InputNumber
+          min={config.min ?? undefined}
+          max={config.max ?? undefined}
+          precision={2}
+          placeholder={placeholder}
+          style={{ width: '100%' }}
+        />
+      );
     case 'date':
-      return <DatePicker format={config.format ?? 'DD/MM/YYYY'} placeholder={placeholder} style={{ width: '100%' }} />
+      return (
+        <DatePicker
+          format={config.format ?? 'DD/MM/YYYY'}
+          placeholder={placeholder}
+          style={{ width: '100%' }}
+        />
+      );
     case 'datetime':
-      return <DatePicker showTime format={config.format ?? 'DD/MM/YYYY HH:mm'} placeholder={placeholder} style={{ width: '100%' }} />
+      return (
+        <DatePicker
+          showTime
+          format={config.format ?? 'DD/MM/YYYY HH:mm'}
+          placeholder={placeholder}
+          style={{ width: '100%' }}
+        />
+      );
     case 'select':
-      return <Select options={options} placeholder={placeholder || 'Chọn...'} />
+      return <Select options={options} placeholder={placeholder || 'Chọn...'} />;
     case 'multi_select':
-      return <Select mode="multiple" options={options} placeholder={placeholder || 'Chọn nhiều...'} />
+      return (
+        <Select mode="multiple" options={options} placeholder={placeholder || 'Chọn nhiều...'} />
+      );
     case 'radio':
-      return <Radio.Group options={options} />
+      return <Radio.Group options={options} />;
     case 'checkbox':
-      return <Checkbox.Group options={options} />
+      return <Checkbox.Group options={options} />;
     case 'file':
     case 'image':
-      return <Input placeholder={placeholder || `Nhập ${field.inputType === 'image' ? 'URL ảnh' : 'URL file'}`} />
+      return (
+        <Input
+          placeholder={
+            placeholder || `Nhập ${field.inputType === 'image' ? 'URL ảnh' : 'URL file'}`
+          }
+        />
+      );
     case 'lookup':
-      return <Input placeholder={placeholder || 'Nhập hoặc tìm kiếm dữ liệu liên kết'} />
+      return <Input placeholder={placeholder || 'Nhập hoặc tìm kiếm dữ liệu liên kết'} />;
     case 'select_api':
-      return <SelectApiField field={field} />
+      return <SelectApiField field={field} />;
     case 'autocomplete':
-      return <AutoComplete options={options} placeholder={placeholder || 'Nhập để tìm...'} />
+      return <AutoComplete options={options} placeholder={placeholder || 'Nhập để tìm...'} />;
     default:
-      return <Input placeholder={placeholder} />
+      return <Input placeholder={placeholder} />;
   }
-}
+};
 
 const FormEntryFields = ({ fields = [] }) => (
   <div className="form-entry-grid">
-    {fields.map(field => {
+    {fields.map((field) => {
       if (field.inputType === 'dynamic_table' || field.config?.widget === 'dynamic_table') {
-        return <div key={field.id ?? field.fieldKey} className="form-entry-field"
-          style={{ gridColumn: `span ${field.colSpan ?? 24}` }}>
-          <FormDynamicTableField name={field.fieldKey} label={field.label}
-            required={field.isRequired} tableConfig={field.config} />
-        </div>
+        return (
+          <div
+            key={field.id ?? field.fieldKey}
+            className="form-entry-field"
+            style={{ gridColumn: `span ${field.colSpan ?? 24}` }}
+          >
+            <FormDynamicTableField
+              name={field.fieldKey}
+              label={field.label}
+              required={field.isRequired}
+              tableConfig={field.config}
+            />
+          </div>
+        );
       }
       if (field.inputType === 'block' && field.config?.widget !== 'dynamic_table') {
         return (
@@ -480,7 +537,7 @@ const FormEntryFields = ({ fields = [] }) => (
             <div className="form-entry-block-title">{field.label || 'Block'}</div>
             <FormEntryFields fields={field.children ?? []} />
           </div>
-        )
+        );
       }
 
       return (
@@ -496,63 +553,66 @@ const FormEntryFields = ({ fields = [] }) => (
               name={field.fieldKey}
               label={field.label}
               rules={[
-                { required: field.isRequired, message: `${field.label || field.fieldKey} là bắt buộc.` },
+                {
+                  required: field.isRequired,
+                  message: `${field.label || field.fieldKey} là bắt buộc.`,
+                },
               ]}
             >
               {renderInputField(field)}
             </Form.Item>
           )}
         </div>
-      )
+      );
     })}
   </div>
-)
+);
 
 const FormEntryModal = ({ template, open, bizId, onCancel, onSaved }) => {
-  const [form] = Form.useForm()
-  const [saving, setSaving] = useState(false)
-  const fields = Array.isArray(template?.fields) ? template.fields : []
-  const title = (template?.description ?? '').trim() || template?.name || 'Form'
+  const [form] = Form.useForm();
+  const [saving, setSaving] = useState(false);
+  const fields = Array.isArray(template?.fields) ? template.fields : [];
+  const title = (template?.description ?? '').trim() || template?.name || 'Form';
 
   const handleSave = async () => {
     try {
-      const values = await form.validateFields()
+      const values = await form.validateFields();
 
       if (!bizId) {
-        message.error('Không tìm thấy bizId của tài khoản đăng nhập.')
-        return
+        message.error('Không tìm thấy bizId của tài khoản đăng nhập.');
+        return;
       }
 
-      const templateId = template?.id != null ? Number(template.id) : null
+      const templateId = template?.id != null ? Number(template.id) : null;
       if (!templateId || Number.isNaN(templateId)) {
-        message.error('Không tìm thấy templateId của form.')
-        return
+        message.error('Không tìm thấy templateId của form.');
+        return;
       }
 
       const payload = {
         bizId,
         templateId,
         values: normalizeSubmissionValues(values, fields),
-      }
+      };
 
-      setSaving(true)
-      const res = await RequestUtils.Post(DATA_SAVE_API, payload)
-      const ok = res?.success || res?.errorCode === SUCCESS_CODE
+      setSaving(true);
+      const res = await RequestUtils.Post(DATA_SAVE_API, payload);
+      const ok = res?.success || res?.errorCode === SUCCESS_CODE;
       if (!ok) {
-        message.error(res?.message || 'Không lưu được dữ liệu form.')
-        return
+        message.error(res?.message || 'Không lưu được dữ liệu form.');
+        return;
       }
 
-      message.success(res?.message || 'Đã lưu dữ liệu form.')
-      onSaved?.()
+      message.success(res?.message || 'Đã lưu dữ liệu form.');
+      onSaved?.();
     } catch (error) {
       if (!error?.errorFields) {
-        message.error('Không lưu được dữ liệu form.')
+        message.error('Không lưu được dữ liệu form.');
       }
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   return (
     <Modal
@@ -561,8 +621,16 @@ const FormEntryModal = ({ template, open, bizId, onCancel, onSaved }) => {
       width={820}
       onCancel={onCancel}
       footer={[
-        <Button key="cancel" onClick={onCancel}>Hủy</Button>,
-        <Button key="save" type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>
+        <Button key="cancel" onClick={onCancel}>
+          Hủy
+        </Button>,
+        <Button
+          key="save"
+          type="primary"
+          icon={<SaveOutlined />}
+          loading={saving}
+          onClick={handleSave}
+        >
           Lưu
         </Button>,
       ]}
@@ -576,166 +644,168 @@ const FormEntryModal = ({ template, open, bizId, onCancel, onSaved }) => {
         )}
       </Form>
     </Modal>
-  )
-}
+  );
+};
 
 const getStorageValues = (item = {}) => {
-  const rawValues = item.valuesJson ?? {}
+  const rawValues = item.valuesJson ?? {};
   if (typeof rawValues === 'string') {
     try {
-      return JSON.parse(rawValues)
+      return JSON.parse(rawValues);
     } catch (_) {
-      return {}
+      return {};
     }
   }
-  return rawValues && typeof rawValues === 'object' ? rawValues : {}
-}
+  return rawValues && typeof rawValues === 'object' ? rawValues : {};
+};
 
 const formatEntryValue = (value, field) => {
   if (value == null || value === '') {
-    return '—'
+    return '—';
   }
 
-  const options = normalizeFieldOptions(field?.config?.options ?? [])
+  const options = normalizeFieldOptions(field?.config?.options ?? []);
   if (options.length > 0) {
     if (Array.isArray(value)) {
-      return value.map(item => formatEntryValue(item, field)).join(', ')
+      return value.map((item) => formatEntryValue(item, field)).join(', ');
     }
-    const matchedOption = options.find(option => String(option.value) === String(value))
+    const matchedOption = options.find((option) => String(option.value) === String(value));
     if (matchedOption) {
-      return matchedOption.label
+      return matchedOption.label;
     }
   }
 
   if (dayjs.isDayjs(value) || field?.inputType === 'date' || field?.inputType === 'datetime') {
-    const parsed = dayjs.isDayjs(value) ? value : dayjs(value)
+    const parsed = dayjs.isDayjs(value) ? value : dayjs(value);
     if (parsed.isValid()) {
-      return parsed.format(field?.inputType === 'date' ? 'DD/MM/YYYY' : 'DD/MM/YYYY HH:mm')
+      return parsed.format(field?.inputType === 'date' ? 'DD/MM/YYYY' : 'DD/MM/YYYY HH:mm');
     }
   }
 
   if (Array.isArray(value)) {
-    return value.map(item => formatEntryValue(item, field)).join(', ')
+    return value.map((item) => formatEntryValue(item, field)).join(', ');
   }
   if (value && typeof value === 'object') {
-    return JSON.stringify(value)
+    return JSON.stringify(value);
   }
-  return String(value)
-}
+  return String(value);
+};
 
 /** POST /workflow/forms/storage/template/filter-data → data = { embedded, page } */
 const normalizeStorageListResponse = (res = {}) => {
-  const ok = res?.success === true
-    || Number(res?.errorCode) === SUCCESS_CODE
-    || res?.errorCode == null
-  const embedded = Array.isArray(res?.data?.embedded) ? res.data.embedded : []
-  const total = res?.data?.page?.totalElements ?? embedded.length
+  const ok =
+    res?.success === true || Number(res?.errorCode) === SUCCESS_CODE || res?.errorCode == null;
+  const embedded = Array.isArray(res?.data?.embedded) ? res.data.embedded : [];
+  const total = res?.data?.page?.totalElements ?? embedded.length;
 
   return {
     ok,
     embedded,
     total,
     message: res?.message,
-  }
-}
+  };
+};
 
-const buildFilterConditions = (filters = {}, fieldByKey = new Map()) => (
+const buildFilterConditions = (filters = {}, fieldByKey = new Map()) =>
   Object.fromEntries(
     Object.entries(filters)
       .map(([key, value]) => {
         const nextValue = Array.isArray(value)
-          ? value.filter(item => String(item ?? '').trim())
-          : String(value ?? '').trim()
-        return [key, nextValue]
+          ? value.filter((item) => String(item ?? '').trim())
+          : String(value ?? '').trim();
+        return [key, nextValue];
       })
-      .filter(([, value]) => Array.isArray(value) ? value.length > 0 : value)
+      .filter(([, value]) => (Array.isArray(value) ? value.length > 0 : value))
       .map(([key, value]) => {
-        const inputType = fieldByKey.get(key)?.inputType
+        const inputType = fieldByKey.get(key)?.inputType;
         if (['select', 'multi_select', 'radio', 'checkbox'].includes(inputType)) {
-          return [key, value]
+          return [key, value];
         }
-        return [key, { $contains: value }]
+        return [key, { $contains: value }];
       }),
-  )
-)
+  );
 
 const FormDataListModal = ({ template, open, reloadKey, bizId, onCancel, onAddData }) => {
-  const [loading, setLoading] = useState(false)
-  const [rows, setRows] = useState([])
-  const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [limit, setLimit] = useState(10)
-  const [draftFilters, setDraftFilters] = useState({})
-  const [columnFilters, setColumnFilters] = useState({})
+  const [loading, setLoading] = useState(false);
+  const [rows, setRows] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [draftFilters, setDraftFilters] = useState({});
+  const [columnFilters, setColumnFilters] = useState({});
   const fields = useMemo(
-    () => Array.isArray(template?.fields) ? template.fields.filter(field => field.inputType !== 'block') : [],
+    () =>
+      Array.isArray(template?.fields)
+        ? template.fields.filter((field) => field.inputType !== 'block')
+        : [],
     [template?.fields],
-  )
+  );
   const fieldByKey = useMemo(
-    () => new Map(fields.map(field => [field.fieldKey, field])),
+    () => new Map(fields.map((field) => [field.fieldKey, field])),
     [fields],
-  )
-  const title = (template?.description ?? '').trim() || template?.name || 'Form'
+  );
+  const title = (template?.description ?? '').trim() || template?.name || 'Form';
 
   const fetchData = useCallback(async () => {
     if (!open || !template?.id) {
-      return
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     try {
-      const conditions = buildFilterConditions(columnFilters, fieldByKey)
+      const conditions = buildFilterConditions(columnFilters, fieldByKey);
       const response = await RequestUtils.Post(DATA_FILTER_API, {
         ...(bizId ? { bizId } : {}),
         templateId: Number(template.id),
         ...(Object.keys(conditions).length ? { conditions } : {}),
         limit,
         offset: (page - 1) * limit,
-      })
-      const result = normalizeStorageListResponse(response)
+      });
+      const result = normalizeStorageListResponse(response);
       if (!result.ok) {
-        message.error(result.message || 'Không tải được danh sách dữ liệu form.')
-        setRows([])
-        setTotal(0)
-        return
+        message.error(result.message || 'Không tải được danh sách dữ liệu form.');
+        setRows([]);
+        setTotal(0);
+        return;
       }
-      setRows(result.embedded)
-      setTotal(result.total)
+      setRows(result.embedded);
+      setTotal(result.total);
     } catch (error) {
-      message.error(error?.message || 'Không tải được danh sách dữ liệu form.')
-      setRows([])
-      setTotal(0)
+      message.error(error?.message || 'Không tải được danh sách dữ liệu form.');
+      setRows([]);
+      setTotal(0);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [bizId, columnFilters, fieldByKey, limit, open, page, template?.id])
+  }, [bizId, columnFilters, fieldByKey, limit, open, page, template?.id]);
 
   useEffect(() => {
-    fetchData()
-  }, [fetchData, reloadKey])
+    fetchData();
+  }, [fetchData, reloadKey]);
 
   useEffect(() => {
     if (open) {
-      setPage(1)
-      setDraftFilters({})
-      setColumnFilters({})
+      setPage(1);
+      setDraftFilters({});
+      setColumnFilters({});
     }
-  }, [open, template?.id])
+  }, [open, template?.id]);
 
   const fieldLabelByKey = useMemo(
-    () => new Map(fields.map(field => [field.fieldKey, field.label || field.fieldKey])),
+    () => new Map(fields.map((field) => [field.fieldKey, field.label || field.fieldKey])),
     [fields],
-  )
+  );
 
-  const valueKeys = useMemo(() => [
-    ...new Set(rows.flatMap(row => Object.keys(getStorageValues(row)))),
-  ], [rows])
+  const valueKeys = useMemo(
+    () => [...new Set(rows.flatMap((row) => Object.keys(getStorageValues(row))))],
+    [rows],
+  );
 
-  const displayKeys = useMemo(() => (
-    valueKeys.length > 0
-      ? valueKeys
-      : fields.map(field => field.fieldKey).filter(Boolean)
-  ), [fields, valueKeys])
+  const displayKeys = useMemo(
+    () =>
+      valueKeys.length > 0 ? valueKeys : fields.map((field) => field.fieldKey).filter(Boolean),
+    [fields, valueKeys],
+  );
 
   const columns = useMemo(() => {
     return [
@@ -743,28 +813,28 @@ const FormDataListModal = ({ template, open, reloadKey, bizId, onCancel, onAddDa
         title: '#',
         key: 'index',
         width: 64,
-        render: (_, __, index) => ((page - 1) * limit) + index + 1,
+        render: (_, __, index) => (page - 1) * limit + index + 1,
       },
-      ...displayKeys.map(key => ({
+      ...displayKeys.map((key) => ({
         title: fieldLabelByKey.get(key) ?? key,
         key,
         dataIndex: ['valuesJson', key],
         ellipsis: true,
         render: (_, record) => formatEntryValue(getStorageValues(record)[key], fieldByKey.get(key)),
       })),
-    ]
-  }, [displayKeys, fieldByKey, fieldLabelByKey, limit, page])
+    ];
+  }, [displayKeys, fieldByKey, fieldLabelByKey, limit, page]);
 
   const applyFilter = useCallback(() => {
-    setPage(1)
-    setColumnFilters(draftFilters)
-  }, [draftFilters])
+    setPage(1);
+    setColumnFilters(draftFilters);
+  }, [draftFilters]);
 
   const clearFilter = useCallback(() => {
-    setPage(1)
-    setDraftFilters({})
-    setColumnFilters({})
-  }, [])
+    setPage(1);
+    setDraftFilters({});
+    setColumnFilters({});
+  }, []);
 
   return (
     <Modal
@@ -774,7 +844,9 @@ const FormDataListModal = ({ template, open, reloadKey, bizId, onCancel, onAddDa
       style={{ maxWidth: 'calc(100vw - 32px)' }}
       onCancel={onCancel}
       footer={[
-        <Button key="close" onClick={onCancel}>Đóng</Button>,
+        <Button key="close" onClick={onCancel}>
+          Đóng
+        </Button>,
         <Button key="add" type="primary" icon={<PlusOutlined />} onClick={onAddData}>
           Thêm dữ liệu
         </Button>,
@@ -783,21 +855,27 @@ const FormDataListModal = ({ template, open, reloadKey, bizId, onCancel, onAddDa
     >
       <div className="form-data-filter">
         <Row gutter={[12, 12]} align="middle">
-          {displayKeys.map(key => (
+          {displayKeys.map((key) => (
             <Col key={key} xs={24} md={12} xl={8}>
-              {['select', 'multi_select', 'radio', 'checkbox'].includes(fieldByKey.get(key)?.inputType) ? (
+              {['select', 'multi_select', 'radio', 'checkbox'].includes(
+                fieldByKey.get(key)?.inputType,
+              ) ? (
                 <Select
                   allowClear
                   className="form-data-filter-input"
-                  mode={['multi_select', 'checkbox'].includes(fieldByKey.get(key)?.inputType) ? 'multiple' : undefined}
+                  mode={
+                    ['multi_select', 'checkbox'].includes(fieldByKey.get(key)?.inputType)
+                      ? 'multiple'
+                      : undefined
+                  }
                   placeholder={fieldLabelByKey.get(key) ?? key}
                   options={normalizeFieldOptions(fieldByKey.get(key)?.config?.options ?? [])}
                   value={draftFilters[key] || undefined}
-                  onChange={value => {
-                    setDraftFilters(current => ({
+                  onChange={(value) => {
+                    setDraftFilters((current) => ({
                       ...current,
                       [key]: value,
-                    }))
+                    }));
                   }}
                 />
               ) : (
@@ -806,12 +884,12 @@ const FormDataListModal = ({ template, open, reloadKey, bizId, onCancel, onAddDa
                   className="form-data-filter-input"
                   placeholder={fieldLabelByKey.get(key) ?? key}
                   value={draftFilters[key] ?? ''}
-                  onChange={event => {
-                    const value = event.target.value
-                    setDraftFilters(current => ({
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setDraftFilters((current) => ({
                       ...current,
                       [key]: value,
-                    }))
+                    }));
                   }}
                   onPressEnter={applyFilter}
                 />
@@ -831,7 +909,10 @@ const FormDataListModal = ({ template, open, reloadKey, bizId, onCancel, onAddDa
         </Row>
       </div>
       <Table
-        rowKey={record => record.id ?? record.storageId ?? record.createdAt ?? JSON.stringify(record)}
+        scroll={{ x: 'max-content' }}
+        rowKey={(record) =>
+          record.id ?? record.storageId ?? record.createdAt ?? JSON.stringify(record)
+        }
         size="small"
         loading={loading}
         columns={columns}
@@ -842,209 +923,225 @@ const FormDataListModal = ({ template, open, reloadKey, bizId, onCancel, onAddDa
           total,
           showSizeChanger: true,
           onChange: (nextPage, nextLimit) => {
-            setPage(nextLimit !== limit ? 1 : nextPage)
-            setLimit(nextLimit)
+            setPage(nextLimit !== limit ? 1 : nextPage);
+            setLimit(nextLimit);
           },
         }}
       />
     </Modal>
-  )
-}
+  );
+};
 
 const WorkflowFormsList = ({ onCreate }) => {
-  const { user: profile, hasPermission } = useGetMe()
-  const canCreate = hasPermission('workflow.form.create')
-  const canUpdate = hasPermission('workflow.form.update')
-  const canAddData = hasPermission('workflow.submission.create')
-  const bizId = useMemo(() => resolveBizId(profile), [profile])
-  const reloadDataTimerRef = useRef(null)
-  const [dataListTemplate, setDataListTemplate] = useState(null)
-  const [dataListReloadKey, setDataListReloadKey] = useState(0)
-  const [entryTemplate, setEntryTemplate] = useState(null)
-  const [entryLoadingId, setEntryLoadingId] = useState(null)
-  const [reloadKey, setReloadKey] = useState(0)
+  const { user: profile, hasPermission } = useGetMe();
+  const canCreate = hasPermission('workflow.form.create');
+  const canUpdate = hasPermission('workflow.form.update');
+  const canAddData = hasPermission('workflow.submission.create');
+  const bizId = useMemo(() => resolveBizId(profile), [profile]);
+  const reloadDataTimerRef = useRef(null);
+  const [dataListTemplate, setDataListTemplate] = useState(null);
+  const [dataListReloadKey, setDataListReloadKey] = useState(0);
+  const [entryTemplate, setEntryTemplate] = useState(null);
+  const [entryLoadingId, setEntryLoadingId] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const fetchTemplateDetail = useCallback(async (record) => {
     if (!record?.id) {
-      throw new Error('Không tìm thấy id form.')
+      throw new Error('Không tìm thấy id form.');
     }
 
-    const res = await RequestUtils.Get(FORM_TEMPLATE_DETAIL_API, { id: record.id })
-    const { ok, template, message: apiMessage } = resolveTemplateDetail(res)
+    const res = await RequestUtils.Get(FORM_TEMPLATE_DETAIL_API, { id: record.id });
+    const { ok, template, message: apiMessage } = resolveTemplateDetail(res);
 
     if (!ok || !template) {
       if (record.source && isSameId(record.source.id, record.id)) {
-        return enrichTemplateOptionsFromCode(record.source)
+        return enrichTemplateOptionsFromCode(record.source);
       }
-      throw new Error(apiMessage || 'Không tải được dữ liệu form.')
+      throw new Error(apiMessage || 'Không tải được dữ liệu form.');
     }
 
-    return enrichTemplateOptionsFromCode(template)
-  }, [])
+    return enrichTemplateOptionsFromCode(template);
+  }, []);
 
-  const handleEditForm = useCallback(async (record) => {
-    if (!record?.id) {
-      message.error('Không tìm thấy id form.')
-      return
-    }
+  const handleEditForm = useCallback(
+    async (record) => {
+      if (!record?.id) {
+        message.error('Không tìm thấy id form.');
+        return;
+      }
 
-    onCreate({ id: record.id })
-  }, [onCreate])
+      onCreate({ id: record.id });
+    },
+    [onCreate],
+  );
 
-  const handleAddData = useCallback(async (record) => {
-    setEntryLoadingId(record?.id)
-    try {
-      const template = await fetchTemplateDetail(record)
-      setDataListTemplate(template)
-    } catch (error) {
-      message.error(error?.message || 'Không tải được cấu hình form để xem dữ liệu.')
-      console.error('[WorkflowFormsList] handleAddData', error)
-    } finally {
-      setEntryLoadingId(null)
-    }
-  }, [fetchTemplateDetail])
+  const handleAddData = useCallback(
+    async (record) => {
+      setEntryLoadingId(record?.id);
+      try {
+        const template = await fetchTemplateDetail(record);
+        setDataListTemplate(template);
+      } catch (error) {
+        message.error(error?.message || 'Không tải được cấu hình form để xem dữ liệu.');
+        console.error('[WorkflowFormsList] handleAddData', error);
+      } finally {
+        setEntryLoadingId(null);
+      }
+    },
+    [fetchTemplateDetail],
+  );
 
-  const columns = useMemo(() => [
-    {
-      title: 'Tên form',
-      dataIndex: 'name',
-      width: 180,
-      ellipsis: true,
-    },
-    {
-      title: 'Tiêu đề',
-      dataIndex: 'title',
-      width: 240,
-      ellipsis: true,
-    },
-    {
-      title: 'Form key',
-      dataIndex: 'formKey',
-      width: 180,
-      ellipsis: true,
-      render: value => value ? <Tag className="form-list-code">{value}</Tag> : null,
-    },
-    {
-      title: 'Field',
-      dataIndex: 'fieldCount',
-      width: 80,
-      align: 'center',
-    },
-    // {
-    //   title: 'Tiêu chuẩn',
-    //   dataIndex: 'standard',
-    //   width: 220,
-    //   ellipsis: true,
-    // },
-    // {
-    //   title: 'Đang gắn vào bước',
-    //   dataIndex: 'step',
-    //   width: 180,
-    //   render: value => value ? <Tag className="form-list-code">{value}</Tag> : null,
-    // },
-    {
-      title: 'Trạng thái',
-      dataIndex: 'status',
-      width: 150,
-      render: (value, record) => value ? (
-        <Tag className={`form-list-status form-list-status--${record.statusKind ?? 'published'}`}>
-          <span className="form-list-status-dot" />
-          {value}
-        </Tag>
-      ) : null,
-    },
-    {
-      title: 'Cập nhật',
-      dataIndex: 'updatedAt',
-      width: 170,
-      ellipsis: true,
-    },
-    (canUpdate || canAddData) && {
-      title: '',
-      key: 'actions',
-      fixed: 'right',
-      width: 70,
-      align: 'center',
-      render: (_, record) => (
-        <Dropdown
-          trigger={['click']}
-          menu={{
-            items: [
-              canUpdate && {
-                key: 'edit',
-                icon: <EditOutlined />,
-                label: 'Chỉnh sửa form',
-              },
-              canAddData && {
-                key: 'add-data',
-                icon: <FormOutlined />,
-                label: 'Thêm dữ liệu',
-              },
-            ].filter(Boolean),
-            onClick: ({ key, domEvent }) => {
-              domEvent?.stopPropagation()
-              if (key === 'edit') {
-                handleEditForm(record)
-                return
-              }
-              if (key === 'add-data') {
-                handleAddData(record)
-              }
-            },
-          }}
-        >
-          <Button
-            type="text"
-            size="small"
-            loading={entryLoadingId === record.id}
-            icon={<MoreOutlined />}
-            onClick={(event) => event.stopPropagation()}
-          />
-        </Dropdown>
-      ),
-    },
-  ].filter(Boolean), [canAddData, canUpdate, entryLoadingId, handleAddData, handleEditForm])
+  const columns = useMemo(
+    () =>
+      [
+        {
+          title: 'Tên form',
+          dataIndex: 'name',
+          width: 180,
+          ellipsis: true,
+        },
+        {
+          title: 'Tiêu đề',
+          dataIndex: 'title',
+          width: 240,
+          ellipsis: true,
+        },
+        {
+          title: 'Form key',
+          dataIndex: 'formKey',
+          width: 180,
+          ellipsis: true,
+          render: (value) => (value ? <Tag className="form-list-code">{value}</Tag> : null),
+        },
+        {
+          title: 'Field',
+          dataIndex: 'fieldCount',
+          width: 80,
+          align: 'center',
+        },
+        // {
+        //   title: 'Tiêu chuẩn',
+        //   dataIndex: 'standard',
+        //   width: 220,
+        //   ellipsis: true,
+        // },
+        // {
+        //   title: 'Đang gắn vào bước',
+        //   dataIndex: 'step',
+        //   width: 180,
+        //   render: value => value ? <Tag className="form-list-code">{value}</Tag> : null,
+        // },
+        {
+          title: 'Trạng thái',
+          dataIndex: 'status',
+          width: 150,
+          render: (value, record) =>
+            value ? (
+              <Tag
+                className={`form-list-status form-list-status--${record.statusKind ?? 'published'}`}
+              >
+                <span className="form-list-status-dot" />
+                {value}
+              </Tag>
+            ) : null,
+        },
+        {
+          title: 'Cập nhật',
+          dataIndex: 'updatedAt',
+          width: 170,
+          ellipsis: true,
+        },
+        (canUpdate || canAddData) && {
+          title: '',
+          key: 'actions',
+          fixed: 'right',
+          width: 70,
+          align: 'center',
+          render: (_, record) => (
+            <Dropdown
+              trigger={['click']}
+              menu={{
+                items: [
+                  canUpdate && {
+                    key: 'edit',
+                    icon: <EditOutlined />,
+                    label: 'Chỉnh sửa form',
+                  },
+                  canAddData && {
+                    key: 'add-data',
+                    icon: <FormOutlined />,
+                    label: 'Thêm dữ liệu',
+                  },
+                ].filter(Boolean),
+                onClick: ({ key, domEvent }) => {
+                  domEvent?.stopPropagation();
+                  if (key === 'edit') {
+                    handleEditForm(record);
+                    return;
+                  }
+                  if (key === 'add-data') {
+                    handleAddData(record);
+                  }
+                },
+              }}
+            >
+              <Button
+                type="text"
+                size="small"
+                loading={entryLoadingId === record.id}
+                icon={<MoreOutlined />}
+                onClick={(event) => event.stopPropagation()}
+              />
+            </Dropdown>
+          ),
+        },
+      ].filter(Boolean),
+    [canAddData, canUpdate, entryLoadingId, handleAddData, handleEditForm],
+  );
 
   const beforeSubmitFilter = useCallback((values = {}) => {
     const nextValues = Object.fromEntries(
       Object.entries(values)
         .map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value])
         .filter(([, value]) => value !== undefined && value !== null && value !== ''),
-    )
+    );
 
-    delete nextValues.isFull
+    delete nextValues.isFull;
     if (nextValues.status === 'all') {
-      delete nextValues.status
+      delete nextValues.status;
     }
     if (nextValues.page && nextValues.limit) {
-      nextValues.offset = String((Number(nextValues.page) - 1) * Number(nextValues.limit))
+      nextValues.offset = String((Number(nextValues.page) - 1) * Number(nextValues.limit));
     } else if (nextValues.offset != null) {
-      nextValues.offset = String(nextValues.offset)
+      nextValues.offset = String(nextValues.offset);
     }
-    return nextValues
-  }, [])
+    return nextValues;
+  }, []);
 
   const onData = useCallback(async (response) => {
-    const { embedded, total } = normalizeTemplateListResponse(response)
-    return replaceResponseItems(response, embedded.map(mapTemplateRow), total)
-  }, [])
+    const { embedded, total } = normalizeTemplateListResponse(response);
+    return replaceResponseItems(response, embedded.map(mapTemplateRow), total);
+  }, []);
 
-  useEffect(() => () => {
-    if (reloadDataTimerRef.current) {
-      clearTimeout(reloadDataTimerRef.current)
-    }
-  }, [])
+  useEffect(
+    () => () => {
+      if (reloadDataTimerRef.current) {
+        clearTimeout(reloadDataTimerRef.current);
+      }
+    },
+    [],
+  );
 
   const closeEntryModalAndReloadData = useCallback(() => {
-    setEntryTemplate(null)
+    setEntryTemplate(null);
     if (reloadDataTimerRef.current) {
-      clearTimeout(reloadDataTimerRef.current)
+      clearTimeout(reloadDataTimerRef.current);
     }
     reloadDataTimerRef.current = setTimeout(() => {
-      setDataListReloadKey(key => key + 1)
-      reloadDataTimerRef.current = null
-    }, DATA_LIST_RELOAD_DELAY_MS)
-  }, [])
+      setDataListReloadKey((key) => key + 1);
+      reloadDataTimerRef.current = null;
+    }, DATA_LIST_RELOAD_DELAY_MS);
+  }, []);
 
   return (
     <>
@@ -1079,12 +1176,12 @@ const WorkflowFormsList = ({ onCreate }) => {
         bizId={bizId}
         onCancel={closeEntryModalAndReloadData}
         onSaved={() => {
-          closeEntryModalAndReloadData()
-          setReloadKey(key => key + 1)
+          closeEntryModalAndReloadData();
+          setReloadKey((key) => key + 1);
         }}
       />
     </>
-  )
-}
+  );
+};
 
-export default WorkflowFormsList
+export default WorkflowFormsList;

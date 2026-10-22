@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="description"
+      content="Hướng dẫn Danh sách cơ hội bán hàng Hatenko: đơn con, chi tiết, sửa cơ hội, báo giá, workflow và chuyển thành đơn hàng."
+    />
+    <title>Hướng dẫn Cơ hội bán hàng · Hatenko</title>
+    <link rel="stylesheet" href="../products/guide.css" />
+    <script src="../products/guide.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Đến nội dung</a>
+    <header class="topbar">
+      <a class="brand" href="#top"
+        ><span> <small>HƯỚNG DẪN SỬ DỤNG</small></span></a
+      >
+      <div class="top-actions">
+        <span class="edition">Cơ hội bán hàng</span
+        ><button id="print" class="print">In hướng dẫn</button>
+      </div>
+    </header>
+    <div class="shell" id="top">
+      <aside>
+        <p class="nav-title">TRONG HƯỚNG DẪN NÀY</p>
+        <nav aria-label="Mục lục">
+          <a href="#overview"><span>01</span>Tìm cơ hội & xem đơn con</a
+          ><a href="#detail"><span>02</span>Xem chi tiết cơ hội</a
+          ><a href="#edit"><span>03</span>Chỉnh sửa cơ hội</a
+          ><a href="#quotation"><span>04</span>Lập, lưu & duyệt báo giá</a
+          ><a href="#attach"><span>05</span>Gắn workflow cho đơn con</a
+          ><a href="#progress"><span>06</span>Xem tiến trình workflow</a
+          ><a href="#convert"><span>07</span>Chuyển cơ hội thành đơn hàng</a
+          ><a href="#faq"><span>?</span>Câu hỏi thường gặp</a>
+        </nav>
+        <div class="aside-note">
+          Kiểm tra dữ liệu,<br />hoàn thiện báo giá,<br />xác nhận chuyển đơn.<br /><a
+            href="../leads/index.html"
+            >Hướng dẫn Lead →</a
+          >
+        </div>
+      </aside>
+      <main id="main">
+        <div class="hero">
+          <div class="eyebrow">HATENKO / CƠ HỘI BÁN HÀNG</div>
+          <h1>Từ nhu cầu đã rõ,<br /><span>đến đơn hàng đã chốt.</span></h1>
+          <p>
+            Đọc từng dòng hàng, hoàn thiện báo giá, theo dõi workflow và chuyển cơ hội thành đơn
+            hàng — có ảnh minh họa cho từng thao tác.
+          </p>
+          <div class="hero-links">
+            <a class="primary" href="#overview">Bắt đầu từ danh sách <span>→</span></a
+            ><a href="#quotation">Lập báo giá ↓</a>
+          </div>
+          <div class="quick">
+            <a href="#detail"><b>Chi tiết</b><span>Đối chiếu từng dòng</span></a
+            ><a href="#quotation"><b>Báo giá</b><span>Lưu & theo dõi phê duyệt</span></a
+            ><a href="#convert"><b>Chuyển đơn</b><span>Xác nhận khi đã chốt</span></a>
+          </div>
+        </div>
+        <div class="intro-note">
+          <span>i</span>
+          <p>
+            Nút và thao tác phụ thuộc quyền tài khoản, trạng thái và dữ liệu thực tế. Các mã, số
+            tiền và quy trình trong ảnh là ví dụ minh họa.
+          </p>
+        </div>
+        <section id="overview" aria-labelledby="title-overview">
+          <div class="section-heading">
+            <span class="section-num">01</span>
+            <div>
+              <h2 id="title-overview">Tìm cơ hội & xem đơn con</h2>
+              <p>Đọc tổng quan ở hàng chính, chi tiết ở từng dòng</p>
+            </div>
+          </div>
+          <p>
+            Vào <strong>Cơ hội → Danh sách cơ hội bán hàng</strong>. Hàng chính thể hiện mã cơ hội,
+            khách hàng, sản phẩm/SKU và thông tin dự kiến. Khi có nhiều dòng hàng, bảng mở rộng giúp
+            đối chiếu từng đơn con.
+          </p>
+          <ol>
+            <li>
+              Tìm theo <strong>Mã đơn</strong>, <strong>Số ĐT</strong>, <strong>Sản phẩm</strong>,
+              nhân viên <strong>Kinh doanh</strong> hoặc khoảng ngày.
+            </li>
+            <li>
+              Dùng <strong>Tìm theo dữ liệu workflow</strong> khi cần lọc theo dữ liệu quy trình đã
+              có. Bấm <strong>Lọc</strong>; dùng <strong>Xóa lọc</strong> để bắt đầu lại.
+            </li>
+            <li>
+              Bấm biểu tượng mở rộng ở đầu hàng để xem các đơn con. Đối chiếu mã, sản phẩm/SKU, ngày
+              tạo, số lượng, giá bán và Deadline.
+            </li>
+            <li>Chuyển trang hoặc đổi số dòng mỗi trang tại thanh phân trang.</li>
+          </ol>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Thông tin</th>
+                  <th>Cách đọc</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Mã đơn</td>
+                  <td>
+                    Mã nhận diện cơ hội. Mã có hậu tố như -1, -2 là các dòng/đơn con trong ví dụ.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Sản phẩm / SKU</td>
+                  <td>
+                    Tên hàng và các thuộc tính. Ký hiệu (+2) cho biết có thêm sản phẩm/dòng hàng
+                    trong nhóm; mở rộng để xem đầy đủ.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Thông tin đơn hàng</td>
+                  <td>Số lượng dự kiến, đơn vị, ngày đặt dự kiến và người phụ trách.</td>
+                </tr>
+                <tr>
+                  <td>Action</td>
+                  <td>
+                    Cảnh báo, Chi tiết, Báo giá, workflow, sửa và xóa tùy quyền và dữ liệu của cơ
+                    hội.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="note">
+            Kiểm tra cả hàng chính và đơn con. Cùng một sản phẩm có thể xuất hiện ở nhiều dòng với
+            màu, số lượng hoặc thời hạn khác nhau.
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/01-list.jpg"
+              data-caption="Danh sách cơ hội và bảng đơn con đang mở: đọc theo từng mã để tránh nhầm dòng hàng."
+              aria-label="Phóng to ảnh: Danh sách cơ hội và bảng đơn con đang mở: đọc theo từng mã để tránh nhầm dòng hàng."
+            >
+              <img
+                src="images/01-list.jpg"
+                alt="Danh sách cơ hội và bảng đơn con đang mở: đọc theo từng mã để tránh nhầm dòng hàng."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Danh sách cơ hội và bảng đơn con đang mở: đọc theo từng mã để tránh nhầm dòng hàng.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="detail" aria-labelledby="title-detail">
+          <div class="section-heading">
+            <span class="section-num">02</span>
+            <div>
+              <h2 id="title-detail">Xem chi tiết cơ hội</h2>
+              <p>Đối chiếu hàng hóa, tổng tiền và thông tin công ty</p>
+            </div>
+          </div>
+          <ol>
+            <li>Bấm <strong>Chi tiết</strong> ở hàng cơ hội cần xem.</li>
+            <li>
+              Trong tab <strong>Thanh toán</strong>, kiểm tra loại tiền, tỷ giá hiển thị và từng
+              dòng hàng: nội dung, số lượng, đơn vị, đơn giá, thành tiền.
+            </li>
+            <li>
+              Cuộn xuống xem VAT, chi phí vận chuyển, tổng tiền và điều kiện thanh toán nếu có.
+            </li>
+            <li>
+              Mở tab <strong>Thông tin công ty</strong> để kiểm tra thông tin doanh nghiệp liên
+              quan.
+            </li>
+          </ol>
+          <div class="note important">
+            Các số tiền và tỷ giá trong ảnh là dữ liệu ví dụ. Đối chiếu dữ liệu thực tế của cơ hội;
+            không dùng tỷ giá hoặc giá trong ảnh làm giá trị mặc định.
+          </div>
+          <p>
+            Phía trên bảng có lựa chọn <strong>Chuyển thành đơn hàng</strong>. Chỉ thao tác sau khi
+            đã kiểm tra và thống nhất nội dung cơ hội.
+          </p>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/02-detail.jpg"
+              data-caption="Ngăn chi tiết: kiểm tra loại tiền, dòng hàng và tổng tiền trước khi quyết định chuyển đơn."
+              aria-label="Phóng to ảnh: Ngăn chi tiết: kiểm tra loại tiền, dòng hàng và tổng tiền trước khi quyết định chuyển đơn."
+            >
+              <img
+                src="images/02-detail.jpg"
+                alt="Ngăn chi tiết: kiểm tra loại tiền, dòng hàng và tổng tiền trước khi quyết định chuyển đơn."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Ngăn chi tiết: kiểm tra loại tiền, dòng hàng và tổng tiền trước khi quyết định chuyển
+              đơn.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="edit" aria-labelledby="title-edit">
+          <div class="section-heading">
+            <span class="section-num">03</span>
+            <div>
+              <h2 id="title-edit">Chỉnh sửa cơ hội</h2>
+              <p>Cập nhật đúng SKU, số lượng và giá của từng dòng</p>
+            </div>
+          </div>
+          <ol>
+            <li>
+              Bấm biểu tượng <strong>bút chì</strong> để mở trang
+              <strong>Chỉnh sửa cơ hội bán hàng</strong>.
+            </li>
+            <li>
+              Đối chiếu mã cơ hội và mã của từng dòng. Chỉnh số lượng, lợi nhuận hoặc giá bán theo
+              nhu cầu.
+            </li>
+            <li>
+              Dùng <strong>Sửa</strong> trên dòng để điều chỉnh sản phẩm/SKU và thông tin bổ sung.
+              Dùng thùng rác trên dòng để bỏ dòng không còn cần; kiểm tra lại tổng số lượng.
+            </li>
+            <li>
+              Cần thêm dòng mới: bấm <strong>Thêm sản phẩm</strong>, chọn sản phẩm, SKU và số lượng.
+            </li>
+            <li>
+              Kiểm tra loại tiền, phí vận chuyển, điều kiện thanh toán và tổng tiền; bấm
+              <strong>Lưu đơn hàng</strong> để lưu thay đổi trên trang cơ hội.
+            </li>
+          </ol>
+          <div class="note">
+            Nhãn nút lưu hiện tại là Lưu đơn hàng, dù bạn đang ở trang sửa cơ hội. Việc lưu này khác
+            với thao tác Chuyển thành đơn hàng trong ngăn Chi tiết.
+          </div>
+          <p>
+            Nếu dùng <strong>Cấu hình công thức</strong> để điền giá, hãy kiểm tra giá dự kiến rồi
+            bấm Áp dụng công thức. Xem thêm
+            <a href="../leads/index.html#formula">hướng dẫn công thức giá bán</a>.
+          </p>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/07-edit.jpg"
+              data-caption="Trang chỉnh sửa cơ hội: mỗi dòng giữ mã, SKU, số lượng và giá bán riêng."
+              aria-label="Phóng to ảnh: Trang chỉnh sửa cơ hội: mỗi dòng giữ mã, SKU, số lượng và giá bán riêng."
+            >
+              <img
+                src="images/07-edit.jpg"
+                alt="Trang chỉnh sửa cơ hội: mỗi dòng giữ mã, SKU, số lượng và giá bán riêng."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Trang chỉnh sửa cơ hội: mỗi dòng giữ mã, SKU, số lượng và giá bán riêng.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="quotation" aria-labelledby="title-quotation">
+          <div class="section-heading">
+            <span class="section-num">04</span>
+            <div>
+              <h2 id="title-quotation">Lập, lưu & duyệt báo giá</h2>
+              <p>Hoàn thiện chứng từ trước khi in hoặc tải về</p>
+            </div>
+          </div>
+          <ol>
+            <li>
+              Bấm <strong>Báo giá</strong> trên hàng cơ hội. Kiểm tra mã cơ hội và tên khách ở đầu
+              ngăn.
+            </li>
+            <li>
+              Trong tab <strong>Chứng từ</strong>, rà soát sản phẩm, thông số, giá và số lượng. Điền
+              những ô cho phép sửa, ví dụ Color, MOQ, MCQ, Leadtime theo mẫu đang dùng.
+            </li>
+            <li>
+              Nếu áp dụng phê duyệt, chọn <strong>người phê duyệt</strong> phù hợp. Bấm
+              <strong>Lưu báo giá</strong> để lưu nội dung.
+            </li>
+            <li>
+              Theo dõi trạng thái hiển thị. Người được chỉ định phê duyệt thực hiện duyệt/từ chối
+              khi báo giá ở trạng thái chờ duyệt và được hệ thống cho phép.
+            </li>
+            <li>
+              Dùng điều khiển −/+ để đổi mức thu phóng; biểu tượng máy in hoặc tải xuống để xuất
+              chứng từ theo nhu cầu.
+            </li>
+          </ol>
+          <div class="note">
+            Lưu báo giá không đồng nghĩa với báo giá đã được duyệt. Khi báo giá chờ duyệt hoặc đã
+            duyệt, nội dung có thể ở chế độ chỉ đọc. Tab Trao đổi dùng cho phần trao đổi của chứng
+            từ theo giao diện hiện có.
+          </div>
+          <div class="note important">
+            Báo giá cần có mẫu loại quotation đang sử dụng. Nếu thiếu mẫu hoặc lỗi tải dữ liệu, cần
+            kiểm tra cấu hình mẫu; không tự điền dữ liệu thay thế cho khách hàng.
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/04-quotation.jpg"
+              data-caption="Ngăn báo giá: chứng từ, người phê duyệt, trạng thái, lưu và các nút xuất tài liệu."
+              aria-label="Phóng to ảnh: Ngăn báo giá: chứng từ, người phê duyệt, trạng thái, lưu và các nút xuất tài liệu."
+            >
+              <img
+                src="images/04-quotation.jpg"
+                alt="Ngăn báo giá: chứng từ, người phê duyệt, trạng thái, lưu và các nút xuất tài liệu."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Ngăn báo giá: chứng từ, người phê duyệt, trạng thái, lưu và các nút xuất tài liệu.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="attach" aria-labelledby="title-attach">
+          <div class="section-heading">
+            <span class="section-num">05</span>
+            <div>
+              <h2 id="title-attach">Gắn workflow cho đơn con</h2>
+              <p>Chọn quy trình đúng với từng dòng hàng</p>
+            </div>
+          </div>
+          <ol>
+            <li>Mở menu <strong>workflow</strong> ở cột Action, chọn thao tác gắn workflow.</li>
+            <li>Trong hộp <strong>Thêm workflow</strong>, đối chiếu mã của từng đơn con.</li>
+            <li>
+              Chọn quy trình phù hợp cho từng dòng. Trong ảnh, Nhập Lot được chọn cho dòng
+              IRP260513-1; các dòng khác chưa chọn.
+            </li>
+            <li>Bấm <strong>Lưu workflow</strong> và chờ thông báo thành công.</li>
+          </ol>
+          <div class="note">
+            Chọn workflow ở một dòng không có nghĩa là tất cả đơn con đã được gắn cùng quy trình.
+            Kiểm tra từng mã trước khi lưu.
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/05-attach.jpg"
+              data-caption="Hộp gắn workflow có vùng chọn riêng cho từng đơn con."
+              aria-label="Phóng to ảnh: Hộp gắn workflow có vùng chọn riêng cho từng đơn con."
+            >
+              <img
+                src="images/05-attach.jpg"
+                alt="Hộp gắn workflow có vùng chọn riêng cho từng đơn con."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>Hộp gắn workflow có vùng chọn riêng cho từng đơn con.</figcaption>
+          </figure>
+        </section>
+        <section id="progress" aria-labelledby="title-progress">
+          <div class="section-heading">
+            <span class="section-num">06</span>
+            <div>
+              <h2 id="title-progress">Xem tiến trình workflow</h2>
+              <p>Theo dõi và nhập dữ liệu tại bước hiện tại</p>
+            </div>
+          </div>
+          <ol>
+            <li>
+              Mở menu workflow và chọn tiến trình của đơn con cần xem. Đối chiếu mã ở đầu ngăn.
+            </li>
+            <li>
+              Chọn tab quy trình nếu có nhiều quy trình; xem bước hiện tại trên thanh tiến trình.
+            </li>
+            <li>
+              Điền biểu mẫu của bước theo yêu cầu. Trong ví dụ Nhập Lot, có thể thêm dòng LOT, thêm
+              cột và ghi kết quả test theo nguồn.
+            </li>
+            <li>
+              Chọn bước tiếp theo nếu được phép, rồi bấm <strong>Hoàn thành</strong> khi dữ liệu và
+              quyền xử lý đáp ứng.
+            </li>
+          </ol>
+          <div class="note">
+            Nhập Lot là ví dụ theo cấu hình. Các cơ hội/đơn con khác có thể có biểu mẫu và các bước
+            khác. Nếu nút Hoàn thành đang khóa, kiểm tra quyền và dữ liệu bắt buộc của bước.
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/06-progress.jpg"
+              data-caption="Tiến trình đơn con: thông tin dòng hàng, bước hiện tại và biểu mẫu của workflow."
+              aria-label="Phóng to ảnh: Tiến trình đơn con: thông tin dòng hàng, bước hiện tại và biểu mẫu của workflow."
+            >
+              <img
+                src="images/06-progress.jpg"
+                alt="Tiến trình đơn con: thông tin dòng hàng, bước hiện tại và biểu mẫu của workflow."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Tiến trình đơn con: thông tin dòng hàng, bước hiện tại và biểu mẫu của workflow.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="convert" aria-labelledby="title-convert">
+          <div class="section-heading">
+            <span class="section-num">07</span>
+            <div>
+              <h2 id="title-convert">Chuyển cơ hội thành đơn hàng</h2>
+              <p>Xác nhận sau khi đã chốt nội dung bán hàng</p>
+            </div>
+          </div>
+          <ol>
+            <li>
+              Mở <strong>Chi tiết</strong> cơ hội và kiểm tra lại thông tin hàng hóa, giá, số lượng,
+              tổng tiền, khách hàng và điều kiện thanh toán.
+            </li>
+            <li>Chọn <strong>Chuyển thành đơn hàng</strong>.</li>
+            <li>
+              Đọc hộp <strong>Xác nhận chuyển thành đơn hàng</strong>. Bấm <strong>Hủy</strong> nếu
+              chưa sẵn sàng hoặc <strong>Xác nhận</strong> để tiếp tục chuyển.
+            </li>
+            <li>
+              Chờ hệ thống xử lý thành công, sau đó kiểm tra tại
+              <strong>Danh sách đơn hàng</strong> bằng mã tương ứng.
+            </li>
+          </ol>
+          <div class="note important">
+            Đây là thao tác chuyển từ cơ hội sang đơn hàng, khác với lưu sửa hoặc lưu báo giá. Kiểm
+            tra kỹ trước khi xác nhận; không bấm lặp lại khi hệ thống còn đang xử lý.
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/03-convert.jpg"
+              data-caption="Hộp xác nhận xuất hiện sau khi chọn Chuyển thành đơn hàng."
+              aria-label="Phóng to ảnh: Hộp xác nhận xuất hiện sau khi chọn Chuyển thành đơn hàng."
+            >
+              <img
+                src="images/03-convert.jpg"
+                alt="Hộp xác nhận xuất hiện sau khi chọn Chuyển thành đơn hàng."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>Hộp xác nhận xuất hiện sau khi chọn Chuyển thành đơn hàng.</figcaption>
+          </figure>
+        </section>
+        <section id="faq">
+          <div class="section-heading">
+            <span class="section-num">?</span>
+            <div>
+              <h2>Câu hỏi thường gặp</h2>
+              <p>Kiểm tra nhanh trước khi thao tác lại.</p>
+            </div>
+          </div>
+          <details>
+            <summary>Nút chuông cảnh báo đang bị khóa?</summary>
+            <p>
+              Nút cảnh báo chỉ mở khi đối tượng có cảnh báo khả dụng theo quyền truy cập. Nút bị
+              khóa không phải thao tác tạo cảnh báo mới.
+            </p>
+          </details>
+          <details>
+            <summary>Vì sao không sửa được báo giá?</summary>
+            <p>
+              Kiểm tra quyền, người phê duyệt và trạng thái chứng từ. Báo giá đang chờ duyệt hoặc đã
+              duyệt có thể chỉ cho xem. Nếu thiếu mẫu báo giá đang sử dụng, cần kiểm tra cấu hình
+              mẫu.
+            </p>
+          </details>
+          <details>
+            <summary>Sửa ở trang cơ hội có tự chuyển thành đơn hàng không?</summary>
+            <p>
+              Không. Lưu thay đổi cơ hội và chuyển thành đơn hàng là hai thao tác khác nhau. Thao
+              tác chuyển có lựa chọn riêng trong Chi tiết và hộp xác nhận.
+            </p>
+          </details>
+          <details>
+            <summary>Muốn xem tất cả sản phẩm trong một cơ hội?</summary>
+            <p>
+              Mở bảng đơn con ở đầu hàng. Đối chiếu mã từng dòng, SKU, số lượng và thời hạn; có thể
+              cuộn ngang nếu bảng rộng hơn vùng hiển thị.
+            </p>
+          </details>
+          <details>
+            <summary>Muốn xóa cơ hội thì làm thế nào?</summary>
+            <p>
+              Dùng thùng rác ở Action và đọc hộp xác nhận xóa. Chỉ xác nhận với đúng mã cơ hội cần
+              bỏ. Thùng rác ở trang chỉnh sửa dòng hàng chỉ dùng để bỏ dòng, khác với xóa cả cơ hội.
+            </p>
+          </details>
+          <details>
+            <summary>Tạo cơ hội mới từ đâu?</summary>
+            <p>
+              Từ Danh sách Lead, chọn Tạo cơ hội trên Lead tương ứng. Xem
+              <a href="../leads/index.html#opportunity">hướng dẫn tạo cơ hội từ Lead</a>.
+            </p>
+          </details>
+        </section>
+        <footer>
+          <div>
+            <b>Danh sách cơ hội bán hàng</b>
+            <p>Hướng dẫn thao tác · Cập nhật 22/10/2026</p>
+          </div>
+          <a href="#top">Về đầu trang ↑</a>
+        </footer>
+      </main>
+    </div>
+    <dialog id="image-dialog" aria-label="Ảnh hướng dẫn phóng to">
+      <div class="dialog-bar">
+        <p id="image-caption"></p>
+        <button id="close-image" aria-label="Đóng ảnh phóng to">Đóng ×</button>
+      </div>
+      <div class="dialog-image"><img id="large-image" alt="" /></div>
+    </dialog>
+  </body>
+</html>

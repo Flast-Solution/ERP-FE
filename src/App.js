@@ -20,6 +20,7 @@
 /**************************************************************************/
 
 import '@/Main.less';
+import TableScrollbars from '@/components/TableScrollbars';
 import React, { useEffect, Suspense } from 'react';
 import { DataProvider, Loading } from '@flast-erp/core/components';
 import { ThemeProvider } from 'styled-components';
@@ -28,7 +29,7 @@ import i18n from '@/i18n';
 import moment from 'moment';
 import { Auth } from '@/auth';
 import { BrowserRouter } from 'react-router-dom';
-import history from "@/@history";
+import history from '@/@history';
 import Authorization from '@/auth/Authorization';
 import MainLayout from '@/layouts/MainLayout';
 import MyPopup from '@/routes/PopupRoute';
@@ -39,36 +40,35 @@ import { WorkflowDrawerProvider } from '@/contexts/WorkflowDrawerContext';
 
 const ThemeRender = () => (
   <ThemeProvider theme={theme}>
-    <TenantRouteProvider><WorkflowDrawerProvider>
-      <Auth>
-        <Authorization>
-          <MainLayout />
-        </Authorization>
-      </Auth>
-      <Suspense fallback={<Loading />}>
-        <ModalRoutes />
-        <MyPopup />
-      </Suspense>
-    </WorkflowDrawerProvider></TenantRouteProvider>
+    <TableScrollbars />
+    <TenantRouteProvider>
+      <WorkflowDrawerProvider>
+        <Auth>
+          <Authorization>
+            <MainLayout />
+          </Authorization>
+        </Auth>
+        <Suspense fallback={<Loading />}>
+          <ModalRoutes />
+          <MyPopup />
+        </Suspense>
+      </WorkflowDrawerProvider>
+    </TenantRouteProvider>
   </ThemeProvider>
 );
 
 function App() {
-
   useEffect(() => {
     moment.locale(i18n.language);
   }, []);
 
   return (
     <DataProvider initialRoutes={routes}>
-      <BrowserRouter 
-        location={history.location} 
-        navigator={history}
-      >
+      <BrowserRouter location={history.location} navigator={history}>
         <ThemeRender />
       </BrowserRouter>
     </DataProvider>
-  )
-};
+  );
+}
 
 export default App;

@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="description"
+      content="Hướng dẫn Lead Hatenko: tạo sửa, giao sale, nhu cầu khách hàng, tạo cơ hội, giá bán và workflow."
+    />
+    <title>Hướng dẫn Lead · Hatenko</title>
+    <link rel="stylesheet" href="../products/guide.css" />
+    <script src="../products/guide.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Đến nội dung</a>
+    <header class="topbar">
+      <a class="brand" href="#top"
+        ><span> <small>HƯỚNG DẪN SỬ DỤNG</small></span></a
+      >
+      <div class="top-actions">
+        <span class="edition">Danh sách Lead</span
+        ><button id="print" class="print">In hướng dẫn</button>
+      </div>
+    </header>
+    <div class="shell" id="top">
+      <aside>
+        <p class="nav-title">TRONG HƯỚNG DẪN NÀY</p>
+        <nav aria-label="Mục lục">
+          <a href="#overview"><span>01</span>Tìm & đọc danh sách Lead</a
+          ><a href="#create"><span>02</span>Tạo Lead mới</a
+          ><a href="#detail"><span>03</span>Xem & cập nhật Lead</a
+          ><a href="#assign"><span>04</span>Chuyển sale chăm sóc</a
+          ><a href="#opportunity"><span>05</span>Tạo cơ hội từ Lead</a
+          ><a href="#pricing"><span>06</span>Kiểm tra giá & lưu cơ hội</a
+          ><a href="#formula"><span>07</span>Dùng công thức giá bán</a
+          ><a href="#workflow"><span>08</span>Xem tiến trình & nhập dữ liệu workflow</a
+          ><a href="#faq"><span>?</span>Câu hỏi thường gặp</a>
+        </nav>
+        <div class="aside-note">
+          Ghi nhận đúng thông tin,<br />giao người phụ trách,<br />theo dõi đến cơ hội bán hàng.<br /><a
+            href="../products/index.html"
+            >Hướng dẫn Sản phẩm →</a
+          >
+        </div>
+      </aside>
+      <main id="main">
+        <div class="hero">
+          <div class="eyebrow">HATENKO / LEAD</div>
+          <h1>Chăm sóc đúng nhu cầu,<br /><span>phát triển thành cơ hội.</span></h1>
+          <p>
+            Tìm Lead, ghi nhận nhu cầu, giao người phụ trách và tạo cơ hội bán hàng — một luồng thao
+            tác rõ ràng, có hình minh họa để đối chiếu.
+          </p>
+          <div class="hero-links">
+            <a class="primary" href="#create">Bắt đầu tạo Lead <span>→</span></a
+            ><a href="#overview">Tìm hiểu danh sách ↓</a>
+          </div>
+          <div class="quick">
+            <a href="#assign"><b>Phụ trách</b><span>Giao đúng sale</span></a
+            ><a href="#opportunity"><b>Cơ hội</b><span>Cụ thể hóa nhu cầu</span></a
+            ><a href="#workflow"><b>Workflow</b><span>Theo dõi từng bước</span></a>
+          </div>
+        </div>
+        <div class="intro-note">
+          <span>i</span>
+          <p>
+            Ảnh minh họa giúp đối chiếu thao tác. Nút và quyền cập nhật phụ thuộc tài khoản. Tên, số
+            điện thoại, giá và công thức trong ảnh là dữ liệu minh họa.
+          </p>
+        </div>
+        <section id="overview" aria-labelledby="title-overview">
+          <div class="section-heading">
+            <span class="section-num">01</span>
+            <div>
+              <h2 id="title-overview">Tìm & đọc danh sách Lead</h2>
+              <p>Nắm thông tin trước khi bắt đầu chăm sóc</p>
+            </div>
+          </div>
+          <p>
+            Vào <strong>Lead → Danh sách Lead</strong>. Một Lead ghi nhận người liên hệ, nhu cầu sản
+            phẩm và nhân viên phụ trách trước khi phát triển thành cơ hội bán hàng.
+          </p>
+          <ol>
+            <li>Nhập số điện thoại, tên khách hàng hoặc tên sản phẩm để tìm Lead.</li>
+            <li>
+              Kết hợp <strong>Nguồn</strong>, <strong>Trạng thái</strong>,
+              <strong>Từ ngày / Đến ngày</strong> khi cần thu hẹp kết quả.
+            </li>
+            <li>
+              Bấm <strong>Lọc</strong>; dùng <strong>Xóa lọc</strong> để tìm lại từ đầu. Chuyển
+              trang hoặc đổi số dòng tại thanh phân trang.
+            </li>
+          </ol>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Cột</th>
+                  <th>Cách đọc</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Khách hàng / Số Đ/T</td>
+                  <td>Đối chiếu người liên hệ và số điện thoại để tránh thao tác nhầm Lead.</td>
+                </tr>
+                <tr>
+                  <td>Dịch vụ / Nguồn / Sản phẩm</td>
+                  <td>
+                    Xác định nhu cầu và kênh phát sinh Lead. Một Lead có thể quan tâm nhiều sản
+                    phẩm.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Trạng thái / Độ ưu tiên</td>
+                  <td>
+                    Nắm giai đoạn xử lý và mức độ cần quan tâm. Tên trạng thái có thể được cấu hình
+                    theo doanh nghiệp.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Lịch hẹn</td>
+                  <td>
+                    Theo dõi lịch hẹn tiếp theo đã nhập cho Lead; dấu “–” là chưa có thông tin hiển
+                    thị.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Cơ hội / Thao tác</td>
+                  <td>
+                    Tạo cơ hội, chuyển sale, xem chi tiết hoặc xem tiến trình theo quyền tài khoản.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="note">
+            Tên dài có thể được rút gọn bằng “…”. Mở chi tiết để đọc đầy đủ trước khi cập nhật hoặc
+            tạo cơ hội.
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/01-list.jpg"
+              data-caption="Danh sách Lead: bộ lọc, trạng thái, lịch hẹn và các thao tác trên từng hàng."
+              aria-label="Phóng to ảnh: Danh sách Lead: bộ lọc, trạng thái, lịch hẹn và các thao tác trên từng hàng."
+            >
+              <img
+                src="images/01-list.jpg"
+                alt="Danh sách Lead: bộ lọc, trạng thái, lịch hẹn và các thao tác trên từng hàng."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Danh sách Lead: bộ lọc, trạng thái, lịch hẹn và các thao tác trên từng hàng.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="create" aria-labelledby="title-create">
+          <div class="section-heading">
+            <span class="section-num">02</span>
+            <div>
+              <h2 id="title-create">Tạo Lead mới</h2>
+              <p>Điền đủ ba nhóm: liên hệ, nhu cầu và phụ trách</p>
+            </div>
+          </div>
+          <p>
+            Bấm <strong>+ Tạo mới</strong> để mở form ở bên phải. Cuộn trong form để điền đủ cả ba
+            nhóm thông tin.
+          </p>
+          <div class="two-col">
+            <div class="mini">
+              <h3>Cá nhân</h3>
+              <p>
+                Chọn Cá nhân; nhập Họ và tên, Điện thoại. Bổ sung email, Facebook và địa chỉ nếu có.
+                Khối doanh nghiệp được khóa khi chọn Cá nhân.
+              </p>
+            </div>
+            <div class="mini">
+              <h3>Doanh nghiệp</h3>
+              <p>
+                Chọn Doanh nghiệp; bổ sung Tên doanh nghiệp và Người liên hệ. Có thể tìm doanh
+                nghiệp theo tên hoặc tra cứu mã số thuế; kiểm tra lại dữ liệu được điền trước khi
+                lưu.
+              </p>
+            </div>
+          </div>
+          <ol>
+            <li>
+              <strong>Thông tin Lead:</strong> điền tên và điện thoại; chọn đúng loại khách hàng.
+              Với doanh nghiệp, phân biệt tên công ty với tên người liên hệ.
+            </li>
+            <li>
+              <strong>Nhu cầu khách hàng:</strong> chọn một hoặc nhiều
+              <strong>Sản phẩm quan tâm</strong>, chọn <strong>Nguồn Lead</strong>; bổ sung dịch vụ,
+              số lượng, giá trị và thời gian mua dự kiến khi có.
+            </li>
+            <li>
+              <strong>Phụ trách & trạng thái:</strong> chọn <strong>Nhân viên phụ trách</strong>. Có
+              thể bổ sung workflow, mức độ quan tâm và lịch hẹn tiếp theo.
+            </li>
+            <li>
+              Bấm <strong>Lưu Lead</strong> ở cuối form, chờ thông báo thành công rồi kiểm tra lại
+              trên danh sách.
+            </li>
+          </ol>
+          <div class="note important">
+            Các trường có dấu * là bắt buộc. Ghi chú tối đa 500 ký tự; phần hình ảnh thông tin khách
+            hàng hỗ trợ ảnh và giới hạn 8 MB mỗi file.
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/02-create.jpg"
+              data-caption="Form tạo Lead: chọn Cá nhân/Doanh nghiệp rồi nhập thông tin liên hệ và sản phẩm quan tâm."
+              aria-label="Phóng to ảnh: Form tạo Lead: chọn Cá nhân/Doanh nghiệp rồi nhập thông tin liên hệ và sản phẩm quan tâm."
+            >
+              <img
+                src="images/02-create.jpg"
+                alt="Form tạo Lead: chọn Cá nhân/Doanh nghiệp rồi nhập thông tin liên hệ và sản phẩm quan tâm."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Form tạo Lead: chọn Cá nhân/Doanh nghiệp rồi nhập thông tin liên hệ và sản phẩm quan
+              tâm.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="detail" aria-labelledby="title-detail">
+          <div class="section-heading">
+            <span class="section-num">03</span>
+            <div>
+              <h2 id="title-detail">Xem & cập nhật Lead</h2>
+              <p>Giữ thông tin liên hệ và lịch hẹn luôn đúng</p>
+            </div>
+          </div>
+          <ol>
+            <li>Bấm biểu tượng <strong>mắt — Xem chi tiết Lead</strong> trên hàng cần xem.</li>
+            <li>Đối chiếu tên, điện thoại, thông tin doanh nghiệp và các sản phẩm quan tâm.</li>
+            <li>
+              Nếu được quyền sửa, cập nhật nhu cầu, nguồn, người phụ trách, trạng thái Lead hoặc
+              lịch hẹn tiếp theo.
+            </li>
+            <li>
+              Bấm <strong>Cập nhật Lead</strong> để lưu; đóng ngăn mà chưa lưu sẽ không hoàn tất
+              việc cập nhật.
+            </li>
+          </ol>
+          <div class="note">
+            Ngày tạo và Ngày liên hệ gần nhất là các trường chỉ đọc trên form này. Lịch hẹn tiếp
+            theo là trường có thể chọn. Khi tra cứu doanh nghiệp, dữ liệu có thể điền vào các ô liên
+            hệ: hãy kiểm tra trước khi lưu.
+          </div>
+          <p>
+            Trong phần workflow, quy trình đã gắn được giữ lại và không có nút gỡ trên thẻ; bạn có
+            thể chọn thêm quy trình khi được phép.
+          </p>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/03-detail.jpg"
+              data-caption="Chi tiết Lead doanh nghiệp: tên công ty, mã số thuế và người liên hệ là các thông tin riêng."
+              aria-label="Phóng to ảnh: Chi tiết Lead doanh nghiệp: tên công ty, mã số thuế và người liên hệ là các thông tin riêng."
+            >
+              <img
+                src="images/03-detail.jpg"
+                alt="Chi tiết Lead doanh nghiệp: tên công ty, mã số thuế và người liên hệ là các thông tin riêng."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Chi tiết Lead doanh nghiệp: tên công ty, mã số thuế và người liên hệ là các thông tin
+              riêng.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="assign" aria-labelledby="title-assign">
+          <div class="section-heading">
+            <span class="section-num">04</span>
+            <div>
+              <h2 id="title-assign">Chuyển sale chăm sóc</h2>
+              <p>Giao Lead cho đúng người phụ trách</p>
+            </div>
+          </div>
+          <ol>
+            <li>Tìm đúng Lead, bấm biểu tượng <strong>người kèm dấu + — Chuyển sale</strong>.</li>
+            <li>
+              Trong hộp <strong>Chọn sale chăm sóc lead</strong>, chọn nhân viên cần nhận Lead.
+            </li>
+            <li>
+              Bấm <strong>Submit</strong> để xác nhận. Chờ thông báo
+              <strong>Lead đã được chuyển</strong>.
+            </li>
+          </ol>
+          <div class="note">
+            Chọn tên trong danh sách chưa phải là lưu. Cần bấm Submit. Nếu không thấy thao tác
+            chuyển sale, nhờ quản trị viên kiểm tra quyền phân công Lead.
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/04-assign.jpg"
+              data-caption="Hộp chuyển sale: chọn một nhân viên và xác nhận bằng Submit."
+              aria-label="Phóng to ảnh: Hộp chuyển sale: chọn một nhân viên và xác nhận bằng Submit."
+            >
+              <img
+                src="images/04-assign.jpg"
+                alt="Hộp chuyển sale: chọn một nhân viên và xác nhận bằng Submit."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>Hộp chuyển sale: chọn một nhân viên và xác nhận bằng Submit.</figcaption>
+          </figure>
+        </section>
+        <section id="opportunity" aria-labelledby="title-opportunity">
+          <div class="section-heading">
+            <span class="section-num">05</span>
+            <div>
+              <h2 id="title-opportunity">Tạo cơ hội từ Lead</h2>
+              <p>Chuyển nhu cầu quan tâm thành các dòng bán hàng cụ thể</p>
+            </div>
+          </div>
+          <ol>
+            <li>
+              Bấm <strong>Tạo cơ hội</strong> trên hàng Lead để mở trang
+              <strong>Tạo cơ hội bán hàng</strong>.
+            </li>
+            <li>
+              Bấm <strong>Thêm sản phẩm</strong>. Những sản phẩm Lead quan tâm được gợi ý ở đầu
+              ngăn.
+            </li>
+            <li>
+              Chọn từng sản phẩm; chọn <strong>SKU</strong> và nhập <strong>Số lượng</strong>. Có
+              thể thêm mã đơn hàng và ghi chú cho dòng.
+            </li>
+            <li>
+              Điền các thông tin bổ sung như Color, Color standard, Handtouch standard, Finishing
+              nếu cần. Có thể thêm cặp thông tin riêng bằng <strong>Thêm thông tin</strong>.
+            </li>
+            <li>Xác nhận thêm sản phẩm để đưa dòng vào bảng; tiếp tục với các sản phẩm khác.</li>
+          </ol>
+          <div class="note important">
+            Lead có nhiều sản phẩm quan tâm không có nghĩa là mọi dòng đã đủ SKU và số lượng. Hãy
+            chọn từng sản phẩm và cấu hình đầy đủ trước khi lưu cơ hội.
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/05-products.jpg"
+              data-caption="Ngăn Thêm sản phẩm: chọn từ nhu cầu của Lead và cấu hình SKU, số lượng, thông tin bổ sung."
+              aria-label="Phóng to ảnh: Ngăn Thêm sản phẩm: chọn từ nhu cầu của Lead và cấu hình SKU, số lượng, thông tin bổ sung."
+            >
+              <img
+                src="images/05-products.jpg"
+                alt="Ngăn Thêm sản phẩm: chọn từ nhu cầu của Lead và cấu hình SKU, số lượng, thông tin bổ sung."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Ngăn Thêm sản phẩm: chọn từ nhu cầu của Lead và cấu hình SKU, số lượng, thông tin bổ
+              sung.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="pricing" aria-labelledby="title-pricing">
+          <div class="section-heading">
+            <span class="section-num">06</span>
+            <div>
+              <h2 id="title-pricing">Kiểm tra giá & lưu cơ hội</h2>
+              <p>Rà soát các dòng trước khi xác nhận</p>
+            </div>
+          </div>
+          <ol>
+            <li>Kiểm tra từng dòng: sản phẩm, SKU, số lượng, giá mua, lợi nhuận và giá bán.</li>
+            <li>
+              Chọn đúng <strong>Loại tiền</strong>. Chỉnh <strong>Giá bán</strong> trực tiếp nếu
+              cần; dùng <strong>Sửa</strong> để chỉnh dòng hoặc thùng rác để bỏ dòng không dùng.
+            </li>
+            <li>
+              Nhập <strong>Mã cơ hội</strong> nếu cần; theo gợi ý trên màn hình có thể để trống để
+              hệ thống tự tạo. Kiểm tra Phí vận chuyển và tổng tiền.
+            </li>
+            <li>
+              Bấm <strong>Lưu đơn hàng</strong> — đây là nhãn nút lưu đang hiển thị trên trang Tạo
+              cơ hội bán hàng.
+            </li>
+            <li>
+              Chờ thông báo thành công trước khi rời trang; quay lại danh sách Lead để kiểm tra
+              trạng thái được cập nhật.
+            </li>
+          </ol>
+          <div class="note">
+            Đối chiếu Tổng chưa VAT, VAT, chiết khấu, Tổng tiền, Đã thanh toán và Còn lại theo dữ
+            liệu thực tế. Một số thao tác có thể chưa bật khi chưa lưu hoặc chưa đủ điều kiện.
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/06-opportunity.jpg"
+              data-caption="Trang cơ hội sau khi thêm sản phẩm: kiểm tra dòng hàng, loại tiền và tổng tiền trước khi lưu."
+              aria-label="Phóng to ảnh: Trang cơ hội sau khi thêm sản phẩm: kiểm tra dòng hàng, loại tiền và tổng tiền trước khi lưu."
+            >
+              <img
+                src="images/06-opportunity.jpg"
+                alt="Trang cơ hội sau khi thêm sản phẩm: kiểm tra dòng hàng, loại tiền và tổng tiền trước khi lưu."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Trang cơ hội sau khi thêm sản phẩm: kiểm tra dòng hàng, loại tiền và tổng tiền trước
+              khi lưu.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="formula" aria-labelledby="title-formula">
+          <div class="section-heading">
+            <span class="section-num">07</span>
+            <div>
+              <h2 id="title-formula">Dùng công thức giá bán</h2>
+              <p>Áp dụng chủ động, rồi kiểm tra kết quả từng dòng</p>
+            </div>
+          </div>
+          <p>
+            Ở trang Tạo cơ hội bán hàng, mở <strong>Cấu hình công thức</strong> nếu muốn điền giá
+            bán bằng biểu thức thay vì nhập từng dòng.
+          </p>
+          <ol>
+            <li>
+              Chèn các trường có sẵn: <strong>Giá mua</strong>, <strong>Số lượng dòng</strong>,
+              <strong>Tổng số lượng đơn</strong>, <strong>Lợi nhuận (%)</strong>,
+              <strong>Phí vận chuyển</strong>.
+            </li>
+            <li>
+              Kết hợp số, toán tử và dấu ngoặc để tạo biểu thức. Có thể nhập trực tiếp hoặc bấm thẻ
+              để chèn tại vị trí con trỏ.
+            </li>
+            <li>
+              Xem <strong>Giá bán dự kiến</strong> trước khi bấm <strong>Áp dụng công thức</strong>.
+            </li>
+            <li>
+              Kiểm tra lại giá bán trong bảng. Sau khi áp dụng vẫn có thể sửa tay; công thức chỉ
+              tính lại khi bấm áp dụng.
+            </li>
+          </ol>
+          <div class="two-col">
+            <div class="mini">
+              <h3>Phần trăm</h3>
+              <p>
+                Theo hướng dẫn trên màn hình, 20% = 0,2. Kiểm tra biểu thức và kết quả xem trước để
+                tránh nhầm hệ số.
+              </p>
+            </div>
+            <div class="mini">
+              <h3>Phí vận chuyển</h3>
+              <p>
+                Khi công thức dùng phí vận chuyển, màn hình cho biết phí được phân bổ vào giá bán và
+                không cộng thêm vào tổng đơn. Đối chiếu tổng tiền để tránh hiểu nhầm phí.
+              </p>
+            </div>
+          </div>
+          <div class="note">
+            Công thức trong ảnh chỉ là ví dụ. Chọn biểu thức phù hợp chính sách bán hàng và kiểm tra
+            mẫu số, số lượng, tỷ lệ lợi nhuận trước khi áp dụng.
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/07-formula.jpg"
+              data-caption="Cấu hình công thức: chèn trường, xem giá dự kiến và chủ động bấm Áp dụng công thức."
+              aria-label="Phóng to ảnh: Cấu hình công thức: chèn trường, xem giá dự kiến và chủ động bấm Áp dụng công thức."
+            >
+              <img
+                src="images/07-formula.jpg"
+                alt="Cấu hình công thức: chèn trường, xem giá dự kiến và chủ động bấm Áp dụng công thức."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Cấu hình công thức: chèn trường, xem giá dự kiến và chủ động bấm Áp dụng công thức.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="workflow" aria-labelledby="title-workflow">
+          <div class="section-heading">
+            <span class="section-num">08</span>
+            <div>
+              <h2 id="title-workflow">Xem tiến trình & nhập dữ liệu workflow</h2>
+              <p>Theo dõi bước xử lý của Lead theo quy trình đã cấu hình</p>
+            </div>
+          </div>
+          <ol>
+            <li>
+              Từ danh sách, bấm biểu tượng <strong>thông tin — Xem tiến trình Lead</strong>. Nếu
+              chưa có workflow, biểu tượng bị khóa.
+            </li>
+            <li>Đối chiếu thông tin Lead, sản phẩm, sale và tên quy trình ở đầu ngăn.</li>
+            <li>Xem bước hiện tại trên thanh tiến trình, rồi điền biểu mẫu của bước đó.</li>
+            <li>
+              Lưu hoặc chuyển bước theo hành động được hệ thống cho phép; kiểm tra dữ liệu bắt buộc
+              nếu thao tác chưa bật.
+            </li>
+          </ol>
+          <div class="mini">
+            <h3>Ví dụ trong ảnh: Nhập Lot</h3>
+            <p>
+              Bảng LOT cho phép thêm dòng, nhập mã LOT, số lượng và các thông tin liên quan; có thể
+              thêm cột tùy chỉnh. Đánh dấu LOT test để chọn lô cần kiểm tra. Trong House data /
+              Third party test, nhập nội dung, tiêu chuẩn và kết quả theo từng LOT; bảng master tổng
+              hợp các kết quả đã có.
+            </p>
+          </div>
+          <div class="note">
+            Nhập Lot là quy trình minh họa trong ảnh. Tên bước, trường dữ liệu, nút lưu và quyền
+            thao tác phụ thuộc workflow của từng Lead; không phải Lead nào cũng có cùng biểu mẫu.
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/08-workflow.jpg"
+              data-caption="Tiến trình Lead: thông tin quy trình, bảng LOT và kết quả test theo từng nguồn."
+              aria-label="Phóng to ảnh: Tiến trình Lead: thông tin quy trình, bảng LOT và kết quả test theo từng nguồn."
+            >
+              <img
+                src="images/08-workflow.jpg"
+                alt="Tiến trình Lead: thông tin quy trình, bảng LOT và kết quả test theo từng nguồn."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Tiến trình Lead: thông tin quy trình, bảng LOT và kết quả test theo từng nguồn.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="faq">
+          <div class="section-heading">
+            <span class="section-num">?</span>
+            <div>
+              <h2>Câu hỏi thường gặp</h2>
+              <p>Kiểm tra nhanh trước khi thao tác lại.</p>
+            </div>
+          </div>
+          <details>
+            <summary>Vì sao không thấy nút Lưu hoặc Cập nhật Lead?</summary>
+            <p>
+              Quyền xem và quyền sửa là riêng biệt. Bạn có thể xem chi tiết nhưng không được cập
+              nhật. Nhờ quản trị viên kiểm tra quyền tài khoản.
+            </p>
+          </details>
+          <details>
+            <summary>Chọn doanh nghiệp có tự điền liên hệ không?</summary>
+            <p>
+              Khi chọn một doanh nghiệp có sẵn, form có thể điền tên người liên hệ, điện thoại,
+              email và địa chỉ nếu dữ liệu có. Kiểm tra lại trước khi lưu để tránh thay thế nhầm
+              thông tin bạn đã nhập.
+            </p>
+          </details>
+          <details>
+            <summary>Chọn sale xong nhưng chưa chuyển Lead?</summary>
+            <p>Cần bấm Submit trong hộp Chọn sale chăm sóc lead và chờ thông báo thành công.</p>
+          </details>
+          <details>
+            <summary>Đã chọn sản phẩm trong Lead, tại sao tạo cơ hội vẫn cần SKU?</summary>
+            <p>
+              Sản phẩm quan tâm ghi nhận nhu cầu tổng quát. Cơ hội cần dòng hàng cụ thể, bao gồm SKU
+              và số lượng, nên cần cấu hình từng sản phẩm.
+            </p>
+          </details>
+          <details>
+            <summary>Vì sao thay số lượng mà giá bán không tự tính lại?</summary>
+            <p>
+              Theo hướng dẫn trên màn cấu hình, công thức chỉ tính lại khi bấm Áp dụng công thức.
+              Kiểm tra giá dự kiến rồi áp dụng lại nếu muốn cập nhật bằng công thức.
+            </p>
+          </details>
+          <details>
+            <summary>Không mở được tiến trình Lead?</summary>
+            <p>
+              Lead cần có workflow và tài khoản cần quyền xem. Mở chi tiết để kiểm tra quy trình đã
+              gắn; liên hệ quản trị viên khi cần cấu hình.
+            </p>
+          </details>
+        </section>
+        <footer>
+          <div>
+            <b>HATENKO · Danh sách Lead</b>
+            <p>Hướng dẫn thao tác · Cập nhật 22/10/2026</p>
+          </div>
+          <a href="#top">Về đầu trang ↑</a>
+        </footer>
+      </main>
+    </div>
+    <dialog id="image-dialog" aria-label="Ảnh hướng dẫn phóng to">
+      <div class="dialog-bar">
+        <p id="image-caption"></p>
+        <button id="close-image" aria-label="Đóng ảnh phóng to">Đóng ×</button>
+      </div>
+      <div class="dialog-image"><img id="large-image" alt="" /></div>
+    </dialog>
+  </body>
+</html>

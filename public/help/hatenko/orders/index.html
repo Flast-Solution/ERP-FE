@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="description"
+      content="Hướng dẫn đơn hàng Hatenko: đơn con, LOT, nhập kho, chứng từ theo lần xuất, workflow và giao hàng."
+    />
+    <title>Hướng dẫn Danh sách đơn hàng · Hatenko</title>
+    <link rel="stylesheet" href="../products/guide.css" />
+    <script src="../products/guide.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Đến nội dung</a>
+    <header class="topbar">
+      <a class="brand" href="#top"
+        ><span> <small>HƯỚNG DẪN SỬ DỤNG</small></span></a
+      >
+      <div class="top-actions">
+        <span class="edition">Danh sách đơn hàng</span
+        ><button id="print" class="print">In hướng dẫn</button>
+      </div>
+    </header>
+    <div class="shell" id="top">
+      <aside>
+        <p class="nav-title">TRONG HƯỚNG DẪN NÀY</p>
+        <nav aria-label="Mục lục">
+          <a href="#overview"><span>01</span>Đọc danh sách & bảng mở rộng</a
+          ><a href="#detail"><span>02</span>Xem thông tin đơn hàng</a
+          ><a href="#edit"><span>03</span>Chỉnh sửa đơn hàng</a
+          ><a href="#workflow"><span>04</span>Xem workflow & dữ liệu LOT</a
+          ><a href="#inbound"><span>05</span>Nhập nhanh theo đơn</a
+          ><a href="#release"><span>06</span>Chọn lần xuất & lưu số lượng</a
+          ><a href="#documents"><span>07</span>Hoàn thiện bộ chứng từ</a
+          ><a href="#delivery-tab"><span>08</span>Mở giao hàng từ lần xuất</a
+          ><a href="#delivery"><span>09</span>Chọn lô & xác nhận xuất/giao</a
+          ><a href="#faq"><span>?</span>Câu hỏi thường gặp</a>
+        </nav>
+        <div class="aside-note">
+          Đọc đúng số liệu,<br />chọn đúng lần xuất,<br />kiểm tra trước khi giao.<br /><a
+            href="../opportunities/index.html"
+            >Hướng dẫn Cơ hội →</a
+          >
+        </div>
+      </aside>
+      <main id="main">
+        <div class="hero">
+          <div class="eyebrow">HATENKO / ĐƠN HÀNG</div>
+          <h1>Theo dõi từng dòng hàng,<br /><span>hoàn thiện từng lần giao.</span></h1>
+          <p>
+            Từ đơn con và LOT đến nhập kho, chứng từ theo lần xuất và giao hàng — hướng dẫn theo
+            bước, có ảnh để đối chiếu.
+          </p>
+          <div class="hero-links">
+            <a class="primary" href="#overview">Bắt đầu từ danh sách <span>→</span></a
+            ><a href="#release">Làm chứng từ theo lần xuất ↓</a>
+          </div>
+          <div class="quick">
+            <a href="#inbound"><b>Nhập kho</b><span>Ghi nhận hàng thực nhận</span></a
+            ><a href="#documents"><b>Chứng từ</b><span>Đúng lần xuất, đúng version</span></a
+            ><a href="#delivery"><b>Giao hàng</b><span>Chọn lô & kiểm tra xuất</span></a>
+          </div>
+        </div>
+        <div class="intro-note">
+          <span>i</span>
+          <p>
+            Ảnh minh họa thao tác. Nút, dữ liệu và quyền cập nhật phụ thuộc tài khoản và trạng thái
+            nghiệp vụ. Mã đơn, số lượng, số tiền, tỷ giá trong ảnh là ví dụ.
+          </p>
+        </div>
+        <section id="overview" aria-labelledby="title-overview">
+          <div class="section-heading">
+            <span class="section-num">01</span>
+            <div>
+              <h2 id="title-overview">Đọc danh sách & bảng mở rộng</h2>
+              <p>Theo dõi từ đơn hàng đến đơn con và LOT</p>
+            </div>
+          </div>
+          <p>
+            Vào <strong>Đơn hàng → Danh sách đơn hàng</strong>. Bảng chính tổng hợp tình hình của
+            đơn; bảng mở rộng thể hiện đơn con, lệnh sản xuất và dữ liệu LOT liên quan.
+          </p>
+          <ol>
+            <li>
+              Lọc theo <strong>Mã đơn</strong>, <strong>Số ĐT</strong>, <strong>Sản phẩm</strong>,
+              <strong>Kinh doanh</strong>, khoảng ngày hoặc dữ liệu workflow; bấm
+              <strong>Lọc</strong>. Dùng <strong>Xóa lọc</strong> để bắt đầu lại.
+            </li>
+            <li>
+              Bấm biểu tượng mở rộng trước mã đơn để xem đơn con; mở tiếp dòng có dữ liệu LOT để xem
+              từng lô.
+            </li>
+            <li>
+              Cuộn ngang bằng thanh dưới bảng để xem các nhóm cột còn lại. Bảng con có vùng cuộn
+              riêng khi nội dung rộng.
+            </li>
+            <li>
+              Đổi số dòng hoặc chuyển trang ở thanh phân trang. Kéo mép tiêu đề cột nếu cần điều
+              chỉnh chiều rộng.
+            </li>
+          </ol>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nhóm thông tin</th>
+                  <th>Cách đọc</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Đơn hàng</td>
+                  <td>Số lượng đặt, ngày đặt và nhân viên kinh doanh.</td>
+                </tr>
+                <tr>
+                  <td>Sản xuất</td>
+                  <td>
+                    Số lô, số lượng kế hoạch, đã sản xuất, còn lại và ngày hoàn thành dự kiến.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Kho</td>
+                  <td>Lượng nhập, tồn hiện tại và số phiếu nhập theo dữ liệu có trong hệ thống.</td>
+                </tr>
+                <tr>
+                  <td>Xuất kho & giao hàng</td>
+                  <td>Lượng đã xuất, chưa xuất, trạng thái và ngày giao dự kiến.</td>
+                </tr>
+                <tr>
+                  <td>Tài chính</td>
+                  <td>Tổng tiền, đã thanh toán và còn lại; xem ký hiệu tiền trên tiêu đề cột.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="note important">
+            Đã sản xuất, đã nhập kho và đã xuất hàng là các số liệu khác nhau. Kiểm tra đúng nhóm
+            cột; trạng thái lệnh sản xuất không thay thế trạng thái giao hàng.
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/01-list.jpg"
+              data-caption="Bảng mở rộng nhiều cấp: đơn hàng → đơn con/lệnh sản xuất → LOT."
+              aria-label="Phóng to ảnh: Bảng mở rộng nhiều cấp: đơn hàng → đơn con/lệnh sản xuất → LOT."
+            >
+              <img
+                src="images/01-list.jpg"
+                alt="Bảng mở rộng nhiều cấp: đơn hàng → đơn con/lệnh sản xuất → LOT."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>Bảng mở rộng nhiều cấp: đơn hàng → đơn con/lệnh sản xuất → LOT.</figcaption>
+          </figure>
+        </section>
+        <section id="detail" aria-labelledby="title-detail">
+          <div class="section-heading">
+            <span class="section-num">02</span>
+            <div>
+              <h2 id="title-detail">Xem thông tin đơn hàng</h2>
+              <p>Kiểm tra dòng hàng, tổng tiền và thông tin doanh nghiệp</p>
+            </div>
+          </div>
+          <ol>
+            <li>Cuộn đến Action, bấm <strong>Chi tiết</strong> ở đúng mã đơn.</li>
+            <li>
+              Trong tab <strong>Thanh toán</strong>, kiểm tra loại tiền, tỷ giá, nội dung từng dòng,
+              số lượng, đơn giá và thành tiền.
+            </li>
+            <li>
+              Cuộn xuống xem VAT, phí vận chuyển, điều kiện thanh toán và thông tin giao hàng nếu
+              có.
+            </li>
+            <li>
+              Chọn tab <strong>Hóa đơn</strong> hoặc <strong>Thông tin công ty</strong> để xem nội
+              dung tương ứng đang được hệ thống cung cấp.
+            </li>
+          </ol>
+          <div class="note">
+            Ô Chuyển thành đơn hàng đã được đánh dấu và khóa trong ảnh vì đây đã là đơn hàng. Giá và
+            tỷ giá trong ảnh chỉ là ví dụ; đối chiếu số thực tế trước khi lập chứng từ.
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/02-detail.jpg"
+              data-caption="Ngăn chi tiết đơn hàng: các tab và tổng tiền của từng dòng hàng."
+              aria-label="Phóng to ảnh: Ngăn chi tiết đơn hàng: các tab và tổng tiền của từng dòng hàng."
+            >
+              <img
+                src="images/02-detail.jpg"
+                alt="Ngăn chi tiết đơn hàng: các tab và tổng tiền của từng dòng hàng."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Ngăn chi tiết đơn hàng: các tab và tổng tiền của từng dòng hàng.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="edit" aria-labelledby="title-edit">
+          <div class="section-heading">
+            <span class="section-num">03</span>
+            <div>
+              <h2 id="title-edit">Chỉnh sửa đơn hàng</h2>
+              <p>Kiểm tra tác động của thay đổi đến các nghiệp vụ liên quan</p>
+            </div>
+          </div>
+          <ol>
+            <li>Bấm biểu tượng <strong>bút chì</strong> để mở trang Chỉnh sửa đơn hàng.</li>
+            <li>
+              Đối chiếu mã đơn và mã từng đơn con. Các ô đang khóa là thông tin không thể sửa trong
+              trạng thái hiện tại.
+            </li>
+            <li>
+              Chỉnh thông tin được phép; dùng <strong>Sửa</strong> trên dòng để điều chỉnh cấu hình
+              dòng hàng. Khi cần thêm hàng, bấm <strong>Thêm sản phẩm</strong>.
+            </li>
+            <li>
+              Rà soát số lượng, giá, loại tiền, phí và tổng tiền; bấm
+              <strong>Lưu đơn hàng</strong> để cập nhật.
+            </li>
+          </ol>
+          <div class="note important">
+            Với đơn đã có sản xuất, nhập/xuất hoặc chứng từ, kiểm tra dữ liệu liên quan trước khi
+            đổi số lượng hay bỏ dòng. Nút thùng rác trên một dòng và nút xóa cả đơn là hai thao tác
+            khác nhau.
+          </div>
+          <p>
+            Công thức giá có thể bị khóa tùy trạng thái. Không cần sửa giá hoặc lợi nhuận khi mục
+            tiêu chỉ là cập nhật số lượng được phép.
+          </p>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/04-edit.jpg"
+              data-caption="Trang sửa đơn hàng: một số trường bị khóa; chỉ sửa những thông tin đang được cho phép."
+              aria-label="Phóng to ảnh: Trang sửa đơn hàng: một số trường bị khóa; chỉ sửa những thông tin đang được cho phép."
+            >
+              <img
+                src="images/04-edit.jpg"
+                alt="Trang sửa đơn hàng: một số trường bị khóa; chỉ sửa những thông tin đang được cho phép."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Trang sửa đơn hàng: một số trường bị khóa; chỉ sửa những thông tin đang được cho phép.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="workflow" aria-labelledby="title-workflow">
+          <div class="section-heading">
+            <span class="section-num">04</span>
+            <div>
+              <h2 id="title-workflow">Xem workflow & dữ liệu LOT</h2>
+              <p>Hoàn thiện biểu mẫu trước khi chuyển bước</p>
+            </div>
+          </div>
+          <ol>
+            <li>
+              Mở thao tác <strong>Xem tiến trình</strong> của đơn hoặc đơn con đang cần xử lý.
+            </li>
+            <li>
+              Kiểm tra phần <strong>Workflow đang xem</strong> để xác định đúng đối tượng; chọn lô
+              trong danh sách lô đã tạo nếu cần xem quy trình riêng của lô.
+            </li>
+            <li>Mở biểu mẫu của bước hiện tại, điền và lưu dữ liệu cần thiết.</li>
+            <li>
+              Chọn bước tiếp theo ở vùng <strong>Chuyển bước</strong>; bấm
+              <strong>Hoàn thành</strong> khi hệ thống cho phép.
+            </li>
+          </ol>
+          <div class="note important">
+            Trong ảnh, hệ thống báo “Form Nhập Lot chưa được điền” nên không thể chuyển bước. Cần
+            hoàn thiện biểu mẫu tương ứng trước; chỉ chọn bước Xong chưa đủ để hoàn tất.
+          </div>
+          <p>
+            Nhập Lot là một quy trình ví dụ. Các đơn hoặc lô có thể dùng workflow khác theo cấu
+            hình.
+          </p>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/03-workflow.jpg"
+              data-caption="Trang tiến trình: thông tin đơn, workflow đang xem, danh sách lô và lý do chưa thể chuyển bước."
+              aria-label="Phóng to ảnh: Trang tiến trình: thông tin đơn, workflow đang xem, danh sách lô và lý do chưa thể chuyển bước."
+            >
+              <img
+                src="images/03-workflow.jpg"
+                alt="Trang tiến trình: thông tin đơn, workflow đang xem, danh sách lô và lý do chưa thể chuyển bước."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Trang tiến trình: thông tin đơn, workflow đang xem, danh sách lô và lý do chưa thể
+              chuyển bước.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="inbound" aria-labelledby="title-inbound">
+          <div class="section-heading">
+            <span class="section-num">05</span>
+            <div>
+              <h2 id="title-inbound">Nhập nhanh theo đơn</h2>
+              <p>Chọn đúng đơn con, ghi nhận lượng thực nhận</p>
+            </div>
+          </div>
+          <ol>
+            <li>Ở Action, bấm biểu tượng <strong>Nhập kho theo đơn</strong>.</li>
+            <li>
+              Kiểm tra mã phiếu nhập và mã đơn TO. Chọn <strong>Đơn vị giao</strong>,
+              <strong>Ngày nhận</strong>, <strong>Đơn con cần nhập</strong> và điền
+              <strong>Lô nội bộ</strong>.
+            </li>
+            <li>
+              Đối chiếu mặt hàng/SKU được xác định từ đơn con; nhập
+              <strong>SL thực nhận</strong> theo hàng thực tế.
+            </li>
+            <li>
+              Trong <strong>Kiểm tra nhanh</strong>, thêm chỉ tiêu, tiêu chuẩn và kết quả đo khi
+              cần; kiểm tra phần tổng hợp chỉ tiêu đạt.
+            </li>
+            <li>
+              Nhập ghi chú, chọn <strong>Người kiểm</strong> và bấm
+              <strong>Xác nhận & nhập kho</strong>.
+            </li>
+          </ol>
+          <div class="note">
+            Số lượng nhập phải lớn hơn 0 và không vượt lượng còn được nhập của đơn con. Nếu đơn con
+            đã nhập đủ, hệ thống không cho nhập thêm theo luồng này.
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/05-inbound.jpg"
+              data-caption="Ngăn nhập nhanh: thông tin đơn nhập, kiểm tra nhanh, ghi chú và người kiểm."
+              aria-label="Phóng to ảnh: Ngăn nhập nhanh: thông tin đơn nhập, kiểm tra nhanh, ghi chú và người kiểm."
+            >
+              <img
+                src="images/05-inbound.jpg"
+                alt="Ngăn nhập nhanh: thông tin đơn nhập, kiểm tra nhanh, ghi chú và người kiểm."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Ngăn nhập nhanh: thông tin đơn nhập, kiểm tra nhanh, ghi chú và người kiểm.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="release" aria-labelledby="title-release">
+          <div class="section-heading">
+            <span class="section-num">06</span>
+            <div>
+              <h2 id="title-release">Chọn lần xuất & lưu số lượng</h2>
+              <p>Tạo bộ chứng từ riêng cho từng lần xuất</p>
+            </div>
+          </div>
+          <ol>
+            <li>Mở <strong>Hợp đồng, hóa đơn theo lần xuất</strong> của đơn hàng.</li>
+            <li>
+              Chọn lần xuất đã có hoặc bấm <strong>+ Tạo lần xuất mới</strong>. Kiểm tra mã đơn và
+              tiền tệ.
+            </li>
+            <li>Nhập <strong>Số lượng lần xuất</strong> cho từng đơn con theo lần giao dự kiến.</li>
+            <li>
+              Nếu có lựa chọn <strong>Liên kết phiếu xuất đã có</strong>, chỉ chọn phiếu phù hợp với
+              lần xuất đang xử lý.
+            </li>
+            <li>Bấm <strong>Lưu số lượng và mở bộ chứng từ</strong> để tiếp tục.</li>
+          </ol>
+          <div class="note important">
+            Chọn số lượng của lần xuất đang làm, không mặc định dùng toàn bộ số lượng đơn. Kiểm tra
+            lại lần xuất ở danh sách trước khi sửa hoặc lưu chứng từ để tránh dùng nhầm bộ hồ sơ.
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/06-release.jpg"
+              data-caption="Màn chọn lần xuất: mỗi đơn con có số lượng riêng; lưu số lượng để mở bộ chứng từ."
+              aria-label="Phóng to ảnh: Màn chọn lần xuất: mỗi đơn con có số lượng riêng; lưu số lượng để mở bộ chứng từ."
+            >
+              <img
+                src="images/06-release.jpg"
+                alt="Màn chọn lần xuất: mỗi đơn con có số lượng riêng; lưu số lượng để mở bộ chứng từ."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Màn chọn lần xuất: mỗi đơn con có số lượng riêng; lưu số lượng để mở bộ chứng từ.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="documents" aria-labelledby="title-documents">
+          <div class="section-heading">
+            <span class="section-num">07</span>
+            <div>
+              <h2 id="title-documents">Hoàn thiện bộ chứng từ</h2>
+              <p>Chọn đúng loại, mẫu và version trước khi lưu</p>
+            </div>
+          </div>
+          <p>
+            Menu bên phải gồm <strong>Sales Contract</strong>, <strong>Commercial Invoice</strong>,
+            <strong>Packing List</strong>, <strong>Debit Note</strong>,
+            <strong>Cargo Receipt</strong>, <strong>Lệnh điều động</strong> và
+            <strong>Giao hàng</strong>.
+          </p>
+          <ol>
+            <li>Chọn loại chứng từ cần làm; kiểm tra lần xuất và mã đơn đang mở.</li>
+            <li>
+              Chọn mẫu/version phù hợp ở thanh trên. Đối chiếu thông tin công ty, khách hàng và các
+              dòng hàng.
+            </li>
+            <li>
+              Điền các ô có thể sửa: số/ngày chứng từ, thông tin liên hệ, địa chỉ hoặc nội dung bổ
+              sung theo mẫu.
+            </li>
+            <li>
+              Chọn người phê duyệt nếu luồng chứng từ yêu cầu; bấm nút lưu của chứng từ, ví dụ
+              <strong>Lưu hóa đơn</strong> đang hiển thị trong ảnh.
+            </li>
+            <li>Chờ lưu thành công, kiểm tra trạng thái rồi sử dụng thao tác in/tải nếu có.</li>
+          </ol>
+          <div class="note">
+            Lưu nội dung và phê duyệt là hai việc khác nhau. Mẫu/version quyết định bố cục và các ô
+            được nhập; một số nội dung có thể chỉ cho xem theo trạng thái và quyền.
+          </div>
+          <div class="mini">
+            <h3>Lệnh điều động</h3>
+            <p>
+              Chọn mục Lệnh điều động trước Giao hàng để kiểm tra nơi xuất, nơi giao, phương tiện và
+              người vận chuyển. Đối chiếu thông tin thực tế, điền các ô được phép sửa và lưu chứng
+              từ trước khi in.
+            </p>
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/07-documents.jpg"
+              data-caption="Bộ chứng từ: menu từng loại bên phải và thanh chọn mẫu/version, người phê duyệt, lưu ở phía trên."
+              aria-label="Phóng to ảnh: Bộ chứng từ: menu từng loại bên phải và thanh chọn mẫu/version, người phê duyệt, lưu ở phía trên."
+            >
+              <img
+                src="images/07-documents.jpg"
+                alt="Bộ chứng từ: menu từng loại bên phải và thanh chọn mẫu/version, người phê duyệt, lưu ở phía trên."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Bộ chứng từ: menu từng loại bên phải và thanh chọn mẫu/version, người phê duyệt, lưu ở
+              phía trên.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="delivery-tab" aria-labelledby="title-delivery-tab">
+          <div class="section-heading">
+            <span class="section-num">08</span>
+            <div>
+              <h2 id="title-delivery-tab">Mở giao hàng từ lần xuất</h2>
+              <p>Kiểm tra sản phẩm, SKU, kho và tồn trước khi tạo lệnh</p>
+            </div>
+          </div>
+          <ol>
+            <li>
+              Trong bộ chứng từ của lần xuất, chọn <strong>Giao hàng</strong> ở menu bên phải.
+            </li>
+            <li>Đối chiếu đơn con, sản phẩm, SKU, kho và <strong>Tồn còn</strong> trên bảng.</li>
+            <li>
+              Bấm <strong>Giao hàng</strong> trên đúng dòng cần xuất để mở biểu mẫu xuất/giao.
+            </li>
+          </ol>
+          <div class="note">
+            Tồn hiển thị trong bảng là thông tin cần đối chiếu, không phải xác nhận đã xuất. Nếu
+            không có hàng khả dụng hoặc sai kho/SKU, kiểm tra lại nhập kho và dữ liệu liên quan
+            trước khi tạo lệnh.
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/08-delivery-tab.jpg"
+              data-caption="Tab Giao hàng trong bộ chứng từ: kiểm tra tồn và mở thao tác cho đúng đơn con."
+              aria-label="Phóng to ảnh: Tab Giao hàng trong bộ chứng từ: kiểm tra tồn và mở thao tác cho đúng đơn con."
+            >
+              <img
+                src="images/08-delivery-tab.jpg"
+                alt="Tab Giao hàng trong bộ chứng từ: kiểm tra tồn và mở thao tác cho đúng đơn con."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Tab Giao hàng trong bộ chứng từ: kiểm tra tồn và mở thao tác cho đúng đơn con.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="delivery" aria-labelledby="title-delivery">
+          <div class="section-heading">
+            <span class="section-num">09</span>
+            <div>
+              <h2 id="title-delivery">Chọn lô & xác nhận xuất/giao</h2>
+              <p>Rà soát lượng xuất, QC và thông tin vận chuyển</p>
+            </div>
+          </div>
+          <ol>
+            <li>
+              Kiểm tra <strong>Mã phiếu xuất</strong>, điền <strong>Loại xuất</strong> và
+              <strong>Ngày xuất</strong>. Đối chiếu đơn/đơn con và SL yêu cầu.
+            </li>
+            <li>
+              Trong <strong>Chọn lô xuất (FIFO)</strong>, chọn lô phù hợp và nhập lượng xuất của
+              từng lô.
+            </li>
+            <li>
+              Đối chiếu <strong>Yêu cầu</strong>, <strong>Đã chọn</strong>,
+              <strong>Tồn còn lại</strong> và trạng thái. Kiểm tra cột QC riêng của từng lô.
+            </li>
+            <li>
+              Điền <strong>Thông tin giao hàng</strong>: Tự giao hoặc Đơn vị vận chuyển. Với Tự
+              giao, chọn Xe công ty hoặc Khách tự lấy và điền các trường tương ứng.
+            </li>
+            <li>
+              Cuộn xuống kiểm tra người nhận, địa chỉ, chứng từ kèm theo và các thông tin bắt buộc
+              đang hiển thị.
+            </li>
+            <li>
+              Dùng <strong>Lưu nháp</strong> khi chưa sẵn sàng; chỉ bấm
+              <strong>Xác nhận xuất & giao</strong> khi đã kiểm tra đầy đủ và đúng nghiệp vụ.
+            </li>
+          </ol>
+          <div class="note important">
+            Chỉ báo “Đủ điều kiện” ở phần đối chiếu số lượng không thay thế kết quả QC. Trong ảnh
+            vẫn có lô “Chưa đạt”; cần xử lý theo quy trình kiểm tra chất lượng của doanh nghiệp
+            trước khi xác nhận giao.
+          </div>
+          <p>
+            Sau khi lưu thành công, kiểm tra phiếu/lệnh giao và trạng thái của đơn. Không bấm xác
+            nhận lặp lại khi yêu cầu còn đang được xử lý.
+          </p>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/09-delivery.jpg"
+              data-caption="Ngăn giao hàng: chọn lô FIFO, lượng xuất, QC và hình thức giao; phân biệt Lưu nháp với xác nhận."
+              aria-label="Phóng to ảnh: Ngăn giao hàng: chọn lô FIFO, lượng xuất, QC và hình thức giao; phân biệt Lưu nháp với xác nhận."
+            >
+              <img
+                src="images/09-delivery.jpg"
+                alt="Ngăn giao hàng: chọn lô FIFO, lượng xuất, QC và hình thức giao; phân biệt Lưu nháp với xác nhận."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Ngăn giao hàng: chọn lô FIFO, lượng xuất, QC và hình thức giao; phân biệt Lưu nháp với
+              xác nhận.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="faq">
+          <div class="section-heading">
+            <span class="section-num">?</span>
+            <div>
+              <h2>Câu hỏi thường gặp</h2>
+              <p>Những điểm cần kiểm tra trước khi thao tác lại.</p>
+            </div>
+          </div>
+          <details>
+            <summary>Không thấy hết cột của bảng?</summary>
+            <p>
+              Dùng thanh cuộn ngang ở dưới bảng; bảng mở rộng có vùng cuộn riêng. Có thể điều chỉnh
+              độ rộng cột bằng mép tiêu đề.
+            </p>
+          </details>
+          <details>
+            <summary>Đã sản xuất nhưng tại sao chưa có tồn để giao?</summary>
+            <p>
+              Hoàn thành sản xuất, nhập kho và xuất hàng là các nghiệp vụ khác nhau. Kiểm tra phiếu
+              nhập, kho, SKU và tồn của lô trước khi giao.
+            </p>
+          </details>
+          <details>
+            <summary>Không nhập thêm được cho đơn con?</summary>
+            <p>
+              Kiểm tra lượng đã nhập và còn được nhập. Luồng nhập nhanh yêu cầu số lượng dương và
+              không vượt lượng còn được nhập.
+            </p>
+          </details>
+          <details>
+            <summary>Workflow báo chưa thể chuyển bước?</summary>
+            <p>
+              Đọc lý do hiển thị, ví dụ Form Nhập Lot chưa được điền. Hoàn thiện và lưu biểu mẫu của
+              bước hiện tại rồi kiểm tra lại quyền và bước tiếp theo.
+            </p>
+          </details>
+          <details>
+            <summary>Thay mẫu/version có phải lưu lại không?</summary>
+            <p>
+              Kiểm tra lại nội dung của mẫu đang chọn và lưu bằng nút của chứng từ. Đổi mẫu, đổi tab
+              hoặc đổi lần xuất không thay thế thao tác lưu nội dung.
+            </p>
+          </details>
+          <details>
+            <summary>Lưu nháp giao hàng có phải đã xác nhận xuất?</summary>
+            <p>
+              Không. Lưu nháp dùng khi chưa sẵn sàng xác nhận; Xác nhận xuất & giao là hành động
+              riêng. Kiểm tra trạng thái thực tế sau khi hệ thống trả thành công.
+            </p>
+          </details>
+        </section>
+        <footer>
+          <div>
+            <b>Danh sách đơn hàng</b>
+            <p>Hướng dẫn thao tác · Cập nhật 22/10/2026</p>
+          </div>
+          <a href="#top">Về đầu trang ↑</a>
+        </footer>
+      </main>
+    </div>
+    <dialog id="image-dialog" aria-label="Ảnh hướng dẫn phóng to">
+      <div class="dialog-bar">
+        <p id="image-caption"></p>
+        <button id="close-image" aria-label="Đóng ảnh phóng to">Đóng ×</button>
+      </div>
+      <div class="dialog-image"><img id="large-image" alt="" /></div>
+    </dialog>
+  </body>
+</html>

@@ -23,24 +23,35 @@ import React from 'react';
 import { authRoles } from '@/auth';
 import TenantPage from '@/components/TenantPage';
 
-const LocalCohoiPage = React.lazy(() => import('@/pages/cohoi'));
+const CohoiPage = React.lazy(() => import('@/pages/cohoi/OpportunityPage'));
 const LocalBanHangPage = React.lazy(() => import('@/pages/banhang'));
-const CohoiPage = () => <TenantPage page="Opportunities" local={LocalCohoiPage} />;
 const BanHangPage = () => <TenantPage page="SalesEditor" local={LocalBanHangPage} />;
 
 export const CohoiConfig = {
-    auth: authRoles.user,
-    routes: [
-        { path: '/sale/co-hoi/seven-day', permission: 'sales.opportunity.overdue.view', element: <CohoiPage /> },
-        { path: '/sale/co-hoi', permission: 'sales.opportunity.view', element: <CohoiPage /> },
-        { path: '/sale/co-hoi/*', permission: 'sales.opportunity.view', element: <CohoiPage /> },
-        { path: '/sale/ban-hang', permission: ({ search }) => new URLSearchParams(search).has('dataId')
-            ? 'sales.lead.convert_opportunity'
-            : 'sales.opportunity.create', element: <BanHangPage /> },
-        { path: '/sale/ban-hang/:orderId', permission: ({ search }) => (
-            new URLSearchParams(search).get('type') === 'order'
-                ? 'sales.order.update'
-                : 'sales.opportunity.update'
-        ), element: <BanHangPage /> }
-    ]
+  auth: authRoles.user,
+  routes: [
+    {
+      path: '/sale/co-hoi/seven-day',
+      permission: 'sales.opportunity.overdue.view',
+      element: <CohoiPage />,
+    },
+    { path: '/sale/co-hoi', permission: 'sales.opportunity.view', element: <CohoiPage /> },
+    { path: '/sale/co-hoi/*', permission: 'sales.opportunity.view', element: <CohoiPage /> },
+    {
+      path: '/sale/ban-hang',
+      permission: ({ search }) =>
+        new URLSearchParams(search).has('dataId')
+          ? 'sales.lead.convert_opportunity'
+          : 'sales.opportunity.create',
+      element: <BanHangPage />,
+    },
+    {
+      path: '/sale/ban-hang/:orderId',
+      permission: ({ search }) =>
+        new URLSearchParams(search).get('type') === 'order'
+          ? 'sales.order.update'
+          : 'sales.opportunity.update',
+      element: <BanHangPage />,
+    },
+  ],
 };

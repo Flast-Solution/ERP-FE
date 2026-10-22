@@ -22,22 +22,22 @@
 import React, { useCallback, useState } from 'react';
 import { Button, message, Space } from 'antd';
 import { cloneDeep } from 'lodash';
-import { 
-  RestList,
-  CustomImage,
-  BreadcrumbCustom
-} from "@flast-erp/core/components";
+import { RestList, CustomImage, BreadcrumbCustom } from '@flast-erp/core/components';
 
-import { useGetList } from "@flast-erp/core/hooks";
-import { Helmet } from "react-helmet";
+import { useGetList } from '@flast-erp/core/hooks';
+import { Helmet } from 'react-helmet';
 import Filter from '@/pages/category/Filter';
-import { RequestUtils, InAppEvent } from "@flast-erp/core/utils";
+import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import { GATEWAY, HASH_MODAL } from '@/configs';
 import { dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils';
 import useGetMe from '@/hooks/useGetMe';
+import ContentAssignmentModal from '@/components/ContentAssignmentModal';
+import { saveCategoryContents } from './contentAssignmentService';
+import { f5List } from '@flast-erp/core/utils';
 
 const CatePage = () => {
   const { hasPermission } = useGetMe();
+  const [contentCategory, setContentCategory] = useState(null);
   const canCreate = hasPermission('web.news_category.create');
   const canUpdate = hasPermission('web.news_category.update');
   const canDelete = hasPermission('web.news_category.delete');
@@ -47,84 +47,93 @@ const CatePage = () => {
     let hash = '#draw/cate.page';
     let data = cloneDeep(item);
     InAppEvent.emit(HASH_MODAL, { hash, title, data });
-  }
+  };
 
-  const onCreateCatePage = () => InAppEvent.emit(HASH_MODAL, {
-    hash: '#draw/cate.page',
-    title: 'Tạo mới danh mục tin tức',
-    data: {}
-  });
+  const onCreateCatePage = () =>
+    InAppEvent.emit(HASH_MODAL, {
+      hash: '#draw/cate.page',
+      title: 'Tạo mới danh mục tin tức',
+      data: {},
+    });
 
   const onDeleteCate = async ({ id }) => {
-    const { message: MSG } = await RequestUtils.Post("/category/page/delete", {}, {id});
+    const { message: MSG } = await RequestUtils.Post('/category/page/delete', {}, { id });
     message.info(MSG);
-  }
+  };
 
-  const [ title ] = useState("Danh mục tin tức");
+  const [title] = useState('Danh mục tin tức');
   const CUSTOM_ACTION = [
     {
-      title: "Tên",
+      title: 'Tên',
       dataIndex: 'name',
       width: 150,
-      ellipsis: true
+      ellipsis: true,
     },
     {
-      title: "Slug",
+      title: 'Slug',
       dataIndex: 'slug',
       width: 120,
-      ellipsis: true
+      ellipsis: true,
     },
     {
-      title: "Tiêu để",
+      title: 'Tiêu để',
       dataIndex: 'title',
       width: 150,
-      ellipsis: true
+      ellipsis: true,
     },
     {
-      title: "Mô tả",
+      title: 'Mô tả',
       dataIndex: 'desc',
       width: 250,
-      ellipsis: true
+      ellipsis: true,
     },
     {
-      title: "Hình ảnh",
+      title: 'Hình ảnh',
       dataIndex: 'image',
       width: 150,
       ellipsis: true,
       render: (image) => (
-        <CustomImage
-          preview={false}
-          width={50}
-          src={String(GATEWAY).concat(image)}
-          alt='image'
-        />
-      )
+        <CustomImage preview={false} width={50} src={String(GATEWAY).concat(image)} alt="image" />
+      ),
     },
     {
-      title: "Ngày",
+      title: 'Ngày',
       dataIndex: 'createdAt',
       width: 120,
       ellipsis: true,
-      render: (createdAt) => formatTime(createdAt)
+      render: (createdAt) => formatTime(createdAt),
     },
     {
-      title: "Trạng thái",
+      title: 'Trạng thái',
       dataIndex: 'status',
       ellipsis: true,
       width: 120,
-      render: (status) => (status || 0) === 0 ? 'Ngưng' : 'Kích hoạt'
+      render: (status) => ((status || 0) === 0 ? 'Ngưng' : 'Kích hoạt'),
     },
     (canUpdate || canDelete) && {
-      title: "",
-      width: 140,
+      title: '',
+      width: 290,
       fixed: 'right',
       render: (record) => (
-        <Space gap={8}>
-          {canUpdate ? <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size='small'>Detail</Button> : null}
-          {canDelete ? <Button onClick={() => onDeleteCate(record)} size='small'>Xóa</Button> : null}
+        <Space size={8}>
+          {canUpdate ? (
+            <Button size="small" onClick={() => setContentCategory(record)}>
+              Thêm trang tin tức
+            </Button>
+          ) : null}
+          {canUpdate ? (
+            <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size="small">
+              Detail
+            </Button>
+          ) : null}
+          {canDelete ? (
+            <Button onClick={() => onDeleteCate(record)} size="small">
+              Xóa
+            </Button>
+          ) : null}
         </Space>
-      )
-    }
+      ),
+    },
   ].filter(Boolean);
 
   const beforeSubmitFilter = useCallback((values) => {
@@ -134,12 +143,21 @@ const CatePage = () => {
 
   return (
     <>
+      {contentCategory ? (
+        <ContentAssignmentModal
+          title="Thêm trang tin tức vào danh mục"
+          subjectLabel="Danh mục"
+          subjectName={contentCategory.name}
+          initialSelectedIds={contentCategory.contentIds}
+          onSave={(contentIds) => saveCategoryContents(contentCategory.id, contentIds)}
+          onSaved={() => f5List('category/page/fetch')}
+          onClose={() => setContentCategory(null)}
+        />
+      ) : null}
       <Helmet>
         <title>{title}</title>
       </Helmet>
-      <BreadcrumbCustom
-        data={[{ title: 'Trang chủ' }, { title: title }]}
-      />
+      <BreadcrumbCustom data={[{ title: 'Trang chủ' }, { title: title }]} />
       <RestList
         xScroll={1200}
         initialFilter={{ limit: 10, page: 1 }}
@@ -152,7 +170,7 @@ const CatePage = () => {
         columns={CUSTOM_ACTION}
       />
     </>
-  )
+  );
 };
 
 export default CatePage;
