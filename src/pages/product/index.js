@@ -21,13 +21,14 @@ import { isDefaultProductAttribute } from '@/containers/Product/productPropertie
 /**************************************************************************/
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { useGetList } from "@flast-erp/core/hooks";
-import { Helmet } from "react-helmet";
+import { useGetList } from '@flast-erp/core/hooks';
+import { Helmet } from 'react-helmet';
 import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
 import Filter from './Filter';
+import ProductHelpButton from './ProductHelpButton';
 import { Button, Dropdown, Space, Tooltip } from 'antd';
 import { ApartmentOutlined, EyeOutlined } from '@ant-design/icons';
-import { f5List, InAppEvent } from "@flast-erp/core/utils";
+import { f5List, InAppEvent } from '@flast-erp/core/utils';
 import { HASH_MODAL } from 'configs';
 import { arrayEmpty, formatTime } from '@flast-erp/core/utils';
 import ProductAttrService from '@/services/ProductAttrService';
@@ -51,16 +52,24 @@ const formatProductPrice = (value, currency = 'VND') => {
   const amount = Number(value);
   if (!Number.isFinite(amount)) return 'Chưa có giá';
 
-  return formatCurrency(amount, String(currency || 'VND').trim().toUpperCase());
+  return formatCurrency(
+    amount,
+    String(currency || 'VND')
+      .trim()
+      .toUpperCase(),
+  );
 };
 
-const getAttributeValues = (record, attributeId) => Array.from(new Set(
-  (Array.isArray(record?.listProperties) ? record.listProperties : [])
-    .filter(property => String(property?.attributedId) === String(attributeId))
-    .map(property => property?.value)
-    .filter(value => value !== undefined && value !== null && value !== '')
-    .map(String)
-)).join(', ');
+const getAttributeValues = (record, attributeId) =>
+  Array.from(
+    new Set(
+      (Array.isArray(record?.listProperties) ? record.listProperties : [])
+        .filter((property) => String(property?.attributedId) === String(attributeId))
+        .map((property) => property?.value)
+        .filter((value) => value !== undefined && value !== null && value !== '')
+        .map(String),
+    ),
+  ).join(', ');
 
 const Index = () => {
   const [attributes, setAttributes] = useState([]);
@@ -71,16 +80,20 @@ const Index = () => {
       let active = true;
       setActiveProductTypeId(typeId ?? null);
       if (typeId != null && typeId !== '') {
-        ProductAttrService.loadAll({ limit: 1000, page: 1 }).then(items => {
+        ProductAttrService.loadAll({ limit: 1000, page: 1 }).then((items) => {
           if (active) setAttributes(Array.isArray(items) ? items : []);
         });
       }
-      return () => { active = false; };
+      return () => {
+        active = false;
+      };
     }, [typeId]);
     return useGetList(options);
   }, []);
-  const visibleAttributes = activeProductTypeId == null || activeProductTypeId === '' ? []
-    : attributes.filter(attribute => isDefaultProductAttribute(attribute, activeProductTypeId));
+  const visibleAttributes =
+    activeProductTypeId == null || activeProductTypeId === ''
+      ? []
+      : attributes.filter((attribute) => isDefaultProductAttribute(attribute, activeProductTypeId));
   const { hasPermission } = useGetMe();
   const canCreate = hasPermission('catalog.product.create');
   const canUpdate = hasPermission('catalog.product.update');
@@ -90,10 +103,9 @@ const Index = () => {
 
   useEffect(() => {
     let mounted = true;
-    ProductAttrService.loadAll({ limit: 1000, page: 1 })
-      .then(items => {
-        if (mounted) setAttributes(Array.isArray(items) ? items : []);
-      });
+    ProductAttrService.loadAll({ limit: 1000, page: 1 }).then((items) => {
+      if (mounted) setAttributes(Array.isArray(items) ? items : []);
+    });
 
     return () => {
       mounted = false;
@@ -133,21 +145,34 @@ const Index = () => {
     let title = 'Sửa sản phẩm # ' + item.id;
     let hash = '#draw/product.edit';
     let data = cloneDeep(item);
-    let skus = [], listProperties = [];
+    let skus = [],
+      listProperties = [];
     for (const property of item.listProperties || []) {
-      let attr = listProperties.find(i => i.attributedId === property.attributedId);
+      let attr = listProperties.find((i) => i.attributedId === property.attributedId);
       if (attr) {
         attr.attributedValueId.push(property.attributedValueId);
       } else {
-        attr = { attributedId: property.attributedId, attributedValueId: [property.attributedValueId] }
+        attr = {
+          attributedId: property.attributedId,
+          attributedValueId: [property.attributedValueId],
+        };
         listProperties.push(attr);
       }
     }
     for (const iSkus of item.skus || []) {
-      let item = { id: iSkus?.id, name: iSkus.name, note: iSkus?.note, skuPrices: iSkus.skuPrices || [] }
+      let item = {
+        id: iSkus?.id,
+        name: iSkus.name,
+        note: iSkus?.note,
+        skuPrices: iSkus.skuPrices || [],
+      };
       let details = [];
       for (const detail of iSkus.skuDetails || []) {
-        details.push({ id: detail?.id, attributedId: detail.attributedId, attributedValueId: detail.attributedValueId });
+        details.push({
+          id: detail?.id,
+          attributedId: detail.attributedId,
+          attributedValueId: detail.attributedValueId,
+        });
       }
       item.sku = details;
       skus.push(item);
@@ -155,30 +180,32 @@ const Index = () => {
     data.listProperties = listProperties;
     data.skus = skus;
     InAppEvent.emit(HASH_MODAL, { hash, title, data });
-  }
+  };
 
-  const onCreateProduct = () => InAppEvent.emit(HASH_MODAL, {
-    hash: '#draw/product.edit',
-    title: 'Tạo mới sản phẩm',
-    data: {
-      image: [],
-      file: [],
-    }
-  });
+  const onCreateProduct = () =>
+    InAppEvent.emit(HASH_MODAL, {
+      hash: '#draw/product.edit',
+      title: 'Tạo mới sản phẩm',
+      data: {
+        image: [],
+        file: [],
+      },
+    });
 
-  const onAddBom = (item) => InAppEvent.emit(HASH_MODAL, {
-    hash: '#draw/product.bom',
-    title: 'Cấu hình BOM (Bill of Materials) #' + item.id,
-    data: cloneDeep(item)
-  });
+  const onAddBom = (item) =>
+    InAppEvent.emit(HASH_MODAL, {
+      hash: '#draw/product.bom',
+      title: 'Cấu hình BOM (Bill of Materials) #' + item.id,
+      data: cloneDeep(item),
+    });
 
-  const [ title ] = useState("Danh sách sản phẩm");
+  const [title] = useState('Danh sách sản phẩm');
   const CUSTOM_ACTION = [
     {
-      title: "Mã",
+      title: 'Mã',
       dataIndex: 'code',
       width: 200,
-      ellipsis: true
+      ellipsis: true,
     },
 
     // {
@@ -196,22 +223,21 @@ const Index = () => {
     //   ) : ('Chưa có')
     // },
     {
-      title: "Sản phẩm",
+      title: 'Sản phẩm',
       key: 'name',
       width: 200,
       ellipsis: true,
-      render: (record) => canUpdate
-        ? <Link to={`/product/edit/${record.id}`}>{record.name}</Link>
-        : record.name
+      render: (record) =>
+        canUpdate ? <Link to={`/product/edit/${record.id}`}>{record.name}</Link> : record.name,
     },
     {
-      title: "Status",
+      title: 'Status',
       dataIndex: 'status',
       ellipsis: true,
       width: 120,
-      render: (status) => (status || 0) === 0 ? 'Ngưng' : 'Kích hoạt'
+      render: (status) => ((status || 0) === 0 ? 'Ngưng' : 'Kích hoạt'),
     },
-    ...visibleAttributes.map(attribute => ({
+    ...visibleAttributes.map((attribute) => ({
       title: attribute.name || `Thuộc tính #${attribute.id}`,
       key: `attribute-${attribute.id}`,
       width: 160,
@@ -219,23 +245,25 @@ const Index = () => {
       render: (_, record) => {
         const value = getAttributeValues(record, attribute.id) || '—';
         return <Tooltip title={value}>{value}</Tooltip>;
-      }
+      },
     })),
     {
-      title: "SKus",
+      title: 'SKus',
       dataIndex: 'skus',
       width: 400,
       ellipsis: true,
-      render: (skus) => <SkuView skus={skus} />
+      render: (skus) => <SkuView skus={skus} />,
     },
     {
-      title: "Giá bán",
+      title: 'Giá bán',
       key: 'price',
       width: 250,
       ellipsis: true,
       render: (_, record) => {
         const skus = Array.isArray(record?.skus) ? record.skus : [];
-        const hasSkuPrices = skus.some(sku => Array.isArray(sku?.skuPrices) && sku.skuPrices.length > 0);
+        const hasSkuPrices = skus.some(
+          (sku) => Array.isArray(sku?.skuPrices) && sku.skuPrices.length > 0,
+        );
 
         return (
           <div>
@@ -248,75 +276,91 @@ const Index = () => {
             {hasSkuPrices ? <PriceView skus={skus} currency={record?.currency} /> : null}
           </div>
         );
-      }
+      },
     },
     {
-      title: "Created",
+      title: 'Created',
       dataIndex: 'createdTime',
       width: 120,
       ellipsis: true,
-      render: (createdAt) => formatTime(createdAt)
+      render: (createdAt) => formatTime(createdAt),
     },
 
     {
-      title: "",
+      title: '',
       width: 190,
       fixed: 'right',
       render: (record) => (
         <Space gap={8}>
-          {canUpdate ? <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size='small'>Detail</Button> : null}
-          {canManageBom ? <Button onClick={() => onAddBom(record)} size='small'>Bom</Button> : null}
-          {(canAttachWorkflow || (canViewWorkflow && record?.workflowInstances?.length)) ? <Dropdown
-            trigger={['click']}
-            menu={{
-              items: [
-                canAttachWorkflow && {
-                  key: 'attach',
-                  icon: <ApartmentOutlined />,
-                  label: record?.workflowInstances?.length ? 'Gắn thêm workflow' : 'Gắn workflow',
+          {canUpdate ? (
+            <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size="small">
+              Detail
+            </Button>
+          ) : null}
+          {canManageBom ? (
+            <Button onClick={() => onAddBom(record)} size="small">
+              Bom
+            </Button>
+          ) : null}
+          {canAttachWorkflow || (canViewWorkflow && record?.workflowInstances?.length) ? (
+            <Dropdown
+              trigger={['click']}
+              menu={{
+                items: [
+                  canAttachWorkflow && {
+                    key: 'attach',
+                    icon: <ApartmentOutlined />,
+                    label: record?.workflowInstances?.length ? 'Gắn thêm workflow' : 'Gắn workflow',
+                  },
+                  canViewWorkflow &&
+                    record?.workflowInstances?.length && {
+                      key: 'progress',
+                      icon: <EyeOutlined />,
+                      label: 'Xem tiến trình',
+                    },
+                ].filter(Boolean),
+                onClick: ({ key, domEvent }) => {
+                  domEvent?.stopPropagation();
+                  if (key === 'attach') {
+                    openWorkflowModal(record, PRODUCT_WORKFLOW_ENTITY_TYPE);
+                  }
+                  if (key === 'progress') {
+                    openWorkflowProgressDrawer(record, record, {
+                      entityName: PRODUCT_WORKFLOW_ENTITY_TYPE,
+                      entityLabel: 'sản phẩm',
+                    });
+                  }
                 },
-                canViewWorkflow && record?.workflowInstances?.length && {
-                  key: 'progress',
-                  icon: <EyeOutlined />,
-                  label: 'Xem tiến trình',
-                },
-              ].filter(Boolean),
-              onClick: ({ key, domEvent }) => {
-                domEvent?.stopPropagation();
-                if (key === 'attach') {
-                  openWorkflowModal(record, PRODUCT_WORKFLOW_ENTITY_TYPE);
+              }}
+            >
+              <Tooltip
+                title={
+                  record?.workflowInstances?.length ? 'Xem tiến trình workflow' : 'Gắn workflow'
                 }
-                if (key === 'progress') {
-                  openWorkflowProgressDrawer(record, record, {
-                    entityName: PRODUCT_WORKFLOW_ENTITY_TYPE,
-                    entityLabel: 'sản phẩm',
-                  });
-                }
-              },
-            }}
-          >
-            <Tooltip title={record?.workflowInstances?.length ? 'Xem tiến trình workflow' : 'Gắn workflow'}>
-              <Button
-                size="small"
-                icon={record?.workflowInstances?.length ? <EyeOutlined /> : <ApartmentOutlined />}
-                onClick={event => event.stopPropagation()}
-              />
-            </Tooltip>
-          </Dropdown> : null}
+              >
+                <Button
+                  size="small"
+                  icon={record?.workflowInstances?.length ? <EyeOutlined /> : <ApartmentOutlined />}
+                  onClick={(event) => event.stopPropagation()}
+                />
+              </Tooltip>
+            </Dropdown>
+          ) : null}
           {/* <Button onClick={() => onAddChecklist(record)} size='small'>Checklist</Button> */}
         </Space>
-      )
-    }
+      ),
+    },
   ];
 
   const onData = useCallback(async (values) => {
     if (arrayEmpty(values.embedded)) {
       return values;
     }
-    let attrsId = [], attrsValuesId = [];
+    let attrsId = [],
+      attrsValuesId = [];
     for (let item of values.embedded) {
-      attrsId = item.listProperties.map(i => i.attributedId).filter(i => i && i > 0);
-      attrsValuesId = item.listProperties.map(i => i.attributedValueId).filter(i => i && i > 0);
+      attrsId = item.listProperties.map((i) => i.attributedId).filter((i) => i && i > 0);
+      attrsValuesId = item.listProperties.map((i) => i.attributedValueId).filter((i) => i && i > 0);
     }
     ProductAttrService.loadByIds(attrsId);
     ProductAttrService.loadValueByIds(attrsValuesId);
@@ -328,11 +372,14 @@ const Index = () => {
       <Helmet>
         <title>{title}</title>
       </Helmet>
-      <BreadcrumbCustom
-        data={[{ title: 'Trang chủ' }, { title: title }]}
-      />
+      <div
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}
+      >
+        <BreadcrumbCustom data={[{ title: 'Trang chủ' }, { title: title }]} />
+        <ProductHelpButton />
+      </div>
       <RestList
-        xScroll={1200 + (visibleAttributes.length * 160)}
+        xScroll={1200 + visibleAttributes.length * 160}
         onData={onData}
         initialFilter={{ limit: 10, page: 1 }}
         filter={<Filter />}
@@ -369,7 +416,7 @@ const Index = () => {
         entityType={PRODUCT_WORKFLOW_ENTITY_TYPE}
       />
     </>
-  )
-}
+  );
+};
 
 export default Index;

@@ -22,22 +22,20 @@
 import React, { useCallback, useState } from 'react';
 import { Button, message, Space } from 'antd';
 import { cloneDeep } from 'lodash';
-import { 
-  RestList,
-  CustomImage,
-  BreadcrumbCustom
-} from "@flast-erp/core/components";
+import { RestList, CustomImage, BreadcrumbCustom } from '@flast-erp/core/components';
 
-import { useGetList } from "@flast-erp/core/hooks";
-import { Helmet } from "react-helmet";
+import { useGetList } from '@flast-erp/core/hooks';
+import { Helmet } from 'react-helmet';
 import Filter from '@/pages/category/Filter';
-import { RequestUtils, InAppEvent } from "@flast-erp/core/utils";
+import { RequestUtils, InAppEvent } from '@flast-erp/core/utils';
 import { GATEWAY, HASH_MODAL } from '@/configs';
 import { dateFormatOnSubmit, formatTime } from '@flast-erp/core/utils';
 import useGetMe from '@/hooks/useGetMe';
+import AssignProductsModal from './AssignProductsModal';
 
 const CateSanPham = () => {
   const { hasPermission } = useGetMe();
+  const [productCategory, setProductCategory] = useState(null);
   const canCreate = hasPermission('web.product_category.create');
   const canUpdate = hasPermission('web.product_category.update');
   const canDelete = hasPermission('web.product_category.delete');
@@ -47,84 +45,93 @@ const CateSanPham = () => {
     let hash = '#draw/cate.sanpham';
     let data = cloneDeep(item);
     InAppEvent.emit(HASH_MODAL, { hash, title, data });
-  }
+  };
 
-  const onCreateCateSanPHam = () => InAppEvent.emit(HASH_MODAL, {
-    hash: '#draw/cate.sanpham',
-    title: 'Tạo mới danh mục sản phẩm',
-    data: {}
-  });
+  const onCreateCateSanPHam = () =>
+    InAppEvent.emit(HASH_MODAL, {
+      hash: '#draw/cate.sanpham',
+      title: 'Tạo mới danh mục sản phẩm',
+      data: {},
+    });
 
   const onDeleteCate = async ({ id }) => {
-    const { message: MSG } = await RequestUtils.Post("/category/product/delete", {}, {id});
+    const { message: MSG } = await RequestUtils.Post('/category/product/delete', {}, { id });
     message.info(MSG);
-  }
+  };
 
-  const [ title ] = useState("Danh mục sản phẩm");
+  const [title] = useState('Danh mục sản phẩm');
   const CUSTOM_ACTION = [
     {
-      title: "Tên",
+      title: 'Tên',
       dataIndex: 'name',
       width: 150,
-      ellipsis: true
+      ellipsis: true,
     },
     {
-      title: "Slug",
+      title: 'Slug',
       dataIndex: 'slug',
       width: 120,
-      ellipsis: true
+      ellipsis: true,
     },
     {
-      title: "Tiêu để",
+      title: 'Tiêu để',
       dataIndex: 'seoTitle',
       width: 150,
-      ellipsis: true
+      ellipsis: true,
     },
     {
-      title: "Mô tả",
+      title: 'Mô tả',
       dataIndex: 'seoDescription',
       width: 250,
-      ellipsis: true
+      ellipsis: true,
     },
     {
-      title: "Hình ảnh",
+      title: 'Hình ảnh',
       dataIndex: 'image',
       width: 150,
       ellipsis: true,
       render: (image) => (
-        <CustomImage
-          preview={false}
-          width={50}
-          src={String(GATEWAY).concat(image)}
-          alt='image'
-        />
-      )
+        <CustomImage preview={false} width={50} src={String(GATEWAY).concat(image)} alt="image" />
+      ),
     },
     {
-      title: "Ngày",
+      title: 'Ngày',
       dataIndex: 'createdAt',
       width: 120,
       ellipsis: true,
-      render: (createdAt) => formatTime(createdAt)
+      render: (createdAt) => formatTime(createdAt),
     },
     {
-      title: "Trạng thái",
+      title: 'Trạng thái',
       dataIndex: 'status',
       ellipsis: true,
       width: 120,
-      render: (status) => (status || 0) === 0 ? 'Ngưng' : 'Kích hoạt'
+      render: (status) => ((status || 0) === 0 ? 'Ngưng' : 'Kích hoạt'),
     },
     (canUpdate || canDelete) && {
-      title: "",
-      width: 140,
+      title: '',
+      width: 280,
       fixed: 'right',
       render: (record) => (
-        <Space gap={8}>
-          {canUpdate ? <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size='small'>Detail</Button> : null}
-          {canDelete ? <Button onClick={() => onDeleteCate(record)} size='small'>Xóa</Button> : null}
+        <Space size={8}>
+          {canUpdate ? (
+            <Button size="small" onClick={() => setProductCategory(record)}>
+              Thêm sản phẩm
+            </Button>
+          ) : null}
+          {canUpdate ? (
+            <Button color="danger" variant="dashed" onClick={() => onEdit(record)} size="small">
+              Detail
+            </Button>
+          ) : null}
+          {canDelete ? (
+            <Button onClick={() => onDeleteCate(record)} size="small">
+              Xóa
+            </Button>
+          ) : null}
         </Space>
-      )
-    }
+      ),
+    },
   ].filter(Boolean);
 
   const beforeSubmitFilter = useCallback((values) => {
@@ -134,12 +141,13 @@ const CateSanPham = () => {
 
   return (
     <>
+      {productCategory ? (
+        <AssignProductsModal category={productCategory} onClose={() => setProductCategory(null)} />
+      ) : null}
       <Helmet>
         <title>{title}</title>
       </Helmet>
-      <BreadcrumbCustom
-        data={[{ title: 'Trang chủ' }, { title: title }]}
-      />
+      <BreadcrumbCustom data={[{ title: 'Trang chủ' }, { title: title }]} />
       <RestList
         xScroll={1200}
         initialFilter={{ limit: 10, page: 1 }}
@@ -152,7 +160,7 @@ const CateSanPham = () => {
         columns={CUSTOM_ACTION}
       />
     </>
-  )
+  );
 };
 
 export default CateSanPham;

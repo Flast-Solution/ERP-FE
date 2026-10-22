@@ -24,6 +24,7 @@ import { Helmet } from 'react-helmet';
 import { BreadcrumbCustom } from '@flast-erp/core/components';
 import { useLocation } from 'react-router-dom';
 import LeadList from './LeadList';
+import LeadHelpButton from './LeadHelpButton';
 import LeadReport from './LeadReport';
 import { Lead3DayContent } from '@/pages/lead3Day';
 
@@ -40,31 +41,36 @@ const LEAD_VIEWS = {
     title: 'Báo cáo',
     content: LeadReport,
   },
-}
+};
 
 const getLeadViewFromPath = (pathname) => {
-  if (pathname === '/lead/three-day') return 'threeDay'
-  if (pathname === '/lead/report') return 'report'
-  return 'list'
-}
+  if (pathname === '/lead/three-day') return 'threeDay';
+  if (pathname === '/lead/report') return 'report';
+  return 'list';
+};
 
 const LeadPage = () => {
-  const { pathname } = useLocation()
-  const view = getLeadViewFromPath(pathname)
-  const currentView = LEAD_VIEWS[view] ?? LEAD_VIEWS.list
-  const Content = currentView.content
+  const { pathname } = useLocation();
+  const view = getLeadViewFromPath(pathname);
+  const currentView = LEAD_VIEWS[view] ?? LEAD_VIEWS.list;
+  const Content = currentView.content;
 
   return (
     <div>
       <Helmet>
         <title>{currentView.title}</title>
       </Helmet>
-      <BreadcrumbCustom
-        data={[{ title: 'Trang chủ' }, { title: 'Lead' }, { title: currentView.title }]}
-      />
+      <div
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}
+      >
+        <BreadcrumbCustom
+          data={[{ title: 'Trang chủ' }, { title: 'Lead' }, { title: currentView.title }]}
+        />
+        {view === 'list' ? <LeadHelpButton /> : null}
+      </div>
       <Content />
     </div>
-  )
-}
+  );
+};
 
-export default LeadPage
+export default LeadPage;

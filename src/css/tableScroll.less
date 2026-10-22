@@ -1,0 +1,98 @@
+// One native horizontal scrollbar per table; expanded tables keep their own viewport.
+.ant-table-wrapper {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ant-table-container > .ant-table-content,
+.ant-table-container > .ant-table-body {
+  overflow-x: auto;
+  scrollbar-width: auto;
+  scrollbar-color: #a8b0ba #eef0f3;
+
+  &::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #eef0f3;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #a8b0ba;
+    border: 2px solid #eef0f3;
+    border-radius: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: #7e8996;
+  }
+}
+
+// Fallback for list tables supplied by tenant modules without an explicit scroll width.
+.ant-table-container > .ant-table-content > table:not([style*='width']) {
+  width: max-content;
+  min-width: 100%;
+}
+
+// Draw the horizontal control ourselves so macOS cannot auto-hide it.
+.table-has-visible-scrollbar::-webkit-scrollbar:horizontal {
+  height: 0;
+}
+
+.ant-table-content.table-has-visible-scrollbar {
+  scrollbar-width: none;
+}
+
+.table-visible-scrollbar {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  height: 16px;
+  width: 100%;
+  background: #edf0f3;
+  border: 1px solid #d7dce2;
+  border-radius: 6px;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+
+  &[hidden] {
+    display: none;
+  }
+  &:focus-visible {
+    outline: 2px solid #1677ff;
+    outline-offset: 1px;
+  }
+}
+
+.table-visible-scrollbar__thumb {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 0;
+  border-radius: 4px;
+  background: #8a949f;
+  cursor: grab;
+
+  &:hover {
+    background: #65717e;
+  }
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.ant-table-expanded-row .table-visible-scrollbar {
+  position: relative;
+}
+
+.ant-table:has(.table-has-visible-scrollbar) > .ant-table-sticky-scroll {
+  display: none;
+}
+
+// Prefer the tenant-owned fixed footer; the shared controller is only a fallback.
+.table-horizontal-scroll-managed + .table-visible-scrollbar {
+  display: none;
+}

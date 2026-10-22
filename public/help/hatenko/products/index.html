@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="description"
+      content="Hướng dẫn sử dụng Danh sách sản phẩm: tìm kiếm, tạo sửa, SKU, bố cục, BOM và workflow."
+    />
+    <title>Hướng dẫn Danh sách sản phẩm</title>
+    <link rel="stylesheet" href="guide.css" />
+    <script src="guide.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Đến nội dung</a>
+    <header class="topbar">
+      <a class="brand" href="#top"><span> <small>HƯỚNG DẪN SỬ DỤNG</small></span></a>
+      <div class="top-actions">
+        <span class="edition">Danh sách sản phẩm</span
+        ><button id="print" class="print">In hướng dẫn</button>
+      </div>
+    </header>
+    <div class="shell" id="top">
+      <aside>
+        <p class="nav-title">TRONG HƯỚNG DẪN NÀY</p>
+        <nav aria-label="Mục lục">
+          <a href="#overview"><span>01</span>Làm quen với danh sách</a
+          ><a href="#create"><span>02</span>Tạo sản phẩm mới</a
+          ><a href="#sku"><span>03</span>Thuộc tính & SKU</a
+          ><a href="#edit"><span>04</span>Xem & sửa sản phẩm</a
+          ><a href="#layout"><span>05</span>Sắp xếp bố cục form</a
+          ><a href="#bom"><span>06</span>Cấu hình BOM</a
+          ><a href="#workflow"><span>07</span>Gắn workflow & xem tiến trình</a
+          ><a href="#faq"><span>?</span>Câu hỏi thường gặp</a>
+        </nav>
+        <div class="aside-note">
+          Bắt đầu từ thông tin chung,<br />hoàn thiện SKU,<br />rồi cấu hình BOM & workflow.
+        </div>
+      </aside>
+      <main id="main">
+        <div class="hero">
+          <div class="eyebrow"> SẢN PHẨM</div>
+          <h1>Quản lý sản phẩm,<br /><span>từng bước rõ ràng.</span></h1>
+          <p>
+            Từ tìm kiếm một mã hàng đến tạo SKU, cấu hình vật liệu và theo dõi quy trình — tất cả
+            trong một hướng dẫn.
+          </p>
+          <div class="hero-links">
+            <a class="primary" href="#create">Bắt đầu tạo sản phẩm <span>→</span></a
+            ><a href="#overview">Tìm hiểu màn danh sách ↓</a>
+          </div>
+          <div class="quick">
+            <a href="#sku"><b>SKU</b><span>Biến thể tồn kho</span></a
+            ><a href="#bom"><b>BOM</b><span>Vật liệu theo phiên bản</span></a
+            ><a href="#workflow"><b>Workflow</b><span>Tiến trình xử lý</span></a>
+          </div>
+        </div>
+        <div class="intro-note">
+          <span>i</span>
+          <p>
+            Ảnh minh họa giúp bạn đối chiếu từng bước với màn hình làm việc. Nút và thao tác có thể
+            khác nhau theo quyền tài khoản. Tên, mã, số lượng và giá trong ảnh chỉ là ví dụ.
+          </p>
+        </div>
+        <section id="overview" aria-labelledby="title-overview">
+          <div class="section-heading">
+            <span class="section-num">01</span>
+            <div>
+              <h2 id="title-overview">Làm quen với danh sách</h2>
+              <p>Tìm đúng sản phẩm, đọc nhanh thông tin</p>
+            </div>
+          </div>
+          <p>
+            Vào <strong>Sản phẩm → Danh sách sản phẩm</strong>. Mỗi hàng là một sản phẩm; các biến
+            thể tồn kho của sản phẩm được thể hiện ở cột <strong>SKUs</strong>.
+          </p>
+          <div class="steps">
+            <div><b>1</b><span>Chọn điều kiện lọc ở phía trên.</span></div>
+            <div>
+              <b>2</b
+              ><span
+                >Bấm <strong>Lọc</strong> để xem kết quả; bấm <strong>Xóa lọc</strong> để bắt đầu
+                lại.</span
+              >
+            </div>
+            <div>
+              <b>3</b><span>Chuyển trang hoặc đổi số dòng mỗi trang ở thanh phân trang.</span>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Bộ lọc</th>
+                  <th>Khi nào sử dụng?</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Loại sản phẩm / Tên sản phẩm</td>
+                  <td>Thu hẹp theo nhóm hàng hoặc tìm theo tên.</td>
+                </tr>
+                <tr>
+                  <td>Dữ liệu workflow</td>
+                  <td>Tìm theo dữ liệu của quy trình đã gắn với sản phẩm.</td>
+                </tr>
+                <tr>
+                  <td>Tên thiết lập + Giá trị thiết lập</td>
+                  <td>
+                    Tìm theo thuộc tính của sản phẩm; chọn tên thuộc tính rồi nhập giá trị cần tìm.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Nhân viên / Trạng thái</td>
+                  <td>Lọc theo người tạo hoặc trạng thái Kích hoạt / Ngưng.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            Cột <strong>Mã</strong> giúp nhận diện sản phẩm; <strong>Sản phẩm</strong> hiển thị tên;
+            <strong>Status</strong> là trạng thái; <strong>SKUs</strong> hiển thị biến thể và thuộc
+            tính; <strong>Giá bán</strong> có đơn vị tiền; <strong>Created</strong> là ngày tạo.
+          </p>
+          <div class="note">
+            Khi chọn một loại sản phẩm, bảng có thể xuất hiện thêm các cột thuộc tính mặc định của
+            loại đó. Tên hoặc nội dung dài có thể được rút gọn trong ô.
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/01-list.jpg"
+              data-caption="Toàn cảnh danh sách: bộ lọc, phân trang và các thao tác ở cuối mỗi hàng."
+              aria-label="Phóng to ảnh: Toàn cảnh danh sách: bộ lọc, phân trang và các thao tác ở cuối mỗi hàng."
+            >
+              <img
+                src="images/01-list.jpg"
+                alt="Toàn cảnh danh sách: bộ lọc, phân trang và các thao tác ở cuối mỗi hàng."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Toàn cảnh danh sách: bộ lọc, phân trang và các thao tác ở cuối mỗi hàng.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="create" aria-labelledby="title-create">
+          <div class="section-heading">
+            <span class="section-num">02</span>
+            <div>
+              <h2 id="title-create">Tạo sản phẩm mới</h2>
+              <p>Nhập thông tin chung trước, hoàn thiện SKU sau</p>
+            </div>
+          </div>
+          <ol>
+            <li>Bấm <strong>+ Tạo mới</strong>. Form mở ở ngăn bên phải.</li>
+            <li>
+              Nhập <strong>Tên sản phẩm</strong>; bổ sung mã để dễ tra cứu. Chọn loại sản phẩm nếu
+              cần.
+            </li>
+            <li>
+              Chọn <strong>Dịch vụ</strong>, <strong>Nhà cung cấp</strong>,
+              <strong>Trạng thái</strong>, <strong>Loại tiền</strong> và nhập
+              <strong>Giá hiển thị</strong>. Các ô có dấu <span class="required">*</span> cần được
+              điền trước khi lưu.
+            </li>
+            <li>
+              Nhập đơn vị tính (ví dụ M, Mét), giá tham khảo nếu có. Kiểm tra loại tiền để tránh
+              nhầm USD với VND.
+            </li>
+            <li>Thêm ảnh, tài liệu; cuộn xuống cấu hình thuộc tính và SKU theo mục tiếp theo.</li>
+            <li>
+              Bấm <strong>Hoàn thành</strong> ở cuối form. Chờ lưu thành công rồi kiểm tra lại trên
+              danh sách.
+            </li>
+          </ol>
+          <div class="two-col">
+            <div class="mini">
+              <h3>Hình ảnh sản phẩm</h3>
+              <p>
+                Kéo ảnh vào vùng tải lên hoặc bấm để chọn. Có thể chọn nhiều file trong một lần.
+              </p>
+            </div>
+            <div class="mini">
+              <h3>Tài liệu sản phẩm</h3>
+              <p>
+                Đính kèm tài liệu mô tả, thông số hoặc tài liệu liên quan bằng vùng tải file riêng.
+              </p>
+            </div>
+          </div>
+          <div class="note important">
+            <strong>Chưa lưu được?</strong> Kiểm tra các ô bắt buộc và phần SKU. Hiện tại hệ thống
+            không cho lưu sản phẩm nếu danh sách SKU đang trống.
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/02-create.jpg"
+              data-caption="Form tạo mới: thông tin chung, loại tiền, giá, ảnh và tài liệu."
+              aria-label="Phóng to ảnh: Form tạo mới: thông tin chung, loại tiền, giá, ảnh và tài liệu."
+            >
+              <img
+                src="images/02-create.jpg"
+                alt="Form tạo mới: thông tin chung, loại tiền, giá, ảnh và tài liệu."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>Form tạo mới: thông tin chung, loại tiền, giá, ảnh và tài liệu.</figcaption>
+          </figure>
+        </section>
+        <section id="sku" aria-labelledby="title-sku">
+          <div class="section-heading">
+            <span class="section-num">03</span>
+            <div>
+              <h2 id="title-sku">Thuộc tính & SKU</h2>
+              <p>Phân biệt đặc tính sản phẩm với biến thể tồn kho</p>
+            </div>
+          </div>
+          <div class="two-col">
+            <div class="mini">
+              <span class="eyebrow">THUỘC TÍNH</span>
+              <h3>Sản phẩm có đặc điểm gì?</h3>
+              <p>
+                Ví dụ: Composition, Width, Weight, Weave/Knit. Chọn tên thuộc tính rồi chọn một hoặc
+                nhiều giá trị phù hợp.
+              </p>
+            </div>
+            <div class="mini">
+              <span class="eyebrow">SKU</span>
+              <h3>Quản lý biến thể nào?</h3>
+              <p>
+                Mỗi SKU chọn tổ hợp thuộc tính dùng để nhận diện đơn vị tồn kho, có tên, ghi chú và
+                các khoảng giá riêng.
+              </p>
+            </div>
+          </div>
+          <ol>
+            <li>
+              Trong <strong>Thiết lập sản phẩm (Có tính nhận diện tồn kho)</strong>, chọn thuộc tính
+              mặc định nhận diện tồn kho phù hợp với loại sản phẩm.
+            </li>
+            <li>
+              Dùng <strong>Thêm mới thuộc tính</strong> để chọn thuộc tính và giá trị. Các giá trị
+              đã chọn sẽ là nguồn lựa chọn cho SKU.
+            </li>
+            <li>
+              Đến <strong>Thiết lập khoảng giá bán</strong>, bấm <strong>Thêm mới SKU</strong>. Nhập
+              tên SKU nếu cần và chọn tổ hợp thuộc tính trong ô
+              <strong>Chọn SKUs để tạo đơn vị tồn kho</strong>.
+            </li>
+            <li>
+              Nếu có giá theo số lượng, bấm <strong>Thêm khoảng giá</strong> và điền số lượng từ/đến
+              cùng thông tin giá. Có thể bổ sung ghi chú cho SKU.
+            </li>
+            <li>Kiểm tra lại từng SKU rồi bấm <strong>Hoàn thành</strong> để lưu sản phẩm.</li>
+          </ol>
+          <div class="note">
+            Ví dụ: cùng một sản phẩm vải có thể có nhiều tổ hợp thuộc tính khác nhau. Chỉ chọn các
+            giá trị đúng với hàng thực tế; số tiền trong ảnh là dữ liệu minh họa, không phải bảng
+            giá áp dụng chung.
+          </div>
+        </section>
+        <section id="edit" aria-labelledby="title-edit">
+          <div class="section-heading">
+            <span class="section-num">04</span>
+            <div>
+              <h2 id="title-edit">Xem & sửa sản phẩm</h2>
+              <p>Cập nhật đúng sản phẩm, kiểm tra trước khi lưu</p>
+            </div>
+          </div>
+          <ol>
+            <li>
+              Tìm sản phẩm bằng bộ lọc và đối chiếu <strong>Mã</strong> cùng <strong>Tên</strong>.
+            </li>
+            <li>
+              Bấm <strong>Detail</strong> ở cuối hàng để mở form sửa. Tên sản phẩm trong bảng cũng
+              là liên kết đến trang chi tiết.
+            </li>
+            <li>
+              Điều chỉnh thông tin chung, ảnh, tài liệu, thuộc tính hoặc cấu hình SKU cần thay đổi.
+            </li>
+            <li>
+              Bấm <strong>Hoàn thành</strong> để lưu. Khi có thay đổi chưa lưu, thao tác rời form có
+              thể yêu cầu xác nhận.
+            </li>
+          </ol>
+          <div class="note">
+            Đổi trạng thái Kích hoạt / Ngưng là cập nhật trạng thái sản phẩm. Đây không phải thao
+            tác xóa sản phẩm.
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/04-edit.jpg"
+              data-caption="Form sửa hiển thị thông tin của sản phẩm đã chọn; kiểm tra mã trước khi cập nhật."
+              aria-label="Phóng to ảnh: Form sửa hiển thị thông tin của sản phẩm đã chọn; kiểm tra mã trước khi cập nhật."
+            >
+              <img
+                src="images/04-edit.jpg"
+                alt="Form sửa hiển thị thông tin của sản phẩm đã chọn; kiểm tra mã trước khi cập nhật."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Form sửa hiển thị thông tin của sản phẩm đã chọn; kiểm tra mã trước khi cập nhật.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="layout" aria-labelledby="title-layout">
+          <div class="section-heading">
+            <span class="section-num">05</span>
+            <div>
+              <h2 id="title-layout">Sắp xếp bố cục form</h2>
+              <p>Đưa các thông tin thường dùng đến vị trí thuận tiện</p>
+            </div>
+          </div>
+          <ol>
+            <li>Trong form tạo hoặc sửa, bấm <strong>Sắp xếp bố cục</strong>.</li>
+            <li>
+              Kéo biểu tượng chấm để đổi thứ tự các nhóm thông tin. Có thể đổi thứ tự các trường
+              <strong>trong cùng nhóm</strong>.
+            </li>
+            <li>Bấm <strong>Hoàn tất sắp xếp</strong> để quay lại chế độ nhập liệu.</li>
+            <li>Muốn dùng lại thứ tự ban đầu, chọn <strong>Khôi phục mặc định</strong>.</li>
+          </ol>
+          <div class="note">
+            <strong>Bố cục được nhớ ở đâu?</strong> Trên trình duyệt hiện tại, tách theo doanh
+            nghiệp và tài khoản. Mở ở máy/trình duyệt khác hoặc xóa dữ liệu trình duyệt có thể phải
+            sắp xếp lại. Sắp xếp bố cục không thay thế thao tác lưu dữ liệu sản phẩm.
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/03-layout.jpg"
+              data-caption="Chế độ sắp xếp: tay nắm kéo tại mỗi nhóm/trường và nút khôi phục mặc định."
+              aria-label="Phóng to ảnh: Chế độ sắp xếp: tay nắm kéo tại mỗi nhóm/trường và nút khôi phục mặc định."
+            >
+              <img
+                src="images/03-layout.jpg"
+                alt="Chế độ sắp xếp: tay nắm kéo tại mỗi nhóm/trường và nút khôi phục mặc định."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Chế độ sắp xếp: tay nắm kéo tại mỗi nhóm/trường và nút khôi phục mặc định.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="bom" aria-labelledby="title-bom">
+          <div class="section-heading">
+            <span class="section-num">06</span>
+            <div>
+              <h2 id="title-bom">Cấu hình BOM</h2>
+              <p>Quản lý vật liệu theo từng phiên bản định mức</p>
+            </div>
+          </div>
+          <p>
+            <strong>BOM (Bill of Materials)</strong> là danh sách vật liệu được cấu hình cho sản
+            phẩm. Từ danh sách, bấm <strong>Bom</strong> ở hàng tương ứng.
+          </p>
+          <ol>
+            <li>Chọn một phiên bản đang có hoặc bấm <strong>Tạo version mới</strong>.</li>
+            <li>
+              Nhập tên <strong>Version</strong> và chọn trạng thái <strong>Sử dụng</strong> nếu phù
+              hợp. Tên phiên bản không được trùng với phiên bản khác.
+            </li>
+            <li>
+              Bấm <strong>Thêm vật liệu mới</strong>; chọn <strong>Vật liệu</strong>, nhập
+              <strong>Số lượng</strong> và chọn <strong>SKU</strong>.
+            </li>
+            <li>
+              Điền chiều rộng, chiều dài hoặc thông tin giá nếu biểu mẫu của vật liệu có các trường
+              này. Đối chiếu đơn vị hiển thị.
+            </li>
+            <li>
+              Thêm các dòng vật liệu cần thiết, kiểm tra phiên bản đang chọn rồi bấm
+              <strong>Hoàn thành</strong> để lưu.
+            </li>
+          </ol>
+          <div class="two-col">
+            <div class="mini">
+              <h3>Xóa dòng vật liệu</h3>
+              <p>Dùng nút × trên dòng cần bỏ; kiểm tra lại danh sách trước khi lưu.</p>
+            </div>
+            <div class="mini">
+              <h3>Xóa phiên bản</h3>
+              <p>
+                Dùng biểu tượng thùng rác và xác nhận. Cần giữ ít nhất một phiên bản. Sau khi xóa
+                trong danh sách, vẫn phải bấm lưu để cập nhật.
+              </p>
+            </div>
+          </div>
+          <div class="note important">
+            Một phiên bản mới chưa có vật liệu sẽ chưa tạo thành định mức hoàn chỉnh. Bổ sung vật
+            liệu trước khi lưu; đừng chỉ nhập tên version rồi đóng form.
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/05-bom.jpg"
+              data-caption="BOM: chọn phiên bản, trạng thái sử dụng và nhập từng dòng vật liệu."
+              aria-label="Phóng to ảnh: BOM: chọn phiên bản, trạng thái sử dụng và nhập từng dòng vật liệu."
+            >
+              <img
+                src="images/05-bom.jpg"
+                alt="BOM: chọn phiên bản, trạng thái sử dụng và nhập từng dòng vật liệu."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              BOM: chọn phiên bản, trạng thái sử dụng và nhập từng dòng vật liệu.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="workflow" aria-labelledby="title-workflow">
+          <div class="section-heading">
+            <span class="section-num">07</span>
+            <div>
+              <h2 id="title-workflow">Gắn workflow & xem tiến trình</h2>
+              <p>Theo dõi quy trình xử lý trên từng sản phẩm</p>
+            </div>
+          </div>
+          <p>
+            Biểu tượng ở cuối hàng mở menu workflow. Khi sản phẩm đã có quy trình, menu có thêm
+            <strong>Xem tiến trình</strong>.
+          </p>
+          <div class="two-col">
+            <div class="mini">
+              <h3>A. Gắn quy trình</h3>
+              <ol>
+                <li>
+                  Mở menu, chọn <strong>Gắn workflow</strong> hoặc
+                  <strong>Gắn thêm workflow</strong>.
+                </li>
+                <li>Chọn các quy trình phù hợp với sản phẩm.</li>
+                <li>Bấm <strong>Lưu workflow</strong> và chờ thông báo thành công.</li>
+              </ol>
+            </div>
+            <div class="mini">
+              <h3>B. Xem và xử lý</h3>
+              <ol>
+                <li>Chọn <strong>Xem tiến trình</strong>.</li>
+                <li>Chọn tab quy trình để xem bước hiện tại.</li>
+                <li>
+                  Điền dữ liệu của bước, chọn bước tiếp theo nếu có và bấm hành động được hệ thống
+                  cho phép.
+                </li>
+              </ol>
+            </div>
+          </div>
+          <div class="note">
+            Tên quy trình và các trường nhập phụ thuộc cấu hình của doanh nghiệp. “Nhập Lot” trong
+            ảnh là một ví dụ, không phải quy trình cố định của mọi sản phẩm. Khi nút Hoàn thành đang
+            bị khóa, kiểm tra dữ liệu bắt buộc và quyền xử lý bước hiện tại.
+          </div>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/06-workflow.jpg"
+              data-caption="Chọn workflow cần gắn cho đúng sản phẩm và bấm Lưu workflow."
+              aria-label="Phóng to ảnh: Chọn workflow cần gắn cho đúng sản phẩm và bấm Lưu workflow."
+            >
+              <img
+                src="images/06-workflow.jpg"
+                alt="Chọn workflow cần gắn cho đúng sản phẩm và bấm Lưu workflow."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>Chọn workflow cần gắn cho đúng sản phẩm và bấm Lưu workflow.</figcaption>
+          </figure>
+          <figure>
+            <button
+              class="image-button"
+              data-image="images/07-progress.jpg"
+              data-caption="Tiến trình workflow: thông tin sản phẩm, bước hiện tại và biểu mẫu Nhập Lot theo cấu hình."
+              aria-label="Phóng to ảnh: Tiến trình workflow: thông tin sản phẩm, bước hiện tại và biểu mẫu Nhập Lot theo cấu hình."
+            >
+              <img
+                src="images/07-progress.jpg"
+                alt="Tiến trình workflow: thông tin sản phẩm, bước hiện tại và biểu mẫu Nhập Lot theo cấu hình."
+                loading="lazy"
+                width="2200"
+                height="1190"
+              /><span class="zoom-label">↗ Bấm để phóng to</span>
+            </button>
+            <figcaption>
+              Tiến trình workflow: thông tin sản phẩm, bước hiện tại và biểu mẫu Nhập Lot theo cấu
+              hình.
+            </figcaption>
+          </figure>
+        </section>
+        <section id="faq">
+          <div class="section-heading">
+            <span class="section-num">?</span>
+            <div>
+              <h2>Câu hỏi thường gặp</h2>
+              <p>Kiểm tra nhanh trước khi thao tác lại.</p>
+            </div>
+          </div>
+          <details>
+            <summary>Không thấy nút Tạo mới, Detail, Bom hoặc workflow?</summary>
+            <p>
+              Các thao tác được hiển thị theo quyền tài khoản. Liên hệ quản trị viên để kiểm tra
+              quyền tạo/sửa sản phẩm, quản lý BOM, gắn hoặc xem workflow.
+            </p>
+          </details>
+          <details>
+            <summary>Đã điền thông tin nhưng chưa lưu được sản phẩm?</summary>
+            <p>
+              Kiểm tra các ô có dấu *, đặc biệt Dịch vụ, Nhà cung cấp, Trạng thái, Loại tiền và Giá
+              hiển thị. Cuộn đến phần SKU: phải có ít nhất một SKU và chọn tổ hợp thuộc tính. Nếu hệ
+              thống trả lỗi, xem thông báo trước khi lưu lại.
+            </p>
+          </details>
+          <details>
+            <summary>Vì sao cột SKUs hiện “No Content”?</summary>
+            <p>
+              Bảng không có nội dung SKU để hiển thị cho sản phẩm đó. Mở Detail để kiểm tra dữ liệu
+              và cấu hình SKU phù hợp trước khi cập nhật.
+            </p>
+          </details>
+          <details>
+            <summary>Đã kéo bố cục hoặc thêm version BOM, có cần lưu nữa không?</summary>
+            <p>
+              Bố cục form được nhớ tại trình duyệt. Dữ liệu sản phẩm và cấu hình BOM cần bấm Hoàn
+              thành để lưu; việc thêm hoặc xóa version trên giao diện chưa thay thế thao tác này.
+            </p>
+          </details>
+          <details>
+            <summary>Tại sao không thấy Xem tiến trình?</summary>
+            <p>
+              Menu này xuất hiện khi sản phẩm có workflowInstances và tài khoản được quyền xem. Nếu
+              chưa có quy trình, dùng Gắn workflow theo quyền được cấp.
+            </p>
+          </details>
+        </section>
+        <footer>
+          <div>
+            <b>Danh sách sản phẩm</b>
+            <p>Hướng dẫn thao tác · Cập nhật 22/10/2026</p>
+          </div>
+          <a href="#top">Về đầu trang ↑</a>
+        </footer>
+      </main>
+    </div>
+    <dialog id="image-dialog" aria-label="Ảnh hướng dẫn phóng to">
+      <div class="dialog-bar">
+        <p id="image-caption"></p>
+        <button id="close-image" aria-label="Đóng ảnh phóng to">Đóng ×</button>
+      </div>
+      <div class="dialog-image"><img id="large-image" alt="" /></div>
+    </dialog>
+  </body>
+</html>

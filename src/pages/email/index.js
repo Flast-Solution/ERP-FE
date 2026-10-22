@@ -1,23 +1,24 @@
 import React from 'react';
-import { RestList, BreadcrumbCustom } from "@flast-erp/core/components";
-import { useGetList } from "@flast-erp/core/hooks";
-import { Helmet } from "react-helmet";
-import { InAppEvent } from "@flast-erp/core/utils";
+import { RestList, BreadcrumbCustom } from '@flast-erp/core/components';
+import { useGetList } from '@flast-erp/core/hooks';
+import { Helmet } from 'react-helmet';
+import { InAppEvent } from '@flast-erp/core/utils';
 import { HASH_MODAL } from '@/configs';
 
 const Email = () => {
+  const onEdit = (item) =>
+    InAppEvent.emit(HASH_MODAL, {
+      hash: '#draw/email.edit',
+      title: 'Sửa email # ' + item.id,
+      data: item,
+    });
 
-  const onEdit = (item) => InAppEvent.emit(HASH_MODAL, {
-    hash: '#draw/email.edit',
-    title: 'Sửa email # ' + item.id,
-    data: item
-  });
-
-  const onCreate = () => InAppEvent.emit(HASH_MODAL, {
-    hash: '#draw/email.edit',
-    title: 'Tạo email mới',
-    data: {}
-  });
+  const onCreate = () =>
+    InAppEvent.emit(HASH_MODAL, {
+      hash: '#draw/email.edit',
+      title: 'Tạo email mới',
+      data: {},
+    });
 
   const columns = [
     {
@@ -42,13 +43,9 @@ const Email = () => {
       <Helmet>
         <title>Email - Quản lý hành chính</title>
       </Helmet>
-      <BreadcrumbCustom
-        data={[
-          { title: 'Quản lý hành chính' },
-          { title: 'Email' }
-        ]}
-      />
+      <BreadcrumbCustom data={[{ title: 'Quản lý hành chính' }, { title: 'Email' }]} />
       <RestList
+        xScroll="max-content"
         columns={columns}
         useGetAllQuery={useGetList}
         apiPath="email/list"

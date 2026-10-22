@@ -20,7 +20,7 @@
 /**************************************************************************/
 
 import React from 'react';
-import { Helmet } from "react-helmet";
+import { Helmet } from 'react-helmet';
 import { BreadcrumbCustom } from '@flast-erp/core/components';
 import { useLocation } from 'react-router-dom';
 import ListOrder from '@/containers/Order/List';
@@ -50,9 +50,7 @@ const CoHoiPage = () => {
       <Helmet>
         <title>{currentView.title}</title>
       </Helmet>
-      <BreadcrumbCustom
-        data={[{ title: 'Trang chủ' },  { title: currentView.title }]}
-      />
+      <BreadcrumbCustom data={[{ title: 'Trang chủ' }, { title: currentView.title }]} />
       <Content />
     </div>
   );

@@ -19,8 +19,8 @@
 /* có trách nghiệm                                                        */
 /**************************************************************************/
 
-import { Table } from "antd";
-import { useEffect, useState } from "react";
+import { Table } from 'antd';
+import { useEffect, useState } from 'react';
 import { RequestUtils, arrayNotEmpty, dataArray, formatTime } from '@flast-erp/core/utils';
 import { formatCurrency as formatMoney } from '../../utils/formatCurrency';
 
@@ -28,30 +28,40 @@ const HistoryPay = ({ orderId }) => {
   const [historyPayment, setData] = useState([]);
   useEffect(() => {
     if (orderId) {
-      RequestUtils.Get("/pay/list-by-order-id", { orderId: orderId }).then(dataArray).then(setData);
+      RequestUtils.Get('/pay/list-by-order-id', { orderId: orderId }).then(dataArray).then(setData);
     }
   }, [orderId]);
 
   const CUSTOM_ACTION = [
     {
-      title: "Thanh toán",
+      title: 'Thanh toán',
       dataIndex: 'monney',
-      render: (paid) => formatMoney(paid)
+      render: (paid) => formatMoney(paid),
     },
     {
-      title: "Thời gian",
+      title: 'Thời gian',
       dataIndex: 'inTime',
-      render: (inTime) => formatTime(inTime)
+      render: (inTime) => formatTime(inTime),
     },
     {
-      title: "Trạng thái",
+      title: 'Trạng thái',
       dataIndex: 'isConfirm',
-      render: (isConfirm) => isConfirm === 0 ? 'Chưa confirm' : 'Đã confirm'
-    }
+      render: (isConfirm) => (isConfirm === 0 ? 'Chưa confirm' : 'Đã confirm'),
+    },
   ];
   return arrayNotEmpty(historyPayment) ? (
-    <Table rowKey={'inTime'} columns={CUSTOM_ACTION} dataSource={historyPayment} pagination={false} />
-  ) : (<p style={{ padding: '15px 0px', textAlign: 'center' }}>Chưa có thông tin thanh toán được nhập .!</p>);
-}
+    <Table
+      scroll={{ x: 'max-content' }}
+      rowKey={'inTime'}
+      columns={CUSTOM_ACTION}
+      dataSource={historyPayment}
+      pagination={false}
+    />
+  ) : (
+    <p style={{ padding: '15px 0px', textAlign: 'center' }}>
+      Chưa có thông tin thanh toán được nhập .!
+    </p>
+  );
+};
 
 export default HistoryPay;

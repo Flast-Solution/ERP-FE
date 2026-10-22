@@ -23,27 +23,56 @@ import React from 'react';
 import { authRoles } from '@/auth';
 import TenantPage from '@/components/TenantPage';
 
-const LocalOrderPage = React.lazy(() => import('@/pages/order'));
+const OrderPage = React.lazy(() => import('@/pages/order/OrderListPage'));
 const HatecoOrderPage = React.lazy(() => import('@/pages/hateco/order'));
 const LocalOrderProductionPage = React.lazy(() => import('@/pages/order/OrderProduction'));
 const LocalOrderProgressPage = React.lazy(() => import('@/pages/order/Progress'));
 const LocalManufacturingLot = React.lazy(() => import('@/pages/order/ManufacturingLotCreate'));
-const OrderPage = () => <TenantPage page="OrderList" local={LocalOrderPage} />;
-const OrderProductionPage = () => <TenantPage page="ProductionTracking" local={LocalOrderProductionPage} />;
-const OrderProgressPage = () => <TenantPage page="WorkflowProgress" local={LocalOrderProgressPage} />;
-const ManufacturingLot = () => <TenantPage page="ManufacturingLotCreate" local={LocalManufacturingLot} />;
+const OrderProductionPage = () => (
+  <TenantPage page="ProductionTracking" local={LocalOrderProductionPage} />
+);
+const OrderProgressPage = () => (
+  <TenantPage page="WorkflowProgress" local={LocalOrderProgressPage} />
+);
+const ManufacturingLot = () => (
+  <TenantPage page="ManufacturingLotCreate" local={LocalManufacturingLot} />
+);
 
 export const OrderConfig = {
-    auth: authRoles.user,
-    routes: [
-        { path: '/sale/order/progress/:orderId', permission: 'sales.order.workflow.view', element: <OrderProgressPage /> },
-        { path: '/sale/order/progress', permission: 'sales.order.workflow.view', element: <OrderProgressPage /> },
-        { path: '/sale/order/after-sale', permission: 'sales.order.after_sale.view', element: <OrderPage /> },
-        { path: '/sale/order/cancelled', permission: 'sales.order.cancelled.view', element: <OrderPage /> },
-        { path: '/sale/hateco', permission: 'sales.order.view', element: <HatecoOrderPage /> },
-        { path: '/sale/order', permission: 'sales.order.view', element: <OrderPage /> },
-        { path: '/sale/order/*', permission: 'sales.order.view', element: <OrderPage /> },
-        { path: '/sale/order-production', permission: 'manufacturing.progress.view', element: <OrderProductionPage /> },
-        { path: '/sale/production/lots/create', permission: 'sales.order.lot.create', element: <ManufacturingLot /> }
-    ]
+  auth: authRoles.user,
+  routes: [
+    {
+      path: '/sale/order/progress/:orderId',
+      permission: 'sales.order.workflow.view',
+      element: <OrderProgressPage />,
+    },
+    {
+      path: '/sale/order/progress',
+      permission: 'sales.order.workflow.view',
+      element: <OrderProgressPage />,
+    },
+    {
+      path: '/sale/order/after-sale',
+      permission: 'sales.order.after_sale.view',
+      element: <OrderPage />,
+    },
+    {
+      path: '/sale/order/cancelled',
+      permission: 'sales.order.cancelled.view',
+      element: <OrderPage />,
+    },
+    { path: '/sale/hateco', permission: 'sales.order.view', element: <HatecoOrderPage /> },
+    { path: '/sale/order', permission: 'sales.order.view', element: <OrderPage /> },
+    { path: '/sale/order/*', permission: 'sales.order.view', element: <OrderPage /> },
+    {
+      path: '/sale/order-production',
+      permission: 'manufacturing.progress.view',
+      element: <OrderProductionPage />,
+    },
+    {
+      path: '/sale/production/lots/create',
+      permission: 'sales.order.lot.create',
+      element: <ManufacturingLot />,
+    },
+  ],
 };
