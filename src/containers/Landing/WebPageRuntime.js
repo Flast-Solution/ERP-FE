@@ -39,7 +39,7 @@ const getRemoteScope = entry => {
   }
 }
 
-const RemoteLandingPage = ({ page }) => {
+export const RemoteLandingPage = ({ page }) => {
   const [RemotePage, setRemotePage] = useState(null)
   const [error, setError] = useState('')
   const entry = page?.build?.url

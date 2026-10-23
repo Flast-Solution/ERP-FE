@@ -14,9 +14,20 @@ const TagEditPage = React.lazy(() => import('@/pages/tag/Edit'));
 const Landing = React.lazy(() => import('@/pages/landing'));
 const LandingEdit = React.lazy(() => import('@/pages/landing/Edit'));
 const WebPageRuntime = React.lazy(() => import('@/containers/Landing/WebPageRuntime'));
+const SitePreviewRuntime = React.lazy(() => import('@/containers/Landing/SitePreviewRuntime'));
+const McpConnectPage = React.lazy(() => import('@/pages/mcp/Connect'));
 
 export const PublicWebConfig = {
-  routes: [{ path: '/m/:pageId/*', element: <WebPageRuntime /> }],
+  routes: [
+    { path: '/m/page/:domain/:remote', element: <SitePreviewRuntime /> },
+    { path: '/m/:pageId/*', element: <WebPageRuntime /> },
+  ],
+};
+
+/* Claude / ChatGPT connector: MCP chuyển người dùng tới đây để đăng nhập và cho phép truy cập. */
+export const McpConnectConfig = {
+  auth: authRoles.user,
+  routes: [{ path: '/mcp/connect', element: <McpConnectPage /> }],
 };
 
 export const WebConfig = {

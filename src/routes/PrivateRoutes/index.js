@@ -56,7 +56,7 @@ import { NewfeedConfig } from './NewFeedConfig';
 import { DragDropConfig } from './DragDropOrderConfig';
 
 /* Web */
-import { PublicWebConfig, WebConfig } from './WebConfig';
+import { McpConnectConfig, PublicWebConfig, WebConfig } from './WebConfig';
 import { WorkflowDesignerConfig } from './WorkflowDesignerConfig';
 import { ProductionControlConfig } from './ProductionControlConfig';
 
@@ -66,6 +66,7 @@ import { OmniConfig } from './OmniConfig';
 
 const routeConfigs = [
     PublicWebConfig,
+    McpConnectConfig,
     LoginConfig,
     KpiConfig,
     ProductConfig,
