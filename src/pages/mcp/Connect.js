@@ -89,7 +89,7 @@ const McpConnectPage = () => {
     return <Skeleton active style={{ maxWidth: 480, margin: '80px auto' }} />;
   }
 
-  const account = user.fullName || user.name || user.username || user.sub || 'tài khoản hiện tại';
+  const account = user.ssoId;
   return (
     <Card style={{ maxWidth: 480, margin: '80px auto' }} title="Kết nối trợ lý AI">
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
